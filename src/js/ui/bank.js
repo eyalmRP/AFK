@@ -1,12 +1,12 @@
 // Hero Bank tab: the player's roster with find, sort, filter, batch edit,
 // per-hero editing, screenshot import and the shared crystal level.
 
-import { esc, $, $$, toast, toInt, debounce } from '../util.js';
-import { data, FACTION_IDS, CLASSES, ASCENSIONS, LIMITS, TIERS, tierOf, hero as getHero, starLabel } from '../data.js';
-import { bank, updateHeroes, updateSettings, replaceBank, removeHeroes, effectiveLevel, exportBank, sanitizeEntry, defaultEntry, ownedIds } from '../store.js';
-import { aiState, initAi, readScreenshots, errorCopy } from '../ai.js';
+import { esc, $, $$, toast, toInt, debounce, fmtDate } from '../util.js';
+import { data, FACTION_IDS, CLASSES, ASCENSIONS, LIMITS, TIERS, tierOf, hero as getHero, starLabel, ELDER_BRANCHES, ELDER_MAX } from '../data.js';
+import { bank, updateHeroes, updateSettings, updateElderTree, replaceBank, removeHeroes, effectiveLevel, exportBank, sanitizeEntry, defaultEntry, ownedIds } from '../store.js';
+import { aiState, initAi, readScreenshots, readElderTree, errorCopy } from '../ai.js';
 import { ICON, classIcon } from './icons.js';
-import { portrait, openDrawer, closeDrawer, tierPill, gameFilterBar, handleGameFilter, syncGameFilter } from './common.js';
+import { portrait, openDrawer, closeDrawer, tierPill, gameFilterBar, handleGameFilter, syncGameFilter, panel, bindFolding } from './common.js';
 import { openHeroDetail } from './heroDetail.js';
 
 const ui = {
@@ -40,6 +40,7 @@ let root;
 
 export function mountBank(el) {
   root = el;
+  bindFolding(root);
   root.addEventListener('click', onClick);
   root.addEventListener('change', onChange);
   root.addEventListener('input', onInput);
@@ -51,6 +52,92 @@ export function refreshBank() {
   if (!root) return;
   renderList();
   renderCounts();
+  syncElderInputs();
+}
+
+// ---- Elder Tree -------------------------------------------------------------
+
+function elderSummary() {
+  const t = bank.settings.elderTree || {};
+  const known = ['core', ...ELDER_BRANCHES].filter((k) => t[k] !== null && t[k] !== undefined);
+  if (!known.length) return 'not recorded yet';
+  return `tree ${t.core ?? '–'}${t.updated ? ` · updated ${fmtDate(new Date(t.updated).toISOString().slice(0, 10))}` : ''}`;
+}
+
+function elderNode(key, label, icon) {
+  const v = bank.settings.elderTree?.[key];
+  return `<label class="elder-node${key === 'core' ? ' core' : ''}">
+    <span class="elder-ico">${icon}</span>
+    <span class="elder-name">${label}</span>
+    <input class="input num-input" type="number" min="0" max="${ELDER_MAX}" data-et="${key}" value="${v ?? ''}" placeholder="–" aria-label="${label} level">
+  </label>`;
+}
+
+function elderPanel() {
+  const body = `<div class="elder" role="group" aria-label="Elder Tree levels">
+      ${elderNode('core', 'Tree level', `<span class="elder-core-ico">${ICON.star}</span>`)}
+      ${ELDER_BRANCHES.map((c) => elderNode(c, c, classIcon(c))).join('')}
+    </div>
+    <div class="toolbar">
+      <button class="btn" type="button" data-act="elder-upload" id="et-upload" hidden>${ICON.upload} Read a screenshot</button>
+      <input type="file" id="et-file" accept="image/png,image/jpeg,image/webp" hidden>
+      <span class="small muted" id="et-status"></span>
+    </div>
+    <div id="et-review"></div>
+    <p class="small muted">Each branch boosts every hero of its class. The builder and counter favour classes you've levelled further than the rest. Type a level and it saves; leave a box empty if you don't know it.</p>`;
+  return panel({ id: 'bank-elder', title: 'Elder Tree', sub: `<span id="et-sub">${esc(elderSummary())}</span>`, body });
+}
+
+function syncElderInputs() {
+  const t = bank.settings.elderTree || {};
+  for (const inp of $$('[data-et]', root)) {
+    if (document.activeElement === inp || inp.dataset.pending) continue;
+    inp.value = t[inp.dataset.et] ?? '';
+  }
+  const sub = $('#et-sub', root);
+  if (sub) sub.textContent = elderSummary();
+}
+
+async function readElderShot(file) {
+  const status = $('#et-status', root);
+  status.textContent = 'Claude is reading the Elder Tree…';
+  try {
+    const out = await readElderTree(file);
+    const t = bank.settings.elderTree || {};
+    const keys = ['core', ...ELDER_BRANCHES].filter((k) => out[k] !== null);
+    if (!keys.length) {
+      status.textContent = 'No levels found. Try a screenshot of the whole Elder Tree screen.';
+      return;
+    }
+    for (const k of keys) {
+      const inp = root.querySelector(`[data-et="${k}"]`);
+      if (!inp) continue;
+      inp.value = out[k];
+      inp.dataset.pending = String(out[k]);
+      inp.classList.toggle('diff', t[k] !== out[k]);
+    }
+    status.textContent = out.notes || '';
+    $('#et-review', root).innerHTML = `<div class="callout small toolbar">Read ${keys.length} level${keys.length === 1 ? '' : 's'} from the screenshot. Changed values are highlighted.
+      <span class="spacer"></span><button class="btn small primary" type="button" data-act="elder-save">Save these levels</button><button class="btn small ghost" type="button" data-act="elder-discard">Discard</button></div>`;
+  } catch (e) {
+    status.textContent = errorCopy(e);
+  }
+}
+
+function finishElderReview(save) {
+  const patch = {};
+  for (const inp of $$('[data-et]', root)) {
+    if (inp.dataset.pending !== undefined) {
+      if (save) patch[inp.dataset.et] = toInt(inp.dataset.pending);
+      delete inp.dataset.pending;
+      inp.classList.remove('diff');
+    }
+  }
+  $('#et-review', root).innerHTML = '';
+  if (save && Object.keys(patch).length) {
+    updateElderTree(patch, 'screenshot');
+    toast('Elder Tree saved.');
+  } else syncElderInputs();
 }
 
 // ---- filtering & sorting ----------------------------------------------------
@@ -130,6 +217,7 @@ function render() {
       <label class="check">Level <input class="input num-input" id="bank-crystal" type="number" min="1" max="${LIMITS.level}" value="${bank.settings.crystalLevel}" ${bank.settings.sharedLevel ? '' : 'disabled'}></label>
       <span class="small muted" id="bank-shared-note">${sharedNote()}</span>
     </div>
+    ${elderPanel()}
     <div class="bank-controls">
       <div class="toolbar">
         <label class="search">${ICON.search}<input class="input" id="bank-q" type="search" placeholder="Find hero, faction or title" autocomplete="off"></label>
@@ -159,6 +247,10 @@ function render() {
     <div id="bank-batch"></div>`;
   renderList();
   renderCounts();
+  initAi().then(() => {
+    const b = $('#et-upload', root);
+    if (b) b.hidden = !(aiState.images && !aiState.disabled);
+  });
 }
 
 function sharedNote() {
@@ -371,6 +463,15 @@ function toggleSelect(id) {
 
 function handleAct(act) {
   switch (act) {
+    case 'elder-upload':
+      $('#et-file', root).click();
+      break;
+    case 'elder-save':
+      finishElderReview(true);
+      break;
+    case 'elder-discard':
+      finishElderReview(false);
+      break;
     case 'dir':
       ui.dir = -ui.dir;
       render();
@@ -437,6 +538,17 @@ function applyBatch() {
 
 function onChange(ev) {
   const t = ev.target;
+  if (t.dataset.et && t.dataset.pending === undefined) {
+    const v = t.value === '' ? null : Math.max(0, Math.min(ELDER_MAX, toInt(t.value)));
+    updateElderTree({ [t.dataset.et]: v });
+    return;
+  }
+  if (t.id === 'et-file') {
+    const f = t.files?.[0];
+    if (f) readElderShot(f);
+    t.value = '';
+    return;
+  }
   if (t.id === 'bank-shared') {
     updateSettings({ sharedLevel: t.checked });
     $('#bank-crystal', root).disabled = !t.checked;

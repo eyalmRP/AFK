@@ -110,7 +110,23 @@ function modePresence(mode, id) {
   return { bonus: best, label };
 }
 
-export function makeContext({ heroes, entries = null, mode = null, category, enemy = [], combos = [], archetypes = [] }) {
+// Elder Tree branches boost every hero of their class. Only the spread
+// between the player's branches matters for choosing among their own
+// heroes, so a branch counts relative to the average of the recorded ones.
+export function elderTreeFactors(tree) {
+  if (!tree) return null;
+  const levels = Object.entries(tree).filter(([k, v]) => ['Warrior', 'Tank', 'Ranger', 'Mage', 'Support'].includes(k) && Number.isFinite(v) && v > 0);
+  if (levels.length < 2) return null;
+  const mean = levels.reduce((a, [, v]) => a + v, 0) / levels.length;
+  const out = {};
+  for (const [cls, v] of levels) {
+    const dev = Math.max(-0.3, Math.min(0.3, (v - mean) / mean));
+    out[cls] = { factor: 1 + dev * 0.25, level: v, dev };
+  }
+  return out;
+}
+
+export function makeContext({ heroes, entries = null, mode = null, category, enemy = [], combos = [], archetypes = [], elderTree = null }) {
   const cat = category || mode?.category || 'pve';
   const ctx = {
     heroes,
@@ -122,6 +138,7 @@ export function makeContext({ heroes, entries = null, mode = null, category, ene
     enemy: enemy.map((id) => heroes.get(id)).filter(Boolean),
     combos,
     archetypes,
+    elder: elderTreeFactors(elderTree),
     cache: new Map(),
   };
   ctx.enemyArchetypes = detectArchetypes(ctx.enemy, archetypes);
@@ -176,6 +193,11 @@ export function heroValue(ctx, id) {
   }
   const inv = ctx.entries ? investmentFactor(ctx.entries[id], h) : { factor: 1, notes: [] };
   if (inv.notes.length) reasons.push(...inv.notes);
+  const elder = ctx.elder?.[h.class];
+  if (elder) {
+    inv.factor *= elder.factor;
+    if (Math.abs(elder.dev) >= 0.03) reasons.push(`Elder Tree ${h.class} ${elder.level} (${elder.dev > 0 ? 'above' : 'below'} your average)`);
+  }
   const classBonus = ctx.mode?.classBonus?.[h.class] || 0;
   if (classBonus) reasons.push(`${h.class.toLowerCase()}s suit ${ctx.mode.name}`);
   const value = (base + classBonus) * inv.factor + counterBonus;

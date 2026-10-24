@@ -87,3 +87,17 @@ test('unrecorded upgrades count as neutral, not as zero', () => {
   assert.ok(investmentFactor(unknown, h).factor > investmentFactor(zero, h).factor);
   assert.deepEqual(investmentFactor(unknown, h).notes, []);
 });
+
+test('a higher Elder Tree branch lifts heroes of that class', async () => {
+  const { elderTreeFactors } = await import('../src/js/engine.js');
+  const f = elderTreeFactors({ core: 257, Warrior: 150, Tank: 200, Ranger: 200, Mage: 250, Support: 200 });
+  assert.ok(f.Mage.factor > f.Tank.factor && f.Tank.factor > f.Warrior.factor);
+  assert.equal(elderTreeFactors({ core: 10 }), null);
+  const tree = { Warrior: 100, Tank: 300, Ranger: 300, Mage: 300, Support: 300 };
+  const entries = { lucius: { owned: true, asc: 'Ascended', stars: 5, si: null, furniture: null, engrave: null }, brutus: { owned: true, asc: 'Ascended', stars: 5, si: null, furniture: null, engrave: null } };
+  const ctx = makeContext({ heroes: data.heroById, entries, mode: data.modeById.get('campaign'), elderTree: tree });
+  const base = makeContext({ heroes: data.heroById, entries, mode: data.modeById.get('campaign') });
+  const warrior = [...data.heroById.values()].find((h) => h.class === 'Warrior');
+  entries[warrior.id] = entries.lucius;
+  assert.ok(heroValue(ctx, warrior.id).value < heroValue(base, warrior.id).value);
+});

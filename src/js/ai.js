@@ -3,7 +3,7 @@
 // `sample` capability on the viewer's Claude account, so it only lights up
 // when the page is opened inside Claude.
 
-import { data, ASCENSIONS, tierOf, POSITIONS } from './data.js';
+import { data, ASCENSIONS, tierOf, POSITIONS, CLASSES, ELDER_MAX } from './data.js';
 
 let samplePromise = null;
 export const aiState = { text: false, images: false, maxImages: 0, mediaTypes: [], disabled: false };
@@ -134,6 +134,34 @@ Reply with only JSON: {"slots":{"F1":"id or null","F2":"id or null","B1":"id or 
   return { slots, notes: String(out?.notes || '').slice(0, 300) };
 }
 
+// Read the Elder Tree screen. Returns {core, Warrior, Tank, Ranger, Mage, Support, notes}.
+export async function readElderTree(file, { signal } = {}) {
+  const sample = await initAi();
+  if (!sample) throw { code: 'not_granted' };
+  const prompt = `This is a screenshot of the Elder Tree screen in the mobile game AFK Arena (not AFK Journey). It shows the central tree level under a gold star at the trunk, and five class branches, each a round stained-glass icon with "LvlN" under it:
+- Warrior: red icon with a sword-like emblem (usually top centre)
+- Mage: purple icon with a crescent/orb emblem
+- Tank: gold shield icon
+- Support: blue icon with wings
+- Ranger: green arrowhead icon
+Read each level exactly as printed. Use null for any you cannot read.
+Reply with only JSON: {"core": 257, "Warrior": 195, "Tank": 196, "Ranger": 195, "Mage": 200, "Support": 200, "notes": "anything unclear"}`;
+  const out = await sample.json(prompt, { images: [file], signal, modelTier: 'default', cache: false });
+  const res = { notes: String(out?.notes || '').slice(0, 300) };
+  for (const k of ['core', ...CLASSES]) {
+    const n = numOrNull(out?.[k]);
+    res[k] = n === null ? null : Math.max(0, Math.min(ELDER_MAX, n));
+  }
+  return res;
+}
+
+export function elderTreeLine(tree) {
+  if (!tree) return '';
+  const parts = CLASSES.filter((c) => tree[c]).map((c) => `${c} ${tree[c]}`);
+  if (!parts.length && !tree.core) return '';
+  return `Player's Elder Tree (class branches boost every hero of that class): tree level ${tree.core ?? '?'}; ${parts.join(', ')}.`;
+}
+
 function numOrNull(v) {
   if (v === null || v === undefined || v === '') return null;
   const n = Number(v);
@@ -188,7 +216,7 @@ function parseTeams(out, allowed, count, unique = true) {
 
 const ARTIFACT_IDS = () => data.artifacts.map((a) => `${a.id} (${a.name})`).join(', ');
 
-export async function claudeBuild({ mode, count, pool, entries, engineTeams, signal }) {
+export async function claudeBuild({ mode, count, pool, entries, engineTeams, signal, elderTree = null }) {
   const sample = await initAi();
   if (!sample) throw { code: 'not_granted' };
   const prompt = `You are an expert AFK Arena (Lilith Games, not AFK Journey) team builder. Build ${count} formation(s) for the mode below using ONLY the player's owned heroes. Teams must not share heroes. Each formation has 2 front slots (F1, F2) and 3 back slots (B1, B2, B3).
@@ -197,6 +225,7 @@ Mode: ${modeBrief(mode)}
 
 Owned heroes (id | name | faction class | tier ratings | player's investment | roles | kit):
 ${pool.map((id) => heroLine(id, entries)).join('\n')}
+${elderTreeLine(elderTree)}
 
 A rules engine proposed:
 ${engineTeams.map((t, i) => `Team ${i + 1}: ${POSITIONS.map((p) => `${p}:${t.layout[p] || '-'}`).join(' ')}`).join('\n')}
@@ -207,7 +236,7 @@ Reply with only JSON: {"teams":[{"name":"short archetype name","slots":{"F1":"id
   return parseTeams(out, new Set(pool), count);
 }
 
-export async function claudeCounter({ enemySlots, mode, pool, entries, engineTeam, signal }) {
+export async function claudeCounter({ enemySlots, mode, pool, entries, engineTeam, signal, elderTree = null }) {
   const sample = await initAi();
   if (!sample) throw { code: 'not_granted' };
   const enemy = POSITIONS.filter((p) => enemySlots[p]).map((p) => `${p}: ${heroLine(enemySlots[p], null)}`);
@@ -220,6 +249,7 @@ ${enemy.join('\n')}
 
 Owned heroes (id | name | faction class | tier ratings | player's investment | roles | kit):
 ${pool.map((id) => heroLine(id, entries)).join('\n')}
+${elderTreeLine(elderTree)}
 
 A rules engine proposed: ${POSITIONS.map((p) => `${p}:${engineTeam?.layout?.[p] || '-'}`).join(' ')}
 

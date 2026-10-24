@@ -53,6 +53,11 @@ export function starLabel(stars) {
 
 export const POSITIONS = ['F1', 'F2', 'B1', 'B2', 'B3'];
 
+// Elder Tree: the central tree level plus one branch per class. The
+// in-game screen arranges the branches in this order, left to right.
+export const ELDER_BRANCHES = ['Support', 'Mage', 'Warrior', 'Tank', 'Ranger'];
+export const ELDER_MAX = 1000;
+
 const state = {
   meta: null,
   heroes: [],

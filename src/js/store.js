@@ -3,7 +3,7 @@
 // when the page is opened on its own (GitHub Pages, a local file server).
 
 import { local, debounce, clamp, toInt } from './util.js';
-import { ASCENSIONS, LIMITS } from './data.js';
+import { ASCENSIONS, LIMITS, CLASSES, ELDER_MAX } from './data.js';
 
 const LOCAL_KEY = 'afk-codex-bank-v1';
 const LOCAL_FORMATIONS = 'afk-codex-formations-v1';
@@ -13,9 +13,22 @@ const listeners = new Set();
 export const bank = {
   version: 1,
   updatedAt: 0,
-  settings: { sharedLevel: true, crystalLevel: 240 },
+  settings: { sharedLevel: true, crystalLevel: 240, elderTree: emptyElderTree() },
   heroes: {},
 };
+
+export function emptyElderTree() {
+  return { core: null, Warrior: null, Tank: null, Ranger: null, Mage: null, Support: null, updated: null, source: null };
+}
+
+function sanitizeElderTree(t) {
+  const out = { ...emptyElderTree(), ...(t || {}) };
+  for (const k of ['core', ...CLASSES]) {
+    const v = out[k];
+    out[k] = v === null || v === undefined || v === '' ? null : clamp(toInt(v, 0), 0, ELDER_MAX);
+  }
+  return out;
+}
 
 export const formations = { updatedAt: 0, items: [] };
 
@@ -103,11 +116,17 @@ export function removeHeroes(ids) {
 export function updateSettings(patch) {
   bank.settings = { ...bank.settings, ...patch };
   bank.settings.crystalLevel = clamp(toInt(bank.settings.crystalLevel, 240), 1, LIMITS.level);
+  bank.settings.elderTree = sanitizeElderTree(bank.settings.elderTree);
   touch();
+}
+
+export function updateElderTree(patch, source = 'manual') {
+  updateSettings({ elderTree: { ...bank.settings.elderTree, ...patch, updated: Date.now(), source } });
 }
 
 export function replaceBank(next) {
   bank.settings = { ...bank.settings, ...(next.settings || {}) };
+  bank.settings.elderTree = sanitizeElderTree(bank.settings.elderTree);
   bank.heroes = {};
   for (const [id, e] of Object.entries(next.heroes || {})) bank.heroes[id] = sanitizeEntry(e);
   touch();
@@ -189,6 +208,7 @@ export function loadLocal() {
   if (saved && saved.heroes) {
     bank.updatedAt = saved.updatedAt || 0;
     bank.settings = { ...bank.settings, ...(saved.settings || {}) };
+    bank.settings.elderTree = sanitizeElderTree(bank.settings.elderTree);
     for (const [id, e] of Object.entries(saved.heroes)) bank.heroes[id] = sanitizeEntry(e);
   }
   const f = local.get(LOCAL_FORMATIONS);
@@ -212,6 +232,7 @@ export async function connectRemote() {
     if (cloud && (cloud.updatedAt || 0) >= bank.updatedAt) {
       bank.updatedAt = cloud.updatedAt || 0;
       bank.settings = { ...bank.settings, ...(cloud.settings || {}) };
+      bank.settings.elderTree = sanitizeElderTree(bank.settings.elderTree);
       bank.heroes = {};
       for (const [id, e] of Object.entries(cloud.heroes || {})) bank.heroes[id] = sanitizeEntry(e);
       local.set(LOCAL_KEY, bank);
@@ -236,6 +257,7 @@ export async function connectRemote() {
         if ((d.updatedAt || 0) > bank.updatedAt) {
           bank.updatedAt = d.updatedAt;
           bank.settings = { ...bank.settings, ...(d.settings || {}) };
+          bank.settings.elderTree = sanitizeElderTree(bank.settings.elderTree);
           bank.heroes = {};
           for (const [id, e] of Object.entries(d.heroes || {})) bank.heroes[id] = sanitizeEntry(e);
           local.set(LOCAL_KEY, bank);

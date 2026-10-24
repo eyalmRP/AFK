@@ -61,6 +61,7 @@ function context() {
     enemy: enemyIds(),
     combos: [...(data.combos.community || []), ...(data.combos.ai || [])],
     archetypes: data.archetypes,
+    elderTree: ui.pool === 'mine' && ui.invest ? bank.settings.elderTree : null,
   });
 }
 
@@ -234,6 +235,7 @@ async function askClaude() {
       entries: ui.pool === 'mine' ? bank.heroes : null,
       engineTeam: ui.engineTeam ? { layout: ui.engineTeam.score.layout } : null,
       signal: ui.ctl.signal,
+      elderTree: ui.pool === 'mine' ? bank.settings.elderTree : null,
     });
     ui.claude = out.teams;
     ui.claudeNotes = out.notes;
