@@ -597,7 +597,7 @@ a.btn { text-decoration: none; }
 .tierpill[data-tier='D'] { --tc: var(--t-d); }
 
 /* ---------- artifacts ---------- */
-.artifact-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 8px; padding: 8px; min-width: 0; }
+.artifact-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(260px, 100%), 1fr)); gap: 8px; padding: 8px; min-width: 0; }
 .artifact-card { display: grid; grid-template-columns: 52px minmax(0, 1fr); gap: 10px; padding: 10px; border-radius: var(--r-sm); background: var(--surface); border: 1px solid var(--line); }
 .artifact-glyph { width: 42px; height: 42px; border-radius: 50%; display: grid; place-items: center; background: radial-gradient(circle at 35% 30%, var(--accent-soft), color-mix(in srgb, var(--accent) 50%, var(--surface-2))); color: var(--ink); font-family: var(--font-display); font-size: 1rem; border: 1px solid color-mix(in srgb, var(--accent) 50%, transparent); }
 .artifact-card > .art-img { width: 52px; height: 52px; }
@@ -1071,9 +1071,11 @@ table.bank .input, table.bank .select { padding: 3px 6px; font-size: 0.85rem; }
   .side-by-side, .compare, .grid-2 { grid-template-columns: minmax(0, 1fr); }
   .brand-meta { margin-left: 0; }
   .tier-table { --tm-size: 54px; }
-  .gamebar { padding: 6px 8px; gap: 5px; }
-  .gamebar .row { gap: 4px; }
-  .gbtn { width: 36px; height: 36px; }
+  .gamebar { padding: 6px; gap: 5px; }
+  .gamebar .row { gap: 3px; }
+  /* The widest row (All + 8 factions) fits on one line at any phone width. */
+  .gamebar { width: 100%; container-type: inline-size; }
+  .gbtn { width: clamp(30px, calc((100cqw - 24px) / 9), 36px); height: auto; aspect-ratio: 1; }
   .gbtn.all { font-size: 0.74rem; }
   .tier-row { grid-template-columns: 72px minmax(0, 1fr); }
   .tier-label { padding: 6px 4px; }
@@ -1087,6 +1089,37 @@ table.bank .input, table.bank .select { padding: 3px 6px; font-size: 0.85rem; }
   .slot { width: 62px; }
   .slot .portrait { --ps: 50px !important; }
   .drawer { width: 100%; }
+  /* Touch: 16px text in fields stops iOS zooming the page on focus; controls at least ~36px tall. */
+  .input, .select, textarea.input { font-size: 16px; min-height: 38px; }
+  .check { min-height: 36px; }
+  .check input { width: 20px; height: 20px; }
+  .btn.small { min-height: 34px; min-width: 36px; justify-content: center; }
+  .own-plus::after { content: ''; position: absolute; inset: -9px; }
+  p.small a { display: inline-block; padding-block: 5px; }
+  .seg button { min-height: 36px; }
+  .chip-btn { min-height: 34px; padding-inline: 11px; }
+  .et-node .input { min-height: 30px; font-size: 16px; }
+  .beast-own .num-input { min-height: 34px; width: 4.4em; }
+  .buffs { gap: 4px; }
+  .buff { flex-direction: column; gap: 2px; }
+  .buff .input { min-height: 34px; padding: 2px; font-size: 16px; }
+  .team-card .sources a, .code-meta a, .list li > a { display: inline-block; padding-block: 5px; }
+  details > summary { padding-block: 6px; }
+  /* Small labels on formation boards stay readable. */
+  .slot .pos { font-size: 0.68rem; }
+  .slot .art-chip { font-size: 0.72rem; }
+  .board-beast { width: 48px; }
+  .board-beast .beast-img { width: 36px !important; height: 36px !important; }
+  .board-beast span { font-size: 0.68rem; }
+  .tier-label .desc { font-size: 0.72rem; }
+  /* Artifact tiers: the label becomes a bar above the cards so they get the full width. */
+  .tier-row.art-row { grid-template-columns: minmax(0, 1fr); }
+  .art-row .tier-label { flex-direction: row; justify-content: flex-start; gap: 10px; padding: 6px 12px; text-align: left; }
+  .art-row .tier-label .cnt { margin-left: auto; }
+  .art-row .tier-folded { padding: 4px; }
+  /* Bank: the ownership filter takes its own row so sort and its arrow stay together. */
+  .bank-top [aria-label='Ownership'] { flex: 1 1 100%; }
+  .bank-top [aria-label='Ownership'] button { flex: 1; }
 }
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; animation: none !important; }

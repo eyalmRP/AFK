@@ -233,7 +233,7 @@ function artifactsPanel() {
       const id = `art-tier-${t}`;
       const folded = isFolded(id, false);
       const items = groups.get(t);
-      return `<div class="tier-row" data-tier="${t}" data-fold-id="${id}" data-folded="${folded}">
+      return `<div class="tier-row art-row" data-tier="${t}" data-fold-id="${id}" data-folded="${folded}">
         <button class="tier-label" type="button" data-fold-toggle aria-expanded="${!folded}"><span class="letter">${t === '?' ? '–' : t}</span><span class="desc">${ARTIFACT_DESC[t] || ''}</span><span class="cnt">${items.length}${ICON.chevron}</span></button>
         <div class="tier-heroes artifact-list">${items.map(artifactCard).join('')}</div>
         <div class="tier-folded" data-fold-toggle>${items.map((a) => `<span class="tm-tile" aria-hidden="true" title="${esc(a.name)}">${a.img ? `<img src="${esc(a.img)}" alt="">` : ''}</span>`).join('')}<span class="more">${items.length} artifact${items.length === 1 ? '' : 's'} folded</span></div>
