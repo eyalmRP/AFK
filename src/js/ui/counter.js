@@ -54,16 +54,6 @@ function enemyLevel() {
   return ui.enemyLevel ?? myLevel();
 }
 
-function levelOptions() {
-  const cur = enemyLevel();
-  const mine = myLevel();
-  const set = new Set([240, ...Array.from({ length: 25 }, (_, i) => 300 + i * 50), mine, cur]);
-  return [...set]
-    .filter((n) => n >= 1 && n <= LIMITS.level)
-    .sort((a, b) => a - b)
-    .map((n) => `<option value="${n}" ${n === cur ? 'selected' : ''}>${n}${n === mine ? ' · yours' : ''}</option>`)
-    .join('');
-}
 
 let root;
 
@@ -161,7 +151,7 @@ function render() {
         <div class="side-title">${ICON.swords} Enemy formation</div>
         ${board({ slots: ui.enemy, editable: true, cls: 'enemy-board', size: 60, build: enemyBuild(), level: enemyLevel(), beastEdit: beasts, beast: beasts ? ui.enemyBeast : null, beastLevel: ui.enemyBeastLevel })}
         <div class="enemy-opts">
-          <label class="field"><span>Hero level</span><select class="select" id="ct-elevel">${levelOptions()}</select></label>
+          <label class="field"><span>Hero level</span><input class="input" id="ct-elevel" type="number" inputmode="numeric" min="1" max="${LIMITS.level}" value="${enemyLevel()}" placeholder="${myLevel()}" title="Yours: ${myLevel()}"></label>
           <label class="field"><span>Upgrades (assumed)</span><select class="select" id="ct-ebuild">${Object.entries(ENEMY_BUILDS)
             .map(([k, b]) => `<option value="${k}" ${k === ui.enemyBuild ? 'selected' : ''}>${esc(b.label)}</option>`)
             .join('')}</select></label>
@@ -175,6 +165,7 @@ function render() {
         </div>
         <p class="small muted">The game doesn't show enemy upgrades, so enemy heroes count as Ascended 5 stars with the upgrades above.${beasts ? ' Tap the beast corner to set their beast.' : ''}</p>
         <div class="toolbar">
+          <button class="btn primary" type="button" data-act="find" ${enemyIds().length ? '' : 'disabled'}>${ICON.spark} Find best counter</button>
           <button class="btn" type="button" data-act="shot" id="ct-shot" hidden>${ICON.upload} Read a screenshot</button>
           <input type="file" id="ct-file" accept="image/png,image/jpeg,image/webp" hidden>
           <button class="btn" type="button" data-act="clear">Clear</button>
@@ -225,11 +216,12 @@ function renderResult(ctx) {
     .join('');
   const bp = beastFor(ctx, Object.values(s.layout));
   host.innerHTML = `<div class="side-title">${ICON.spark} Your counter (rules engine)</div>
+    <p class="small muted">Recalculated each time you change the enemy, the mode or your heroes.</p>
     <article class="result-card">
+      ${verdict(Object.values(s.layout))}
       <header><h4>${esc(s.template?.name || 'Counter formation')}</h4><span class="score">${s.total.toFixed(1)} pts</span></header>
       ${board({ slots: s.layout, artifacts: arts, showBank: ui.pool === 'mine', beast: bp.id })}
       ${bp.html}
-      ${powerLine(Object.values(s.layout))}
       <ul class="reasons">${reasons}</ul>
       ${s.synergies.length ? `<p class="small"><span class="muted">Synergy:</span> ${s.synergies.map((x) => `${esc(getHero(x.a).name)} + ${esc(getHero(x.b).name)}`).join(', ')}</p>` : ''}
     </article>`;
@@ -249,19 +241,25 @@ function renderResult(ctx) {
       .join('')}</div>`;
 }
 
-// Team power: the counter's estimated combat rating against the enemy's,
-// both from the same estimate (engine.js), the enemy's at the assumed build
-// and level. Beasts are not counted.
-function powerLine(ids) {
+// Can this team win? Compares the counter's estimated power with the
+// enemy's at its assumed build and level (combat rating estimate, engine.js;
+// beasts not counted). A rough guide: counters and faction edge can swing a
+// close fight, rarely a gap of 20% or more.
+function verdict(ids) {
   const enemy = enemyIds();
   if (ui.pool !== 'mine' || !enemy.length) return '';
   const theirs = enemy.reduce((t, id) => t + entryCR(enemyBuild(), getHero(id), enemyLevel()), 0);
   const ours = ids.reduce((t, id) => t + heroCR(getHero(id)), 0);
   const r = ours / theirs;
-  const verdict = enemy.length < 5 ? '' : r >= 1.1 ? 'Your team is stronger.' : r >= 0.9 ? 'A close match: faction edge and counters decide it.' : 'The enemy is stronger: expect a hard fight.';
-  return `<p class="power-line" title="${esc(CR_NOTE)}"><span class="muted">Team power</span> <strong class="num">≈ ${fmtCR(ours)}</strong> <span class="muted">vs enemy</span> <strong class="num">≈ ${fmtCR(theirs)}</strong>${
-    enemy.length < 5 ? ` <span class="muted">(${enemy.length} enemy hero${enemy.length === 1 ? '' : 'es'})</span>` : ''
-  }${verdict ? `<br><span class="small">${verdict}</span>` : ''}</p>`;
+  const pct = Math.round((r >= 1 ? r - 1 : 1 / r - 1) * 100);
+  let v;
+  if (enemy.length < 5) v = ['info', 'Enemy formation incomplete', `With ${enemy.length} of 5 enemy heroes in, the power check isn't meaningful yet.`];
+  else if (r >= 1.1) v = ['good', 'You should win', `Your team is about ${pct}% stronger.`];
+  else if (r >= 0.9) v = ['close', 'Close match', `The teams are within ${pct}% of each other, so faction edge, counters and positioning decide it.`];
+  else if (r >= 0.8) v = ['warn', 'Hard fight', `The enemy is about ${pct}% stronger. You need the counters and faction edge to land.`];
+  else v = ['bad', "You probably can't win this", `The enemy is about ${pct}% stronger. Counters and faction edge rarely make up that much: upgrade your heroes first or pick another opponent.`];
+  return `<div class="verdict ${v[0]}" role="status" title="${esc(CR_NOTE)}"><strong>${v[0] === 'bad' ? '⚠ ' : ''}${v[1]}</strong><span>${v[2]}</span>
+    <span class="small">Team power ≈ <b class="num">${fmtCR(ours)}</b> vs enemy ≈ <b class="num">${fmtCR(theirs)}</b> (estimates; enemy assumed ${esc(ENEMY_BUILDS[ui.enemyBuild]?.label || '')} at level ${enemyLevel()})</span></div>`;
 }
 
 function beastFor(ctx, ids) {
@@ -401,6 +399,14 @@ function onClick(ev) {
       ui.claude = null;
       render();
     });
+  } else if (act === 'find') {
+    // The counter is recalculated on every change; this reruns it and brings it into view.
+    renderResult(context());
+    const card = $('#ct-result .result-card', root) || $('#ct-result', root);
+    card?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    card?.classList.remove('flash');
+    void card?.offsetWidth;
+    card?.classList.add('flash');
   } else if (act === 'claude') askClaude();
   else if (act === 'stop') ui.ctl?.abort();
   else if (act === 'shot') $('#ct-file', root).click();
@@ -416,7 +422,9 @@ function onChange(ev) {
     ui.invest = t.checked;
     render();
   } else if (t.id === 'ct-elevel') {
-    ui.enemyLevel = Number(t.value);
+    // Empty goes back to the player's own level.
+    const v = Math.round(Number(t.value));
+    ui.enemyLevel = t.value === '' || !Number.isFinite(v) ? null : Math.min(LIMITS.level, Math.max(1, v));
     ui.claude = null;
     render();
   } else if (t.id === 'ct-ebuild') {

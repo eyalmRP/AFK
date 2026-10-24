@@ -107,6 +107,18 @@ def main():
     print(f'added {len(new)} heroes. Set their class, release month, kit and ratings, then remove needsReview.')
 
 
+def save_beast(im, dest):
+    """Beast art comes as a portrait card (186x250): crop a square near the top,
+    where the head is, instead of squashing the card into a square."""
+    from PIL import Image
+    im = im.convert('RGBA')
+    w, h = im.size
+    side = min(w, h)
+    top = min(h - side, round(h * 0.056))
+    left = (w - side) // 2
+    im.crop((left, top, left + side, top + side)).resize((128, 128), Image.LANCZOS).save(dest, 'WEBP', quality=84, method=6)
+
+
 def sync_beasts(units, write):
     path = ROOT / 'data' / 'beasts.json'
     doc = json.loads(path.read_text())
@@ -129,7 +141,7 @@ def sync_beasts(units, write):
     for b in new:
         try:
             raw = get(f"{CDN}unit_icon_by_id/{b['gameId']}_2x.webp")
-            Image.open(io.BytesIO(raw)).convert('RGBA').resize((128, 128), Image.LANCZOS).save(ROOT / b['img'], 'WEBP', quality=84, method=6)
+            save_beast(Image.open(io.BytesIO(raw)), ROOT / b['img'])
         except Exception as e:
             print(f"  no portrait for {b['name']}: {e}")
     doc['beasts'] += new

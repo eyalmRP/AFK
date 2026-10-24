@@ -900,12 +900,24 @@ table.bank .input, table.bank .select { padding: 3px 6px; min-height: 30px; font
 /* Enemy formation: level, assumed upgrades and beast level in one row. */
 .enemy-opts { display: grid; grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.6fr) minmax(0, 0.8fr); gap: 10px; }
 .enemy-opts .select { width: 100%; }
-.power-line { margin: 0; font-size: 0.9rem; }
+/* Win check at the top of the counter: red and loud when the enemy is out of reach. */
+.verdict { display: flex; flex-direction: column; gap: 3px; padding: 10px 12px; border-radius: var(--r-sm); border: 1px solid var(--line-2); background: var(--surface-2); font-size: 0.92rem; }
+.verdict strong { font-family: var(--font-display); font-weight: 400; font-size: 1.12rem; }
+.verdict .small { color: var(--ink-2); }
+.verdict.good { border-color: color-mix(in srgb, var(--good) 60%, transparent); background: color-mix(in srgb, var(--good) 14%, var(--surface)); }
+.verdict.good strong { color: var(--good); }
+.verdict.close { border-color: color-mix(in srgb, var(--accent) 55%, transparent); background: var(--accent-soft); }
+.verdict.warn { border-color: color-mix(in srgb, #f08a24 70%, transparent); background: color-mix(in srgb, #f08a24 16%, var(--surface)); }
+.verdict.warn strong { color: #f08a24; }
+.verdict.bad { border: 2px solid var(--bad); background: color-mix(in srgb, var(--bad) 22%, var(--surface)); box-shadow: 0 0 0 3px color-mix(in srgb, var(--bad) 18%, transparent); }
+.verdict.bad strong { color: var(--bad); font-size: 1.3rem; }
+.verdict.bad .small { color: var(--ink); }
+.result-card.flash { animation: flash 1.2s ease-out; }
+@keyframes flash { 0% { box-shadow: 0 0 0 3px var(--accent); } 100% { box-shadow: var(--shadow); } }
 @media (max-width: 760px) {
   .enemy-opts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .enemy-opts .field:nth-child(2) { grid-column: 1 / -1; order: 3; }
 }
-.power-line strong { font-family: var(--font-data); font-size: 1.05rem; }
 .clamp-2 { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
 .picker-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(78px, 1fr)); gap: 4px; }
 .picker-grid .hero-tile { width: auto; }
