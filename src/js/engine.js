@@ -58,7 +58,9 @@ export const CR_WEIGHTS = {
   reference: { cr: 5839e6, level: 922, gear: 4, branch: 195, tree: 257 },
   ascension: { Elite: 0.72, 'Elite+': 0.8, Legendary: 0.9, 'Legendary+': 1, Mythic: 1.27, 'Mythic+': 1.37, Ascended: 1.478 },
   si: [[0, 1], [10, 1.05], [20, 1.1], [30, 1.15], [35, 1.2], [40, 1.26], [50, 1.5]],
-  furniture: [[0, 1], [3, 1.03], [7, 1.06], [9, 1.08], [36, 1.2]],
+  // In game, 7 and 9 pieces give nearly the same stats (about +6-7% HP and
+  // +5-6% attack); the 9-piece bonus is mostly a skill upgrade.
+  furniture: [[0, 1], [3, 1.03], [7, 1.07], [9, 1.08], [36, 1.2]],
   engrave: [[0, 1], [30, 1.1], [60, 1.155], [80, 1.21], [100, 1.25]],
   // The first star gives most of the gain; each further star a little.
   firstStar: 0.06,
