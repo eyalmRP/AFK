@@ -623,6 +623,7 @@ input.switch.small:checked::before { transform: translateX(14px); }
 
 .callout { padding: 10px 12px; border-radius: var(--r-sm); background: var(--accent-soft); border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent); font-size: 0.92rem; }
 .callout.info { background: var(--surface-2); border-color: var(--line); }
+.callout.good { background: color-mix(in srgb, var(--good) 13%, var(--surface)); border-color: color-mix(in srgb, var(--good) 55%, transparent); }
 .callout strong { font-weight: 700; }
 .grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 .list { margin: 0; padding-left: 1.2em; display: flex; flex-direction: column; gap: 4px; }

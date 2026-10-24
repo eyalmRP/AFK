@@ -1734,7 +1734,540 @@
    "whatMatters": "Roster depth: three separate PvP teams, and you need to win two of the three fights.",
    "bosses": [],
    "bossesUnknown": [],
-   "community": [],
+   "community": [
+    {
+     "name": "Groody LC Team 1 (filler)",
+     "consensus": "common",
+     "why": "Team 1 of 14 in Groody's Legends Championship guide (Oct 24, 2026, '2nd update'), role: filler. The author calls the guide experimental after Awakened Theowyn's release. Heroes read from the guide's portraits.",
+     "sources": [
+      "https://www.reddit.com/r/afkarena/comments/1xe45yp/legends_championship_kraken_meta_teams_14_teams/"
+     ],
+     "date": "2026-10-24",
+     "dated": false,
+     "heroes": [
+      {
+       "id": "cha-hae-in",
+       "pos": "F1"
+      },
+      {
+       "id": "zolrath",
+       "pos": "F2"
+      },
+      {
+       "id": "sung-jinwoo",
+       "pos": "B1"
+      },
+      {
+       "id": "shuna",
+       "pos": "B2"
+      },
+      {
+       "id": "awakened-pippa",
+       "pos": "B3"
+      }
+     ],
+     "partial": false,
+     "positionsInferred": true,
+     "subs": {},
+     "options": [],
+     "beast": "blazefang",
+     "role": "filler"
+    },
+    {
+     "name": "Groody LC Team 2 (filler)",
+     "consensus": "common",
+     "why": "Team 2 of 14 in Groody's Legends Championship guide (Oct 24, 2026, '2nd update'), role: filler. The author calls the guide experimental after Awakened Theowyn's release. Heroes read from the guide's portraits.",
+     "sources": [
+      "https://www.reddit.com/r/afkarena/comments/1xe45yp/legends_championship_kraken_meta_teams_14_teams/"
+     ],
+     "date": "2026-10-24",
+     "dated": false,
+     "heroes": [
+      {
+       "id": "kregor",
+       "pos": "F1"
+      },
+      {
+       "id": "gorok",
+       "pos": "F2"
+      },
+      {
+       "id": "envydiel",
+       "pos": "B1"
+      },
+      {
+       "id": "selene",
+       "pos": "B2"
+      },
+      {
+       "id": "daemia",
+       "pos": "B3"
+      }
+     ],
+     "partial": false,
+     "positionsInferred": true,
+     "subs": {},
+     "options": [],
+     "beast": "flutterplume-owl",
+     "role": "filler"
+    },
+    {
+     "name": "Groody LC Team 3 (filler)",
+     "consensus": "common",
+     "why": "Team 3 of 14 in Groody's Legends Championship guide (Oct 24, 2026, '2nd update'), role: filler. The author calls the guide experimental after Awakened Theowyn's release. Heroes read from the guide's portraits.",
+     "sources": [
+      "https://www.reddit.com/r/afkarena/comments/1xe45yp/legends_championship_kraken_meta_teams_14_teams/"
+     ],
+     "date": "2026-10-24",
+     "dated": false,
+     "heroes": [
+      {
+       "id": "awakened-lucius",
+       "pos": "F1"
+      },
+      {
+       "id": "jerome",
+       "pos": "F2"
+      },
+      {
+       "id": "aurelia",
+       "pos": "B1"
+      },
+      {
+       "id": "lavatune",
+       "pos": "B2"
+      },
+      {
+       "id": "eugene",
+       "pos": "B3"
+      }
+     ],
+     "partial": false,
+     "positionsInferred": true,
+     "subs": {},
+     "options": [],
+     "beast": "shroom-spooder",
+     "role": "filler"
+    },
+    {
+     "name": "Groody LC Team 4 (semi-carry)",
+     "consensus": "common",
+     "why": "Team 4 of 14 in Groody's Legends Championship guide (Oct 24, 2026, '2nd update'), role: semi-carry. The author calls the guide experimental after Awakened Theowyn's release. Heroes read from the guide's portraits.",
+     "sources": [
+      "https://www.reddit.com/r/afkarena/comments/1xe45yp/legends_championship_kraken_meta_teams_14_teams/"
+     ],
+     "date": "2026-10-24",
+     "dated": false,
+     "heroes": [
+      {
+       "id": "harvey",
+       "pos": "F1"
+      },
+      {
+       "id": "rem",
+       "pos": "F2"
+      },
+      {
+       "id": "hybris",
+       "pos": "B1"
+      },
+      {
+       "id": "valeri",
+       "pos": "B2"
+      },
+      {
+       "id": "velufira",
+       "pos": "B3"
+      }
+     ],
+     "partial": false,
+     "positionsInferred": true,
+     "subs": {},
+     "options": [],
+     "beast": "trickery-chest",
+     "role": "semi-carry"
+    },
+    {
+     "name": "Groody LC Team 5 (filler)",
+     "consensus": "common",
+     "why": "Team 5 of 14 in Groody's Legends Championship guide (Oct 24, 2026, '2nd update'), role: filler. The author calls the guide experimental after Awakened Theowyn's release. Heroes read from the guide's portraits.",
+     "sources": [
+      "https://www.reddit.com/r/afkarena/comments/1xe45yp/legends_championship_kraken_meta_teams_14_teams/"
+     ],
+     "date": "2026-10-24",
+     "dated": false,
+     "heroes": [
+      {
+       "id": "albedo",
+       "pos": "F1"
+      },
+      {
+       "id": "ivan",
+       "pos": "F2"
+      },
+      {
+       "id": "awakened-skriath",
+       "pos": "B1"
+      },
+      {
+       "id": "severin",
+       "pos": "B2"
+      },
+      {
+       "id": "sion",
+       "pos": "B3"
+      }
+     ],
+     "partial": false,
+     "positionsInferred": true,
+     "subs": {},
+     "options": [],
+     "beast": "talismane",
+     "role": "filler"
+    },
+    {
+     "name": "Groody LC Team 6 (hard-carry)",
+     "consensus": "common",
+     "why": "Team 6 of 14 in Groody's Legends Championship guide (Oct 24, 2026, '2nd update'), role: hard-carry. The author calls the guide experimental after Awakened Theowyn's release. Heroes read from the guide's portraits.",
+     "sources": [
+      "https://www.reddit.com/r/afkarena/comments/1xe45yp/legends_championship_kraken_meta_teams_14_teams/"
+     ],
+     "date": "2026-10-24",
+     "dated": false,
+     "heroes": [
+      {
+       "id": "awakened-thoran",
+       "pos": "F1"
+      },
+      {
+       "id": "kafka-hibino",
+       "pos": "F2"
+      },
+      {
+       "id": "shalltear-bloodfallen",
+       "pos": "B1"
+      },
+      {
+       "id": "kikoru-shinomiya",
+       "pos": "B2"
+      },
+      {
+       "id": "flora",
+       "pos": "B3"
+      }
+     ],
+     "partial": false,
+     "positionsInferred": true,
+     "subs": {},
+     "options": [],
+     "beast": "slumber-seal",
+     "role": "hard-carry"
+    },
+    {
+     "name": "Groody LC Team 7 (filler)",
+     "consensus": "common",
+     "why": "Team 7 of 14 in Groody's Legends Championship guide (Oct 24, 2026, '2nd update'), role: filler. The author calls the guide experimental after Awakened Theowyn's release. Heroes read from the guide's portraits.",
+     "sources": [
+      "https://www.reddit.com/r/afkarena/comments/1xe45yp/legends_championship_kraken_meta_teams_14_teams/"
+     ],
+     "date": "2026-10-24",
+     "dated": false,
+     "heroes": [
+      {
+       "id": "alna",
+       "pos": "F1"
+      },
+      {
+       "id": "kaelon",
+       "pos": "F2"
+      },
+      {
+       "id": "liberta",
+       "pos": "B1"
+      },
+      {
+       "id": "melion",
+       "pos": "B2"
+      },
+      {
+       "id": "lucilla",
+       "pos": "B3"
+      }
+     ],
+     "partial": false,
+     "positionsInferred": true,
+     "subs": {},
+     "options": [],
+     "beast": "ice-crown",
+     "role": "filler"
+    },
+    {
+     "name": "Groody LC Team 8 (semi-carry)",
+     "consensus": "common",
+     "why": "Team 8 of 14 in Groody's Legends Championship guide (Oct 24, 2026, '2nd update'), role: semi-carry. The author calls the guide experimental after Awakened Theowyn's release. Heroes read from the guide's portraits.",
+     "sources": [
+      "https://www.reddit.com/r/afkarena/comments/1xe45yp/legends_championship_kraken_meta_teams_14_teams/"
+     ],
+     "date": "2026-10-24",
+     "dated": false,
+     "heroes": [
+      {
+       "id": "alvida",
+       "pos": "F1"
+      },
+      {
+       "id": "haelia",
+       "pos": "F2"
+      },
+      {
+       "id": "awakened-athalia",
+       "pos": "B1"
+      },
+      {
+       "id": "awakened-lyca",
+       "pos": "B2"
+      },
+      {
+       "id": "lysander",
+       "pos": "B3"
+      }
+     ],
+     "partial": false,
+     "positionsInferred": true,
+     "subs": {},
+     "options": [],
+     "beast": "pearlcrest-ibis",
+     "role": "semi-carry"
+    },
+    {
+     "name": "Groody LC Team 9 (filler)",
+     "consensus": "common",
+     "why": "Team 9 of 14 in Groody's Legends Championship guide (Oct 24, 2026, '2nd update'), role: filler. The author calls the guide experimental after Awakened Theowyn's release. Heroes read from the guide's portraits.",
+     "sources": [
+      "https://www.reddit.com/r/afkarena/comments/1xe45yp/legends_championship_kraken_meta_teams_14_teams/"
+     ],
+     "date": "2026-10-24",
+     "dated": false,
+     "heroes": [
+      {
+       "id": "begris",
+       "pos": "F1"
+      },
+      {
+       "id": "awakened-eironn",
+       "pos": "F2"
+      },
+      {
+       "id": "misha",
+       "pos": "B1"
+      },
+      {
+       "id": "judy-punch",
+       "pos": "B2"
+      },
+      {
+       "id": "knox",
+       "pos": "B3"
+      }
+     ],
+     "partial": false,
+     "positionsInferred": true,
+     "subs": {},
+     "options": [],
+     "beast": "fox-fatale",
+     "role": "filler"
+    },
+    {
+     "name": "Groody LC Team 10 (hard-carry)",
+     "consensus": "common",
+     "why": "Team 10 of 14 in Groody's Legends Championship guide (Oct 24, 2026, '2nd update'), role: hard-carry. The author calls the guide experimental after Awakened Theowyn's release. Heroes read from the guide's portraits.",
+     "sources": [
+      "https://www.reddit.com/r/afkarena/comments/1xe45yp/legends_championship_kraken_meta_teams_14_teams/"
+     ],
+     "date": "2026-10-24",
+     "dated": false,
+     "heroes": [
+      {
+       "id": "awakened-shemira",
+       "pos": "F1"
+      },
+      {
+       "id": "leviathan",
+       "pos": "F2"
+      },
+      {
+       "id": "athena",
+       "pos": "B1"
+      },
+      {
+       "id": "medusa",
+       "pos": "B2"
+      },
+      {
+       "id": "awakened-eluard",
+       "pos": "B3"
+      }
+     ],
+     "partial": false,
+     "positionsInferred": true,
+     "subs": {},
+     "options": [],
+     "beast": "nightfall-pegasus",
+     "role": "hard-carry"
+    },
+    {
+     "name": "Groody LC Team 11 (MVP team)",
+     "consensus": "common",
+     "why": "Team 11 of 14 in Groody's Legends Championship guide (Oct 24, 2026, '2nd update'), role: MVP team. The author calls the guide experimental after Awakened Theowyn's release. Heroes read from the guide's portraits.",
+     "sources": [
+      "https://www.reddit.com/r/afkarena/comments/1xe45yp/legends_championship_kraken_meta_teams_14_teams/"
+     ],
+     "date": "2026-10-24",
+     "dated": false,
+     "heroes": [
+      {
+       "id": "misfortis",
+       "pos": "F1"
+      },
+      {
+       "id": "hildwin",
+       "pos": "F2"
+      },
+      {
+       "id": "dracula",
+       "pos": "B1"
+      },
+      {
+       "id": "awakened-theowyn",
+       "pos": "B2"
+      },
+      {
+       "id": "gavus",
+       "pos": "B3"
+      }
+     ],
+     "partial": false,
+     "positionsInferred": true,
+     "subs": {},
+     "options": [],
+     "beast": "twinlum-spirit",
+     "role": "MVP team"
+    },
+    {
+     "name": "Groody LC Team 12 (anti-swipe)",
+     "consensus": "common",
+     "why": "Team 12 of 14 in Groody's Legends Championship guide (Oct 24, 2026, '2nd update'), role: anti-swipe. The author calls the guide experimental after Awakened Theowyn's release. Heroes read from the guide's portraits.",
+     "sources": [
+      "https://www.reddit.com/r/afkarena/comments/1xe45yp/legends_championship_kraken_meta_teams_14_teams/"
+     ],
+     "date": "2026-10-24",
+     "dated": false,
+     "heroes": [
+      {
+       "id": "maetria",
+       "pos": "F1"
+      },
+      {
+       "id": "icariel",
+       "pos": "F2"
+      },
+      {
+       "id": "serenmira",
+       "pos": "B1"
+      },
+      {
+       "id": "mira",
+       "pos": "B2"
+      },
+      {
+       "id": "zohra",
+       "pos": "B3"
+      }
+     ],
+     "partial": false,
+     "positionsInferred": true,
+     "subs": {},
+     "options": [],
+     "beast": "count-snickerfang",
+     "role": "anti-swipe"
+    },
+    {
+     "name": "Groody LC Team 13 (MVP team)",
+     "consensus": "common",
+     "why": "Team 13 of 14 in Groody's Legends Championship guide (Oct 24, 2026, '2nd update'), role: MVP team. The author calls the guide experimental after Awakened Theowyn's release. Heroes read from the guide's portraits.",
+     "sources": [
+      "https://www.reddit.com/r/afkarena/comments/1xe45yp/legends_championship_kraken_meta_teams_14_teams/"
+     ],
+     "date": "2026-10-24",
+     "dated": false,
+     "heroes": [
+      {
+       "id": "awakened-estrilda",
+       "pos": "F1"
+      },
+      {
+       "id": "kyno",
+       "pos": "F2"
+      },
+      {
+       "id": "odysseus",
+       "pos": "B1"
+      },
+      {
+       "id": "thalassa",
+       "pos": "B2"
+      },
+      {
+       "id": "lan",
+       "pos": "B3"
+      }
+     ],
+     "partial": false,
+     "positionsInferred": true,
+     "subs": {},
+     "options": [],
+     "beast": "treatspector",
+     "role": "MVP team"
+    },
+    {
+     "name": "Groody LC Team 14 (carry)",
+     "consensus": "common",
+     "why": "Team 14 of 14 in Groody's Legends Championship guide (Oct 24, 2026, '2nd update'), role: carry. The author calls the guide experimental after Awakened Theowyn's release. Heroes read from the guide's portraits.",
+     "sources": [
+      "https://www.reddit.com/r/afkarena/comments/1xe45yp/legends_championship_kraken_meta_teams_14_teams/"
+     ],
+     "date": "2026-10-24",
+     "dated": false,
+     "heroes": [
+      {
+       "id": "saitama",
+       "pos": "F1"
+      },
+      {
+       "id": "elthara",
+       "pos": "F2"
+      },
+      {
+       "id": "skylan",
+       "pos": "B1"
+      },
+      {
+       "id": "awakened-fawkes",
+       "pos": "B2"
+      },
+      {
+       "id": "gorren",
+       "pos": "B3"
+      }
+     ],
+     "partial": false,
+     "positionsInferred": true,
+     "subs": {},
+     "options": [],
+     "beast": "pandy-dumpty",
+     "role": "carry"
+    }
+   ],
    "ai": [
     {
      "name": "Team 1",
@@ -2690,5 +3223,55 @@
   "Low-reliability sources (Driffle, FindingDulcinea, Rosenberry Rooms, PropelRC, Vintage Vinyl News) carry 'October 2026' titles with older metadata, and some list non-AFK-Arena content. Their teams are marked niche.",
   "Faction tower restrictions and the Legends Championship 3-team rule come from general game knowledge and were not re-verified this session.",
   "Ids for the new heroes 'kaelon', 'elthara', 'marcille', 'tornado' and 'odysseus' are taken from afk.guide comp names. Their full names and factions were not confirmed."
+ ],
+ "pvpMatchups": [
+  {
+   "mode": "legends-championship",
+   "vsName": "Groody's MVP team (LC Team 13)",
+   "vs": [
+    "awakened-estrilda",
+    "kyno",
+    "odysseus",
+    "thalassa",
+    "lan"
+   ],
+   "beatenBy": [
+    {
+     "name": "Groody LC Team 10",
+     "heroes": [
+      "awakened-shemira",
+      "leviathan",
+      "athena",
+      "medusa",
+      "awakened-eluard"
+     ]
+    },
+    {
+     "name": "Groody LC Team 11",
+     "heroes": [
+      "misfortis",
+      "hildwin",
+      "dracula",
+      "awakened-theowyn",
+      "gavus"
+     ]
+    },
+    {
+     "name": "Groody LC Team 12",
+     "heroes": [
+      "maetria",
+      "icariel",
+      "serenmira",
+      "mira",
+      "zohra"
+     ]
+    }
+   ],
+   "claim": "Asked 'Which team has a chance to beat the MVP team 13?', the guide's author answered '10 11 and 12'.",
+   "who": "u/GroodyLeVrai",
+   "source": "r/afkarena - Groody's Legends Championship guide, Oct 24 2026",
+   "url": "https://www.reddit.com/r/afkarena/comments/1xe45yp/legends_championship_kraken_meta_teams_14_teams/",
+   "date": "2026-10-24"
+  }
  ]
 }

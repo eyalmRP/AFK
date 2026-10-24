@@ -100,7 +100,9 @@ function context() {
     mode: data.modeById.get(ui.modeId),
     category: data.modeById.get(ui.modeId)?.category || 'pvp',
     enemy: enemyIds(),
-    combos: [...(data.combos.community || []), ...(data.combos.ai || [])],
+    // AI combos are pairs this engine keeps picking; scoring them would reward its own past picks.
+    combos: data.combos.community || [],
+    matchups: data.matchups,
     archetypes: data.archetypes,
     elderTree: ui.pool === 'mine' && ui.weigh === 'upgrades' ? bank.settings.elderTree : null,
     power: ui.pool === 'mine' && ui.weigh === 'power' ? new Map(ownedIds().map((id) => [id, heroCR(getHero(id))])) : null,
@@ -180,7 +182,11 @@ function render() {
           <button class="btn" type="button" data-act="clear">Clear</button>
           <span class="small muted" id="ct-status"></span>
         </div>
-        ${enemyIds().length ? `<div class="chips">${threatChips(ctx)}</div>${factionAdvice(ctx)}${ctx.enemyArchetypes.length ? `<p class="small"><span class="muted">Recognised comp:</span> ${ctx.enemyArchetypes.map((a) => esc(a.name)).join(', ')}</p>` : ''}` : '<p class="small muted">Select a slot to add an enemy hero.</p>'}
+        ${enemyIds().length ? `<div class="chips">${threatChips(ctx)}</div>${factionAdvice(ctx)}${ctx.enemyArchetypes.length ? `<p class="small"><span class="muted">Recognised comp:</span> ${ctx.enemyArchetypes.map((a) => esc(a.name)).join(', ')}</p>` : ''}${knownLineup(ctx)}${
+          ctx.enemyMatchups.length
+            ? `<p class="small"><span class="muted">Known answer:</span> ${ctx.enemyMatchups.map((m) => `${esc(m.vsName)} loses to ${esc(m.beatenBy.map((t) => t.name).join(', '))} (<a href="${esc(m.url)}" target="_blank" rel="noopener">source</a>)`).join('; ')}</p>`
+            : ''
+        }` : '<p class="small muted">Select a slot to add an enemy hero.</p>'}
       </section>
       <section><div id="ct-result"></div><div id="ct-claude"></div></section>
     </div>
@@ -224,7 +230,12 @@ function renderResult(ctx) {
     ${counterKnowledge(ctx) ? '' : `<p class="callout small"><strong>No counter data for these enemies yet.</strong> The sources this week don't say which heroes beat ${esc(ctx.enemy.map((h) => h.name).join(', '))}, so this is your strongest team for ${esc(ctx.mode?.name || 'this mode')}, adjusted for faction advantage and positions. Ask Claude below for a matchup-based counter.</p>`}
     <article class="result-card">
       ${verdict(Object.values(s.layout))}
-      <header><h4>${esc(s.template?.name || 'Counter formation')}</h4><span class="score">${s.total.toFixed(1)} pts</span></header>
+      ${
+        s.beats
+          ? `<p class="callout good small"><strong>Built on ${esc(s.beats.name)}</strong>${s.beats.overlap < s.beats.size ? ` (${s.beats.overlap} of its ${s.beats.size} heroes: ${swapText(s.beats.heroes, Object.values(s.layout))})` : ''}, which beats ${esc(s.beats.vsName)}: ${esc(s.beats.claim || '')} <a href="${esc(s.beats.url)}" target="_blank" rel="noopener">Source</a>, ${esc(s.beats.date || '')}.</p>`
+          : ''
+      }
+      <header><h4>${esc(s.beats?.name || s.template?.name || 'Counter formation')}</h4><span class="score">${s.total.toFixed(1)} pts</span></header>
       ${board({ slots: s.layout, showBank: ui.pool === 'mine', beast: bp.id })}
       ${bp.html}
       <ul class="reasons">${reasons}</ul>
@@ -267,12 +278,36 @@ function verdict(ids) {
     <span class="small">Team power ≈ <b class="num">${fmtCR(ours)}</b> vs enemy ≈ <b class="num">${fmtCR(theirs)}</b> (estimates; enemy assumed ${esc(ENEMY_BUILDS[ui.enemyBuild]?.label || '')} at level ${enemyLevel()})</span></div>`;
 }
 
+// "Sung Jinwoo instead of Leviathan": how a lineup differs from the source's.
+function swapText(source, team) {
+  const out = source.filter((id) => !team.includes(id)).map((id) => getHero(id)?.name || id);
+  const inn = team.filter((id) => !source.includes(id)).map((id) => getHero(id)?.name || id);
+  if (!out.length) return 'all of it';
+  const why = out.map((n, i) => { const id = source.filter((x) => !team.includes(x))[i]; return bank.heroes[id]?.owned ? `${n} (your copy is less built)` : `${n} (not owned)`; });
+  return `${inn.join(', ')} instead of ${why.join(', ')}`;
+}
+
+// The enemy matches a community lineup from a PvP mode (4+ of its heroes).
+function knownLineup(ctx) {
+  const ids = new Set(ctx.enemy.map((h) => h.id));
+  const hits = [];
+  for (const m of data.modes.filter((x) => x.category === 'pvp')) {
+    for (const t of m.community || []) {
+      const tIds = (t.heroes || []).map((x) => x.id);
+      const n = tIds.filter((id) => ids.has(id)).length;
+      if (tIds.length >= 4 && n >= 4) hits.push(`${t.name}${n < tIds.length ? ` (${n}/${tIds.length})` : ''}`);
+    }
+  }
+  return hits.length ? `<p class="small"><span class="muted">Matches:</span> ${hits.map(esc).join(', ')}</p>` : '';
+}
+
 // Whether the data knows anything about beating this enemy: a hero listed as
 // countering one of them, or a recognised enemy comp with known answers.
 function counterKnowledge(ctx) {
   const ids = new Set(ctx.enemy.map((h) => h.id));
   if (ctx.enemy.some((h) => (h.counteredBy || []).length)) return true;
   if (ctx.enemyArchetypes.some((a) => (a.counteredBy || []).length)) return true;
+  if (ctx.enemyMatchups.length) return true;
   return data.heroes.some((h) => (h.counters || []).some((c) => ids.has(c)));
 }
 

@@ -76,6 +76,16 @@ for (const m of modesFile.modes) {
 }
 for (const side of ['community', 'ai']) (modesFile.combos?.[side] || []).forEach((c, i) => c.heroes.forEach((id) => known(id, `combo ${side}[${i}]`)));
 for (const a of modesFile.pvpArchetypes || []) [...(a.core || []), ...(a.counteredBy || [])].forEach((id) => known(id, `archetype ${a.name}`));
+// Team-vs-team results: who the source says beats a lineup. Each needs a source.
+for (const [i, mu] of (modesFile.pvpMatchups || []).entries()) {
+  const where = `pvpMatchups[${i}]`;
+  (mu.vs || []).forEach((id) => known(id, where + ' vs'));
+  if (!(mu.vs || []).length) err(`${where}: no enemy lineup`);
+  if (!(mu.beatenBy || []).length) err(`${where}: no winning lineup`);
+  for (const t of mu.beatenBy || []) (t.heroes || []).forEach((id) => known(id, `${where} ${t.name}`));
+  if (!/^https?:\/\//.test(mu.url || '')) err(`${where}: no source URL`);
+  if (!/^\d{4}-\d{2}(-\d{2})?$/.test(mu.date || '')) err(`${where}: date must be YYYY-MM or YYYY-MM-DD`);
+}
 for (const id of meta.mustBuild || []) known(id, 'mustBuild');
 if (!/^\d{4}-\d{2}-\d{2}$/.test(meta.asOf || '')) err('meta.asOf must be YYYY-MM-DD');
 if (meta.nextUpdate && meta.nextUpdate <= meta.asOf) err('meta.nextUpdate must be after asOf');

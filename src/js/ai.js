@@ -289,6 +289,7 @@ Mode: ${modeBrief(mode)}
 
 Enemy formation:
 ${enemy.join('\n')}
+${(data.matchups || []).length ? `Known team-vs-team results from community guides (use them when the enemy matches): ${data.matchups.map((m) => `${m.vsName} [${m.vs.join(', ')}] loses to ${m.beatenBy.map((t) => `${t.name} [${t.heroes.join(', ')}]`).join(' or ')} (${m.date})`).join('; ')}.` : ''}
 ${enemyInfo ? `Enemy heroes are level ${enemyInfo.level}; their upgrades are not visible, so assume Ascended 5 stars with ${enemyInfo.build}. Enemy beast: ${enemyInfo.beast ? `${enemyInfo.beast} at level ${enemyInfo.beastLevel}` : 'unknown'}.` : ''}
 
 Owned heroes (id | name | faction class | tier ratings | player's investment | roles | kit):

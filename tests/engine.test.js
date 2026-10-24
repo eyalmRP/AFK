@@ -184,3 +184,19 @@ test('weighing by power ranks a hero by its combat rating against the strongest 
   assert.equal(value(at(10e9)), heroValue(ctxFor('arena-of-heroes'), ids[0]).value);
   assert.equal(value(at(1)), value(at(2)));
 });
+
+test('a lineup the sources say beats the enemy is preferred and named', () => {
+  const vs = ['awakened-estrilda', 'kyno', 'odysseus', 'thalassa', 'lan'];
+  const win = ['awakened-shemira', 'leviathan', 'athena', 'medusa', 'awakened-eluard'];
+  const matchups = [{ vsName: 'Test MVP team', vs, beatenBy: [{ name: 'Test winner', heroes: win }], url: 'https://example.com', date: '2026-10-24' }];
+  const mode = data.modeById.get('arena-of-heroes');
+  const pool = all.filter((id) => !vs.includes(id));
+  const ctx = makeContext({ heroes: data.heroById, mode, category: 'pvp', enemy: vs, archetypes: data.archetypes, matchups });
+  assert.equal(ctx.enemyMatchups.length, 1);
+  const t = buildTeam(ctx, pool);
+  assert.equal(t.score.beats?.name, 'Test winner');
+  assert.ok(win.filter((id) => t.ids.includes(id)).length >= 4);
+  // An unrelated enemy does not trigger it.
+  const other = makeContext({ heroes: data.heroById, mode, category: 'pvp', enemy: ['liberta', 'ivan', 'daemia'], matchups });
+  assert.equal(other.enemyMatchups.length, 0);
+});

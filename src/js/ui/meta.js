@@ -313,7 +313,7 @@ function communityCard(t) {
           .filter(Boolean)
           .map((h) => heroTile(h, { size: 48 }))
           .join('')}</div>`
-      : board({ slots: slotsFromList(t.heroes), emptyLabel: '?' });
+      : board({ slots: slotsFromList(t.heroes), emptyLabel: '?', beast: t.beast && data.beastById?.get(t.beast) ? t.beast : null });
   return `<div class="team-card">
     <h5>${esc(t.name)} <span class="tag ${cls}">${label}</span>${flags}</h5>
     ${body}

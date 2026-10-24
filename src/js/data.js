@@ -111,6 +111,7 @@ const state = {
   modeById: new Map(),
   combos: { community: [], ai: [] },
   archetypes: [],
+  matchups: [],
 };
 
 async function loadJson(path) {
@@ -143,6 +144,7 @@ export function setData({ meta, heroes, artifacts, modes, beasts = { beasts: [] 
   state.modeById = new Map(state.modes.map((m) => [m.id, m]));
   state.combos = modes.combos || { community: [], ai: [] };
   state.archetypes = modes.pvpArchetypes || [];
+  state.matchups = modes.pvpMatchups || [];
   state.codes = codes;
   state.beasts = beasts.beasts || [];
   state.beastById = new Map(state.beasts.map((b) => [b.id, b]));

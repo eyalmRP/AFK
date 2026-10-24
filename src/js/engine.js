@@ -189,7 +189,9 @@ export function elderTreeFactors(tree) {
 // `power` (optional) maps hero id to its estimated combat rating; with it, a
 // hero's strength is weighed by its rating against the pool's strongest five
 // instead of by its upgrade levels (see heroValue).
-export function makeContext({ heroes, entries = null, mode = null, category, enemy = [], combos = [], archetypes = [], elderTree = null, power = null }) {
+// `matchups` are team-vs-team results from the sources (modes.json
+// pvpMatchups): a lineup and the lineups said to beat it.
+export function makeContext({ heroes, entries = null, mode = null, category, enemy = [], combos = [], archetypes = [], elderTree = null, power = null, matchups = [] }) {
   const cat = category || mode?.category || 'pve';
   const ctx = {
     heroes,
@@ -212,6 +214,7 @@ export function makeContext({ heroes, entries = null, mode = null, category, ene
     if (!ctx.powerRef) ctx.power = null;
   }
   ctx.enemyArchetypes = detectArchetypes(ctx.enemy, archetypes);
+  ctx.enemyMatchups = detectMatchups(ctx.enemy, matchups);
   ctx.enemyThreats = enemyThreats(ctx.enemy);
   return ctx;
 }
@@ -225,6 +228,15 @@ export function detectArchetypes(enemyHeroes, archetypes) {
     if (core.length && hit.length >= Math.min(2, core.length)) found.push({ ...a, hit });
   }
   return found;
+}
+
+// Results that apply to this enemy: it shares at least three heroes (all, for
+// a smaller lineup) with a lineup the source says can be beaten.
+export function detectMatchups(enemyHeroes, matchups) {
+  const ids = new Set(enemyHeroes.map((h) => h.id));
+  return (matchups || [])
+    .map((m) => ({ ...m, overlap: (m.vs || []).filter((id) => ids.has(id)).length }))
+    .filter((m) => m.overlap >= Math.min(3, (m.vs || []).length));
 }
 
 function enemyThreats(enemyHeroes) {
@@ -315,6 +327,13 @@ function matchup(ctx, h) {
       reasons.push(`answers enemy ${a.name}`);
     }
   }
+  for (const m of ctx.enemyMatchups) {
+    const t = (m.beatenBy || []).find((x) => (x.heroes || []).includes(h.id));
+    if (t) {
+      score += 1.0;
+      reasons.push(`in ${t.name}, which beats ${m.vsName}`);
+    }
+  }
   const t = ctx.enemyThreats;
   if (t.burst >= 2 && ['shielder', 'revive', 'immunity'].some((r) => roles.has(r))) {
     score += 0.6;
@@ -403,7 +422,17 @@ export function scoreTeam(ctx, ids) {
   }
   if (template) total += template.bonus;
 
-  return { total, members, synergies, combos, coverage, layout: layout.slots, template };
+  // A lineup the sources say beats this enemy: the strongest signal there is.
+  let beats = null;
+  for (const m of ctx.enemyMatchups || []) {
+    for (const t of m.beatenBy || []) {
+      const overlap = (t.heroes || []).filter((id) => idSet.has(id)).length;
+      if (overlap >= Math.min(4, (t.heroes || []).length) && (!beats || overlap > beats.overlap)) beats = { name: t.name, vsName: m.vsName, heroes: t.heroes, overlap, size: t.heroes.length, claim: m.claim, url: m.url, date: m.date };
+    }
+  }
+  if (beats) total += 2 + beats.overlap;
+
+  return { total, members, synergies, combos, coverage, layout: layout.slots, template, beats };
 }
 
 // Two front slots, three back slots. Front goes to the sturdiest heroes.
@@ -474,7 +503,8 @@ function improveBySwaps(ctx, team, pool, maxPasses = 4) {
 function templateSeeds(ctx, pool) {
   const owned = new Set(pool);
   const seeds = [];
-  const teams = [...(ctx.mode?.community || []), ...(ctx.mode?.ai || [])];
+  const winners = (ctx.enemyMatchups || []).flatMap((m) => (m.beatenBy || []).map((t) => ({ name: t.name, heroes: (t.heroes || []).map((id) => ({ id })) })));
+  const teams = [...winners, ...(ctx.mode?.community || []), ...(ctx.mode?.ai || [])];
   for (const t of teams) {
     const picked = [];
     const swaps = [];
@@ -509,6 +539,7 @@ export function shortlist(ctx, pool, k = 30) {
   for (const t of [...(ctx.mode?.community || []), ...(ctx.mode?.ai || [])]) {
     for (const x of t.heroes || []) if (inPool.has(x.id)) keep.add(x.id);
   }
+  for (const m of ctx.enemyMatchups || []) for (const t of m.beatenBy || []) for (const id of t.heroes || []) if (inPool.has(id)) keep.add(id);
   return [...keep];
 }
 

@@ -77,7 +77,8 @@ function context() {
     heroes: data.heroById,
     entries: ui.pool === 'mine' && ui.weigh !== 'tier' ? bank.heroes : null,
     mode: mode(),
-    combos: [...(data.combos.community || []), ...(data.combos.ai || [])],
+    // AI combos are pairs this engine keeps picking; scoring them would reward its own past picks.
+    combos: data.combos.community || [],
     archetypes: data.archetypes,
     elderTree: ui.pool === 'mine' && ui.weigh === 'upgrades' ? bank.settings.elderTree : null,
     power: ui.pool === 'mine' && ui.weigh === 'power' ? new Map(ownedIds().map((id) => [id, heroCR(getHero(id))])) : null,
