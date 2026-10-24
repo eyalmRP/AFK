@@ -35,10 +35,12 @@ export const ICON = {
   stop: svg('<rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor"/>'),
 };
 
-// Faceted stars in the game's three colours: gold (1-5), red (6-10), white (11-15).
-// Ten facets from the centre, lit from the top, drawn once as a sprite and reused with <use>.
+// Faceted stars in the game's four engraving colours: gold (below E30),
+// orange (E30), red (E60) and white (E80). Ten facets from the centre, lit from
+// the top, drawn once as a sprite and reused with <use>.
 const GEM_COLORS = {
-  gold: ['#fff1a6', '#f6b62a', '#c47a06', '#5a3000'],
+  gold: ['#fff6b8', '#f7cb3c', '#cf9412', '#5a3800'],
+  orange: ['#ffd49a', '#f4952c', '#c15a0b', '#552300'],
   red: ['#ffb3bc', '#f2324f', '#a80d2a', '#4d0010'],
   white: ['#ffffff', '#e9e5ff', '#b7acef', '#4a3a9e'],
 };

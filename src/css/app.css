@@ -772,32 +772,56 @@ a.btn { text-decoration: none; }
 .bank-grid.z3 { grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 16px 10px; }
 .bank-grid.z4 { grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; }
 [data-card] { cursor: pointer; -webkit-tap-highlight-color: transparent; }
-.fr { position: relative; display: block; aspect-ratio: 1; border-radius: 12px; border: 3px solid var(--fr, var(--line-2)); background: var(--surface-2); }
-.fr[data-asc^='Elite'] { --fr: var(--asc-elite); }
-.fr[data-asc^='Legendary'] { --fr: var(--asc-legendary); }
-.fr[data-asc^='Mythic'] { --fr: var(--asc-mythic); }
-.fr[data-asc='Ascended'] { --fr: var(--asc-ascended); box-shadow: 0 0 0 1px color-mix(in srgb, var(--star) 70%, transparent), 0 0 10px color-mix(in srgb, var(--star) 35%, transparent); }
-.fr[data-asc$='+'] { border-width: 4px; border-style: double; }
-.fr-art { position: absolute; inset: 0; border-radius: 9px; overflow: hidden; display: grid; place-items: center; }
+.fr {
+  /* Ascension frames as in the card guide: wide two-tone diagonal stripes in
+     the tier colour, the top-left and bottom-right corners rounded, and gold
+     corner caps with a gem on the "+" tiers (emblem.js). */
+  --f1: #7d8496;
+  --f2: #697083;
+  position: relative;
+  display: block;
+  aspect-ratio: 1;
+  max-width: 100%;
+  container-type: inline-size;
+  border-radius: 23% 4% 25% 4%;
+  background: repeating-linear-gradient(135deg, var(--f1) 0 6%, var(--f2) 6% 12%);
+}
+.fr[data-asc^='Elite'] { --f1: #9a55ea; --f2: #7f7be4; }
+.fr[data-asc^='Legendary'] { --f1: #f2c63c; --f2: #f7dc80; }
+.fr[data-asc^='Mythic'] { --f1: #b52f3c; --f2: #cb6672; }
+.fr[data-asc='Ascended'] { --f1: #ffffff; --f2: #d8cff6; box-shadow: 0 0 9px rgb(170 150 255 / 35%); }
+.fr-cap { position: absolute; z-index: 2; width: 18%; height: 18%; pointer-events: none; filter: drop-shadow(0 1px 1px rgb(0 0 0 / 45%)); }
+.fr-cap.tr { top: 0; right: 0; }
+.fr-cap.bl { bottom: 0; left: 0; transform: rotate(180deg); }
+.fr-art { position: absolute; inset: max(2px, 4.6cqw); border-radius: 20% 2% 22% 2%; overflow: hidden; display: grid; place-items: center; background: var(--surface-2); }
 .fr-art img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .fr-art .initials, .big-art .initials { font-family: var(--font-display); font-size: 1.4rem; color: var(--ink-2); }
 [data-owned='false'] .fr-art img, [data-owned='false'] .big-art img { filter: grayscale(0.9); opacity: 0.55; }
-.fr-fac { position: absolute; top: -6px; left: -6px; width: 34px; height: 34px; z-index: 1; }
-.fr-fac .gi { width: 100%; height: 100%; filter: drop-shadow(0 1px 2px rgb(0 0 0 / 70%)); }
+/* Faction emblem with its signature item ring and furniture pendant (emblem.js). */
+.emb { position: absolute; display: block; width: var(--es, 30px); height: var(--es, 30px); z-index: 1; }
+.emb .gi { position: relative; width: 100%; height: 100%; filter: drop-shadow(0 1px 2px rgb(0 0 0 / 70%)); }
+/* The ornament's viewBox (emblem.js) is -8..108 x 0..128 units around an icon 52 units wide at 24..76. */
+.emb-orn { position: absolute; left: calc(var(--es, 30px) * -0.6154); top: calc(var(--es, 30px) * -0.4615); width: calc(var(--es, 30px) * 2.2308); height: calc(var(--es, 30px) * 2.4615); overflow: visible; pointer-events: none; filter: drop-shadow(0 1px 1px rgb(0 0 0 / 40%)); }
+/* Icon 18% of the tile, centred in the frame's rounded top-left corner, as on the game's cards. */
+.fr-fac { --es: 20cqw; top: 4.5cqw; left: 4.5cqw; }
+/* The level sits above the gold corner cap of a "+" tier. */
+.fr:has(.fr-cap) .fr-lvl { z-index: 3; right: 9cqw; }
 /* "Lvl 922" in gold with a dark outline, beside the emblem, like the game. */
-.fr-lvl { position: absolute; left: 29px; top: 2px; z-index: 1; font-family: var(--font-data); font-weight: 700; font-size: 0.98rem; line-height: 1.15; white-space: nowrap; color: #fbe08a; font-variant-numeric: tabular-nums; text-shadow: 1px 1px 0 #2b1c06, -1px -1px 0 #2b1c06, 1px -1px 0 #2b1c06, -1px 1px 0 #2b1c06, 0 1px 0 #2b1c06, 0 -1px 0 #2b1c06, 1px 0 0 #2b1c06, -1px 0 0 #2b1c06, 0 2px 4px rgb(0 0 0 / 70%); }
+.fr-lvl { position: absolute; right: 6px; top: 3px; z-index: 1; font-family: var(--font-data); font-weight: 700; font-size: 0.98rem; line-height: 1.15; white-space: nowrap; color: #fbe08a; font-variant-numeric: tabular-nums; text-shadow: 1px 1px 0 #2b1c06, -1px -1px 0 #2b1c06, 1px -1px 0 #2b1c06, -1px 1px 0 #2b1c06, 0 1px 0 #2b1c06, 0 -1px 0 #2b1c06, 1px 0 0 #2b1c06, -1px 0 0 #2b1c06, 0 2px 4px rgb(0 0 0 / 70%); }
 .fr-lvl .lv-l { font-size: 0.86em; }
 .fr-lvl.own-level { color: #a6e6ff; }
 .own-level { box-shadow: inset 0 0 0 1px var(--accent); }
 .big-lvl.own-level { color: var(--accent); }
 /* Stars sit in a dark band across the bottom of the art. */
 /* Big overlapping stars on the bottom edge of the frame, over a soft dark band. */
-.fr-band { position: absolute; left: 0; right: 0; bottom: 0; height: 34%; display: flex; align-items: flex-end; justify-content: center; border-radius: 0 0 9px 9px; background: linear-gradient(180deg, transparent, rgb(6 8 14 / 55%) 60%, rgb(6 8 14 / 82%)); pointer-events: none; }
+.fr-band { position: absolute; left: 0; right: 0; bottom: 0; height: 34%; display: flex; align-items: flex-end; justify-content: center; pointer-events: none; }
+/* The dark band behind the stars lives inside the art so it follows the curved corner. */
+.fr:has(.fr-band) .fr-art::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 34%; background: linear-gradient(180deg, transparent, rgb(6 8 14 / 55%) 60%, rgb(6 8 14 / 82%)); }
 .fr-band .star-row { margin: 0 0 -8px; --ss: 26px !important; filter: drop-shadow(0 1px 1px rgb(0 0 0 / 85%)); }
 .fr-band .star-row svg + svg { margin-left: calc(var(--ss) * -0.3); }
 .fr-band .star-row.white { filter: drop-shadow(0 0 3px rgb(170 150 255 / 85%)) drop-shadow(0 1px 1px rgb(0 0 0 / 85%)); }
 /* White-star heroes get the game's lavender frame. */
-.fr[data-st='white'] { --fr: #b9aff3; box-shadow: 0 0 0 1px rgb(228 222 255 / 70%), 0 0 12px rgb(150 130 255 / 40%); }
+
 .bank-tile { display: flex; flex-direction: column; gap: 14px; min-width: 0; text-align: center; }
 .bank-tile .nm { font-size: 0.84rem; font-weight: 600; line-height: 1.15; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .pick, .own-plus, .own-mark { position: absolute; top: -7px; right: -7px; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; padding: 0; z-index: 1; }
@@ -808,20 +832,14 @@ a.btn { text-decoration: none; }
 .own-mark { background: #ead9a6; color: #2a2010; box-shadow: 0 1px 4px rgb(0 0 0 / 45%); }
 .bank-tile[aria-selected='true'] .fr, .bank-row[aria-selected='true'] .fr { outline: 3px solid var(--accent); outline-offset: 2px; }
 /* zoom steps */
-.z1 .fr { border-width: 2px; border-radius: 9px; }
-.z1 .fr[data-asc$='+'] { border-width: 3px; }
-.z1 .fr-art { border-radius: 7px; }
-.z1 .fr-fac { width: 21px; height: 21px; top: -4px; left: -4px; }
-.z1 .fr-lvl { font-size: 0.68rem; left: 17px; top: 1px; }
+.z1 .fr-lvl { font-size: 0.68rem; right: 3px; top: 1px; }
 .z1 .fr-lvl .lv-l { display: none; }
-.z1 .fr-band { border-radius: 0 0 7px 7px; }
 .z1 .fr-band .star-row { --ss: 14.5px !important; margin-bottom: -5px; }
 .z1 .bank-tile { gap: 9px; }
 .z1 .bank-tile .nm { font-size: 0.66rem; }
 .z1 .pick, .z1 .own-plus { width: 20px; height: 20px; top: -5px; right: -5px; font-size: 0.9rem; }
 .z1 .pick svg { width: 12px; height: 12px; }
-.z2 .fr-fac { width: 27px; height: 27px; top: -5px; left: -5px; }
-.z2 .fr-lvl { font-size: 0.8rem; left: 22px; top: 1px; }
+.z2 .fr-lvl { font-size: 0.8rem; right: 4px; top: 2px; }
 .z2 .fr-band .star-row { --ss: 20px !important; margin-bottom: -6px; }
 .z2 .bank-tile { gap: 11px; }
 .z2 .bank-tile .nm { font-size: 0.76rem; }

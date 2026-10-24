@@ -72,12 +72,19 @@ test('a full team scores higher than a partial one', () => {
   assert.ok(scoreTeam(ctx, t.ids).total > scoreTeam(ctx, t.ids.slice(0, 3)).total);
 });
 
-test('star tiers follow the game colours', async () => {
-  const { starTier } = await import('../src/js/data.js');
-  assert.deepEqual(starTier(3), { tier: 'gold', count: 3 });
-  assert.deepEqual(starTier(7), { tier: 'red', count: 2 });
-  assert.deepEqual(starTier(15), { tier: 'white', count: 5 });
-  assert.equal(starTier(0), null);
+test('star colour follows engraving, as in the game', async () => {
+  const { starTier, upgradeUnlocked } = await import('../src/js/data.js');
+  assert.deepEqual(starTier(3, 0), { tier: 'gold', count: 3 });
+  assert.deepEqual(starTier(5, 30), { tier: 'orange', count: 5 });
+  assert.deepEqual(starTier(2, 65), { tier: 'red', count: 2 });
+  assert.deepEqual(starTier(5, 80), { tier: 'white', count: 5 });
+  assert.deepEqual(starTier(4, null), { tier: 'gold', count: 4 });
+  assert.equal(starTier(0, 80), null);
+  assert.equal(upgradeUnlocked({ asc: 'Legendary+' }, 'si'), false);
+  assert.equal(upgradeUnlocked({ asc: 'Mythic' }, 'si'), true);
+  assert.equal(upgradeUnlocked({ asc: 'Mythic+' }, 'furniture'), false);
+  assert.equal(upgradeUnlocked({ asc: 'Ascended', stars: 0 }, 'engrave'), false);
+  assert.equal(upgradeUnlocked({ asc: 'Ascended', stars: 1 }, 'engrave'), true);
 });
 
 test('unrecorded upgrades count as neutral, not as zero', () => {

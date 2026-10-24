@@ -3,13 +3,14 @@
 // Tree, and a Beasts sub-tab.
 
 import { esc, $, $$, toast, toInt, debounce, fmtDate, local } from '../util.js';
-import { data, FACTION_IDS, CLASSES, ASCENSIONS, LIMITS, TIERS, tierOf, hero as getHero, starTier, ELDER_MAX } from '../data.js';
+import { data, FACTION_IDS, CLASSES, ASCENSIONS, LIMITS, TIERS, tierOf, hero as getHero, starTier, upgradeUnlocked, ELDER_MAX } from '../data.js';
 import { bank, updateHeroes, updateSettings, updateElderTree, replaceBank, removeHeroes, effectiveLevel, exportBank, sanitizeEntry, defaultEntry, ownedIds, ownedBeasts } from '../store.js';
 import { aiState, initAi, readScreenshots, readElderTree, errorCopy } from '../ai.js';
 import { ICON, classIcon, factionIcon } from './icons.js';
 import { portrait, openDrawer, closeDrawer, tierPill, gameFilterBar, handleGameFilter, syncGameFilter, bindFolding, starRow, ascText } from './common.js';
 import { openHeroDetail } from './heroDetail.js';
 import { beastPanel, bindBeastPanel, refreshBeastPanel } from './beastPanel.js';
+import { emblem, upgradeText, plusCorners } from './emblem.js';
 
 const SUB_KEY = 'afk-codex-bank-sub';
 const SIZE_KEY = 'afk-codex-bank-size';
@@ -46,17 +47,20 @@ const MISSING = [
 ];
 const MISSING_SHORT = { si: 'SI', furniture: 'Furniture', engrave: 'Engraving', gear: 'Gear' };
 const unset = (v) => v === null || v === undefined;
+// An upgrade that has not unlocked yet (SI below Mythic, furniture below
+// Ascended, engraving below Ascended 1 star) is never missing.
+const lacks = (e, f) => upgradeUnlocked(e, f) && unset(e[f]);
 function missingMatch(e, what = ui.missing) {
   switch (what) {
     case 'upgrades':
-      return unset(e.si) || unset(e.furniture) || unset(e.engrave);
+      return lacks(e, 'si') || lacks(e, 'furniture') || lacks(e, 'engrave');
     case 'si':
     case 'furniture':
     case 'engrave':
     case 'gear':
-      return unset(e[what]);
+      return lacks(e, what);
     case 'complete':
-      return !unset(e.si) && !unset(e.furniture) && !unset(e.engrave) && !unset(e.gear);
+      return !lacks(e, 'si') && !lacks(e, 'furniture') && !lacks(e, 'engrave') && !unset(e.gear);
     default:
       return true;
   }
@@ -378,17 +382,13 @@ function renderStats() {
 const dash = (v) => (unset(v) ? '–' : v);
 
 function ascLine(e, size = 12) {
-  return `${ascText(e.asc)}${e.asc === 'Ascended' && e.stars ? starRow(e.stars, { size }) : ''}`;
+  return `${ascText(e.asc)}${e.asc === 'Ascended' && e.stars ? starRow(e.stars, { size, engrave: e.engrave }) : ''}`;
 }
 
-// Stars as the game shows them: gold 1–5, red 6–10, white 11–15.
-const STAR_TIER = { gold: 'Gold', red: 'Red', white: 'White' };
+// Ascended heroes have 0-5 stars; their colour comes from engraving.
 function starOptions(cur, withKeep = false) {
   const opts = withKeep ? ['<option value="">No change</option>'] : [];
-  for (let i = 0; i <= LIMITS.stars; i++) {
-    const t = starTier(i);
-    opts.push(`<option value="${i}" ${cur === i ? 'selected' : ''}>${t ? `${'★'.repeat(t.count)} ${STAR_TIER[t.tier]} (${i})` : 'None'}</option>`);
-  }
+  for (let i = 0; i <= LIMITS.stars; i++) opts.push(`<option value="${i}" ${cur === i ? 'selected' : ''}>${i ? `${'★'.repeat(i)} ${i} star${i === 1 ? '' : 's'}` : 'No stars'}</option>`);
   return opts.join('');
 }
 
@@ -443,12 +443,13 @@ function cardAttrs(h, e, cls) {
 function tile(h) {
   const e = bank.heroes[h.id];
   const owned = !!e?.owned;
-  const st = owned && e.asc === 'Ascended' ? starTier(e.stars) : null;
-  const stars = st ? starRow(e.stars, { title: false }) : '';
-  // Laid out like the in-game hero icon: emblem and "Lvl" across the top, stars on the bottom edge.
+  const st = owned && e.asc === 'Ascended' ? starTier(e.stars, e.engrave) : null;
+  const stars = st ? starRow(e.stars, { title: false, engrave: e.engrave }) : '';
+  // Laid out like the in-game hero icon: the faction emblem with its signature
+  // item and furniture ornaments top-left, "Lvl" top-right, stars on the bottom edge.
   return `<div ${cardAttrs(h, e, 'bank-tile')}>
-    <span class="fr" data-asc="${owned ? esc(e.asc) : ''}"${st ? ` data-st="${st.tier}"` : ''}><span class="fr-art">${heroArt(h)}</span>
-      <span class="fr-fac">${factionIcon(h.faction)}</span>
+    <span class="fr" data-asc="${owned ? esc(e.asc) : ''}"><span class="fr-art">${heroArt(h)}</span>${owned ? plusCorners(e.asc) : ''}
+      ${emblem(h, e, { cls: 'fr-fac' })}
       ${stars ? `<span class="fr-band">${stars}</span>` : ''}${owned ? lvlBadge(h, e, 'fr-lvl', { prefix: true }) : ''}
       ${cornerBadge(h, owned)}</span>
     <span class="nm">${esc(h.name)}</span>
@@ -471,20 +472,23 @@ function bigCard(h) {
 function row(h) {
   const e = bank.heroes[h.id];
   const owned = !!e?.owned;
-  const chip = (label, v) => `<span class="up${unset(v) ? ' unset' : ''}">${label}<b>${dash(v)}</b></span>`;
+  const chip = (label, f) => {
+    const t = f === 'gear' ? (unset(e.gear) ? '–' : 'T' + e.gear) : upgradeText(e, f);
+    return `<span class="up${t === '–' ? ' unset' : t === 'n/a' ? ' na' : ''}"${t === 'n/a' ? ' title="Not unlocked at this ascension"' : e.est?.includes(f) ? ' title="Read from the card icon: a minimum"' : ''}>${label}<b>${t}</b></span>`;
+  };
   const right = owned
     ? `<span class="row-lvl"><small>Lv</small>${lvlBadge(h, e, '')}</span>`
     : ui.selectMode
       ? ''
       : `<button class="btn small" type="button" data-own-hero="${h.id}">+ Own</button>`;
   return `<div ${cardAttrs(h, e, 'bank-row')}>
-    <span class="fr" data-asc="${owned ? esc(e.asc) : ''}"><span class="fr-art">${heroArt(h)}</span>${ui.selectMode ? cornerBadge(h, owned) : ''}</span>
+    <span class="fr" data-asc="${owned ? esc(e.asc) : ''}"><span class="fr-art">${heroArt(h)}</span>${owned ? plusCorners(e.asc) : ''}${ui.selectMode ? cornerBadge(h, owned) : ''}</span>
     <span class="row-main">
       <span class="nm">${esc(h.name)}<span class="row-icons">${factionIcon(h.faction)}${classIcon(h.class)}</span></span>
       ${
         owned
           ? `<span class="row-line">${ascLine(e, 14)}</span>
-      <span class="row-ups">${chip('SI', e.si)}${chip('F', e.furniture)}${chip('E', e.engrave)}${chip('Gear', unset(e.gear) ? null : 'T' + e.gear)}</span>`
+      <span class="row-ups">${chip('SI', 'si')}${chip('F', 'furniture')}${chip('E', 'engrave')}${chip('Gear', 'gear')}</span>`
           : '<span class="row-line muted">Not owned</span>'
       }
     </span>
@@ -510,7 +514,7 @@ function tableView(list) {
         <td><span class="hero-cell">${portrait(h, { size: 34, unowned: !owned })}<button class="btn ghost small" type="button" data-detail="${h.id}">${esc(h.name)}</button></span></td>
         <td><input type="checkbox" data-cell="${h.id}" data-field="owned" ${owned ? 'checked' : ''} aria-label="Owned"></td>
         <td><select class="select asc-select" data-asc="${owned ? esc(e.asc) : ''}" data-cell="${h.id}" data-field="asc" ${dis ? 'disabled' : ''} aria-label="Ascension">${ASCENSIONS.map((a) => `<option ${e.asc === a ? 'selected' : ''}>${a}</option>`).join('')}</select></td>
-        <td><span class="star-cell"><select class="select" data-cell="${h.id}" data-field="stars" ${ascended ? '' : 'disabled'} aria-label="Stars">${starOptions(e.stars)}</select>${ascended ? starRow(e.stars, { size: 12 }) : ''}</span></td>
+        <td><span class="star-cell"><select class="select" data-cell="${h.id}" data-field="stars" ${ascended ? '' : 'disabled'} aria-label="Stars">${starOptions(e.stars)}</select>${ascended ? starRow(e.stars, { size: 12, engrave: e.engrave }) : ''}</span></td>
         <td>${shared && e.crystal !== false ? `<span class="num muted" title="Shared level">${owned ? bank.settings.crystalLevel : '–'}</span>` : numCell(h.id, 'level', e.level, LIMITS.level, dis)}</td>
         <td>${numCell(h.id, 'si', e.si, LIMITS.si, dis)}</td>
         <td>${numCell(h.id, 'furniture', e.furniture, LIMITS.furniture, dis)}</td>
@@ -553,7 +557,6 @@ function openBatchEditor() {
   const n = ui.selected.size;
   if (!n) return;
   const keep = opt('', 'No change');
-  const range = (k) => Array.from({ length: k + 1 }, (_, i) => opt(String(i))).join('');
   const picked = [...ui.selected].map(getHero).filter(Boolean);
   const d = openDrawer({
     title: `Edit ${plural(n, 'hero')}`,
@@ -569,7 +572,7 @@ function openBatchEditor() {
         <label class="field"><span>Shared level</span><select class="select" id="b-crystal">${keep}${opt('yes', 'Uses it')}${opt('no', 'Own level')}</select></label>
         <label class="field"><span>Own level</span><input class="input num-input" id="b-level" type="number" min="1" max="${LIMITS.level}" placeholder="–"></label>
         <label class="field"><span>Signature item</span><input class="input num-input" id="b-si" type="number" min="0" max="${LIMITS.si}" placeholder="–"></label>
-        <label class="field"><span>Furniture</span><select class="select" id="b-furniture">${keep}${range(LIMITS.furniture)}</select></label>
+        <label class="field"><span>Furniture</span><input class="input num-input" id="b-furniture" type="number" min="0" max="${LIMITS.furniture}" placeholder="–"></label>
         <label class="field"><span>Engraving</span><input class="input num-input" id="b-engrave" type="number" min="0" max="${LIMITS.engrave}" placeholder="–"></label>
         <label class="field"><span>Gear tier</span><select class="select" id="b-gear">${keep}${Array.from({ length: LIMITS.gear + 1 }, (_, i) => opt(String(i), 'T' + i)).join('')}</select></label>
       </div>`,
@@ -770,7 +773,10 @@ function applyBatch(d) {
   // Editing upgrades on a hero implies owning it unless told otherwise.
   if (!('owned' in patch)) patch.owned = true;
   const patches = {};
-  for (const id of ui.selected) patches[id] = { ...(bank.heroes[id] || {}), ...patch };
+  for (const id of ui.selected) {
+    const cur = bank.heroes[id] || {};
+    patches[id] = { ...cur, ...patch, est: (cur.est || []).filter((f) => !(f in patch)) };
+  }
   updateHeroes(patches);
   toast(`Updated ${plural(ui.selected.size, 'hero')}.`);
   return true;
@@ -810,7 +816,8 @@ function onChange(ev) {
     const f = t.dataset.field;
     const optional = ['si', 'furniture', 'engrave', 'gear'].includes(f);
     const val = f === 'owned' ? t.checked : f === 'asc' ? t.value : optional && t.value === '' ? null : toInt(t.value);
-    updateHeroes({ [id]: { ...(bank.heroes[id] || { ...defaultEntry(), owned: false }), [f]: val } });
+    const cur = bank.heroes[id] || { ...defaultEntry(), owned: false };
+    updateHeroes({ [id]: { ...cur, [f]: val, est: (cur.est || []).filter((x) => x !== f) } });
   }
 }
 
@@ -833,6 +840,14 @@ function onInput(ev) {
 
 // ---- per-hero editor ----------------------------------------------------------------
 
+const UNLOCK = { si: 'Unlocks at Mythic', furniture: 'Unlocks at Ascended', engrave: 'Unlocks at Ascended 1 star' };
+
+function upField(cur, f, label, max) {
+  const t = upgradeText(cur, f);
+  const min = cur.est?.includes(f) ? `<span class="tag" data-min="${f}">${t.startsWith('<') ? `under ${t.slice(1)}` : `at least ${t.replace('+', '')}`}</span>` : '';
+  return `<label class="field"><span>${label} ${min}</span><input class="input" id="ed-${f}" type="number" min="0" max="${max}" value="${cur[f] ?? ''}" placeholder="not recorded"><span class="small muted" data-lock="${f}" hidden>${UNLOCK[f]}</span></label>`;
+}
+
 export function openEditor(id) {
   const h = getHero(id);
   if (!h) return;
@@ -844,13 +859,14 @@ export function openEditor(id) {
     <label class="check"><input type="checkbox" id="ed-owned" ${cur.owned ? 'checked' : ''}> I own this hero</label>
     <div class="edit-grid">
       <label class="field"><span>Ascension</span><select class="select asc-select" id="ed-asc" data-asc="${esc(cur.asc)}">${ASCENSIONS.map((a) => `<option ${cur.asc === a ? 'selected' : ''}>${a}</option>`).join('')}</select></label>
-      <label class="field"><span>Stars (Ascended)</span><select class="select" id="ed-stars" ${cur.asc === 'Ascended' ? '' : 'disabled'}>${starOptions(cur.stars)}</select><span class="star-prev" id="ed-star-row">${cur.asc === 'Ascended' ? starRow(cur.stars, { size: 16 }) : ''}</span></label>
+      <label class="field"><span>Stars (Ascended)</span><select class="select" id="ed-stars" ${cur.asc === 'Ascended' ? '' : 'disabled'}>${starOptions(cur.stars)}</select><span class="star-prev" id="ed-star-row">${cur.asc === 'Ascended' ? starRow(cur.stars, { size: 16, engrave: cur.engrave }) : ''}</span></label>
       <label class="field"><span>Level</span><input class="input" id="ed-level" type="number" min="1" max="${LIMITS.level}" value="${shared && cur.crystal !== false ? bank.settings.crystalLevel : cur.level}" ${shared && cur.crystal !== false ? 'disabled' : ''}></label>
-      <label class="field"><span>Signature item</span><input class="input" id="ed-si" type="number" min="0" max="${LIMITS.si}" value="${cur.si ?? ''}" placeholder="not recorded"></label>
-      <label class="field"><span>Furniture (0–9)</span><input class="input" id="ed-furniture" type="number" min="0" max="${LIMITS.furniture}" value="${cur.furniture ?? ''}" placeholder="not recorded"></label>
-      <label class="field"><span>Engraving</span><input class="input" id="ed-engrave" type="number" min="0" max="${LIMITS.engrave}" value="${cur.engrave ?? ''}" placeholder="not recorded"></label>
+      ${upField(cur, 'si', 'Signature item', LIMITS.si)}
+      ${upField(cur, 'furniture', 'Furniture', LIMITS.furniture)}
+      ${upField(cur, 'engrave', 'Engraving', LIMITS.engrave)}
       <label class="field"><span>Mythic gear tier</span><select class="select" id="ed-gear"><option value="">Not recorded</option>${Array.from({ length: LIMITS.gear + 1 }, (_, i) => `<option value="${i}" ${cur.gear === i ? 'selected' : ''}>T${i}</option>`).join('')}</select></label>
     </div>
+    <p class="small muted" id="ed-est"${(cur.est || []).length ? '' : ' hidden'}>Fields marked "at least" were read from the card icon: the ring around the faction emblem (signature item), the pendant under it (furniture) and the star colour (engraving). Type the exact number to replace them.</p>
     ${shared ? `<label class="check"><input type="checkbox" id="ed-crystal" ${cur.crystal !== false ? 'checked' : ''}> Uses the shared level (${bank.settings.crystalLevel})</label>` : ''}
     ${h.investment?.note ? `<p class="callout info small"><strong>Investment tip:</strong> ${esc(h.investment.note)}</p>` : ''}
     <label class="field"><span>Notes</span><textarea class="input" id="ed-notes" rows="2" maxlength="500">${esc(cur.notes || '')}</textarea></label>
@@ -860,14 +876,32 @@ export function openEditor(id) {
     body,
     foot: `${bank.heroes[id] ? '<button class="btn ghost" type="button" data-remove>Remove data</button>' : ''}<button class="btn" type="button" data-cancel>Cancel</button><button class="btn primary" type="button" data-save>Save</button>`,
   });
+  // Fields you type in are exact; untouched ones keep their "at least" mark.
+  const est = new Set(cur.est || []);
   const showStars = () => {
     const asc = $('#ed-asc', d).value;
+    const stars = toInt($('#ed-stars', d).value);
     $('#ed-asc', d).dataset.asc = asc;
     $('#ed-stars', d).disabled = asc !== 'Ascended';
-    $('#ed-star-row', d).innerHTML = asc === 'Ascended' ? starRow(toInt($('#ed-stars', d).value), { size: 16 }) : '';
+    const eng = $('#ed-engrave', d).value === '' ? null : toInt($('#ed-engrave', d).value);
+    $('#ed-star-row', d).innerHTML = asc === 'Ascended' ? starRow(stars, { size: 16, engrave: eng }) : '';
+    for (const f of ['si', 'furniture', 'engrave']) {
+      const open = upgradeUnlocked({ asc, stars }, f);
+      const inp = $(`#ed-${f}`, d);
+      inp.disabled = !open;
+      $(`[data-lock="${f}"]`, d).hidden = open;
+    }
   };
   $('#ed-asc', d).addEventListener('change', showStars);
   $('#ed-stars', d).addEventListener('change', showStars);
+  for (const f of ['si', 'furniture', 'engrave']) {
+    $(`#ed-${f}`, d).addEventListener('input', () => {
+      est.delete(f);
+      $(`[data-min="${f}"]`, d)?.remove();
+      if (f === 'engrave') showStars();
+    });
+  }
+  showStars();
   $('#ed-crystal', d)?.addEventListener('change', (e) => {
     $('#ed-level', d).disabled = e.target.checked;
     if (e.target.checked) $('#ed-level', d).value = bank.settings.crystalLevel;
@@ -892,6 +926,7 @@ export function openEditor(id) {
         engrave: opt('#ed-engrave'),
         gear: opt('#ed-gear'),
         notes: $('#ed-notes', d).value,
+        est: [...est],
       };
       const crystalBox = $('#ed-crystal', d);
       if (crystalBox) patch.crystal = crystalBox.checked;
@@ -1112,7 +1147,18 @@ function mergeReadings(list) {
   for (const r of list) {
     const prev = byId.get(r.id);
     if (!prev) byId.set(r.id, { ...r });
-    else for (const k of ['level', 'asc', 'stars', 'si', 'furniture', 'engrave']) if (r[k] !== null && r[k] !== undefined) prev[k] = r[k];
+    else {
+      // An exact number from a detail screen beats a minimum read from the hero list.
+      for (const k of ['level', 'asc', 'stars', 'si', 'furniture', 'engrave']) {
+        if (r[k] === null || r[k] === undefined) continue;
+        const exactBefore = !(prev.est || []).includes(k) && prev[k] !== null && prev[k] !== undefined;
+        const minNow = (r.est || []).includes(k);
+        if (exactBefore && minNow) continue;
+        prev[k] = r[k];
+        prev.est = minNow ? [...new Set([...(prev.est || []), k])] : (prev.est || []).filter((x) => x !== k);
+      }
+      if (r.siCrown) prev.siCrown = true;
+    }
   }
   return [...byId.values()];
 }
@@ -1173,7 +1219,15 @@ function applyResults(d, results) {
     const r = results[toInt(box.dataset.take)];
     const cur = bank.heroes[r.id] || { ...defaultEntry(), owned: false };
     const patch = { ...cur, owned: true };
-    for (const [k] of FIELDS) if (r[k] !== null && r[k] !== undefined) patch[k] = r[k];
+    const est = new Set(cur.est || []);
+    for (const [k] of FIELDS) {
+      if (r[k] === null || r[k] === undefined) continue;
+      patch[k] = r[k];
+      if ((r.est || []).includes(k)) est.add(k);
+      else est.delete(k);
+    }
+    patch.est = [...est];
+    if (r.siCrown) patch.siCrown = true;
     // A level that differs from the shared level means the hero sits outside the crystal.
     if (bank.settings.sharedLevel && r.level) patch.crystal = r.level === bank.settings.crystalLevel;
     patches[r.id] = patch;

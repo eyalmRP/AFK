@@ -74,7 +74,7 @@ export function portrait(h, { size = 64, showBank = false, unowned = false, badg
   if (!h) return '';
   const e = showBank ? bankEntry(h.id) : null;
   const asc = e?.owned ? e.asc : '';
-  const st = e?.owned && e.asc === 'Ascended' ? starTier(e.stars) : null;
+  const st = e?.owned && e.asc === 'Ascended' ? starTier(e.stars, e.engrave) : null;
   const stars = st ? gemStar(st.tier).repeat(st.count) : '';
   const img = h.img
     ? `<img src="${esc(h.img)}" alt="" loading="lazy" data-fallback="${esc(initials(h.name))}">`
@@ -160,10 +160,12 @@ export function artifactChip(id) {
 
 // The star row as the game draws it: up to five stars in gold (1–5),
 // red (6–10) or white (11–15).
-export function starRow(stars, { size = 14, title = true } = {}) {
-  const t = starTier(stars);
+// Stars as the game shows them: 1-5 of them, coloured by engraving.
+const ENGRAVE_NAME = { gold: 'below E30', orange: 'E30+', red: 'E60+', white: 'E80+' };
+export function starRow(stars, { size = 14, title = true, engrave = null } = {}) {
+  const t = starTier(stars, engrave);
   if (!t) return '';
-  return `<span class="star-row ${t.tier}" style="--ss:${size}px"${title ? ` title="${stars} of 15 stars (${t.count} ${t.tier})"` : ''} aria-label="${stars} stars">${gemStar(t.tier).repeat(t.count)}</span>`;
+  return `<span class="star-row ${t.tier}" style="--ss:${size}px"${title ? ` title="${t.count} star${t.count === 1 ? '' : 's'}, ${t.tier} (engraving ${ENGRAVE_NAME[t.tier]})"` : ''} aria-label="${t.count} stars, ${t.tier}">${gemStar(t.tier).repeat(t.count)}</span>`;
 }
 
 // Ascension name coloured like its card frame.

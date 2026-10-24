@@ -33,23 +33,52 @@ export const ASCENSIONS = ['Elite', 'Elite+', 'Legendary', 'Legendary+', 'Mythic
 export const LIMITS = {
   level: 1500,
   si: 50,
-  furniture: 9,
+  furniture: 36,
   engrave: 100,
-  stars: 15,
+  stars: 5,
   gear: 5,
 };
 
-// Ascended stars come in three colours of five: gold 1–5, red 6–10, white 11–15.
-export function starTier(stars) {
-  if (!stars) return null;
-  const tier = stars <= 5 ? 'gold' : stars <= 10 ? 'red' : 'white';
-  return { tier, count: ((stars - 1) % 5) + 1 };
+// Ascended heroes have 1-5 stars. The star colour shows engraving: gold below
+// E30, orange from E30, red from E60, white from E80.
+export const ENGRAVE_TIERS = [
+  [80, 'white'],
+  [60, 'red'],
+  [30, 'orange'],
+  [0, 'gold'],
+];
+
+export function engraveTier(engrave) {
+  const v = engrave ?? 0;
+  return ENGRAVE_TIERS.find(([min]) => v >= min)[1];
 }
 
-export function starLabel(stars) {
-  const t = starTier(stars);
+export function starTier(stars, engrave) {
+  const count = Math.min(LIMITS.stars, Math.max(0, Math.trunc(Number(stars) || 0)));
+  return count ? { tier: engraveTier(engrave), count } : null;
+}
+
+export function starLabel(stars, engrave) {
+  const t = starTier(stars, engrave);
   return t ? `${t.count}★ ${t.tier}` : 'no stars';
 }
+
+// What each upgrade needs before it unlocks (from the in-game card guide):
+// signature item from Mythic, furniture from Ascended, engraving from
+// Ascended 1 star.
+const ASC_RANK = (a) => ASCENSIONS.indexOf(a);
+export function upgradeUnlocked(e, field) {
+  if (!e) return false;
+  if (field === 'si') return ASC_RANK(e.asc) >= ASC_RANK('Mythic');
+  if (field === 'furniture') return e.asc === 'Ascended';
+  if (field === 'engrave') return e.asc === 'Ascended' && (e.stars || 0) >= 1;
+  return true;
+}
+
+// Milestones the card icon shows: the ring around the faction emblem for
+// signature item, the pendant under it for furniture.
+export const SI_MILESTONES = [0, 10, 20, 30];
+export const FURNITURE_MILESTONES = [0, 3, 9, 36];
 
 export const POSITIONS = ['F1', 'F2', 'B1', 'B2', 'B3'];
 

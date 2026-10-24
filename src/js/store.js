@@ -127,12 +127,32 @@ export function defaultEntry() {
 // which does not show signature item, furniture or engraving).
 const optNum = (v, max) => (v === null || v === undefined || v === '' ? null : clamp(toInt(v, 0), 0, max));
 
+const EST_FIELDS = ['si', 'furniture', 'engrave'];
+
 export function sanitizeEntry(e) {
   const d = defaultEntry();
   const out = { ...d, ...e };
   out.owned = !!out.owned;
   out.asc = ASCENSIONS.includes(out.asc) ? out.asc : d.asc;
-  out.stars = out.asc === 'Ascended' ? clamp(toInt(out.stars, 0), 0, LIMITS.stars) : 0;
+  // est: fields holding a minimum read from the card icon (SI ring, furniture
+  // pendant, star colour) rather than an exact number.
+  out.est = Array.isArray(out.est) ? [...new Set(out.est.filter((f) => EST_FIELDS.includes(f)))] : [];
+  out.siCrown = !!out.siCrown;
+  const raw = toInt(out.stars, 0);
+  let stars = raw;
+  // Banks saved before this used 0-15 stars, with 6-10 (red) and 11-15 (white)
+  // as extra stars. The colour is engraving, so keep the count and record the
+  // engraving it shows.
+  if (raw > LIMITS.stars) stars = ((raw - 1) % 5) + 1;
+  if (raw > LIMITS.stars && out.asc === 'Ascended') {
+    const floor = raw > 10 ? 80 : 60;
+    const cur = out.engrave === null || out.engrave === undefined || out.engrave === '' ? null : toInt(out.engrave, 0);
+    if (cur === null || cur < floor) {
+      out.engrave = floor;
+      if (!out.est.includes('engrave')) out.est.push('engrave');
+    }
+  }
+  out.stars = out.asc === 'Ascended' ? clamp(stars, 0, LIMITS.stars) : 0;
   out.level = clamp(toInt(out.level, d.level), 1, LIMITS.level);
   out.crystal = out.crystal !== false;
   out.si = optNum(out.si, LIMITS.si);

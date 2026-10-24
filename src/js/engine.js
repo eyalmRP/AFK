@@ -48,11 +48,11 @@ export function investmentFactor(entry, hero) {
   const notes = [];
   if (!entry) return { factor: 1, notes };
   let f = ASC_FACTOR[entry.asc] ?? 0.8;
-  if (entry.asc === 'Ascended') f += (entry.stars || 0) * 0.01;
+  if (entry.asc === 'Ascended') f += Math.min(5, entry.stars || 0) * 0.02;
   // Unrecorded values (null) count as neutral rather than as zero.
   const si = entry.si;
   if (si !== null && si !== undefined) f *= lerpTable([[0, 0.9], [10, 0.94], [20, 0.97], [30, 1.0], [40, 1.02], [50, 1.03]], si);
-  if (entry.furniture !== null && entry.furniture !== undefined) f *= lerpTable([[0, 0.92], [3, 0.97], [9, 1.02]], entry.furniture);
+  if (entry.furniture !== null && entry.furniture !== undefined) f *= lerpTable([[0, 0.92], [3, 0.97], [9, 1.02], [36, 1.05]], entry.furniture);
   if (entry.engrave !== null && entry.engrave !== undefined) f *= lerpTable([[0, 0.96], [30, 1.0], [60, 1.02], [80, 1.03]], entry.engrave);
   const need = hero?.investment || null;
   if (need) {
