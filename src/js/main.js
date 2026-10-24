@@ -70,8 +70,9 @@ function header() {
   </div>`;
 }
 
-// Phone navigation: a tab bar that sticks to the top of the screen. (A bar
-// fixed to the bottom can sit under Safari's toolbar or the app's controls.)
+// Phone navigation: a tab bar at the top of the screen that stays put while the
+// page below it scrolls. (A bar fixed to the bottom can sit under Safari's
+// toolbar, and a sticky one moves when iOS shifts the page around it.)
 function phoneNav() {
   return `<nav class="phone-nav" aria-label="Sections">${TABS.map(
     (t) => `<button type="button" data-tab="${t.id}" aria-selected="${t.id === current}">${ICON[t.icon]}<span>${t.short}</span><span class="count"></span></button>`
@@ -102,6 +103,8 @@ function show(id) {
     /* sandboxed */
   }
   window.scrollTo({ top: 0 });
+  const sc = document.getElementById('app-scroll');
+  if (sc) sc.scrollTop = 0;
 }
 
 function renderSync() {
@@ -136,10 +139,10 @@ async function start() {
     return;
   }
   loadLocal();
-  app.innerHTML = `<header class="app-header">${header()}</header>
-    ${phoneNav()}
+  // Phones: the tab bar stays put and only .app-scroll scrolls (see app.css).
+  app.innerHTML = `${phoneNav()}<div class="app-scroll" id="app-scroll"><header class="app-header">${header()}</header>
     <main>${TABS.map((t) => `<section class="view" id="view-${t.id}" role="tabpanel" aria-labelledby="tab-${t.id}" hidden></section>`).join('')}
-      <footer class="small muted app-foot">Fan-made tool, not affiliated with Lilith Games. Hero portraits are game assets via the floofpire/cdn mirror. Meta data ${esc(data.meta.gameVersion || '')} · updated weekly.</footer></main>
+      <footer class="small muted app-foot">Fan-made tool, not affiliated with Lilith Games. Hero portraits are game assets via the floofpire/cdn mirror. Meta data ${esc(data.meta.gameVersion || '')} · updated weekly.</footer></main></div>
     <div id="toast" role="status" aria-live="polite" hidden></div>`;
   bindImageFallback(document.body);
   applyTheme();

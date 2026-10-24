@@ -118,6 +118,7 @@
 [hidden] { display: none !important; }
 html, body { background: var(--bg); color: var(--ink); }
 body {
+  margin: 0;
   font-family: var(--font-body);
   font-size: 16px;
   line-height: 1.5;
@@ -787,12 +788,12 @@ a.btn { text-decoration: none; }
 [data-owned='false'] .fr-art img, [data-owned='false'] .big-art img { filter: grayscale(0.9); opacity: 0.55; }
 .fr-fac { position: absolute; top: -7px; left: -7px; width: 30px; height: 30px; }
 .fr-fac .gi { width: 100%; height: 100%; filter: drop-shadow(0 1px 2px rgb(0 0 0 / 70%)); }
-.fr-lvl { position: absolute; left: 3px; bottom: 11px; font-family: var(--font-data); font-weight: 700; font-size: 0.82rem; line-height: 1.35; color: #fff; background: rgb(0 0 0 / 72%); border-radius: 6px; padding: 0 5px; font-variant-numeric: tabular-nums; }
+.fr-lvl { position: absolute; left: 3px; bottom: 15px; font-family: var(--font-data); font-weight: 700; font-size: 0.82rem; line-height: 1.35; color: #fff; background: rgb(0 0 0 / 72%); border-radius: 6px; padding: 0 5px; font-variant-numeric: tabular-nums; }
 .own-level { box-shadow: inset 0 0 0 1px var(--accent); }
 .fr-lvl.own-level, .big-lvl.own-level { color: var(--accent); }
-.fr-stars { position: absolute; left: 0; right: 0; bottom: -8px; display: flex; justify-content: center; pointer-events: none; }
-.fr-stars .star-row { margin: 0; --ss: 11px !important; filter: drop-shadow(0 1px 1px rgb(0 0 0 / 90%)); }
-.bank-tile { display: flex; flex-direction: column; gap: 9px; min-width: 0; text-align: center; }
+.fr-stars { position: absolute; left: 0; right: 0; bottom: -9px; display: flex; justify-content: center; pointer-events: none; }
+.fr-stars .star-row { margin: 0; --ss: 15px !important; filter: drop-shadow(0 1px 1px rgb(0 0 0 / 90%)); }
+.bank-tile { display: flex; flex-direction: column; gap: 13px; min-width: 0; text-align: center; }
 .bank-tile .nm { font-size: 0.84rem; font-weight: 600; line-height: 1.15; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .pick, .own-plus, .own-mark { position: absolute; top: -7px; right: -7px; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; padding: 0; z-index: 1; }
 .pick { border: 2px solid var(--line-2); background: var(--surface); color: var(--accent-ink); box-shadow: 0 1px 3px rgb(0 0 0 / 35%); }
@@ -806,17 +807,18 @@ a.btn { text-decoration: none; }
 .z1 .fr[data-asc$='+'] { border-width: 3px; }
 .z1 .fr-art { border-radius: 7px; }
 .z1 .fr-fac { width: 20px; height: 20px; top: -5px; left: -5px; }
-.z1 .fr-lvl { font-size: 0.64rem; left: 2px; bottom: 8px; padding: 0 3px; }
-.z1 .fr-stars { bottom: -6px; }
-.z1 .fr-stars .star-row { --ss: 8px !important; }
-.z1 .bank-tile { gap: 6px; }
+.z1 .fr-lvl { font-size: 0.64rem; left: 2px; bottom: 10px; padding: 0 3px; }
+.z1 .fr-stars { bottom: -7px; }
+.z1 .fr-stars .star-row { --ss: 11px !important; gap: 0; }
+.z1 .bank-tile { gap: 9px; }
 .z1 .bank-tile .nm { font-size: 0.66rem; }
 .z1 .pick, .z1 .own-plus { width: 20px; height: 20px; top: -5px; right: -5px; font-size: 0.9rem; }
 .z1 .pick svg { width: 12px; height: 12px; }
 .z2 .fr-fac { width: 24px; height: 24px; top: -6px; left: -6px; }
-.z2 .fr-lvl { font-size: 0.72rem; bottom: 9px; }
-.z2 .fr-stars { bottom: -7px; }
-.z2 .fr-stars .star-row { --ss: 9.5px !important; }
+.z2 .fr-lvl { font-size: 0.72rem; bottom: 12px; }
+.z2 .fr-stars { bottom: -8px; }
+.z2 .fr-stars .star-row { --ss: 13px !important; }
+.z2 .bank-tile { gap: 11px; }
 .z2 .bank-tile .nm { font-size: 0.76rem; }
 .z2 .pick, .z2 .own-plus { width: 23px; height: 23px; top: -6px; right: -6px; }
 /* zoom 4: portrait card */
@@ -980,8 +982,12 @@ table.bank .input, table.bank .select { padding: 3px 6px; font-size: 0.85rem; }
 
 .loading { padding: 60px 16px; text-align: center; color: var(--ink-3); font-family: var(--font-display); font-size: 1.2rem; }
 
-/* Phones (and phones held sideways): the header scrolls away and the tabs become a bar that sticks to the top. */
+/* Phones (and phones held sideways): the tabs become a bar at the top that stays put; only the
+   page below it scrolls, inside .app-scroll, so iOS has no outer page to shift under the status bar. */
 @media (max-width: 760px), (pointer: coarse) and (max-height: 500px) {
+  html, body { height: 100%; overflow: hidden; overscroll-behavior: none; }
+  #app { height: 100%; display: flex; flex-direction: column; }
+  .app-scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
   .app-header { position: static; }
   .app-header .tabs { display: none; }
   .app-header .inner { padding-block: 10px; }
@@ -991,8 +997,8 @@ table.bank .input, table.bank .select { padding: 3px 6px; font-size: 0.85rem; }
   .phone-nav {
     display: grid;
     grid-template-columns: repeat(5, minmax(0, 1fr));
-    position: sticky;
-    top: env(safe-area-inset-top, 0px);
+    flex: none;
+    position: relative;
     z-index: 30;
     background: var(--surface);
     border-bottom: 1px solid var(--line);
@@ -1025,8 +1031,8 @@ table.bank .input, table.bank .select { padding: 3px 6px; font-size: 0.85rem; }
   .phone-nav .count { position: absolute; top: 4px; left: calc(50% + 8px); font-size: 0.62rem; line-height: 1.4; }
   .phone-nav .count:empty { display: none; }
   .phone-nav .count:not(.alert) { display: none; }
-  main { padding-block: 14px calc(24px + env(safe-area-inset-bottom, 0px)); }
-  #bank-batch { top: calc(env(safe-area-inset-top, 0px) + var(--nav-h) + 6px); }
+  main { padding-block: 14px 24px; }
+  #bank-batch { top: 6px; }
 }
 /* Sideways phones: a lower tab bar with the label beside the icon. */
 @media (pointer: coarse) and (max-height: 500px) {
