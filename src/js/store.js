@@ -3,7 +3,7 @@
 // when the page is opened on its own (GitHub Pages, a local file server).
 
 import { local, debounce, clamp, toInt } from './util.js';
-import { ASCENSIONS, LIMITS, CLASSES, ELDER_MAX, BEAST_LEVEL_MAX } from './data.js';
+import { ASCENSIONS, LIMITS, CLASSES, ELDER_MAX, BEAST_LEVEL_MAX, CR_FIT_RANGE } from './data.js';
 
 const LOCAL_KEY = 'afk-codex-bank-v1';
 const LOCAL_FORMATIONS = 'afk-codex-formations-v1';
@@ -143,6 +143,9 @@ export function sanitizeEntry(e) {
     if (!out.est.includes('si')) out.est.push('si');
   }
   delete out.siCrown;
+  // crFit: combat rating correction learned from the game's hero order (engine.js).
+  if (Number.isFinite(Number(out.crFit)) && out.crFit !== null && out.crFit !== '') out.crFit = clamp(Number(out.crFit), CR_FIT_RANGE[0], CR_FIT_RANGE[1]);
+  else delete out.crFit;
   const raw = toInt(out.stars, 0);
   let stars = raw;
   // Banks saved before this used 0-15 stars, with 6-10 (red) and 11-15 (white)

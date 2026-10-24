@@ -39,6 +39,9 @@ export const LIMITS = {
   gear: 5,
 };
 
+// Bounds of a hero's learned combat rating correction (crFit, see estimateCR).
+export const CR_FIT_RANGE = [0.5, 2.5];
+
 // Ascended heroes have 1-5 stars. The star colour shows engraving: gold below
 // E30, orange from E30, red from E60, white from E80.
 export const ENGRAVE_TIERS = [

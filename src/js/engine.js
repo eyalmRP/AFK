@@ -4,7 +4,7 @@
 // matchups against the enemy formation. Everything here is pure so it can
 // run in the browser and in node tests.
 
-import { ASCENSIONS, POSITIONS, tierOf, tierScore, factionAdvantage } from './data.js';
+import { ASCENSIONS, POSITIONS, CR_FIT_RANGE, tierOf, tierScore, factionAdvantage } from './data.js';
 
 const ROLE_GROUPS = {
   front: ['tank', 'off-tank'],
@@ -44,28 +44,38 @@ function lerpTable(table, x) {
 }
 
 // Estimated combat rating, in the game's own units. The game does not publish
-// its formula, so this multiplies one factor per upgrade, fitted to eight
+// its formula, so this multiplies one factor per upgrade, fitted to 41
 // in-game ratings at level 922 (Legendary+ to Ascended, SI 0-50, 0-5 stars,
-// furniture 0-9, red to white stars); each estimate came within 3% of the
-// game's number. Furniture, signature item and engraving are percentages of
-// the hero's base, so their absolute bonus grows with level and tier, as the
-// game describes for furniture. Hero-specific base stats are not modelled
-// (heroes with the same build differ by a few percent in game).
-// Upgrades not unlocked or not recorded add nothing.
+// furniture 0-9, gold to white stars) and to the order of the player's 215
+// heroes in the game's hero list, which the game sorts by combat rating.
+// Heroes with the same build still differ by up to about 15% in game (their
+// own base stats), so a single hero can be off by up to about 10%; on average
+// the estimate is within 3%. Furniture, signature
+// item and engraving are percentages of the hero's base, so their absolute
+// bonus grows with level and tier, as the game describes for furniture.
+// Upgrades not unlocked or not recorded add nothing. A hero can also carry
+// crFit, a correction learned from where the game ranks it in the player's
+// hero list (it covers the hero's own base stats and upgrades only known as
+// minimums); later upgrades still move the estimate as usual.
 export const CR_WEIGHTS = {
   // Legendary+, level 922, no upgrades, mythic gear T4, Elder Tree class
   // branch 195 and tree 257: 5839M in game.
   reference: { cr: 5839e6, level: 922, gear: 4, branch: 195, tree: 257 },
-  ascension: { Elite: 0.72, 'Elite+': 0.8, Legendary: 0.9, 'Legendary+': 1, Mythic: 1.27, 'Mythic+': 1.37, Ascended: 1.478 },
-  si: [[0, 1], [10, 1.05], [20, 1.1], [30, 1.15], [35, 1.2], [40, 1.26], [50, 1.5]],
-  // In game, 7 and 9 pieces give nearly the same stats (about +6-7% HP and
-  // +5-6% attack); the 9-piece bonus is mostly a skill upgrade.
-  furniture: [[0, 1], [3, 1.03], [7, 1.07], [9, 1.08], [36, 1.2]],
-  engrave: [[0, 1], [30, 1.1], [60, 1.155], [80, 1.21], [100, 1.25]],
-  // The first star gives most of the gain; each further star a little.
-  firstStar: 0.06,
-  perStar: 0.01,
-  perGearTier: 0.03,
+  ascension: { Elite: 0.72, 'Elite+': 0.8, Legendary: 0.9, 'Legendary+': 1, Mythic: 1.2, 'Mythic+': 1.33, Ascended: 1.48 },
+  // 10 and 35 sit between their neighbours (no hero checked at exactly those).
+  si: [[0, 1], [10, 1.07], [20, 1.145], [30, 1.155], [35, 1.24], [40, 1.33], [50, 1.395]],
+  // From in-game stats: 7 and 9 pieces give nearly the same stats (about +6-7%
+  // HP and +5-6% attack); the 9-piece bonus is mostly a skill upgrade. 36 is
+  // not checked.
+  furniture: [[0, 1], [3, 1.03], [7, 1.065], [9, 1.07], [36, 1.2]],
+  // Engraving is worth more than any other upgrade in the game's list order;
+  // 100 is not checked.
+  engrave: [[0, 1], [30, 1.18], [60, 1.3], [80, 1.47], [100, 1.55]],
+  // Stars past the first add little in game; the first unlocks engraving.
+  firstStar: 0,
+  perStar: 0.006,
+  // T5 is checked on two heroes only.
+  perGearTier: 0.04,
   // Elder Tree: each level of the hero's class branch, and each level of the tree itself.
   perBranchLevel: 0.0006,
   perTreeLevel: 0.0003,
@@ -90,6 +100,7 @@ export function estimateCR(entry, hero, { level, elderTree } = {}) {
   cr *= gearF(num(entry.gear));
   const t = elderTree || {};
   cr *= treeF(num(t[hero?.class]), num(t.core));
+  if (Number.isFinite(entry.crFit)) cr *= Math.min(CR_FIT_RANGE[1], Math.max(CR_FIT_RANGE[0], entry.crFit));
   return Math.round(cr);
 }
 

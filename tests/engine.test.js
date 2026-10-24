@@ -137,20 +137,40 @@ test('estimated combat rating rises with every upgrade and the Elder Tree', asyn
   assert.equal(cr({ ...base, owned: false }), 0);
 });
 
-test('estimated combat rating matches in-game ratings within 4%', async () => {
+test('estimated combat rating matches 41 in-game ratings', async () => {
   const { estimateCR } = await import('../src/js/engine.js');
   const tree = { Mage: 200, Ranger: 195, Support: 200, Tank: 196, Warrior: 195, core: 257 };
-  const at = (cls, asc, stars, si, furniture, engrave) => estimateCR({ owned: true, asc, stars, si, furniture, engrave, gear: 4 }, { class: cls }, { level: 922, elderTree: tree });
-  // In-game ratings (level 922, mythic gear T4), as the game shows them.
+  const at = (cls, asc, stars, si, furniture, engrave, gear = 4) => estimateCR({ owned: true, asc, stars, si, furniture, engrave, gear }, { class: cls }, { level: 922, elderTree: tree });
+  // The player's heroes at level 922 and their rating in game. The game shows
+  // whole billions from 10B up, so those compare with the middle of the number.
+  const B = (n) => (n + 0.25) * 1e9;
+  const A = 'Ascended';
   const cases = [
-    [at('Mage', 'Ascended', 4, 50, 9, 80), 19e9],
-    [at('Warrior', 'Ascended', 5, 40, 9, 60), 15e9],
-    [at('Support', 'Ascended', 1, 40, 9, 60), 15e9],
-    [at('Warrior', 'Ascended', 5, 30, 9, 30), 13e9],
-    [at('Warrior', 'Ascended', 0, 35, 7, 0), 11e9],
-    [at('Mage', 'Mythic', 0, 40, 0, 0), 9509e6],
-    [at('Support', 'Mythic', 0, 40, 0, 0), 9159e6],
-    [at('Ranger', 'Legendary+', 0, 0, 0, 0), 5839e6],
+    [at('Tank', A, 5, 40, 9, 80, 5), B(21)], [at('Mage', A, 5, 40, 9, 80), B(20)],
+    [at('Mage', A, 4, 50, 9, 80), B(19)], [at('Tank', A, 5, 40, 9, 80), B(19)], [at('Ranger', A, 2, 50, 9, 80), B(19)], [at('Tank', A, 3, 40, 9, 80), B(19)],
+    [at('Support', A, 5, 40, 9, 80, 5), B(18)], [at('Warrior', A, 5, 40, 9, 80), B(18)], [at('Support', A, 5, 40, 9, 80), B(18)], [at('Support', A, 5, 40, 9, 80), B(18)], [at('Ranger', A, 4, 40, 9, 80), B(18)],
+    [at('Tank', A, 5, 30, 9, 80), B(17)],
+    [at('Ranger', A, 5, 40, 9, 60), B(16)], [at('Tank', A, 1, 40, 9, 60), B(16)], [at('Mage', A, 1, 40, 9, 60), B(16)], [at('Support', A, 5, 30, 9, 80), B(16)],
+    [at('Warrior', A, 5, 40, 9, 60), B(15)], [at('Support', A, 1, 40, 9, 60), B(15)], [at('Mage', A, 5, 30, 9, 80), B(15)], [at('Warrior', A, 5, 30, 9, 80), B(15)],
+    [at('Mage', A, 5, 30, 9, 80), B(15)], [at('Support', A, 5, 30, 9, 80), B(15)], [at('Tank', A, 5, 30, 9, 60), B(15)], [at('Mage', A, 5, 30, 9, 60), B(15)],
+    ...['Mage', 'Warrior', 'Mage', 'Warrior', 'Mage', 'Mage'].map((c) => [at(c, A, 5, 30, 9, 60), B(14)]),
+    [at('Ranger', A, 5, 30, 3, 60), B(14)], [at('Mage', A, 5, 20, 3, 60), B(14)],
+    ...['Support', 'Mage', 'Ranger', 'Warrior'].map((c) => [at(c, A, 2, 30, 9, 60), B(14)]),
+    [at('Warrior', A, 5, 30, 9, 30), B(13)], [at('Warrior', A, 0, 35, 7, 0), B(11)],
+    [at('Mage', 'Mythic', 0, 40, 0, 0), 9509e6], [at('Support', 'Mythic', 0, 40, 0, 0), 9159e6], [at('Ranger', 'Legendary+', 0, 0, 0, 0), 5839e6],
   ];
-  for (const [est, game] of cases) assert.ok(Math.abs(est / game - 1) < 0.04, `${est} vs ${game}`);
+  assert.equal(cases.length, 41);
+  // Heroes with the same build differ by up to about 15% in game (Awakened
+  // Shemira 21B, Liberta 18B), so single heroes are off by up to 10%.
+  for (const [est, game] of cases) assert.ok(Math.abs(est / game - 1) < 0.1, `${est} vs ${game}`);
+  const mean = cases.reduce((s, [est, game]) => s + Math.abs(est / game - 1), 0) / cases.length;
+  assert.ok(mean < 0.035, `mean error ${mean}`);
+});
+
+test('a hero\'s combat rating correction scales its estimate, within limits', async () => {
+  const { estimateCR } = await import('../src/js/engine.js');
+  const e = { owned: true, asc: 'Ascended', stars: 5, si: 40, furniture: 9, engrave: 80, gear: 4 };
+  const base = estimateCR(e, { class: 'Mage' }, { level: 922 });
+  assert.equal(estimateCR({ ...e, crFit: 1.1 }, { class: 'Mage' }, { level: 922 }), Math.round(base * 1.1));
+  assert.equal(estimateCR({ ...e, crFit: 9 }, { class: 'Mage' }, { level: 922 }), Math.round(base * 2.5));
 });

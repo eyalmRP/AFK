@@ -183,7 +183,7 @@ export function fmtCR(n) {
   return String(n);
 }
 
-export const CR_NOTE = 'Estimated combat rating, from level, ascension, stars, signature item, furniture, engraving, gear and the Elder Tree. Fitted to in-game ratings (within about 3% on the heroes checked); heroes with the same build can still differ by a few percent in game.';
+export const CR_NOTE = 'Estimated combat rating, from level, ascension, stars, signature item, furniture, engraving, gear and the Elder Tree. Fitted to in-game ratings and to the order of your hero list in the game; upgrades you record later move it up from there.';
 
 // Ascension name coloured like its card frame.
 export function ascText(asc) {
