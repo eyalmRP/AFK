@@ -21,6 +21,12 @@ export const ICON = {
   swords: svg('<g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 4l10 10M4 4h3.5M4 4v3.5"/><path d="M20 4L10 14M20 4h-3.5M20 4v3.5"/><path d="M8 17l-3 3M16 17l3 3M7 14l3 3M17 14l-3 3"/></g>'),
   save: svg('<path fill="currentColor" d="M5 3h11l3 3v13a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2zm2 2v4h8V5zm5 8a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"/>'),
   trash: svg('<path fill="currentColor" d="M9 3h6l1 2h4v2H4V5h4zm-3 6h12l-1 12H7z"/>'),
+  copy: svg('<g fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="8.5" y="8.5" width="11" height="11" rx="2"/><path d="M15.5 8.5V6a1.5 1.5 0 0 0-1.5-1.5H6A1.5 1.5 0 0 0 4.5 6v8A1.5 1.5 0 0 0 6 15.5h2.5"/></g>'),
+  tabMeta: svg('<g fill="currentColor"><rect x="3" y="4" width="5" height="4" rx="1"/><rect x="10" y="4.5" width="11" height="3" rx="1.5" opacity=".55"/><rect x="3" y="10" width="5" height="4" rx="1"/><rect x="10" y="10.5" width="8" height="3" rx="1.5" opacity=".55"/><rect x="3" y="16" width="5" height="4" rx="1"/><rect x="10" y="16.5" width="5" height="3" rx="1.5" opacity=".55"/></g>'),
+  tabBank: svg('<g fill="currentColor"><rect x="3" y="3" width="8" height="8" rx="2"/><rect x="13" y="3" width="8" height="8" rx="2" opacity=".55"/><rect x="3" y="13" width="8" height="8" rx="2" opacity=".55"/><rect x="13" y="13" width="8" height="8" rx="2"/></g>'),
+  tabBuild: svg('<g fill="currentColor"><circle cx="8" cy="7" r="3"/><circle cx="16" cy="7" r="3"/><circle cx="5" cy="16" r="2.6" opacity=".6"/><circle cx="12" cy="16" r="2.6" opacity=".6"/><circle cx="19" cy="16" r="2.6" opacity=".6"/></g>'),
+  tabCounter: svg('<g fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 4l10 10M4 4h3.5M4 4v3.5"/><path d="M20 4L10 14M20 4h-3.5M20 4v3.5"/><path d="M8 17l-3 3M16 17l3 3M7 14l3 3M17 14l-3 3"/></g>'),
+  tabCodes: svg('<g fill="currentColor"><path d="M3 10h18v3H3z"/><path d="M4.5 14h6.5v7H6a1.5 1.5 0 0 1-1.5-1.5zM13 14h6.5v5.5A1.5 1.5 0 0 1 18 21h-5z" opacity=".7"/><path d="M12 9.5C10.5 6 7 5 6.3 6.6 5.6 8.3 9 9.5 12 9.5zm0 0c1.5-3.5 5-4.5 5.7-2.9.7 1.7-2.7 2.9-5.7 2.9z" fill="none" stroke="currentColor" stroke-width="1.8"/></g>'),
   stop: svg('<rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor"/>'),
 };
 

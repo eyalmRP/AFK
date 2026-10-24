@@ -7,15 +7,17 @@ import { mountMeta, refreshMeta } from './ui/meta.js';
 import { mountBank, refreshBank } from './ui/bank.js';
 import { mountBuilder, refreshBuilder } from './ui/builder.js';
 import { mountCounter, refreshCounter } from './ui/counter.js';
+import { mountCodes, refreshCodes, codesToRedeem } from './ui/codes.js';
 import { bindImageFallback } from './ui/common.js';
-import { BRAND } from './ui/icons.js';
+import { BRAND, ICON } from './ui/icons.js';
 import { initAi } from './ai.js';
 
 const TABS = [
-  { id: 'meta', label: 'Meta', mount: mountMeta, refresh: refreshMeta },
-  { id: 'bank', label: 'Hero Bank', mount: mountBank, refresh: refreshBank },
-  { id: 'builder', label: 'Formation Builder', mount: mountBuilder, refresh: refreshBuilder },
-  { id: 'counter', label: 'Counter', mount: mountCounter, refresh: refreshCounter },
+  { id: 'meta', label: 'Meta', short: 'Meta', icon: 'tabMeta', mount: mountMeta, refresh: refreshMeta },
+  { id: 'bank', label: 'Hero Bank', short: 'Bank', icon: 'tabBank', mount: mountBank, refresh: refreshBank },
+  { id: 'builder', label: 'Formation Builder', short: 'Build', icon: 'tabBuild', mount: mountBuilder, refresh: refreshBuilder },
+  { id: 'counter', label: 'Counter', short: 'Counter', icon: 'tabCounter', mount: mountCounter, refresh: refreshCounter },
+  { id: 'codes', label: 'Codes', short: 'Codes', icon: 'tabCodes', mount: mountCodes, refresh: refreshCodes },
 ];
 
 const mounted = new Set();
@@ -39,13 +41,20 @@ function header() {
   </div>`;
 }
 
+// Phone navigation: a bar fixed to the bottom of the screen.
+function bottomNav() {
+  return `<nav class="bottom-nav" aria-label="Sections">${TABS.map(
+    (t) => `<button type="button" data-tab="${t.id}" aria-selected="${t.id === current}">${ICON[t.icon]}<span>${t.short}</span><span class="count"></span></button>`
+  ).join('')}</nav>`;
+}
+
 function show(id) {
   if (!TABS.some((t) => t.id === id)) id = 'meta';
   current = id;
   for (const t of TABS) {
     const v = document.getElementById('view-' + t.id);
     v.hidden = t.id !== id;
-    document.getElementById('tab-' + t.id).setAttribute('aria-selected', String(t.id === id));
+    for (const b of document.querySelectorAll(`[data-tab="${t.id}"]`)) b.setAttribute('aria-selected', String(t.id === id));
   }
   const tab = TABS.find((t) => t.id === id);
   const el = document.getElementById('view-' + id);
@@ -80,8 +89,12 @@ function renderSync() {
 
 function updateBankCount() {
   const n = ownedIds().length;
-  const c = document.querySelector('[data-tab="bank"] .count');
-  if (c) c.textContent = n ? String(n) : '';
+  for (const c of document.querySelectorAll('[data-tab="bank"] .count')) c.textContent = n ? String(n) : '';
+  const k = codesToRedeem();
+  for (const c of document.querySelectorAll('[data-tab="codes"] .count')) {
+    c.textContent = k ? String(k) : '';
+    c.classList.toggle('alert', k > 0);
+  }
 }
 
 async function start() {
@@ -96,6 +109,7 @@ async function start() {
   app.innerHTML = `<header class="app-header">${header()}</header>
     <main>${TABS.map((t) => `<section class="view" id="view-${t.id}" role="tabpanel" aria-labelledby="tab-${t.id}" hidden></section>`).join('')}
       <footer class="small muted app-foot">Fan-made tool, not affiliated with Lilith Games. Hero portraits are game assets via the floofpire/cdn mirror. Meta data ${esc(data.meta.gameVersion || '')} · updated weekly.</footer></main>
+    ${bottomNav()}
     <div id="toast" role="status" aria-live="polite" hidden></div>`;
   bindImageFallback(document.body);
   $$('[data-tab]').forEach((b) => b.addEventListener('click', () => show(b.dataset.tab)));

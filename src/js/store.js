@@ -16,7 +16,52 @@ export const bank = {
   settings: { sharedLevel: true, crystalLevel: 240, elderTree: emptyElderTree() },
   heroes: {},
   beasts: {},
+  codes: {}, // CODE -> { used, usedAt }
+  customCodes: [], // codes the player added: { code, rewards, added }
 };
+
+// Fill the bank from a stored copy (browser storage, the cloud store, or a
+// snapshot from another device).
+function hydrate(src) {
+  bank.updatedAt = src.updatedAt || 0;
+  bank.settings = { ...bank.settings, ...(src.settings || {}) };
+  bank.settings.elderTree = sanitizeElderTree(bank.settings.elderTree);
+  bank.heroes = {};
+  for (const [id, e] of Object.entries(src.heroes || {})) bank.heroes[id] = sanitizeEntry(e);
+  bank.beasts = loadBeasts(src.beasts);
+  bank.codes = loadCodes(src.codes);
+  bank.customCodes = Array.isArray(src.customCodes) ? src.customCodes.filter((c) => c && c.code).slice(0, 200) : [];
+}
+
+// ---- redeem codes ------------------------------------------------------------
+
+export const normCode = (c) => String(c || '').trim();
+
+function loadCodes(src) {
+  const out = {};
+  for (const [code, e] of Object.entries(src || {})) if (e?.used) out[code] = { used: true, usedAt: e.usedAt || null };
+  return out;
+}
+
+export function setCodeUsed(code, used) {
+  const k = normCode(code);
+  if (used) bank.codes[k] = { used: true, usedAt: Date.now() };
+  else delete bank.codes[k];
+  touch();
+}
+
+export function addCustomCode(code, rewards = '') {
+  const k = normCode(code);
+  if (!k || bank.customCodes.some((c) => c.code === k)) return false;
+  bank.customCodes = [{ code: k, rewards: String(rewards).slice(0, 200), added: Date.now() }, ...bank.customCodes];
+  touch();
+  return true;
+}
+
+export function removeCustomCode(code) {
+  bank.customCodes = bank.customCodes.filter((c) => c.code !== code);
+  touch();
+}
 
 // A beast the player owns, with its Strength / Intelligence / Agility buff levels.
 export function sanitizeBeast(e, max = 18) {
@@ -155,6 +200,8 @@ export function replaceBank(next) {
   bank.heroes = {};
   for (const [id, e] of Object.entries(next.heroes || {})) bank.heroes[id] = sanitizeEntry(e);
   if (next.beasts) bank.beasts = loadBeasts(next.beasts);
+  if (next.codes) bank.codes = loadCodes(next.codes);
+  if (Array.isArray(next.customCodes)) bank.customCodes = next.customCodes.filter((c) => c && c.code);
   touch();
 }
 
@@ -231,13 +278,7 @@ function emitSync() {
 
 export function loadLocal() {
   const saved = local.get(LOCAL_KEY);
-  if (saved && saved.heroes) {
-    bank.updatedAt = saved.updatedAt || 0;
-    bank.settings = { ...bank.settings, ...(saved.settings || {}) };
-    bank.settings.elderTree = sanitizeElderTree(bank.settings.elderTree);
-    for (const [id, e] of Object.entries(saved.heroes)) bank.heroes[id] = sanitizeEntry(e);
-    bank.beasts = loadBeasts(saved.beasts);
-  }
+  if (saved && (saved.heroes || saved.codes)) hydrate(saved);
   const f = local.get(LOCAL_FORMATIONS);
   if (f && Array.isArray(f.items)) Object.assign(formations, f);
 }
@@ -257,15 +298,10 @@ export async function connectRemote() {
     sync.mode = 'cloud';
     const cloud = snap.exists ? snap.data() : null;
     if (cloud && (cloud.updatedAt || 0) >= bank.updatedAt) {
-      bank.updatedAt = cloud.updatedAt || 0;
-      bank.settings = { ...bank.settings, ...(cloud.settings || {}) };
-      bank.settings.elderTree = sanitizeElderTree(bank.settings.elderTree);
-      bank.heroes = {};
-      for (const [id, e] of Object.entries(cloud.heroes || {})) bank.heroes[id] = sanitizeEntry(e);
-      bank.beasts = loadBeasts(cloud.beasts);
+      hydrate(cloud);
       local.set(LOCAL_KEY, bank);
       emit();
-    } else if (Object.keys(bank.heroes).length) {
+    } else if (bank.updatedAt) {
       pushRemote();
     }
     const fc = fsnap.exists ? fsnap.data() : null;
@@ -283,12 +319,7 @@ export async function connectRemote() {
         if (!s.exists || s.metadata.hasPendingWrites) return;
         const d = s.data();
         if ((d.updatedAt || 0) > bank.updatedAt) {
-          bank.updatedAt = d.updatedAt;
-          bank.settings = { ...bank.settings, ...(d.settings || {}) };
-          bank.settings.elderTree = sanitizeElderTree(bank.settings.elderTree);
-          bank.heroes = {};
-          for (const [id, e] of Object.entries(d.heroes || {})) bank.heroes[id] = sanitizeEntry(e);
-          bank.beasts = loadBeasts(d.beasts);
+          hydrate(d);
           local.set(LOCAL_KEY, bank);
           emit();
         }

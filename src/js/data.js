@@ -86,17 +86,18 @@ async function loadJson(path) {
 }
 
 export async function loadData() {
-  const [meta, heroes, artifacts, modes, beasts] = await Promise.all([
+  const [meta, heroes, artifacts, modes, beasts, codes] = await Promise.all([
     loadJson('data/meta.json'),
     loadJson('data/heroes.json'),
     loadJson('data/artifacts.json'),
     loadJson('data/modes.json'),
     loadJson('data/beasts.json').catch(() => ({ beasts: [] })),
+    loadJson('data/codes.json').catch(() => ({ codes: [] })),
   ]);
-  return setData({ meta, heroes, artifacts, modes, beasts });
+  return setData({ meta, heroes, artifacts, modes, beasts, codes });
 }
 
-export function setData({ meta, heroes, artifacts, modes, beasts = { beasts: [] } }) {
+export function setData({ meta, heroes, artifacts, modes, beasts = { beasts: [] }, codes = { codes: [] } }) {
   state.meta = meta;
   state.heroes = (heroes.heroes || []).map(normalizeHero);
   state.heroById = new Map(state.heroes.map((h) => [h.id, h]));
@@ -108,6 +109,7 @@ export function setData({ meta, heroes, artifacts, modes, beasts = { beasts: [] 
   state.modeById = new Map(state.modes.map((m) => [m.id, m]));
   state.combos = modes.combos || { community: [], ai: [] };
   state.archetypes = modes.pvpArchetypes || [];
+  state.codes = codes;
   state.beasts = beasts.beasts || [];
   state.beastById = new Map(state.beasts.map((b) => [b.id, b]));
   state.beastSystem = beasts.system || null;

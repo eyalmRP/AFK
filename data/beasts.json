@@ -1,6 +1,66 @@
 {
  "asOf": "2026-10-24",
- "system": null,
+ "system": {
+  "summary": "One beast joins each battle. Its three buffs (Strength, Intelligence, Agility) raise heroes of that type, up to 12 each, or 18 on legendary beasts. A beast's level is the sum of its buffs, and its skill gets stronger at levels 3, 6, 9, 12, 15 and 18. Beast Resonance lifts every beast to a shared minimum level, up to 18.",
+  "perFormation": "One beast per battle or team. Games Fuze says only one beast can go into each battle. Game Vault says one beast per party, and in multi-stage or multi-team fights each team is given its own beast. You pick the beast with an icon at the top left of the battle screen. In battle the beast fills a cooldown bar, then fires automatically, or on tap when auto-battle is off. Enemies cannot target beasts with Attack, Control or Buff effects. Whether the same beast can sit in several teams of one multi-team mode was not confirmed.",
+  "modes": [
+   "campaign",
+   "nightmare-corridor",
+   "arena-of-heroes",
+   "legends-championship",
+   "kings-tower",
+   "faction-towers",
+   "guild-hunts",
+   "twisted-realm",
+   "cursed-realm",
+   "arcane-labyrinth",
+   "treasure-scramble",
+   "guild-trials"
+  ],
+  "modesConfirmed": [
+   "campaign",
+   "nightmare-corridor"
+  ],
+  "modesExcluded": [
+   "abyssal-expedition"
+  ],
+  "upgrades": [
+   {
+    "name": "Strength buff",
+    "range": "0-12 (18 for legendary/fabled beasts)",
+    "effect": "Raises stats for Strength-type heroes on the team. In afk.guide's tables the Strength row lists stats such as DEF%, a secondary stat and Accuracy (for example Grassy Orb: DEF 17.47%, ACC 7.86). Each buff level also adds 1 to Beast Level."
+   },
+   {
+    "name": "Intelligence buff",
+    "range": "0-12 (18 for legendary/fabled beasts)",
+    "effect": "Same as the Strength buff, for Intelligence-type heroes."
+   },
+   {
+    "name": "Agility buff",
+    "range": "0-12 (18 for legendary/fabled beasts)",
+    "effect": "Same as the Strength buff, for Agility-type heroes."
+   },
+   {
+    "name": "Beast Level (derived)",
+    "range": "0-36 for rare and elite (3 x 12). 0-54 for legendary, inferred from 3 x 18 and not confirmed by a source",
+    "effect": "Beast Level is the sum of the three buff levels (AFK Calc: level = strengthBuff + intelligenceBuff + agilityBuff; Fandom: you raise Beast Level by levelling Attribute Buffs). It unlocks skill effects. The base skill is available from Lv0 in afk.guide's text. Rare beasts have 3 skill tiers at Lv6, 12 and 18. Elite and fabled beasts also unlock training effects at Lv3, 9 and 15; patch 1.177 folded Beast Training into Beast Skills so these unlock automatically (AFK Calc marks rares hasBasic=false). Past Lv18 no new skills unlock, only stats. Past Lv18 all three buffs must reach 6 before the beast can level further. afk.guide's tables also show a team-wide HP/DEF/ATK% row for all allies that grows with the beast."
+   },
+   {
+    "name": "Beast Resonance (account-wide)",
+    "range": "shared level up to 18",
+    "effect": "Added in 1.106 and works like the Resonating Crystal. 4 beasts at Lv6 lift every beast to 6. 5 at Lv9 lift all to 9, 6 at Lv12 to 12, 7 at Lv15 to 15, and 8 at Lv18 to 18 (the cap). Above 18 each beast is levelled on its own."
+   },
+   {
+    "name": "Fabled beast ascension (legendary only)",
+    "range": "unknown",
+    "effect": "Fabled beasts start at Legendary tier and are upgraded through Beast Resonance. They have extra perks that unlock as they level, and ascension quests that cost 'wishes' (1.194 lowered the number of wishes needed). Community guides call these 'awakened pets' and compare them by ascension level. No star or ascension scale was found."
+   }
+  ],
+  "screenHints": {
+   "list": "The Beast Grounds (Ranhorn) collection shows square portraits in rarity frames: rare, elite, and an orange-gold legendary frame (AFK Calc frame assets). Each portrait has 'Lvl N' in the top-right corner, where N is Beast Level, the sum of the three buff levels; AFK Calc copies this layout. Unowned or locked beasts are shown greyed out (AFK Calc greys a beast when any buff is -1). Elite beasts have a 'basic' artwork that changes to an evolved artwork at Lv18 (game assets pet_60xx_basic vs pet_60xx; AFK Calc switches at Lv18). Rare and fabled beasts have one artwork. Beast Resonance gives a shared minimum level, so a list can show many beasts at the same level (6, 9, 12, 15 or 18).",
+   "detail": "Tapping a portrait opens an overview with the beast's skills (each effect tagged with its unlock level, such as Lv0/3/6/9/12/15/18), Attribute Buff details and story (Fandom Beast Grounds). The three buff cards are Strength (red, fist icon), Intelligence (blue, head icon) and Agility (green, swoosh icon). Each has a row of 6 diamond pips that light gold as the buff levels (AFK Calc buff assets). How levels 7-12 (or 13-18 on legendary beasts) show on 6 pips was not confirmed. Fabled beasts also have ascension (wishes) and perks. No star rating was found on normal beasts, so read the level from the 'Lvl' badge and the buff pips."
+  }
+ },
  "beasts": [
   {
    "id": "dreary-ball",
@@ -9,12 +69,26 @@
    "rarity": "rare",
    "img": "img/beasts/dreary-ball.webp",
    "maxBuff": 12,
-   "skill": null,
-   "roles": [],
-   "suits": null,
-   "tiers": {},
-   "raw": {},
-   "bestFor": []
+   "skill": "Gloomy Howl: bellows to deal beast damage to all enemies. Higher levels add skill damage and cut the Haste and Defense of enemies hit.",
+   "roles": [
+    "damage",
+    "debuff"
+   ],
+   "suits": "Early-game filler. afk.guide says it is most players' first Lv18 beast and their strongest until Grassy Orb reaches 18. With all rares at 18 and elites at 9+ it is by far the weakest. Also an option in the Thoran cheese campaign comp.",
+   "tiers": {
+    "pve": "D",
+    "pvp": "D",
+    "boss": "D"
+   },
+   "raw": {
+    "afkglobal-2026-10-22": "D",
+    "allclash": "D",
+    "afkguide-1.194": "prose: first Lv18 beast for most players, weakest once elites are built"
+   },
+   "bestFor": [
+    "campaign",
+    "thoran"
+   ]
   },
   {
    "id": "tufty-ears",
@@ -23,11 +97,23 @@
    "rarity": "rare",
    "img": "img/beasts/tufty-ears.webp",
    "maxBuff": 12,
-   "skill": null,
-   "roles": [],
-   "suits": null,
-   "tiers": {},
-   "raw": {},
+   "skill": "Hallowed Sigh: heals all allies and turns overhealing into a shield. Lv6 heals more, Lv12 gains beast energy faster, Lv18 also removes allies' debuffs.",
+   "roles": [
+    "heal",
+    "shield",
+    "cleanse"
+   ],
+   "suits": "Sustain teams, and fights against debuff-heavy enemies thanks to the Lv18 cleanse. afk.guide calls it 'a good rare beast' that comes in handy in specific situations.",
+   "tiers": {
+    "pve": "C",
+    "pvp": "C",
+    "boss": "C"
+   },
+   "raw": {
+    "afkglobal-2026-10-22": "C+",
+    "allclash": "B",
+    "afkguide-1.194": "prose: good rare beast, situational (Lv18 cleanse)"
+   },
    "bestFor": []
   },
   {
@@ -37,11 +123,21 @@
    "rarity": "rare",
    "img": "img/beasts/grassy-orb.webp",
    "maxBuff": 12,
-   "skill": null,
-   "roles": [],
-   "suits": null,
-   "tiers": {},
-   "raw": {},
+   "skill": "Ground Rustle: buffs allied heroes' Attack and Crit, growing with beast level. Lv12 gives it beast energy at the start of battle.",
+   "roles": [
+    "buff"
+   ],
+   "suits": "afk.guide: 'the best offensive rare beast', still the best choice while elites are around Lv6. One guide says it works best with teams that drain or control enemy energy.",
+   "tiers": {
+    "pve": "C",
+    "pvp": "C",
+    "boss": "C"
+   },
+   "raw": {
+    "afkglobal-2026-10-22": "C",
+    "allclash": "C",
+    "afkguide-1.194": "prose: best offensive rare beast"
+   },
    "bestFor": []
   },
   {
@@ -51,12 +147,26 @@
    "rarity": "elite",
    "img": "img/beasts/polar-beast.webp",
    "maxBuff": 12,
-   "skill": null,
-   "roles": [],
-   "suits": null,
-   "tiers": {},
-   "raw": {},
-   "bestFor": []
+   "skill": "Tundra Freeze: beast damage to all enemies. It gains extra beast energy while an enemy is controlled, and its damage to controlled targets ignores Defense. It also debuffs enemies (Tenacity, Haste and Defense down).",
+   "roles": [
+    "damage",
+    "debuff"
+   ],
+   "suits": "Crowd-control teams. afk.guide: 'one of the weakest beasts', but its Tenacity debuff helps in PvE against enemies cursed by Thoran. An option in the Thoran cheese campaign comp.",
+   "tiers": {
+    "pve": "C",
+    "pvp": "C",
+    "boss": "C"
+   },
+   "raw": {
+    "afkglobal-2026-10-22": "C",
+    "allclash": "C+",
+    "afkguide-1.194": "prose: one of the weakest beasts"
+   },
+   "bestFor": [
+    "campaign",
+    "thoran"
+   ]
   },
   {
    "id": "fire-breather",
@@ -65,12 +175,30 @@
    "rarity": "elite",
    "img": "img/beasts/fire-breather.webp",
    "maxBuff": 12,
-   "skill": null,
-   "roles": [],
-   "suits": null,
-   "tiers": {},
-   "raw": {},
-   "bestFor": []
+   "skill": "Lava Spouts: lava jets hit enemies around the ally who has dealt the most damage. Lv12 adds a lava zone that follows that hero, where enemies lose HP and cannot heal and the hero's lost HP becomes a shield. Lv18 gives that hero bonus damage and control immunity for 6s.",
+   "roles": [
+    "damage",
+    "anti-heal",
+    "shield",
+    "buff"
+   ],
+   "suits": "A melee main carry. AllClash cites synergy with Awakened Brutus; the lava ring is weak around backliners. First choice in afk.guide's Thoran cheese campaign comp. afk.guide calls it outclassed, but its Lv18 damage buff plus CC immunity on your strongest hero is useful.",
+   "tiers": {
+    "pve": "B",
+    "pvp": "B",
+    "boss": "B"
+   },
+   "raw": {
+    "afkglobal-2026-10-22": "B",
+    "allclash": "B+",
+    "theria-1.154": "C",
+    "afkguide-1.194": "prose: outclassed, Lv18 useful"
+   },
+   "bestFor": [
+    "campaign",
+    "thoran",
+    "awakened-brutus"
+   ]
   },
   {
    "id": "blade-ridge",
@@ -79,12 +207,28 @@
    "rarity": "elite",
    "img": "img/beasts/blade-ridge.webp",
    "maxBuff": 12,
-   "skill": null,
-   "roles": [],
-   "suits": null,
-   "tiers": {},
-   "raw": {},
-   "bestFor": []
+   "skill": "Raiding Chariot: dashes at one enemy and claws it for beast damage. Lv6 shortens the cooldown, Lv9 lowers the target's Physical and Magic Resist, Lv18 adds extra hits and gives allies Focus layers.",
+   "roles": [
+    "damage",
+    "debuff",
+    "buff"
+   ],
+   "suits": "Single-target or boss damage. afk.guide: 'good against bosses, especially after you unlock his skill level 9', once meta but now outclassed. Second choice in the Thoran cheese campaign comp.",
+   "tiers": {
+    "pve": "B",
+    "pvp": "B",
+    "boss": "A"
+   },
+   "raw": {
+    "afkglobal-2026-10-22": "B",
+    "allclash": "A",
+    "theria-1.154": "A",
+    "afkguide-1.194": "prose: good vs bosses after Lv9, outclassed"
+   },
+   "bestFor": [
+    "campaign",
+    "thoran"
+   ]
   },
   {
    "id": "winged-lion",
@@ -93,12 +237,27 @@
    "rarity": "elite",
    "img": "img/beasts/winged-lion.webp",
    "maxBuff": 12,
-   "skill": null,
-   "roles": [],
-   "suits": null,
-   "tiers": {},
-   "raw": {},
-   "bestFor": []
+   "skill": "Deafening Roar: beast damage to all enemies, gaining beast energy when allies cast Ultimates. Lv3 starts the battle with beast energy, Lv6 gives allies energy, Lv12 Inspires the highest-Attack-Rating ally (more damage dealt, less taken).",
+   "roles": [
+    "damage",
+    "energy",
+    "buff"
+   ],
+   "suits": "Teams built around one carry. afk.guide says it is 'useful on all game modes' and peaks once Lv12 is unlocked. Theria pairs it with Saurus.",
+   "tiers": {
+    "pve": "A",
+    "pvp": "A",
+    "boss": "A"
+   },
+   "raw": {
+    "afkglobal-2026-10-22": "A",
+    "allclash": "S+ ('probably the beast that has the highest impact right now')",
+    "theria-1.154": "S",
+    "afkguide-1.194": "prose: useful in all modes, shines at Lv12"
+   },
+   "bestFor": [
+    "saurus"
+   ]
   },
   {
    "id": "rock-crown-lizard",
@@ -107,11 +266,25 @@
    "rarity": "elite",
    "img": "img/beasts/rock-crown-lizard.webp",
    "maxBuff": 12,
-   "skill": null,
-   "roles": [],
-   "suits": null,
-   "tiers": {},
-   "raw": {},
+   "skill": "Guardian Shield: a shield zone absorbs part of the damage taken by allies inside it. Lv3 adds Dissolve and Tenacity, Lv9 lets one ally survive fatal damage once per battle, Lv12 knocks back enemies, stuns the closest one and lowers enemy Attack, Lv18 drains enemy shields.",
+   "roles": [
+    "shield",
+    "revive",
+    "cc",
+    "debuff"
+   ],
+   "suits": "Defensive comps. afk.guide calls it a 'good defensive beast', and it was a recommended beast for the Fantastic Beasts: Misty Forest event.",
+   "tiers": {
+    "pve": "B",
+    "pvp": "B",
+    "boss": "B"
+   },
+   "raw": {
+    "afkglobal-2026-10-22": "B+",
+    "allclash": "A",
+    "theria-1.154": "A",
+    "afkguide-1.194": "prose: good defensive beast"
+   },
    "bestFor": []
   },
   {
@@ -121,11 +294,22 @@
    "rarity": "elite",
    "img": "img/beasts/feline-vesperio.webp",
    "maxBuff": 12,
-   "skill": null,
-   "roles": [],
-   "suits": null,
-   "tiers": {},
-   "raw": {},
+   "skill": "Darkfire Ball: a ball fires Abysmal Draw at enemies every second for beast damage. Lv12 steals Energy from hit heroes and deals more damage to low-energy targets, bosses and summons. Lv18 makes the ball explode for max-HP-based damage to all enemies and hands the stored Energy to allies.",
+   "roles": [
+    "damage",
+    "energy"
+   ],
+   "suits": "Teams that drain enemy energy. afk.guide: useful in specific situations but 'mostly a very weak and outdated beast'.",
+   "tiers": {
+    "pve": "C",
+    "pvp": "C",
+    "boss": "C"
+   },
+   "raw": {
+    "afkglobal-2026-10-22": "C",
+    "allclash": "C+",
+    "afkguide-1.194": "prose: weak and outdated, energy-drain synergy"
+   },
    "bestFor": []
   },
   {
@@ -135,11 +319,23 @@
    "rarity": "elite",
    "img": "img/beasts/bellbellow.webp",
    "maxBuff": 12,
-   "skill": null,
-   "roles": [],
-   "suits": null,
-   "tiers": {},
-   "raw": {},
+   "skill": "Healing Bloom: heals all allies (240% ATK) and leaves Trail of Life healing zones. Lv6 protects and heals the lowest-HP ally, Lv12 and Lv18 strengthen the Trails.",
+   "roles": [
+    "heal",
+    "buff"
+   ],
+   "suits": "Survivability in PvP and some bosses. afk.guide says it lacks offensive buffs and only shows its full value at Lv18.",
+   "tiers": {
+    "pve": "B",
+    "pvp": "B",
+    "boss": "B"
+   },
+   "raw": {
+    "afkglobal-2026-10-22": "B",
+    "allclash": "B",
+    "theria-1.154": "B",
+    "afkguide-1.194": "prose: great defensive buffs, PvP and some bosses, needs Lv18"
+   },
    "bestFor": []
   },
   {
@@ -149,12 +345,33 @@
    "rarity": "elite",
    "img": "img/beasts/flutterplume-owl.webp",
    "maxBuff": 12,
-   "skill": null,
-   "roles": [],
-   "suits": null,
-   "tiers": {},
-   "raw": {},
-   "bestFor": []
+   "skill": "Chrono Control: creates a time zone where heroes are densest and damages enemies inside (330% ATK). For 8s, ally buffs in the zone last 20% longer and enemy buffs 20% shorter. Lv18: after 3 casts, the battle lasts 5s longer (once per battle).",
+   "roles": [
+    "damage",
+    "buff",
+    "debuff"
+   ],
+   "suits": "Very flexible. Fits teams that lean on timed buffs and timed fights (the Lv18 extra 5s). A common option in afk.guide's Envydiel, Liberta, AEironn, ABelinda and Tasi-Twins campaign comps. Theria pairs it with Saurus.",
+   "tiers": {
+    "pve": "S+",
+    "pvp": "S+",
+    "boss": "S+"
+   },
+   "raw": {
+    "afkglobal-2026-10-22": "S+",
+    "allclash": "S+",
+    "theria-1.154": "S",
+    "afkguide-1.194": "prose: very strong and flexible"
+   },
+   "bestFor": [
+    "campaign",
+    "envydiel",
+    "liberta",
+    "awakened-eironn",
+    "awakened-belinda",
+    "tasi",
+    "saurus"
+   ]
   },
   {
    "id": "talismane",
@@ -163,12 +380,29 @@
    "rarity": "elite",
    "img": "img/beasts/talismane.webp",
    "maxBuff": 12,
-   "skill": null,
-   "roles": [],
-   "suits": null,
-   "tiers": {},
-   "raw": {},
-   "bestFor": []
+   "skill": "A Blessed Year: follows the front-most ally, raising its Dodge and Magic Suppression. When cast, it leaps into the enemy cluster with firecrackers (damage, Accuracy and Magic Efficiency down). Lv6 adds blinding, Lv12 gives the followed hero a Longevity Lock every 10s, Lv18 also locks the top-damage ally.",
+   "roles": [
+    "damage",
+    "buff",
+    "debuff",
+    "shield"
+   ],
+   "suits": "Strong early game, especially with an Agility carry (Theria). Its main buff covers only one or two heroes (afk.guide). Level the Strength buff before Agility. An option in the Tasi-Twins campaign comp.",
+   "tiers": {
+    "pve": "A",
+    "pvp": "A",
+    "boss": "A"
+   },
+   "raw": {
+    "afkglobal-2026-10-22": "A",
+    "allclash": "S",
+    "theria-1.154": "S",
+    "afkguide-1.194": "prose: huge buffs to one ally, Lv12 strong, Lv18 adds a second hero"
+   },
+   "bestFor": [
+    "campaign",
+    "tasi"
+   ]
   },
   {
    "id": "phantasmoth",
@@ -177,11 +411,25 @@
    "rarity": "elite",
    "img": "img/beasts/phantasmoth.webp",
    "maxBuff": 12,
-   "skill": null,
-   "roles": [],
-   "suits": null,
-   "tiers": {},
-   "raw": {},
+   "skill": "Gossamer Wings: possesses the ally with the most damage for up to 15s, buffing its Attack and Attack Speed. Its normal attacks apply Dreamtorn (Tenacity down). Lv18: when possession ends, it cleanses allies' Attack-reduction debuffs, damages all enemies and extends Dreamtorn.",
+   "roles": [
+    "buff",
+    "debuff",
+    "cleanse",
+    "damage"
+   ],
+   "suits": "Normal-attack carries. Theria calls it a great early investment as a carry-buffer that is less strong when maxed. afk.guide says it works well even at Lv6.",
+   "tiers": {
+    "pve": "B",
+    "pvp": "B",
+    "boss": "B"
+   },
+   "raw": {
+    "afkglobal-2026-10-22": "B+",
+    "allclash": "A+",
+    "theria-1.154": "A",
+    "afkguide-1.194": "prose: works well even at skill level 6"
+   },
    "bestFor": []
   },
   {
@@ -191,12 +439,28 @@
    "rarity": "elite",
    "img": "img/beasts/savage-souffle.webp",
    "maxBuff": 12,
-   "skill": null,
-   "roles": [],
-   "suits": null,
-   "tiers": {},
-   "raw": {},
-   "bestFor": []
+   "skill": "Flavorful Frenzy: Candy Clouds restore 100 Energy to all allies and Marzipan Meteors hit all enemies 3 times. Lv6 'cakefies' the top-damage enemy so it cannot attack for 5s. Lv12 drops Boom-Boom Buns that immobilize. Lv18 makes cakefied targets take 35% more damage with 35% less Defense.",
+   "roles": [
+    "energy",
+    "damage",
+    "cc",
+    "debuff"
+   ],
+   "suits": "PvP-oriented (Theria). afk.guide notes ally energy at Lv0 and very strong CC at Lv6 and 9.",
+   "tiers": {
+    "pve": "B",
+    "pvp": "A",
+    "boss": "B"
+   },
+   "raw": {
+    "afkglobal-2026-10-22": "B",
+    "allclash": "A",
+    "theria-1.154": "S",
+    "afkguide-1.194": "prose: ally energy at Lv0, strong CC at Lv6/9"
+   },
+   "bestFor": [
+    "arena-of-heroes"
+   ]
   },
   {
    "id": "slumber-seal",
@@ -205,12 +469,29 @@
    "rarity": "elite",
    "img": "img/beasts/slumber-seal.webp",
    "maxBuff": 12,
-   "skill": null,
-   "roles": [],
-   "suits": null,
-   "tiers": {},
-   "raw": {},
-   "bestFor": []
+   "skill": "Ocean Song: spawns aquatic spirits that keep attacking the lowest-HP enemy, plus waves that knock enemies back. Control effects trap enemies in bubbles, even if resisted (AllClash). Lv18 spawns extra spirits for each trapped enemy, and passives ramp up its ATK and Crit.",
+   "roles": [
+    "damage",
+    "cc"
+   ],
+   "suits": "Any team, and crowd-control teams most of all. afk.guide calls it 'the strongest beast in the game' and the top priority to Lv18. Level the Strength buff before Agility. In the Liberta charm and Envydiel campaign comps. Theria pairs it with Saurus.",
+   "tiers": {
+    "pve": "S+",
+    "pvp": "S+",
+    "boss": "S+"
+   },
+   "raw": {
+    "afkglobal-2026-10-22": "S+",
+    "allclash": "S+",
+    "theria-1.154": "S",
+    "afkguide-1.194": "prose: strongest beast in the game"
+   },
+   "bestFor": [
+    "campaign",
+    "liberta",
+    "envydiel",
+    "saurus"
+   ]
   },
   {
    "id": "fox-fatale",
@@ -219,12 +500,32 @@
    "rarity": "elite",
    "img": "img/beasts/fox-fatale.webp",
    "maxBuff": 12,
-   "skill": null,
-   "roles": [],
-   "suits": null,
-   "tiers": {},
-   "raw": {},
-   "bestFor": []
+   "skill": "Seductive Dance: applies Degenerate (lower energy recovery and Attack Rating) to up to 3 top-damage enemies. Lv6 also applies it to the highest-ATK enemy at battle start. Lv12: on leaving, it charms nearby enemies for 4s (normal attacks only). Lv18 makes allies focus Degenerate targets and deal more damage to them.",
+   "roles": [
+    "debuff",
+    "cc",
+    "damage",
+    "buff"
+   ],
+   "suits": "PvP, and charm comps. It is the only beast listed for Maetria charm and an option for Liberta charm and AEironn. Level the Strength buff before Agility. afk.guide says it becomes very strong once the Lv12 charm unlocks.",
+   "tiers": {
+    "pve": "A",
+    "pvp": "S",
+    "boss": "A"
+   },
+   "raw": {
+    "afkglobal-2026-10-22": "A+",
+    "allclash": "S+",
+    "theria-1.154": "S",
+    "afkguide-1.194": "prose: very strong from Lv12 (charm)"
+   },
+   "bestFor": [
+    "arena-of-heroes",
+    "campaign",
+    "maetria",
+    "liberta",
+    "awakened-eironn"
+   ]
   },
   {
    "id": "shroom-spooder",
@@ -233,12 +534,29 @@
    "rarity": "elite",
    "img": "img/beasts/shroom-spooder.webp",
    "maxBuff": 12,
-   "skill": null,
-   "roles": [],
-   "suits": null,
-   "tiers": {},
-   "raw": {},
-   "bestFor": []
+   "skill": "Noxious Mirage: drops an 8s hallucinogenic mist on the densest enemies, dealing damage each second, slowing them 75% and stacking venom that explodes at 4 layers. Allies outside the mist take 60% less damage from enemies inside it and are immune to their control. A phantom taunts the highest-ATK enemy, and a free cast at battle start targets the enemy backline.",
+   "roles": [
+    "damage",
+    "debuff",
+    "cc"
+   ],
+   "suits": "Debuffing whole enemy teams. Theria says it needs heavy investment. It is the top pick in afk.guide's Liberta charm campaign comp and an option for ABelinda.",
+   "tiers": {
+    "pve": "A",
+    "pvp": "A",
+    "boss": "A"
+   },
+   "raw": {
+    "afkglobal-2026-10-22": "A+",
+    "allclash": "S+",
+    "theria-1.154": "S",
+    "afkguide-1.194": "prose: very useful, strong at debuffing"
+   },
+   "bestFor": [
+    "campaign",
+    "liberta",
+    "awakened-belinda"
+   ]
   },
   {
    "id": "radish-rotunda",
@@ -247,11 +565,22 @@
    "rarity": "elite",
    "img": "img/beasts/radish-rotunda.webp",
    "maxBuff": 12,
-   "skill": null,
-   "roles": [],
-   "suits": null,
-   "tiers": {},
-   "raw": {},
+   "skill": "Sunny Sky: heals the target for 20% of its max HP and adds Crit Damage Resistance. Under Sunny Sky allies' healing is 20% stronger. Higher levels store damage taken for later healing and add a decaying ATK/DEF buff. Lv18 spawns Mini Radishes that repeat the effect.",
+   "roles": [
+    "heal",
+    "buff"
+   ],
+   "suits": "Defensive teams that already have strong healers (afk.guide). Added in 1.126.",
+   "tiers": {
+    "pve": "B",
+    "pvp": "B",
+    "boss": "B"
+   },
+   "raw": {
+    "afkglobal-2026-10-22": "B",
+    "allclash": "A",
+    "afkguide-1.194": "prose: good defensive beast with healers"
+   },
    "bestFor": []
   },
   {
@@ -261,12 +590,28 @@
    "rarity": "elite",
    "img": "img/beasts/pandy-dumpty.webp",
    "maxBuff": 12,
-   "skill": null,
-   "roles": [],
-   "suits": null,
-   "tiers": {},
-   "raw": {},
-   "bestFor": []
+   "skill": "Up and Away: smashes the densest enemy area for beast damage (250% ATK) up to 3 times, rising higher each time. Later levels hide the rearmost ally behind bamboo cover and give the team Crit Rating and Crit Damage Amplification that grows as it rises.",
+   "roles": [
+    "damage",
+    "buff",
+    "shield"
+   ],
+   "suits": "Crit-reliant damage teams. afk.guide calls it 'very strong' for the ally Crit buffs. An option in the ABelinda and Tasi-Twins campaign comps.",
+   "tiers": {
+    "pve": "A",
+    "pvp": "A",
+    "boss": "A"
+   },
+   "raw": {
+    "afkglobal-2026-10-22": "A",
+    "theria-1.154": "A",
+    "afkguide-1.194": "prose: very strong (crit buffs)"
+   },
+   "bestFor": [
+    "campaign",
+    "awakened-belinda",
+    "tasi"
+   ]
   },
   {
    "id": "ice-crown",
@@ -275,12 +620,32 @@
    "rarity": "elite",
    "img": "img/beasts/ice-crown.webp",
    "maxBuff": 12,
-   "skill": null,
-   "roles": [],
-   "suits": null,
-   "tiers": {},
-   "raw": {},
-   "bestFor": []
+   "skill": "Glacial Elegy: rains 3 hails of shards on all enemies (250% ATK each) and gives allies a Frost Shield. Lv6 freezes enemies above half HP. Lv12 lets it absorb part of the damage allies take while dormant, then cast on its own. Lv18 lowers frozen enemies' Crit Block and Crit Damage Resistance.",
+   "roles": [
+    "damage",
+    "cc",
+    "shield",
+    "debuff"
+   ],
+   "suits": "PvP and PvE once Lv12 is unlocked (afk.guide). Commonly paired with Treatspector in PvE. Top pick for the ABelinda and Tasi-Twins campaign comps and an option for Envydiel and AEironn.",
+   "tiers": {
+    "pve": "S",
+    "pvp": "S",
+    "boss": "S"
+   },
+   "raw": {
+    "afkglobal-2026-10-22": "S",
+    "allclash": "S+",
+    "afkguide-1.194": "prose: one of the strongest for PvP and PvE (needs Lv12)"
+   },
+   "bestFor": [
+    "campaign",
+    "arena-of-heroes",
+    "awakened-belinda",
+    "tasi",
+    "envydiel",
+    "awakened-eironn"
+   ]
   },
   {
    "id": "aureus",
@@ -289,12 +654,28 @@
    "rarity": "elite",
    "img": "img/beasts/aureus.webp",
    "maxBuff": 12,
-   "skill": null,
-   "roles": [],
-   "suits": null,
-   "tiers": {},
-   "raw": {},
-   "bestFor": []
+   "skill": "Golden Tempest: follows the highest-ATK ally, giving +40% Normal Attack damage and a joint sonic-breath attack every 6s. When cast, it makes a pulling cyclone. Lv6 adds Resonance (extra damage and knockdown), Lv12 raises the followed hero's ATK, Lv18 stops enemies in the cyclone from casting Ultimates.",
+   "roles": [
+    "buff",
+    "damage",
+    "cc",
+    "debuff"
+   ],
+   "suits": "Normal-attack carries. afk.guide: 'a great beast to buff your carry and debuff your enemy team'. Also an option in the Thoran cheese campaign comp.",
+   "tiers": {
+    "pve": "S",
+    "pvp": "S",
+    "boss": "S"
+   },
+   "raw": {
+    "afkglobal-2026-10-22": "S",
+    "allclash": "S+",
+    "afkguide-1.194": "prose: great carry buffer and debuffer"
+   },
+   "bestFor": [
+    "campaign",
+    "thoran"
+   ]
   },
   {
    "id": "pearlcrest-ibis",
@@ -303,11 +684,23 @@
    "rarity": "elite",
    "img": "img/beasts/pearlcrest-ibis.webp",
    "maxBuff": 12,
-   "skill": null,
-   "roles": [],
-   "suits": null,
-   "tiers": {},
-   "raw": {},
+   "skill": "Companionship Prayer: heals all allies 3 times (250% ATK) and gives +35 Proficiency for 6s. Twin lotuses give it energy. Higher levels make enemies take more damage, and Lv18 lets heroes survive fatal damage.",
+   "roles": [
+    "heal",
+    "buff",
+    "debuff",
+    "revive"
+   ],
+   "suits": "Flexible defensive pick (afk.guide). Added in 1.147.",
+   "tiers": {
+    "pve": "A",
+    "pvp": "A",
+    "boss": "A"
+   },
+   "raw": {
+    "afkglobal-2026-10-22": "A",
+    "afkguide-1.194": "prose: flexible defensive beast, Lv18 fatal-damage survival"
+   },
    "bestFor": []
   },
   {
@@ -317,12 +710,31 @@
    "rarity": "elite",
    "img": "img/beasts/treatspector.webp",
    "maxBuff": 12,
-   "skill": null,
-   "roles": [],
-   "suits": null,
-   "tiers": {},
-   "raw": {},
-   "bestFor": []
+   "skill": "Fires a beam at the densest enemies for beast damage plus a lockdown (they lose 5% HP every second for 5s), and gives allies a temporary ATK boost. Lv18 burns its Soul Flame to return allies who would die to their state 4s earlier, up to 2 times per battle.",
+   "roles": [
+    "damage",
+    "debuff",
+    "buff",
+    "revive"
+   ],
+   "suits": "Protecting a hypercarry. It is the most common beast in afk.guide's Envydiel and AEironn campaign comps and is often paired with Ice Crown. afk.guide: 'the best beast that can prevent fatal damage'. Top pick for the Spooky Smash-Up event. AllClash says it is mainly a PvP beast that needs heavily built heroes.",
+   "tiers": {
+    "pve": "A",
+    "pvp": "A",
+    "boss": "A"
+   },
+   "raw": {
+    "afkglobal-2026-10-22": "A+",
+    "allclash": "B+",
+    "afkguide-1.194": "prose: best fatal-damage prevention"
+   },
+   "bestFor": [
+    "campaign",
+    "envydiel",
+    "awakened-eironn",
+    "awakened-belinda",
+    "tasi"
+   ]
   },
   {
    "id": "joyous-roamer",
@@ -331,11 +743,24 @@
    "rarity": "elite",
    "img": "img/beasts/joyous-roamer.webp",
    "maxBuff": 12,
-   "skill": null,
-   "roles": [],
-   "suits": null,
-   "tiers": {},
-   "raw": {},
+   "skill": "Warden of Misfortune: destroys Jinxes (created when allies lose energy), then fireballs and stuns the enemy that caused it for 2s. Lv6 Lanterns make allies immune to effects that stop energy recovery and stack +10% ATK. Lv15 adds Lantern Shields. Lv18 transforms it so fireballs hit an extra target.",
+   "roles": [
+    "cc",
+    "buff",
+    "shield",
+    "damage"
+   ],
+   "suits": "A counter to enemy energy-reduction teams, mostly in PvP (AllClash). afk.guide: its skills are not good enough to use over the best beasts.",
+   "tiers": {
+    "pve": "C",
+    "pvp": "C",
+    "boss": "C"
+   },
+   "raw": {
+    "afkglobal-2026-10-22": "C+",
+    "allclash": "B+",
+    "afkguide-1.194": "prose: theoretically good vs energy drain, not worth it"
+   },
    "bestFor": []
   },
   {
@@ -345,12 +770,32 @@
    "rarity": "elite",
    "img": "img/beasts/trickery-chest.webp",
    "maxBuff": 12,
-   "skill": null,
-   "roles": [],
-   "suits": null,
-   "tiers": {},
-   "raw": {},
-   "bestFor": []
+   "skill": "Spews gold coins for beast damage to all enemies (250%) and throws Doomed Treasure at enemy heroes. A hero who picks one up gains 200 Energy but is haunted. Patch notes say it drains enemy Energy, disables their Ultimates and gives allies Energy and damage. Lv18 lets allies survive fatal damage.",
+   "roles": [
+    "damage",
+    "energy",
+    "debuff",
+    "buff",
+    "revive"
+   ],
+   "suits": "Late-game PvE comps. It appears in afk.guide's Liberta, ABelinda, Envydiel, AEironn and Tasi-Twins campaign lists and was the top pick for the Fantastic Beasts: Treasure Tales event. Added in 1.167.",
+   "tiers": {
+    "pve": "S",
+    "pvp": "S",
+    "boss": "S"
+   },
+   "raw": {
+    "afkglobal-2026-10-22": "S",
+    "afkguide-1.194": "prose: energy to allies, drains enemies, Lv18 fatal-damage survival"
+   },
+   "bestFor": [
+    "campaign",
+    "envydiel",
+    "awakened-eironn",
+    "awakened-belinda",
+    "liberta",
+    "tasi"
+   ]
   },
   {
    "id": "thistlekin",
@@ -359,11 +804,16 @@
    "rarity": "elite",
    "img": "img/beasts/thistlekin.webp",
    "maxBuff": 12,
-   "skill": null,
-   "roles": [],
-   "suits": null,
+   "skill": "Keeps emitting magic dust that damages nearby enemies and inflicts Floral Curse, which hinders their actions (1.174 patch-note overview; the full skill text was not found).",
+   "roles": [
+    "damage",
+    "debuff"
+   ],
+   "suits": "Unknown. No guide text was found. Added in 1.174 (2025-08-12).",
    "tiers": {},
-   "raw": {},
+   "raw": {
+    "afkglobal-2026-10-22": "unranked ('NEW' group)"
+   },
    "bestFor": []
   },
   {
@@ -373,11 +823,22 @@
    "rarity": "legendary",
    "img": "img/beasts/nightfall-pegasus.webp",
    "maxBuff": 18,
-   "skill": null,
-   "roles": [],
-   "suits": null,
-   "tiers": {},
-   "raw": {},
+   "skill": "Collects Negative Energy from the battlefield to boost its own and allied heroes' damage, and spreads Melancholy to suppress enemy offense (1.177 patch-note overview; full skill text not found).",
+   "roles": [
+    "damage",
+    "buff",
+    "debuff"
+   ],
+   "suits": "General damage amplifier. afk.guide calls it the best fabled beast so far: Lv21 for F2P and low spenders, Lv27 for whales. It was the first fabled beast (1.177, 2025-09) and every player got a copy.",
+   "tiers": {
+    "pve": "S",
+    "pvp": "S",
+    "boss": "S"
+   },
+   "raw": {
+    "afkglobal-2026-10-22": "S",
+    "afkguide-1.194": "prose: best fabled beast so far (spelled 'Nightmare Pegasus' in one place)"
+   },
    "bestFor": []
   },
   {
@@ -387,11 +848,22 @@
    "rarity": "legendary",
    "img": "img/beasts/count-snickerfang.webp",
    "maxBuff": 18,
-   "skill": null,
-   "roles": [],
-   "suits": null,
-   "tiers": {},
-   "raw": {},
+   "skill": "Keeps summoning Little Carrots that fight beside allied heroes, frightens enemies and applies several crowd-control effects. Its Lv15 skill 'Sinister Festival' was adjusted in 1.186 (overview only, full text not found).",
+   "roles": [
+    "summon",
+    "cc",
+    "damage"
+   ],
+   "suits": "Big spenders. afk.guide: 'quite strong' but needs a lot of investment, niche for F2P, mainly useful at Lv30. Added in 1.185 (2026-01).",
+   "tiers": {
+    "pve": "A",
+    "pvp": "A",
+    "boss": "A"
+   },
+   "raw": {
+    "afkglobal-2026-10-22": "A",
+    "afkguide-1.194": "prose: strong but investment-heavy, niche for F2P"
+   },
    "bestFor": []
   },
   {
@@ -401,11 +873,24 @@
    "rarity": "legendary",
    "img": "img/beasts/twinlum-spirit.webp",
    "maxBuff": 18,
-   "skill": null,
-   "roles": [],
-   "suits": null,
-   "tiers": {},
-   "raw": {},
+   "skill": "Summons a Shepherd's Moon that frequently heals allies, attacks enemies and applies buffs and debuffs to heroes on both sides (patch-note overview; full skill text not found).",
+   "roles": [
+    "summon",
+    "heal",
+    "damage",
+    "buff",
+    "debuff"
+   ],
+   "suits": "General support. afk.guide: 'a very strong beast with lots of buffs to your allies and debuffs to your enemies'. Added in 1.193 (2026 spring), internal name LunarAries.",
+   "tiers": {
+    "pve": "A",
+    "pvp": "A",
+    "boss": "A"
+   },
+   "raw": {
+    "afkglobal-2026-10-22": "A",
+    "afkguide-1.194": "prose: very strong, many buffs and debuffs"
+   },
    "bestFor": []
   },
   {
@@ -415,13 +900,330 @@
    "rarity": "legendary",
    "img": "img/beasts/blazefang.webp",
    "maxBuff": 18,
-   "skill": null,
-   "roles": [],
-   "suits": null,
+   "skill": "Leaves molten wax as it moves, attacks with Firefall and Waxfall, and supports allies through its Wax Pool and breath attacks (1.201 patch-note overview; full skill text not found).",
+   "roles": [
+    "damage",
+    "buff"
+   ],
+   "suits": "Unknown. It is the newest fabled beast (1.201, 2026-08-25) and has no guide text yet. It is not in AFK Calc's pets.json, which ends at 6029.",
    "tiers": {},
-   "raw": {},
+   "raw": {
+    "afkglobal-2026-10-22": "unranked ('NEW' group)"
+   },
    "bestFor": []
   }
  ],
- "modeRecommendations": []
+ "modeRecommendations": [
+  {
+   "mode": "campaign",
+   "beast": "fire-breather",
+   "heroes": [
+    "thoran"
+   ],
+   "why": "afk.guide's most common beasts for this comp: Fire Breather > Blade Ridge > Polar Beast, Aureus, Dreary Ball. The order comes from '>' separators in a jumbled extract.",
+   "source": "https://afk.guide/campaigns/"
+  },
+  {
+   "mode": "campaign",
+   "beast": "shroom-spooder",
+   "heroes": [
+    "liberta"
+   ],
+   "why": "afk.guide: Shroom Spooder > Slumber Seal, Fox Fatale > Flutterplume Owl, Treatspector, Trickery Chest.",
+   "source": "https://afk.guide/campaigns/"
+  },
+  {
+   "mode": "campaign",
+   "beast": "fox-fatale",
+   "heroes": [
+    "maetria"
+   ],
+   "why": "afk.guide lists only Fox Fatale (its charm adds to the comp's charm plan).",
+   "source": "https://afk.guide/campaigns/"
+  },
+  {
+   "mode": "campaign",
+   "beast": "treatspector",
+   "heroes": [
+    "awakened-eironn"
+   ],
+   "why": "afk.guide: Treatspector > Fox Fatale, Trickery Chest > Ice Crown, Flutterplume Owl.",
+   "source": "https://afk.guide/campaigns/"
+  },
+  {
+   "mode": "campaign",
+   "beast": "treatspector",
+   "heroes": [
+    "envydiel"
+   ],
+   "why": "afk.guide: Treatspector > Flutterplume Owl, Ice Crown > Slumber Seal, Trickery Chest. The team's job is to keep Envydiel alive while he carries.",
+   "source": "https://afk.guide/campaigns/"
+  },
+  {
+   "mode": "campaign",
+   "beast": "ice-crown",
+   "heroes": [
+    "awakened-belinda"
+   ],
+   "why": "afk.guide: Ice Crown and Treatspector lead, then Trickery Chest, Flutterplume Owl, Shroom Spooder, Pandy Dumpty. The extract's order was garbled.",
+   "source": "https://afk.guide/campaigns/"
+  },
+  {
+   "mode": "campaign",
+   "beast": "ice-crown",
+   "heroes": [
+    "tasi",
+    "elijah-lailah"
+   ],
+   "why": "afk.guide: Ice Crown > Treatspector > Flutterplume Owl, Pandy Dumpty, Talismane, Trickery Chest. Tasi banishes an enemy and passes its ATK to a carry through the Twins' link.",
+   "source": "https://afk.guide/campaigns/"
+  },
+  {
+   "mode": null,
+   "beast": "slumber-seal",
+   "heroes": [
+    "saurus"
+   ],
+   "why": "Theria Games: 'Slumber Seal, Winged Lion, or Flutterplume Owl synergize best with his sustain-focused kit' (search extract, undated).",
+   "source": "https://theriagames.com/"
+  },
+  {
+   "mode": null,
+   "beast": "fire-breather",
+   "heroes": [
+    "awakened-brutus"
+   ],
+   "why": "AllClash: Fire Breather needs a melee hero that deals a lot of damage, and the lava ring works with Awakened Brutus.",
+   "source": "https://www.allclash.com/afk-arena-beasts-guide-tier-list-ranking/"
+  },
+  {
+   "mode": "arena-of-heroes",
+   "beast": "fox-fatale",
+   "heroes": [],
+   "why": "Fox Fatale 'shines primarily in PvP' (Theria). Ice Crown is 'one of the strongest for PvP and PvE' (afk.guide). Savage Soufflé is 'more PvP-oriented' (Theria). Bellbellow suits PvP survivability (afk.guide). Not a ranked PvP list.",
+   "source": "https://theriagames.com/guide/afk-arena-beasts-tier-list-guide/"
+  }
+ ],
+ "sources": [
+  {
+   "id": "afkglobal",
+   "name": "afk.global - AFK Arena Beast Tier List (October 2026)",
+   "url": "https://www.afk.global/afk-arena/tier-list/beasts",
+   "date": "2026-10-22 (page says 'Last updated October 22, 2026'; also served at https://www.afk.global/afk-arena-beast-tier-list-best-beasts)"
+  },
+  {
+   "id": "afkguide-tier",
+   "name": "afk.guide - AFK Arena Beasts Tier List (Patch 1.194)",
+   "url": "https://afk.guide/afk-arena-beast-tier-listpatch-1-101/",
+   "date": "2026-05 (patch 1.194). Ranks beasts in prose, with no tier letters visible in the extracts"
+  },
+  {
+   "id": "afkguide-beasts",
+   "name": "afk.guide - AFK Arena Beasts Guide (skills, buffs per beast)",
+   "url": "https://afk.guide/afk-arena-beasts-guide/",
+   "date": "about 2025-05 (search metadata: about 525 days old)"
+  },
+  {
+   "id": "allclash",
+   "name": "AllClash - AFK Arena Beasts Guide + Tier List (2025) - with Joyous Roamer",
+   "url": "https://www.allclash.com/afk-arena-beasts-guide-tier-list-ranking/",
+   "date": "titled 2025; search metadata says updated about 62 days ago (about 2026-08). Has no fabled beasts, Treasure-era beasts are only partly listed"
+  },
+  {
+   "id": "theria-tier",
+   "name": "Theria Games - AFK Arena Beasts Tier List Guide",
+   "url": "https://theriagames.com/guide/afk-arena-beasts-tier-list-guide/",
+   "date": "patch 1.154 (2024-11); about 608 days old"
+  },
+  {
+   "id": "theria-grounds",
+   "name": "Theria Games - AFK Arena Beast Grounds Guide",
+   "url": "https://theriagames.com/guide/afk-arena-beast-grounds-guide/",
+   "date": "about 2025-02 (about 612 days old)"
+  },
+  {
+   "id": "afkguide-campaign",
+   "name": "afk.guide - Campaign Formations for Late/End Game (2025 meta)",
+   "url": "https://afk.guide/campaigns/",
+   "date": "about 2026-03 (about 210 days old), covers the 2025 meta"
+  },
+  {
+   "id": "afkguide-nc",
+   "name": "afk.guide - Nightmare Corridor Guide & Teams",
+   "url": "https://afk.guide/nightmare-corridor-guide-teams/",
+   "date": "about 2026-07 (about 112 days old)"
+  },
+  {
+   "id": "pn-1177-global",
+   "name": "afk.global - Update 1.177 Patch Notes (Fabled Beasts, Nightfall Pegasus, Wishing Shrine, Beast Training merged into skills)",
+   "url": "https://www.afk.global/afk-arena/patch-notes/1-177",
+   "date": "2025-09-23"
+  },
+  {
+   "id": "pn-1177-guide",
+   "name": "afk.guide - AFK Arena v1.177 Patch Notes",
+   "url": "https://afk.guide/afk-arena-v1-177-patch-notes/",
+   "date": "2025-09-18 (server-local date)"
+  },
+  {
+   "id": "pn-1185",
+   "name": "AFK Arena Wiki (Fandom) - Update 1.185 Patch Notes (Count Snickerfang)",
+   "url": "https://afk-arena.fandom.com/wiki/Update_1.185_Patch_Notes",
+   "date": "2026-01 (one extract gives 2026-01-13)"
+  },
+  {
+   "id": "pn-1185-guide",
+   "name": "afk.guide - AFK Arena v1.185 Patch Notes",
+   "url": "https://afk.guide/afk-arena-v1-185-patch-notes/",
+   "date": "2026-01"
+  },
+  {
+   "id": "pn-1186-guide",
+   "name": "afk.guide - AFK Arena v1.186 Patch Notes (Snickerfang Lv15 'Sinister Festival' adjusted)",
+   "url": "https://afk.guide/afk-arena-v1-186-patch-notes/",
+   "date": "2026-01/02"
+  },
+  {
+   "id": "pn-1193-guide",
+   "name": "afk.guide - AFK Arena v1.193 Patch Notes (Twinlum Spirit)",
+   "url": "https://afk.guide/afk-arena-v1-193-patch-notes/",
+   "date": "2026 spring"
+  },
+  {
+   "id": "pn-1194-global",
+   "name": "afk.global - Update 1.194 Patch Notes (fabled beast ascension quests need fewer wishes)",
+   "url": "https://www.afk.global/afk-arena/patch-notes/1-194",
+   "date": "2026-05-19"
+  },
+  {
+   "id": "pn-1200",
+   "name": "AFK Arena Wiki (Fandom) - Update 1.200 Patch Notes (Aureus Golden Tempest bug fix)",
+   "url": "https://afk-arena.fandom.com/wiki/Update_1.200_Patch_Notes",
+   "date": "2026-08"
+  },
+  {
+   "id": "pn-1201",
+   "name": "AFK Arena Wiki (Fandom) - Update 1.201 Patch Notes (Blazefang, Beast Exchange)",
+   "url": "https://afk-arena.fandom.com/wiki/Update_1.201_Patch_Notes",
+   "date": "2026-08-25"
+  },
+  {
+   "id": "pn-1174",
+   "name": "AFK Arena Wiki (Fandom) - Update 1.174 Patch Notes (Thistlekin)",
+   "url": "https://afk-arena.fandom.com/wiki/Update_1.174_Patch_Notes",
+   "date": "2025-08-12"
+  },
+  {
+   "id": "pn-1167",
+   "name": "AFK Arena Wiki (Fandom) - Update 1.167 Patch Notes (Trickery Chest)",
+   "url": "https://afk-arena.fandom.com/wiki/Update_1.167_Patch_Notes",
+   "date": "2025"
+  },
+  {
+   "id": "fandom-grounds",
+   "name": "AFK Arena Wiki (Fandom) - Beast Grounds",
+   "url": "https://afk-arena.fandom.com/wiki/Beast_Grounds",
+   "date": "undated (system written around 1.98-1.167)"
+  },
+  {
+   "id": "fandom-beasts",
+   "name": "AFK Arena Wiki (Fandom) - Beasts",
+   "url": "https://afk-arena.fandom.com/wiki/Beasts",
+   "date": "undated"
+  },
+  {
+   "id": "gamevault",
+   "name": "Game Vault AFK Arena Wiki - Beasts",
+   "url": "https://afkarena.game-vault.net/wiki/Beasts",
+   "date": "about 2023 (about 1,300 days old)"
+  },
+  {
+   "id": "gamesfuze",
+   "name": "Games Fuze - AFK Arena: Beast Guide",
+   "url": "https://gamesfuze.com/guides/afk-arena-beast-guide/",
+   "date": "undated (older)"
+  },
+  {
+   "id": "afkcalc",
+   "name": "AFK Calc source code (brunosabot/afkalc): components/modal/EditPet.tsx, components/ui/afk/Pet.tsx, pages/api/pet.ts, pages/api/pet-buff.ts, data/pets.json",
+   "url": "https://github.com/brunosabot/afkalc",
+   "date": "2026-06-03 (latest commit 'feat: add v1.195 change')"
+  },
+  {
+   "id": "glossary",
+   "name": "floofpire/glossary - AFK Arena internal names (Pets table 6001-6030)",
+   "url": "https://github.com/floofpire/glossary",
+   "date": "undated, includes 6030 Blazefang"
+  },
+  {
+   "id": "shodee-pegasus",
+   "name": "Shodee & SaiLus - Awakened pet deep dive: Nightfall Pegasus",
+   "url": "https://afk-web.onrender.com/guides/afkarenacompanions-shodee-awakened-pet-deep-dive-nightfall-pegasus-by-sailus-and-shodee-1qhg409",
+   "date": "2026-01-19 (only the intro was retrieved)"
+  },
+  {
+   "id": "shodee-snickerfang",
+   "name": "Shodee - Awakened pet deep dive: Count Snickerfang",
+   "url": "https://afk-web.onrender.com/guides/afkarenacompanions-shodee-awakened-pet-deep-dive-count-snickerfang-by-shodee-1sarh03",
+   "date": "2026-04-02 (content not retrieved)"
+  },
+  {
+   "id": "sailus-twinlum",
+   "name": "SaiLus - Awakened pet overview: Twinlum Spirit",
+   "url": "https://afk-web.onrender.com/guides/afkarenacompanions-salty-mood-6633-awakened-pet-overview-twinlum-spirit-1tgpys0",
+   "date": "2026-05-18 (content not retrieved)"
+  },
+  {
+   "id": "afkguide-spooky",
+   "name": "afk.guide - Fantastic Beasts: Spooky Smash-Up",
+   "url": "https://afk.guide/fantastic-beasts-spooky-smash-up/",
+   "date": "about 2024"
+  },
+  {
+   "id": "theria-saurus",
+   "name": "Theria Games - Saurus guide (beast note)",
+   "url": "https://theriagames.com/guide/",
+   "date": "undated; only a search extract was seen: 'Slumber Seal, Winged Lion, or Flutterplume Owl synergize best with his sustain-focused kit'"
+  }
+ ],
+ "bestOverall": {
+  "pve": [
+   6015,
+   6011
+  ],
+  "pvp": [
+   6016,
+   6020
+  ],
+  "boss": [
+   6015,
+   6011
+  ],
+  "defensive": [
+   6023
+  ],
+  "fabled": [
+   6027
+  ],
+  "earlyRare": [
+   6003
+  ],
+  "notes": "afk.global (2026-10-22) puts Flutterplume Owl and Slumber Seal at S+, then Nightfall Pegasus, Trickery Chest, Aureus and Ice Crown at S. afk.guide (1.194) calls Slumber Seal the strongest beast. No current boss-specific beast list was found. The boss picks repeat the overall top two, and afk.guide calls Blade Ridge 'good against bosses' but outclassed."
+ },
+ "uncertain": [
+  "No guide page could be opened directly (DNS errors and proxy 403s). All text comes from search-engine extracts, which sometimes garble skill text: afk.guide's skill pages show stray 'Seductive Dance' headings on several beasts, and the 'Lava Spouts' label appears in buff tables.",
+  "afk.global tier letters: the main extract gives S+ Owl, Seal / S Pegasus, Trickery Chest, Aureus, Ice Crown / A+ Fox Fatale, Shroom Spooder, Treatspector / A Snickerfang, Pandy Dumpty, Pearlcrest Ibis, Talismane, Twinlum, Winged Lion / B+ Rock Crown Lizard, Phantasmoth / B Bellbellow, Blade Ridge, Savage Soufflé, Fire Breather, Radish Rotunda / C+ Joyous Roamer, Tufty Ears / C Feline Vesperio, Polar Beast, Grassy Orb / D Dreary Ball / 'NEW' Blazefang, Thistlekin (28 ranked). Other extracts contradicted it: Aureus A+, Ice Crown A+, Treatspector A, Winged Lion B+, Phantasmoth B. The main extract adds up to the stated 28 and was used.",
+  "afk.global gives a single overall grade. The per-mode tiers here are that grade plus a one-step raise only where a source says the beast excels in that mode (Fox Fatale PvP, Savage Soufflé PvP, Blade Ridge boss). They are not a community per-mode list.",
+  "Nightmare Corridor beast picks per comp (Sion/Cha Hae-in, Envydiel/Kaelon, Elthara, Marcille, Odysseus/Tornado/Marcille, Sion) exist on afk.guide as icons and could not be read. 'beast' is null in those entries.",
+  "Mode availability: only Campaign and Nightmare Corridor are confirmed from comp guides, and PvP and bosses only through general tier-list remarks. Abyssal Expedition exclusion comes from one guide (about 2025-02). Whether beasts work in King's Tower, Faction Towers, Labyrinth, Treasure Scramble, Legends Championship, Guild Trials, Twisted or Cursed Realm, and whether one beast can be reused across teams in multi-team modes, was not confirmed.",
+  "Legendary max Beast Level of 54 is inferred from AFK Calc's per-buff max of 18. Guides mention fabled beasts at Lv21, 27 and 30 but give no cap. AFK Calc's 12/18 per-buff maxima are confirmed in EditPet.tsx.",
+  "What each Attribute Buff gives exactly (which stats, how much per level, and whether the team-wide HP/DEF/ATK% row comes from the buffs or from Beast Level) was only partly seen, in an older afk.guide table.",
+  "Fabled beast ascension: the 'wishes' cost, the number of ascension steps and how ascension shows on screen were not found. The 'awakened pet' guides (Shodee/SaiLus) may describe these, but only their intros were retrieved.",
+  "Fabled beast debut: one apkmirror changelog for 1.171.01 mentions a fabled beast 'Celestwing', which is not in the game id list 6001-6030. It may be a Companions-only or test item; 1.177 is treated as the debut here.",
+  "Thistlekin, Nightfall Pegasus, Count Snickerfang, Twinlum Spirit and Blazefang have only patch-note overviews, not level-by-level skill text. Their role tags rest on those overviews.",
+  "Trickery Chest energy: the skill text says Doomed Treasure gives the enemy 200 Energy before haunting it, while the patch notes and afk.guide say it drains enemy energy. The likely reading is that the haunt later drains it or disables the Ultimate, but this was not confirmed.",
+  "Theria D-tier placements (Dreary Ball, Tufty Ears, Polar Beast) and AllClash grades for Pandy Dumpty, Pearlcrest Ibis and Trickery Chest were not seen, so they are left out of 'raw'.",
+  "Ranked order inside afk.guide's campaign beast lists comes from '>' separators in jumbled extracts.",
+  "Unlock stages differ between sources: beasts unlock at 10-40 or Chapter 11, and capture at 14-40 or Chapter 15."
+ ]
 }

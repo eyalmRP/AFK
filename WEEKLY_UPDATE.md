@@ -17,6 +17,7 @@ Only record what a source actually says, and keep the URL and date of every sour
 - **Tier lists** from the last 2 months: Pocket Gamer, AllClash, AFK Global, Driffle, Pocket Tactics, afk.guide and others. Map grades onto S+ S A B C D, with SS → S+ and F → D.
 - **Mode guides** for each mode in `data/modes.json`, with priority on modes that have no community team yet: Legends Championship, Cursed Realm, King's Tower, faction towers and Treasure Scramble. Also check the current Twisted Realm boss and the Nightmare Corridor cycle.
 - **Kits** for heroes whose `kitConfidence` is `low`. Fill in about 20 a week, newest and highest-rated first.
+- **Redeem codes**: a daily routine already checks them (see "Daily code check" below), but confirm `data/codes.json` is current.
 - **Beasts**: new beasts, beast tier lists, and the beast the community pairs with each comp (Nightmare Corridor guides name one per comp).
 
 ## 2. Roster and portraits
@@ -83,3 +84,11 @@ Republish with the Artifact tool:
 - Leave out `capabilities` so the stored ones are kept.
 
 Before publishing, take one look at the built page (`npm run serve` and a Playwright screenshot). Finally, reply with a short summary: new heroes, tier moves, new community teams, and what is still missing.
+
+## Daily code check
+A separate daily routine only updates `data/codes.json`:
+1. Search for AFK Arena redemption codes posted or confirmed since `lastChecked`, and for codes that have expired.
+2. Add new codes with the exact code string, `rewards`, `firstSeen`, `expires`, `status` (active / expired / unverified) and `sources`. Never invent a code. A code seen on only one low-reliability site is `unverified`.
+3. Set `lastChecked` and `asOf` to today.
+4. Run `npm run validate && npm run build`, then commit and push.
+5. Republish the artifact with only `data/codes.json` in `files`.

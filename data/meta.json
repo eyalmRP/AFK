@@ -65,7 +65,8 @@
   "No current community team sets were found for Legends Championship, Cursed Realm, King's Tower or the faction towers.",
   "PvP ratings are thin for many Lightbearer, Mauler and Wilder heroes. Where a category rating is missing, the overall rating is used.",
   "Signature Item caps: patch 1.134 raised the cap to +50, but some 2025 guides still stop at +40. Check in game.",
-  "Seraphic Tide (Support artifact) has no effect text or rating yet."
+  "Seraphic Tide (Support artifact) has no effect text or rating yet.",
+  "Beast ratings come from one overall tier list (AFK Global, Oct 22 2026). PvE, PvP and boss grades only differ where a guide says a beast stands out in that mode, and beast picks per Nightmare Corridor comp could not be read."
  ],
  "limits": {
   "level": 800,
@@ -660,6 +661,156 @@
    "url": "https://github.com/brunosabot/afkalc",
    "date": "2026-06-03",
    "kind": "roster"
+  },
+  {
+   "name": "afk.global - AFK Arena Beast Tier List (October 2026)",
+   "url": "https://www.afk.global/afk-arena/tier-list/beasts",
+   "date": "2026-10-22 (page says 'Last updated October 22, 2026'; also served at https://www.afk.global/afk-arena-beast-tier-list-best-beasts)",
+   "kind": "beasts"
+  },
+  {
+   "name": "afk.guide - AFK Arena Beasts Tier List (Patch 1.194)",
+   "url": "https://afk.guide/afk-arena-beast-tier-listpatch-1-101/",
+   "date": "2026-05 (patch 1.194). Ranks beasts in prose, with no tier letters visible in the extracts",
+   "kind": "beasts"
+  },
+  {
+   "name": "afk.guide - AFK Arena Beasts Guide (skills, buffs per beast)",
+   "url": "https://afk.guide/afk-arena-beasts-guide/",
+   "date": "about 2025-05 (search metadata: about 525 days old)",
+   "kind": "beasts"
+  },
+  {
+   "name": "AllClash - AFK Arena Beasts Guide + Tier List (2025) - with Joyous Roamer",
+   "url": "https://www.allclash.com/afk-arena-beasts-guide-tier-list-ranking/",
+   "date": "titled 2025; search metadata says updated about 62 days ago (about 2026-08). Has no fabled beasts, Treasure-era beasts are only partly listed",
+   "kind": "beasts"
+  },
+  {
+   "name": "Theria Games - AFK Arena Beasts Tier List Guide",
+   "url": "https://theriagames.com/guide/afk-arena-beasts-tier-list-guide/",
+   "date": "patch 1.154 (2024-11); about 608 days old",
+   "kind": "beasts"
+  },
+  {
+   "name": "Theria Games - AFK Arena Beast Grounds Guide",
+   "url": "https://theriagames.com/guide/afk-arena-beast-grounds-guide/",
+   "date": "about 2025-02 (about 612 days old)",
+   "kind": "beasts"
+  },
+  {
+   "name": "afk.global - Update 1.177 Patch Notes (Fabled Beasts, Nightfall Pegasus, Wishing Shrine, Beast Training merged into skills)",
+   "url": "https://www.afk.global/afk-arena/patch-notes/1-177",
+   "date": "2025-09-23",
+   "kind": "beasts"
+  },
+  {
+   "name": "afk.guide - AFK Arena v1.177 Patch Notes",
+   "url": "https://afk.guide/afk-arena-v1-177-patch-notes/",
+   "date": "2025-09-18 (server-local date)",
+   "kind": "beasts"
+  },
+  {
+   "name": "AFK Arena Wiki (Fandom) - Update 1.185 Patch Notes (Count Snickerfang)",
+   "url": "https://afk-arena.fandom.com/wiki/Update_1.185_Patch_Notes",
+   "date": "2026-01 (one extract gives 2026-01-13)",
+   "kind": "beasts"
+  },
+  {
+   "name": "afk.guide - AFK Arena v1.185 Patch Notes",
+   "url": "https://afk.guide/afk-arena-v1-185-patch-notes/",
+   "date": "2026-01",
+   "kind": "beasts"
+  },
+  {
+   "name": "afk.guide - AFK Arena v1.186 Patch Notes (Snickerfang Lv15 'Sinister Festival' adjusted)",
+   "url": "https://afk.guide/afk-arena-v1-186-patch-notes/",
+   "date": "2026-01/02",
+   "kind": "beasts"
+  },
+  {
+   "name": "afk.guide - AFK Arena v1.193 Patch Notes (Twinlum Spirit)",
+   "url": "https://afk.guide/afk-arena-v1-193-patch-notes/",
+   "date": "2026 spring",
+   "kind": "beasts"
+  },
+  {
+   "name": "afk.global - Update 1.194 Patch Notes (fabled beast ascension quests need fewer wishes)",
+   "url": "https://www.afk.global/afk-arena/patch-notes/1-194",
+   "date": "2026-05-19",
+   "kind": "beasts"
+  },
+  {
+   "name": "AFK Arena Wiki (Fandom) - Update 1.200 Patch Notes (Aureus Golden Tempest bug fix)",
+   "url": "https://afk-arena.fandom.com/wiki/Update_1.200_Patch_Notes",
+   "date": "2026-08",
+   "kind": "beasts"
+  },
+  {
+   "name": "AFK Arena Wiki (Fandom) - Update 1.174 Patch Notes (Thistlekin)",
+   "url": "https://afk-arena.fandom.com/wiki/Update_1.174_Patch_Notes",
+   "date": "2025-08-12",
+   "kind": "beasts"
+  },
+  {
+   "name": "AFK Arena Wiki (Fandom) - Beast Grounds",
+   "url": "https://afk-arena.fandom.com/wiki/Beast_Grounds",
+   "date": "undated (system written around 1.98-1.167)",
+   "kind": "beasts"
+  },
+  {
+   "name": "AFK Arena Wiki (Fandom) - Beasts",
+   "url": "https://afk-arena.fandom.com/wiki/Beasts",
+   "date": "undated",
+   "kind": "beasts"
+  },
+  {
+   "name": "Game Vault AFK Arena Wiki - Beasts",
+   "url": "https://afkarena.game-vault.net/wiki/Beasts",
+   "date": "about 2023 (about 1,300 days old)",
+   "kind": "beasts"
+  },
+  {
+   "name": "Games Fuze - AFK Arena: Beast Guide",
+   "url": "https://gamesfuze.com/guides/afk-arena-beast-guide/",
+   "date": "undated (older)",
+   "kind": "beasts"
+  },
+  {
+   "name": "floofpire/glossary - AFK Arena internal names (Pets table 6001-6030)",
+   "url": "https://github.com/floofpire/glossary",
+   "date": "undated, includes 6030 Blazefang",
+   "kind": "beasts"
+  },
+  {
+   "name": "Shodee & SaiLus - Awakened pet deep dive: Nightfall Pegasus",
+   "url": "https://afk-web.onrender.com/guides/afkarenacompanions-shodee-awakened-pet-deep-dive-nightfall-pegasus-by-sailus-and-shodee-1qhg409",
+   "date": "2026-01-19 (only the intro was retrieved)",
+   "kind": "beasts"
+  },
+  {
+   "name": "Shodee - Awakened pet deep dive: Count Snickerfang",
+   "url": "https://afk-web.onrender.com/guides/afkarenacompanions-shodee-awakened-pet-deep-dive-count-snickerfang-by-shodee-1sarh03",
+   "date": "2026-04-02 (content not retrieved)",
+   "kind": "beasts"
+  },
+  {
+   "name": "SaiLus - Awakened pet overview: Twinlum Spirit",
+   "url": "https://afk-web.onrender.com/guides/afkarenacompanions-salty-mood-6633-awakened-pet-overview-twinlum-spirit-1tgpys0",
+   "date": "2026-05-18 (content not retrieved)",
+   "kind": "beasts"
+  },
+  {
+   "name": "afk.guide - Fantastic Beasts: Spooky Smash-Up",
+   "url": "https://afk.guide/fantastic-beasts-spooky-smash-up/",
+   "date": "about 2024",
+   "kind": "beasts"
+  },
+  {
+   "name": "Theria Games - Saurus guide (beast note)",
+   "url": "https://theriagames.com/guide/",
+   "date": "undated; only a search extract was seen: 'Slumber Seal, Winged Lion, or Flutterplume Owl synergize best with his sustain-focused kit'",
+   "kind": "beasts"
   }
  ],
  "changelog": [

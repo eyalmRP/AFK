@@ -107,6 +107,27 @@ try {
   err(`beasts.json: ${e.message}`);
 }
 
+// Redeem codes
+let codeCount = 0;
+try {
+  const codesFile = await read('codes.json');
+  const seenCodes = new Set();
+  const date = /^\d{4}-\d{2}(-\d{2})?$/;
+  for (const c of codesFile.codes || []) {
+    codeCount++;
+    if (!c.code || /\s/.test(c.code)) err(`code "${c.code}": empty or contains spaces`);
+    if (seenCodes.has(c.code)) err(`duplicate code ${c.code}`);
+    seenCodes.add(c.code);
+    if (!['active', 'expired', 'unverified'].includes(c.status)) err(`code ${c.code}: bad status ${c.status}`);
+    if (c.firstSeen && !date.test(c.firstSeen)) err(`code ${c.code}: bad firstSeen ${c.firstSeen}`);
+    if (c.expires && !date.test(c.expires)) err(`code ${c.code}: bad expires ${c.expires}`);
+    if (!(c.sources || []).length) warn.push(`code ${c.code}: no source`);
+  }
+  if (codesFile.lastChecked && !date.test(codesFile.lastChecked)) err('codes.lastChecked must be YYYY-MM-DD');
+} catch (e) {
+  err(`codes.json: ${e.message}`);
+}
+
 for (const w of warn.slice(0, 15)) console.log('warn:', w);
 if (warn.length > 15) console.log(`warn: …and ${warn.length - 15} more`);
 if (errors.length) {
@@ -114,4 +135,4 @@ if (errors.length) {
   console.error(`\n${errors.length} error(s)`);
   process.exit(1);
 }
-console.log(`data ok: ${ids.size} heroes, ${artIds.size} artifacts, ${beastCount} beasts, ${modeIds.size} modes, ${meta.sources.length} sources`);
+console.log(`data ok: ${ids.size} heroes, ${artIds.size} artifacts, ${beastCount} beasts, ${codeCount} codes, ${modeIds.size} modes, ${meta.sources.length} sources`);

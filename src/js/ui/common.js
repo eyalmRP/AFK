@@ -164,10 +164,9 @@ export function beastArt(id, size = 40) {
   return `<img class="beast-img" src="${esc(b.img)}" alt="" loading="lazy" style="width:${size}px;height:${size}px">`;
 }
 
-// Modes that take a beast, when the weekly research says which ones do.
+// Beasts join every mode except the ones research says exclude them.
 export function beastAllowed(mode) {
-  const modes = data.beastSystem?.modes;
-  return !modes?.length || !mode || modes.includes(mode.id);
+  return !mode || !(data.beastSystem?.modesExcluded || []).includes(mode.id);
 }
 
 export function beastLine(pick, { owned = true } = {}) {

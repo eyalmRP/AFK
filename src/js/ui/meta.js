@@ -522,7 +522,7 @@ function archetypesPanel() {
   return panel({ id: 'meta-archetypes', title: 'PvP archetypes and their counters', sub: `${list.length} archetypes`, body: `<div class="combo-list">${rows}</div>`, folded: true });
 }
 
-const KIND_LABEL = { tiers: 'Tier lists', formations: 'Formations and modes', systems: 'Artifacts and systems', roster: 'Hero roster and portraits' };
+const KIND_LABEL = { tiers: 'Tier lists', formations: 'Formations and modes', systems: 'Artifacts and systems', beasts: 'Beasts', roster: 'Hero roster and portraits' };
 
 function sourcesPanel() {
   const m = data.meta;

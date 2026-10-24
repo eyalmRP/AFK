@@ -269,8 +269,7 @@ function renderCounts() {
   const owned = ownedIds().length;
   const shown = visibleHeroes().length;
   el.textContent = `${owned} owned of ${data.heroes.length} heroes · showing ${shown}${ui.selected.size ? ` · ${ui.selected.size} selected` : ''}`;
-  const tab = document.querySelector('[data-tab="bank"] .count');
-  if (tab) tab.textContent = owned ? String(owned) : '';
+  for (const tab of document.querySelectorAll('[data-tab="bank"] .count')) tab.textContent = owned ? String(owned) : '';
 }
 
 const dash = (v) => (v === null || v === undefined ? '–' : v);
