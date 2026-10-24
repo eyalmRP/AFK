@@ -3,7 +3,7 @@
 
 import { esc, $, fmtDate, toast, local } from '../util.js';
 import { data } from '../data.js';
-import { bank, setCodeUsed, addCustomCode, removeCustomCode, normCode } from '../store.js';
+import { bank, setCodeUsed, addCustomCode, removeCustomCode, normCode, updateSettings } from '../store.js';
 import { ICON } from './icons.js';
 import { panel, bindFolding } from './common.js';
 
@@ -39,17 +39,34 @@ function allCodes() {
 
 const used = (c) => !!bank.codes?.[c.code]?.used;
 
-function groups(list) {
+const SERVERS = { classic: 'Classic', companions: 'Companions' };
+const myServer = () => bank.settings.codeServer || 'both';
+// Codes with no known server show for everyone.
+const forMe = (c) => myServer() === 'both' || !c.server || c.server === myServer();
+
+function daysLeft(c) {
+  if (!c.expires) return null;
+  return Math.ceil((new Date(c.expires + 'T23:59:59Z') - new Date()) / DAY);
+}
+
+function groups(all) {
+  const list = all.filter(forMe);
+  // Confirmed codes first, soonest to expire first; unverified ones last.
+  const rank = (c) => (c.status === 'active' ? 0 : c.custom ? 1 : 2);
+  const todo = list
+    .filter((c) => !used(c) && !isExpired(c))
+    .sort((a, b) => rank(a) - rank(b) || (a.expires || '9999').localeCompare(b.expires || '9999'));
   return {
-    todo: list.filter((c) => !used(c) && !isExpired(c)),
+    todo,
     used: list.filter((c) => used(c)),
     expired: list.filter((c) => !used(c) && isExpired(c)),
     all: list,
   };
 }
 
+// Tab badge: confirmed codes still to redeem (unverified ones don't count).
 export function codesToRedeem() {
-  return groups(allCodes()).todo.length;
+  return groups(allCodes()).todo.filter((c) => c.status === 'active' || c.custom).length;
 }
 
 function hostOf(u) {
@@ -68,6 +85,15 @@ function statusPill(c) {
   return '<span class="tag good">Active</span>';
 }
 
+function extraTags(c) {
+  const out = [];
+  if (c.server) out.push(`<span class="tag" title="Works only on ${SERVERS[c.server]} servers">${SERVERS[c.server]}</span>`);
+  const left = daysLeft(c);
+  if (!used(c) && !isExpired(c) && left !== null && left <= 10) out.push(`<span class="tag bad">Ends in ${left} day${left === 1 ? '' : 's'}</span>`);
+  if (isNew(c) && !used(c)) out.push('<span class="tag accent">New</span>');
+  return out.join('');
+}
+
 function card(c) {
   const u = used(c);
   const exp = isExpired(c);
@@ -80,13 +106,13 @@ function card(c) {
     .join(' · ');
   const srcs = (c.sources || []).slice(0, 3).map((s) => `<a href="${esc(s)}" target="_blank" rel="noopener">${esc(hostOf(s))}</a>`).join(' · ');
   return `<article class="code-card" data-state="${u ? 'used' : exp ? 'expired' : 'todo'}">
-    <div class="code-top">${statusPill(c)}${isNew(c) && !u ? '<span class="tag accent">New</span>' : ''}</div>
+    <div class="code-top">${statusPill(c)}${extraTags(c)}</div>
     <div class="code-main">
       <code class="code-str" data-code-text="${esc(c.code)}">${esc(c.code)}</code>
       <button class="btn primary code-copy" type="button" data-copy="${esc(c.code)}" aria-label="Copy ${esc(c.code)}">${ICON.copy}<span>Copy</span></button>
     </div>
-    ${c.rewards ? `<p class="code-rewards">${esc(c.rewards)}</p>` : ''}
-    ${c.note ? `<p class="small muted">${esc(c.note)}</p>` : ''}
+    <p class="code-rewards">${c.rewards ? esc(c.rewards) : '<span class="muted">Rewards not published</span>'}</p>
+    ${c.note ? `<details class="small muted"><summary>Notes</summary>${esc(c.note)}</details>` : ''}
     <div class="code-foot">
       <label class="check code-used"><input type="checkbox" data-used="${esc(c.code)}" ${u ? 'checked' : ''}> I've redeemed this</label>
       ${c.custom ? `<button class="btn small ghost" type="button" data-remove-code="${esc(c.code)}">${ICON.trash} Remove</button>` : ''}
@@ -103,7 +129,7 @@ function render() {
   const steps = (info.howToRedeem || []).map((s) => `<li>${esc(s)}</li>`).join('');
   const empty = {
     todo: list.length ? "You've redeemed every active code. New ones are checked every day." : 'No active codes right now. New ones are checked every day.',
-    used: 'Codes you mark as redeemed show up here.',
+    used: 'Codes you tick as redeemed show up here.',
     expired: 'No expired codes recorded.',
     all: 'No codes recorded yet.',
   };
@@ -111,16 +137,27 @@ function render() {
     <div class="view-head"><div>
       <p class="eyebrow">Free rewards</p>
       <h2>Redeem codes</h2>
-      <p>Lilith posts codes on social media, in events and on streams. Copy one, redeem it in the game, then tick it so it drops off your list.</p>
+      <p>Lilith posts codes in pairs, one for Classic and one for Companions servers, around events and holidays. Copy a code, redeem it on Lilith's site, then tick it so it drops off your list.</p>
       ${info.lastChecked ? `<p class="small muted">Last checked for new codes ${esc(fmtDate(info.lastChecked))} · checked daily</p>` : ''}
     </div></div>
+    <div class="code-server">
+      <span class="eyebrow">My server</span>
+      <div class="seg" role="group" aria-label="My server">${[
+        ['classic', 'Classic'],
+        ['companions', 'Companions'],
+        ['both', 'Both'],
+      ]
+        .map(([v, l]) => `<button type="button" data-server="${v}" aria-pressed="${myServer() === v}">${l}</button>`)
+        .join('')}</div>
+      ${info.webRedeem?.url ? `<a class="btn primary" href="${esc(info.webRedeem.url)}" target="_blank" rel="noopener">${ICON.gift} Redeem on Lilith's site</a>` : ''}
+    </div>
     ${panel({
       id: 'codes-how',
       title: 'How to redeem',
       folded: Object.keys(bank.codes || {}).length > 0,
       body: `${steps ? `<ol class="list">${steps}</ol>` : '<p class="small muted">Steps not recorded yet.</p>'}
-        ${info.webRedeem?.url ? `<p class="small">Or redeem on the web: <a href="${esc(info.webRedeem.url)}" target="_blank" rel="noopener">${esc(hostOf(info.webRedeem.url))}</a>${info.webRedeem.notes ? ` <span class="muted">${esc(info.webRedeem.notes)}</span>` : ''}</p>` : ''}
-        <p class="small muted">Codes are case-sensitive, and each works once per account. Rewards usually arrive in your in-game mail.</p>`,
+        ${info.webRedeem?.url ? `<p class="small"><a href="${esc(info.webRedeem.url)}" target="_blank" rel="noopener">${esc(info.webRedeem.url.replace(/^https?:\/\//, ''))}</a></p>` : ''}
+        <p class="small muted">Each code works once per account, and only on its own server (Classic or Companions). Sources disagree on whether codes are case-sensitive, so paste them exactly as listed.</p>`,
     })}
     <div class="toolbar code-tools">
       <div class="seg" role="group" aria-label="Show codes">${[
@@ -178,6 +215,11 @@ export function mountCodes(el) {
   bindFolding(root);
   root.addEventListener('click', (ev) => {
     const t = ev.target;
+    const sv = t.closest('[data-server]');
+    if (sv) {
+      updateSettings({ codeServer: sv.dataset.server });
+      return;
+    }
     const f = t.closest('[data-filter]');
     if (f) {
       filter = f.dataset.filter;

@@ -27,6 +27,7 @@ export const ICON = {
   tabBuild: svg('<g fill="currentColor"><circle cx="8" cy="7" r="3"/><circle cx="16" cy="7" r="3"/><circle cx="5" cy="16" r="2.6" opacity=".6"/><circle cx="12" cy="16" r="2.6" opacity=".6"/><circle cx="19" cy="16" r="2.6" opacity=".6"/></g>'),
   tabCounter: svg('<g fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 4l10 10M4 4h3.5M4 4v3.5"/><path d="M20 4L10 14M20 4h-3.5M20 4v3.5"/><path d="M8 17l-3 3M16 17l3 3M7 14l3 3M17 14l-3 3"/></g>'),
   tabCodes: svg('<g fill="currentColor"><path d="M3 10h18v3H3z"/><path d="M4.5 14h6.5v7H6a1.5 1.5 0 0 1-1.5-1.5zM13 14h6.5v5.5A1.5 1.5 0 0 1 18 21h-5z" opacity=".7"/><path d="M12 9.5C10.5 6 7 5 6.3 6.6 5.6 8.3 9 9.5 12 9.5zm0 0c1.5-3.5 5-4.5 5.7-2.9.7 1.7-2.7 2.9-5.7 2.9z" fill="none" stroke="currentColor" stroke-width="1.8"/></g>'),
+  gift: svg('<g fill="currentColor"><path d="M3 9h18v4H3z"/><path d="M4.5 14h6.5v7H6a1.5 1.5 0 0 1-1.5-1.5zM13 14h6.5v5.5A1.5 1.5 0 0 1 18 21h-5z"/><path d="M12 8.5C10.5 5 7 4 6.3 5.6 5.6 7.3 9 8.5 12 8.5zm0 0c1.5-3.5 5-4.5 5.7-2.9.7 1.7-2.7 2.9-5.7 2.9z" fill="none" stroke="currentColor" stroke-width="1.8"/></g>'),
   stop: svg('<rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor"/>'),
 };
 

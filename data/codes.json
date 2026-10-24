@@ -1,8 +1,810 @@
 {
  "asOf": "2026-10-24",
- "lastChecked": null,
- "howToRedeem": [],
- "webRedeem": null,
- "codes": [],
- "sources": []
+ "lastChecked": "2026-10-24",
+ "howToRedeem": [
+  "There is no code box inside the game (removed in Dec 2020). Codes are redeemed on Lilith's web portal.",
+  "In AFK Arena, tap your avatar (top-left) and copy your UID, the number shown under your player name. Classic and Companions accounts have different UIDs.",
+  "In the same avatar panel, open Settings (gear icon) and tap 'Verification Code' to generate a 6-digit code. It is single-use and expires after about 2 minutes, so generate it right before logging in.",
+  "Open https://cdkey.lilith.com/afk-global in a browser, enter the UID and verification code, and tap Log In. Some guides say a linked account can log in with email and password instead.",
+  "Choose the server that matches the code (Classic or Companions). Codes only work on their own server.",
+  "Enter the code exactly as listed and tap Redeem. Each code works once per UID.",
+  "Back in the game, open Mail (envelope icon) and tap Claim All."
+ ],
+ "webRedeem": {
+  "url": "https://cdkey.lilith.com/afk-global",
+  "notes": "This official Lilith portal is the only way to redeem. Log in with your in-game UID plus a 6-digit verification code from avatar > Settings > Verification Code (expires after about 2 minutes). Then pick Classic or Companions and enter the code. Rewards arrive by in-game mail. Each code works once per UID or server, and the official posts say the same code can be used again on a different server. Sources disagree on case-sensitivity: Dexerto and AllThings.how say codes are not case-sensitive, while BoostBot and games.gg say they are. Paste the code exactly as written."
+ },
+ "cadence": "Lilith posts AFK Arena codes in pairs, one for Classic and one for Companions, on the official X, Facebook and Discord channels. Releases follow events, holidays and collabs: AFK anniversary (April), Labor Day (May 1), Lilith 13th anniversary (May 9), Kaiju No. 8 collab (Sep 23), Mid-Autumn (Sep 25), early October (Oct 1). In 2026 that worked out to about 1-3 new pairs a month: June 3, 19, 24 and 30; July 2 and 30; Aug 19; Sep 3, 23 and 25; Oct 1. Codes usually last 4-10 weeks and tend to expire at month-end (00:00 UTC+8), so checking every couple of weeks catches them all.",
+ "codes": [
+  {
+   "code": "8VI6VSBQGE",
+   "server": "classic",
+   "rewards": null,
+   "firstSeen": "2026-10-01",
+   "expires": "2026-11-30",
+   "status": "active",
+   "sources": [
+    "https://www.mrguider.org/codes/afk-arena-codes/",
+    "https://boostbot.org/blog/afk-arena-codes/",
+    "https://www.lolvvv.com/codes/afk-arena",
+    "https://www.dudcode.com/code/afk-arena-codes/"
+   ],
+   "note": "Classic server. Expires 2026-11-30 00:00 UTC+8. MrGuider says it was added 2026-10-01, LOLVVV says 2026-10-16. Paired with Companions code 8V5257RADA."
+  },
+  {
+   "code": "8V5257RADA",
+   "server": "companions",
+   "rewards": null,
+   "firstSeen": "2026-10-01",
+   "expires": "2026-11-30",
+   "status": "active",
+   "sources": [
+    "https://www.mrguider.org/codes/afk-arena-codes/",
+    "https://boostbot.org/blog/afk-arena-codes/",
+    "https://www.lolvvv.com/codes/afk-arena",
+    "https://www.dudcode.com/code/afk-arena-codes/"
+   ],
+   "note": "Companions server. Expires 2026-11-30 00:00 UTC+8. Added 2026-10-01 per MrGuider, 2026-10-16 per LOLVVV. Paired with Classic code 8VI6VSBQGE."
+  },
+  {
+   "code": "8vtsewmeyj",
+   "server": "classic",
+   "rewards": null,
+   "firstSeen": "2026-09-25",
+   "expires": "2026-11-30",
+   "status": "active",
+   "sources": [
+    "https://www.mrguider.org/codes/afk-arena-codes/",
+    "https://boostbot.org/blog/afk-arena-codes/",
+    "https://www.lolvvv.com/codes/afk-arena",
+    "https://kodegg.com/en/codes/",
+    "https://x.com/AFK_Arena/status/2103439370959335503"
+   ],
+   "note": "Classic server. Probably the Mid-Autumn Festival code: the official X post of 2026-09-25 gives the same 'valid until November 30, 2026 00:00 UTC+8', but the snippet did not show the code strings. LOLVVV lists it in caps (8VTSEWMEYJ), dated 2026-09-30. Paired with 8vn8gamxqy."
+  },
+  {
+   "code": "8vn8gamxqy",
+   "server": "companions",
+   "rewards": null,
+   "firstSeen": "2026-09-25",
+   "expires": "2026-11-30",
+   "status": "active",
+   "sources": [
+    "https://www.mrguider.org/codes/afk-arena-codes/",
+    "https://boostbot.org/blog/afk-arena-codes/",
+    "https://www.lolvvv.com/codes/afk-arena",
+    "https://x.com/AFK_Arena/status/2103439370959335503"
+   ],
+   "note": "Companions server. Probably the Mid-Autumn code (see 8vtsewmeyj). LOLVVV lists it as 8VN8GAMXQY, dated 2026-09-30."
+  },
+  {
+   "code": "8hmy6cgxdz",
+   "server": "classic",
+   "rewards": null,
+   "firstSeen": "2026-09-23",
+   "expires": "2026-10-21",
+   "status": "expired",
+   "sources": [
+    "https://x.com/afk_arena",
+    "https://boostbot.org/blog/afk-arena-codes/",
+    "https://www.mrguider.org/codes/afk-arena-codes/",
+    "https://www.memuplay.com/blog/afk-arena-codes.html",
+    "https://www.pocketgamer.com/afk-arena/codes/"
+   ],
+   "note": "Classic server. Kaiju No. 8 collab code from the official X post of 2026-09-23, 'Valid until: 2026/10/21'. It is past expiry, though LOLVVV may still list it as active."
+  },
+  {
+   "code": "8hfgnq824p",
+   "server": "companions",
+   "rewards": null,
+   "firstSeen": "2026-09-23",
+   "expires": "2026-10-21",
+   "status": "expired",
+   "sources": [
+    "https://x.com/afk_arena",
+    "https://boostbot.org/blog/afk-arena-codes/",
+    "https://www.mrguider.org/codes/afk-arena-codes/",
+    "https://www.memuplay.com/blog/afk-arena-codes.html"
+   ],
+   "note": "Companions server. Kaiju No. 8 collab code, valid until 2026-10-21."
+  },
+  {
+   "code": "8D82CDSRBY",
+   "server": "classic",
+   "rewards": null,
+   "firstSeen": "2026-09-03",
+   "expires": "2026-10-31",
+   "status": "active",
+   "sources": [
+    "https://boostbot.org/blog/afk-arena-codes/",
+    "https://www.mrguider.org/codes/afk-arena-codes/",
+    "https://www.lolvvv.com/codes/afk-arena",
+    "https://beebom.com/afk-arena-codes/",
+    "https://www.dudcode.com/code/afk-arena-codes/"
+   ],
+   "note": "Classic server per BoostBot and LOLVVV. Dudcode puts it under Companions. Added 2026-09-03 per MrGuider, 2026-09-22 per LOLVVV. Expires in about a week. Paired with 8DM4I4AWUE."
+  },
+  {
+   "code": "8DM4I4AWUE",
+   "server": "companions",
+   "rewards": null,
+   "firstSeen": "2026-09-03",
+   "expires": "2026-10-31",
+   "status": "active",
+   "sources": [
+    "https://boostbot.org/blog/afk-arena-codes/",
+    "https://www.mrguider.org/codes/afk-arena-codes/",
+    "https://www.lolvvv.com/codes/afk-arena",
+    "https://beebom.com/afk-arena-codes/",
+    "https://www.dudcode.com/code/afk-arena-codes/"
+   ],
+   "note": "Companions server per BoostBot, LOLVVV and MrGuider. Dudcode puts it under Classic. Expires 2026-10-31."
+  },
+  {
+   "code": "7TUZ4QI7CQ",
+   "server": "classic",
+   "rewards": null,
+   "firstSeen": "2026-08-19",
+   "expires": "2026-10-31",
+   "status": "active",
+   "sources": [
+    "https://boostbot.org/blog/afk-arena-codes/",
+    "https://www.mrguider.org/codes/afk-arena-codes/",
+    "https://beebom.com/afk-arena-codes/",
+    "https://www.dudcode.com/code/afk-arena-codes/"
+   ],
+   "note": "Classic server. Added 2026-08-19 per MrGuider. Dudcode writes it in lowercase (7tuz4qi7cq). Paired with 7TT7TZHW8X."
+  },
+  {
+   "code": "7TT7TZHW8X",
+   "server": "companions",
+   "rewards": null,
+   "firstSeen": "2026-08-19",
+   "expires": "2026-10-31",
+   "status": "active",
+   "sources": [
+    "https://boostbot.org/blog/afk-arena-codes/",
+    "https://www.mrguider.org/codes/afk-arena-codes/",
+    "https://www.lolvvv.com/codes/afk-arena",
+    "https://beebom.com/afk-arena-codes/",
+    "https://www.dudcode.com/code/afk-arena-codes/"
+   ],
+   "note": "Companions server. LOLVVV dates it 2026-09-03. Expires 2026-10-31."
+  },
+  {
+   "code": "7BH6PUM7YN",
+   "server": "classic",
+   "rewards": "800 Diamonds, 10 Common Scrolls, 5 Time Emblems",
+   "firstSeen": "2026-07-30",
+   "expires": "2026-09-30",
+   "status": "expired",
+   "sources": [
+    "https://www.mrguider.org/codes/afk-arena-codes/",
+    "https://guidesgame.ru/guides/afk_arena/afk_arena_kody_vozmeshhenija/",
+    "https://afk.guide/redemption-codes/",
+    "https://mobi.gg/en/tips/afk-arena-redemption-codes/",
+    "https://boostbot.org/blog/afk-arena-codes/",
+    "https://www.pockettactics.com/afk-arena/codes"
+   ],
+   "note": "Classic server. Sources conflict. MrGuider lists it as expired on 2026-09-30, GuidesGame logged it expired, and BoostBot's table marks it expired, yet BoostBot's text says 'live now, checked Oct 20'. Pocket Tactics and LOLVVV still list it. Probably dead. Paired with 7BZV7M9B38."
+  },
+  {
+   "code": "7BZV7M9B38",
+   "server": "companions",
+   "rewards": "800 Diamonds, 10 Common Scrolls, 5 Time Emblems (assumed same as Classic twin)",
+   "firstSeen": "2026-07-30",
+   "expires": "2026-09-30",
+   "status": "expired",
+   "sources": [
+    "https://www.mrguider.org/codes/afk-arena-codes/",
+    "https://boostbot.org/blog/afk-arena-codes/",
+    "https://www.lolvvv.com/codes/afk-arena",
+    "https://www.pockettactics.com/afk-arena/codes",
+    "https://www.dudcode.com/code/afk-arena-codes/"
+   ],
+   "note": "Companions server. Same conflict as 7BH6PUM7YN: MrGuider says it expired 2026-09-30, while BoostBot's text says it was live on 2026-10-20."
+  },
+  {
+   "code": "CLASSIC4F",
+   "server": "classic",
+   "rewards": "3000 Diamonds, 10 Stargazer Scrolls, 10 Time Emblems, 10 Draconis Insignia (per Redeem Code Tracker and VGTimes)",
+   "firstSeen": "2026-07-02",
+   "expires": "2026-08-31",
+   "status": "expired",
+   "sources": [
+    "https://www.mrguider.org/codes/afk-arena-codes/",
+    "https://afk.guide/redemption-codes/",
+    "https://www.redeem-code-tracker.com/games/afk-arena-classic",
+    "https://afk-arena.fun/codes"
+   ],
+   "note": "Classic server. MrGuider lists it as expired on 2026-08-31; AFK-Arena.fun says it expired 2026-08-06. Dudcode and PocketGamer still list it (stale)."
+  },
+  {
+   "code": "6ab8kqbtz4",
+   "server": "classic",
+   "rewards": "500 Diamonds, 30 Common Scrolls",
+   "firstSeen": "2026-06-30",
+   "expires": "2026-08-31",
+   "status": "expired",
+   "sources": [
+    "https://afk.guide/redemption-codes/",
+    "https://mobi.gg/en/tips/afk-arena-redemption-codes/",
+    "https://www.mrguider.org/codes/afk-arena-codes/"
+   ],
+   "note": "Classic server. MrGuider lists it as expired on 2026-08-31. No Companions twin found."
+  },
+  {
+   "code": "6af7a7cezi",
+   "server": "classic",
+   "rewards": "600 Diamonds, 1x 8h Dust, 1x 8h Gold, 1x 8h Hero EXP",
+   "firstSeen": "2026-06-24",
+   "expires": "2026-07-31",
+   "status": "expired",
+   "sources": [
+    "https://afk.guide/redemption-codes/",
+    "https://mobi.gg/en/tips/afk-arena-redemption-codes/",
+    "https://www.mrguider.org/codes/afk-arena-codes/",
+    "https://www.dudcode.com/code/afk-arena-codes/",
+    "https://www.pockettactics.com/afk-arena/codes"
+   ],
+   "note": "Classic server. MrGuider and Dudcode list it as expired. Pocket Tactics (Oct 7) and LOLVVV still show it (stale). Companions twin: 6anehsigfk."
+  },
+  {
+   "code": "6anehsigfk",
+   "server": "companions",
+   "rewards": null,
+   "firstSeen": "2026-06-24",
+   "expires": null,
+   "status": "unverified",
+   "sources": [
+    "https://www.lolvvv.com/codes/afk-arena"
+   ],
+   "note": "Companions twin of 6af7a7cezi. Seen only on LOLVVV. Probably expired along with its twin on 2026-07-31."
+  },
+  {
+   "code": "6artru2utm",
+   "server": "classic",
+   "rewards": "1200 Diamonds, 1x 8h Dust, 1x 8h Gold, 1x 8h Hero EXP",
+   "firstSeen": "2026-06-19",
+   "expires": "2026-07-31",
+   "status": "expired",
+   "sources": [
+    "https://afk.guide/redemption-codes/",
+    "https://www.mrguider.org/codes/afk-arena-codes/",
+    "https://www.dexerto.com/gaming/afk-arena-codes-may-2021-how-to-redeem-rewards-more-1569624/",
+    "https://www.pockettactics.com/afk-arena/codes"
+   ],
+   "note": "Classic server. MrGuider lists it as expired on 2026-07-31. LOLVVV lists it as 6ARTRU2UTM. Companions twin: 6AJ9B5AIVT."
+  },
+  {
+   "code": "6AJ9B5AIVT",
+   "server": "companions",
+   "rewards": null,
+   "firstSeen": "2026-06-19",
+   "expires": null,
+   "status": "unverified",
+   "sources": [
+    "https://www.lolvvv.com/codes/afk-arena"
+   ],
+   "note": "Companions twin of 6artru2utm. Seen only on LOLVVV. Probably expired 2026-07-31."
+  },
+  {
+   "code": "5QR3FJEZPJ",
+   "server": "classic",
+   "rewards": "Free rewards (one RU site says about 600 Diamonds plus chests; unconfirmed)",
+   "firstSeen": "2026-06-03",
+   "expires": "2026-07-31",
+   "status": "expired",
+   "sources": [
+    "https://www.mrguider.org/codes/afk-arena-codes/",
+    "https://www.lolvvv.com/codes/afk-arena"
+   ],
+   "note": "Classic server. MrGuider lists it as expired on 2026-07-31; some aggregators still list it."
+  },
+  {
+   "code": "5QSHFJPHQV",
+   "server": "companions",
+   "rewards": null,
+   "firstSeen": "2026-06",
+   "expires": "2026-07-31",
+   "status": "expired",
+   "sources": [
+    "https://www.mrguider.org/codes/afk-arena-codes/"
+   ],
+   "note": "Companions server, probably the twin of 5QR3FJEZPJ. Expired 2026-07-31 per MrGuider."
+  },
+  {
+   "code": "13thlilith",
+   "server": "classic",
+   "rewards": "1300 Diamonds, 13 Time Emblems",
+   "firstSeen": "2026-05-09",
+   "expires": null,
+   "status": "unverified",
+   "sources": [
+    "https://www.pockettactics.com/afk-arena/codes",
+    "https://mobi.gg/en/tips/afk-arena-redemption-codes/",
+    "https://nerdschalk.com/afk-arena-codes/",
+    "https://www.dudcode.com/code/afk-arena-codes/"
+   ],
+   "note": "Classic server, Lilith 13th-anniversary code. Pocket Tactics (Oct 7) lists it as working and Dudcode lists it as expired. No official expiry found. Companions twin: lilith13th."
+  },
+  {
+   "code": "lilith13th",
+   "server": "companions",
+   "rewards": "Free rewards (probably mirrors 13thlilith)",
+   "firstSeen": "2026-05",
+   "expires": null,
+   "status": "unverified",
+   "sources": [
+    "https://allthings.how/afk-arena-codes/",
+    "https://www.dudcode.com/code/afk-arena-codes/",
+    "https://www.redeem-code-tracker.com/games/afk-arena-classic"
+   ],
+   "note": "Companions server. Dudcode lists it as expired; Redeem Code Tracker says 'likely valid'."
+  },
+  {
+   "code": "4hwzcs2umh",
+   "server": "classic",
+   "rewards": "10 Common Scrolls, 1x 8h Dust, 1x 8h Gold, 1x 8h Hero EXP",
+   "firstSeen": "2026-05-01",
+   "expires": "2026-06-30",
+   "status": "expired",
+   "sources": [
+    "https://www.youtube.com/watch?v=eax_nfxSp-c",
+    "https://guidesgame.ru/guides/afk_arena/afk_arena_kody_vozmeshhenija/",
+    "https://www.dudcode.com/code/afk-arena-codes/",
+    "https://mobi.gg/en/tips/afk-arena-redemption-codes/"
+   ],
+   "note": "Classic server, Labor Day code valid until 2026/06/30 23:59 UTC+8. GuidesGame and Dudcode list it as expired. Pocket Tactics still lists it (stale)."
+  },
+  {
+   "code": "4hg98bkkfh",
+   "server": "classic",
+   "rewards": null,
+   "firstSeen": "2026-05",
+   "expires": null,
+   "status": "expired",
+   "sources": [
+    "https://boostbot.org/blog/afk-arena-codes/",
+    "https://www.redeem-code-tracker.com/games/afk-arena-classic"
+   ],
+   "note": "Classic server. BoostBot (Oct 20) lists it as dead; Redeem Code Tracker (Aug) said 'likely valid'."
+  },
+  {
+   "code": "4hpxmzav3e",
+   "server": "companions",
+   "rewards": null,
+   "firstSeen": "2026-05",
+   "expires": null,
+   "status": "expired",
+   "sources": [
+    "https://boostbot.org/blog/afk-arena-codes/"
+   ],
+   "note": "Companions server. BoostBot (Oct 20) lists it as dead."
+  },
+  {
+   "code": "426653P7TD",
+   "server": "classic",
+   "rewards": "3000 Diamonds, 10 Time Emblems, 10 Stargazer Scrolls, 10 Common Scrolls",
+   "firstSeen": "2026-04",
+   "expires": "2026-05-31",
+   "status": "expired",
+   "sources": [
+    "https://www.lolvvv.com/codes/afk-arena",
+    "https://www.dudcode.com/code/afk-arena-codes/",
+    "https://boostbot.org/blog/afk-arena-codes/",
+    "https://www.pockettactics.com/afk-arena/codes"
+   ],
+   "note": "Classic server. A YouTube description gives 'valid until 2026/05/31 23:59 UTC+8'. LOLVVV, Dudcode and BoostBot list it as expired; Pocket Tactics and PocketGamer still show it (stale). Companions twin: 42N6CAGKSV."
+  },
+  {
+   "code": "42N6CAGKSV",
+   "server": "companions",
+   "rewards": "Free rewards (probably mirrors 426653P7TD)",
+   "firstSeen": "2026-04",
+   "expires": "2026-05-31",
+   "status": "expired",
+   "sources": [
+    "https://boostbot.org/blog/afk-arena-codes/",
+    "https://www.dudcode.com/code/afk-arena-codes/",
+    "https://www.pocketgamer.com/afk-arena/codes/"
+   ],
+   "note": "Companions server. BoostBot and Dudcode list it as expired."
+  },
+  {
+   "code": "2bfe265g6x",
+   "server": null,
+   "rewards": "1000 Diamonds, 8h Dust/Gold/EXP boosts",
+   "firstSeen": "2026-02-16",
+   "expires": "2026-03-31",
+   "status": "expired",
+   "sources": [
+    "https://mobi.gg/en/tips/afk-arena-redemption-codes/",
+    "https://www.pockettactics.com/afk-arena/codes"
+   ],
+   "note": "Older than 6 months; included because Pocket Tactics and Dexerto still list it. One guide puts it under expired codes, ending 2026-03-31."
+  },
+  {
+   "code": "2b9pyu99rn",
+   "server": null,
+   "rewards": "Stargazer Scrolls, Honourable Soulstones, Faction Scrolls",
+   "firstSeen": "2026-02-16",
+   "expires": "2026-03-31",
+   "status": "expired",
+   "sources": [
+    "https://mobi.gg/en/tips/afk-arena-redemption-codes/",
+    "https://www.pockettactics.com/afk-arena/codes"
+   ],
+   "note": "Older code still circulating; one guide lists it as expired 2026-03-31."
+  },
+  {
+   "code": "2bjzpbed53",
+   "server": null,
+   "rewards": "2000 Diamonds, Stargazer Scrolls, Common Scrolls, Faction Scrolls",
+   "firstSeen": "2026-02-12",
+   "expires": null,
+   "status": "unverified",
+   "sources": [
+    "https://mobi.gg/en/tips/afk-arena-redemption-codes/",
+    "https://www.pockettactics.com/afk-arena/codes"
+   ],
+   "note": "Older code with no recent confirmation; probably expired."
+  },
+  {
+   "code": "2bxn4k86qd",
+   "server": "classic",
+   "rewards": "1000 Diamonds, multiple 8h boosts",
+   "firstSeen": "2026-02",
+   "expires": null,
+   "status": "unverified",
+   "sources": [
+    "https://www.pockettactics.com/afk-arena/codes",
+    "https://www.lolvvv.com/codes/afk-arena",
+    "https://www.dudcode.com/code/afk-arena-codes/"
+   ],
+   "note": "Classic server. Pocket Tactics and Dudcode list it as active and LOLVVV reportedly lists it as expired. Server labels differ between sites."
+  },
+  {
+   "code": "2bqw69udk3",
+   "server": "companions",
+   "rewards": "600 Diamonds, 15 Primordial Emblems, 3x 8h Large Hero's Essence Chest, 3x 8h Large Hero EXP Chest (per Nerdschalk)",
+   "firstSeen": "2026-02",
+   "expires": null,
+   "status": "unverified",
+   "sources": [
+    "https://www.dexerto.com/gaming/afk-arena-codes-may-2021-how-to-redeem-rewards-more-1569624/",
+    "https://nerdschalk.com/afk-arena-codes/",
+    "https://boostbot.org/blog/afk-arena-codes/"
+   ],
+   "note": "Companions server. Dexerto (Aug) and BoostBot list it without an expiry; no confirmed recent redemption."
+  },
+  {
+   "code": "lilithhappy2026",
+   "server": "classic",
+   "rewards": null,
+   "firstSeen": "2026-02-10",
+   "expires": "2026-02-28",
+   "status": "expired",
+   "sources": [
+    "https://x.com/AFK_Arena/status/2021172579424190496",
+    "https://www.pockettactics.com/afk-arena/codes"
+   ],
+   "note": "Classic server. The official X post says valid Feb 10 00:00 to Feb 28 24:00, 2026. Pocket Tactics still lists it (stale)."
+  },
+  {
+   "code": "2026lilithhappy",
+   "server": "companions",
+   "rewards": null,
+   "firstSeen": "2026-02-10",
+   "expires": "2026-02-28",
+   "status": "expired",
+   "sources": [
+    "https://x.com/AFK_Arena/status/2021172579424190496"
+   ],
+   "note": "Companions twin of lilithhappy2026, from the official X post."
+  },
+  {
+   "code": "vdj82fht4r",
+   "server": "classic",
+   "rewards": "3000 Diamonds, 10 Time Emblems, 10 Stargazer Scrolls, 10 Common Scrolls",
+   "firstSeen": "2026-02",
+   "expires": "2026-02-28",
+   "status": "expired",
+   "sources": [
+    "https://www.mrguider.org/codes/afk-arena-codes/",
+    "https://www.lolvvv.com/codes/afk-arena",
+    "https://games.gg/news/afk-arena-redeem-codes-february-2026/"
+   ],
+   "note": "Classic server. MrGuider gives expiry 2026-02-28 and LOLVVV lists it as expired. GIGA, Gaming Deputy and Pocket Tactics still list it (stale)."
+  },
+  {
+   "code": "DON2026classic",
+   "server": null,
+   "rewards": "10 Common Scrolls, 15 Draconis Insignias, 10 Stargazer Scrolls, 10 Wish Leafs",
+   "firstSeen": "2025-12-31",
+   "expires": "2026-01-31",
+   "status": "expired",
+   "sources": [
+    "https://www.mrguider.org/codes/afk-arena-codes/",
+    "https://afk.guide/redemption-codes/"
+   ],
+   "note": "MrGuider gives expiry 2026-01-31. Pocket Tactics and Dexerto still list it (stale)."
+  },
+  {
+   "code": "ujqrukd2at",
+   "server": null,
+   "rewards": "About 1200 Diamonds plus 8h boosts (diamond amount disputed)",
+   "firstSeen": "2025-12-31",
+   "expires": null,
+   "status": "unverified",
+   "sources": [
+    "https://afk.guide/redemption-codes/",
+    "https://www.pockettactics.com/afk-arena/codes",
+    "https://boostbot.org/blog/afk-arena-codes/"
+   ],
+   "note": "Mobilematters listed it as expired in July 2026, while Pocket Tactics and MrGuider list it as non-expiring. BoostBot calls the rewards unclear."
+  },
+  {
+   "code": "uj5fs5z58s",
+   "server": null,
+   "rewards": "60 Elite Soulstones, 10 Faction Scrolls, 10 Stargazer Scrolls",
+   "firstSeen": "2025-12-25",
+   "expires": null,
+   "status": "unverified",
+   "sources": [
+    "https://afk.guide/redemption-codes/",
+    "https://www.pockettactics.com/afk-arena/codes",
+    "https://www.dudcode.com/code/afk-arena-codes/"
+   ],
+   "note": "Dudcode lists it as expired; Pocket Tactics and MrGuider list it as active."
+  },
+  {
+   "code": "u4fctemje2",
+   "server": null,
+   "rewards": "1000 Diamonds plus multiple 8h boosts",
+   "firstSeen": "2025-12-01",
+   "expires": null,
+   "status": "unverified",
+   "sources": [
+    "https://afk.guide/redemption-codes/",
+    "https://www.pockettactics.com/afk-arena/codes",
+    "https://www.lolvvv.com/codes/afk-arena",
+    "https://www.redeem-code-tracker.com/games/afk-arena-classic"
+   ],
+   "note": "LOLVVV lists it as expired; Redeem Code Tracker says valid until 2026-12-31; Pocket Tactics lists it as active."
+  },
+  {
+   "code": "selene2025",
+   "server": "classic",
+   "rewards": "Disputed: Dexerto says 1000 Diamonds plus 8h boosts, a French guide says a Moon Goddess avatar frame",
+   "firstSeen": null,
+   "expires": null,
+   "status": "unverified",
+   "sources": [
+    "https://www.dexerto.com/gaming/afk-arena-codes-may-2021-how-to-redeem-rewards-more-1569624/",
+    "https://boostbot.org/blog/afk-arena-codes/"
+   ],
+   "note": "Classic server. One tracker says valid until 2026-12-31. Companions twin: 2025selene."
+  },
+  {
+   "code": "2025selene",
+   "server": "companions",
+   "rewards": null,
+   "firstSeen": "2026-03-31",
+   "expires": null,
+   "status": "unverified",
+   "sources": [
+    "https://www.dexerto.com/gaming/afk-arena-codes-may-2021-how-to-redeem-rewards-more-1569624/",
+    "https://www.lolvvv.com/codes/afk-arena",
+    "https://www.dudcode.com/code/afk-arena-codes/"
+   ],
+   "note": "Companions server. Dexerto and LOLVVV list it as active and Dudcode as expired."
+  },
+  {
+   "code": "afk888",
+   "server": null,
+   "rewards": "300 Diamonds, 100 Hero's Essence, 20,000 Gold",
+   "firstSeen": null,
+   "expires": null,
+   "status": "unverified",
+   "sources": [
+    "https://www.dexerto.com/gaming/afk-arena-codes-may-2021-how-to-redeem-rewards-more-1569624/"
+   ],
+   "note": "Old evergreen Classic code that Dexerto calls non-expiring. Usually already claimed on older accounts."
+  },
+  {
+   "code": "DTZDMHXU83",
+   "server": null,
+   "rewards": "100 Million Players Bundle",
+   "firstSeen": null,
+   "expires": null,
+   "status": "unverified",
+   "sources": [
+    "https://www.dexerto.com/gaming/afk-arena-codes-may-2021-how-to-redeem-rewards-more-1569624/"
+   ],
+   "note": "Old evergreen Classic code that Dexerto calls non-expiring. No recent confirmation."
+  },
+  {
+   "code": "lightbearer",
+   "server": null,
+   "rewards": "Faction code (soulstones/scrolls)",
+   "firstSeen": null,
+   "expires": null,
+   "status": "expired",
+   "sources": [
+    "https://boostbot.org/blog/afk-arena-codes/"
+   ],
+   "note": "BoostBot (2026-10-20) lists the faction codes lightbearer, wilder, graveborn and mauler as dead, although Dexerto still calls them non-expiring."
+  },
+  {
+   "code": "graveborn",
+   "server": null,
+   "rewards": "Faction code (soulstones/scrolls)",
+   "firstSeen": null,
+   "expires": null,
+   "status": "expired",
+   "sources": [
+    "https://boostbot.org/blog/afk-arena-codes/"
+   ],
+   "note": "Listed as dead by BoostBot (2026-10-20)."
+  },
+  {
+   "code": "wilder",
+   "server": null,
+   "rewards": "Faction code (soulstones/scrolls)",
+   "firstSeen": null,
+   "expires": null,
+   "status": "expired",
+   "sources": [
+    "https://boostbot.org/blog/afk-arena-codes/"
+   ],
+   "note": "Listed as dead by BoostBot (2026-10-20)."
+  },
+  {
+   "code": "mauler",
+   "server": null,
+   "rewards": "Faction code (soulstones/scrolls)",
+   "firstSeen": null,
+   "expires": null,
+   "status": "expired",
+   "sources": [
+    "https://boostbot.org/blog/afk-arena-codes/"
+   ],
+   "note": "Listed as dead by BoostBot (2026-10-20)."
+  }
+ ],
+ "sources": [
+  {
+   "name": "BoostBot - AFK Arena Codes (Classic & Companions)",
+   "url": "https://boostbot.org/blog/afk-arena-codes/",
+   "date": "2026-10-20 (last verified)"
+  },
+  {
+   "name": "LOLVVV - AFK Arena Codes",
+   "url": "https://www.lolvvv.com/codes/afk-arena",
+   "date": "2026-10-24 (shows 'updated today'; newest entries dated 2026-10-16)"
+  },
+  {
+   "name": "MrGuider - AFK Arena Codes",
+   "url": "https://www.mrguider.org/codes/afk-arena-codes/",
+   "date": "2026-10-01"
+  },
+  {
+   "name": "Pocket Tactics - AFK Arena codes",
+   "url": "https://www.pockettactics.com/afk-arena/codes",
+   "date": "2026-10-07"
+  },
+  {
+   "name": "Dudcode - AFK Arena Codes",
+   "url": "https://www.dudcode.com/code/afk-arena-codes/",
+   "date": "2026-10"
+  },
+  {
+   "name": "Beebom - AFK Arena Codes",
+   "url": "https://beebom.com/afk-arena-codes/",
+   "date": "2026-10-01"
+  },
+  {
+   "name": "MEmu Play blog - AFK Arena Codes",
+   "url": "https://www.memuplay.com/blog/afk-arena-codes.html",
+   "date": "2026-10"
+  },
+  {
+   "name": "Mobi.gg - AFK Arena Codes List",
+   "url": "https://mobi.gg/en/tips/afk-arena-redemption-codes/",
+   "date": "2026-10 (title; table looks stale)"
+  },
+  {
+   "name": "Gaming Deputy - AFK Arena voucher codes",
+   "url": "https://www.gamingdeputy.com/afk-arena-all-voucher-codes-and-how-to-enter-them-october-2026/",
+   "date": "2026-10-01"
+  },
+  {
+   "name": "GuidesGame (RU) - AFK Arena codes",
+   "url": "https://guidesgame.ru/guides/afk_arena/afk_arena_kody_vozmeshhenija/",
+   "date": "2026-10"
+  },
+  {
+   "name": "KodeGG - code listings",
+   "url": "https://kodegg.com/en/codes/",
+   "date": "2026-10"
+  },
+  {
+   "name": "PocketGamer - AFK Arena codes",
+   "url": "https://www.pocketgamer.com/afk-arena/codes/",
+   "date": "2026-09"
+  },
+  {
+   "name": "AllThings.how - AFK Arena Codes",
+   "url": "https://allthings.how/afk-arena-codes/",
+   "date": "2026-09"
+  },
+  {
+   "name": "Nerdschalk - AFK Arena Codes",
+   "url": "https://nerdschalk.com/afk-arena-codes/",
+   "date": "2026-09"
+  },
+  {
+   "name": "Dexerto - AFK Arena codes",
+   "url": "https://www.dexerto.com/gaming/afk-arena-codes-may-2021-how-to-redeem-rewards-more-1569624/",
+   "date": "2026-08-13 (titled October 2026)"
+  },
+  {
+   "name": "Redeem Code Tracker - AFK Arena (Classic)",
+   "url": "https://www.redeem-code-tracker.com/games/afk-arena-classic",
+   "date": "2026-08"
+  },
+  {
+   "name": "AFK Arena Guide (afk.guide) - Redemption Codes",
+   "url": "https://afk.guide/redemption-codes/",
+   "date": "2026-07 (updated July 2026)"
+  },
+  {
+   "name": "AFK-Arena.fun - Gift Codes",
+   "url": "https://afk-arena.fun/codes",
+   "date": "2026-08 (stale)"
+  },
+  {
+   "name": "Official AFK Arena X - Mid-Autumn gift codes post",
+   "url": "https://x.com/AFK_Arena/status/2103439370959335503",
+   "date": "2026-09-25"
+  },
+  {
+   "name": "Official AFK Arena X account (Kaiju No. 8 collab code post, valid until 2026/10/21)",
+   "url": "https://x.com/afk_arena",
+   "date": "2026-09-23"
+  },
+  {
+   "name": "Inven Global - AFK Arena begins Kaiju No. 8 collaboration",
+   "url": "https://www.invenglobal.com/articles/26437/afk-arena-begins-kaiju-no-8-collaboration",
+   "date": "2026-09-23"
+  },
+  {
+   "name": "Official AFK Arena X - lilithhappy2026 post",
+   "url": "https://x.com/AFK_Arena/status/2021172579424190496",
+   "date": "2026-02-10"
+  },
+  {
+   "name": "YouTube - Labor Day code (4hwzcs2umh, valid until 2026/06/30)",
+   "url": "https://www.youtube.com/watch?v=eax_nfxSp-c",
+   "date": "2026-05"
+  },
+  {
+   "name": "games.gg - AFK Arena redeem codes (redemption steps)",
+   "url": "https://games.gg/news/afk-arena-redeem-codes-february-2026/",
+   "date": "2026-02 (updated 2026-03-31)"
+  }
+ ],
+ "uncertain": [
+  "Every page fetch (WebFetch and curl) was blocked by DNS or the proxy, so all data comes from search-engine snippets and summaries, not the pages themselves. None of the codes were test-redeemed.",
+  "No source published reward contents for the 8 active codes (8VI6VSBQGE, 8V5257RADA, 8vtsewmeyj, 8vn8gamxqy, 8D82CDSRBY, 8DM4I4AWUE, 7TUZ4QI7CQ, 7TT7TZHW8X). They are only described as 'free rewards'.",
+  "Server assignment for 8D82CDSRBY and 8DM4I4AWUE is swapped on Dudcode compared with BoostBot, LOLVVV and MrGuider. The majority mapping is used here (8D82... Classic, 8DM4... Companions).",
+  "The added date for 8VI6VSBQGE and 8V5257RADA differs between sources: 2026-10-01 (MrGuider) and 2026-10-16 (LOLVVV).",
+  "The official Mid-Autumn X post (2026-09-25, valid until 2026-11-30) was found, but its snippet did not show the code strings. Linking it to 8vtsewmeyj and 8vn8gamxqy rests on the matching date and expiry only.",
+  "7BH6PUM7YN and 7BZV7M9B38: BoostBot's text says 'live now, checked Oct 20' but its table and MrGuider say they expired on 2026-09-30. They are marked expired here.",
+  "Case-sensitivity is disputed between sources. Codes are recorded as most sources print them.",
+  "Many large sites (Pocket Tactics Oct 7, Dexerto, PocketGamer, Gaming Deputy) still list codes from Dec 2025 to May 2026 as active even though their official expiry has passed. Treat those lists as stale.",
+  "Lordstrategist lists a code 'HALLOWEEN' with no date or rewards. It was not found anywhere else and is excluded as unreliable. No 2026 Halloween code was found as of 2026-10-24.",
+  "No Reddit r/afkarena or Discord posts came up in search, and Reddit could not be reached directly."
+ ]
 }
