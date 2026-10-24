@@ -3,7 +3,7 @@
 import { esc, local, $ } from '../util.js';
 import { data, hero as getHero, POSITIONS, CLASSES, TYPES, FACTION_IDS, starTier } from '../data.js';
 import { entry as bankEntry, effectiveLevel } from '../store.js';
-import { ICON, factionIcon, classIcon, typeIcon } from './icons.js';
+import { ICON, factionIcon, classIcon, typeIcon, gemStar } from './icons.js';
 
 // ---- fold state ------------------------------------------------------------
 
@@ -75,7 +75,7 @@ export function portrait(h, { size = 64, showBank = false, unowned = false, badg
   const e = showBank ? bankEntry(h.id) : null;
   const asc = e?.owned ? e.asc : '';
   const st = e?.owned && e.asc === 'Ascended' ? starTier(e.stars) : null;
-  const stars = st ? Array.from({ length: st.count }, () => ICON.star).join('') : '';
+  const stars = st ? gemStar(st.tier).repeat(st.count) : '';
   const img = h.img
     ? `<img src="${esc(h.img)}" alt="" loading="lazy" data-fallback="${esc(initials(h.name))}">`
     : `<span class="initials">${esc(initials(h.name))}</span>`;
@@ -163,7 +163,7 @@ export function artifactChip(id) {
 export function starRow(stars, { size = 14, title = true } = {}) {
   const t = starTier(stars);
   if (!t) return '';
-  return `<span class="star-row ${t.tier}" style="--ss:${size}px"${title ? ` title="${stars} of 15 stars (${t.count} ${t.tier})"` : ''} aria-label="${stars} stars">${ICON.star.repeat(t.count)}</span>`;
+  return `<span class="star-row ${t.tier}" style="--ss:${size}px"${title ? ` title="${stars} of 15 stars (${t.count} ${t.tier})"` : ''} aria-label="${stars} stars">${gemStar(t.tier).repeat(t.count)}</span>`;
 }
 
 // Ascension name coloured like its card frame.

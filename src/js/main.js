@@ -9,7 +9,7 @@ import { mountBuilder, refreshBuilder } from './ui/builder.js';
 import { mountCounter, refreshCounter } from './ui/counter.js';
 import { mountCodes, refreshCodes, codesToRedeem } from './ui/codes.js';
 import { bindImageFallback } from './ui/common.js';
-import { BRAND, ICON } from './ui/icons.js';
+import { BRAND, ICON, GEM_SPRITE } from './ui/icons.js';
 import { initAi } from './ai.js';
 
 const TABS = [
@@ -143,7 +143,7 @@ async function start() {
   app.innerHTML = `${phoneNav()}<div class="app-scroll" id="app-scroll"><header class="app-header">${header()}</header>
     <main>${TABS.map((t) => `<section class="view" id="view-${t.id}" role="tabpanel" aria-labelledby="tab-${t.id}" hidden></section>`).join('')}
       <footer class="small muted app-foot">Fan-made tool, not affiliated with Lilith Games. Hero portraits are game assets via the floofpire/cdn mirror. Meta data ${esc(data.meta.gameVersion || '')} · updated weekly.</footer></main></div>
-    <div id="toast" role="status" aria-live="polite" hidden></div>`;
+    <div id="toast" role="status" aria-live="polite" hidden></div>${GEM_SPRITE}`;
   bindImageFallback(document.body);
   applyTheme();
   $('#theme-btn').addEventListener('click', cycleTheme);

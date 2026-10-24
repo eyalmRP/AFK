@@ -35,6 +35,35 @@ export const ICON = {
   stop: svg('<rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor"/>'),
 };
 
+// Faceted stars in the game's three colours: gold (1-5), red (6-10), white (11-15).
+// Ten facets from the centre, lit from the top, drawn once as a sprite and reused with <use>.
+const GEM_COLORS = {
+  gold: ['#fff1a6', '#f6b62a', '#c47a06', '#5a3000'],
+  red: ['#ffb3bc', '#f2324f', '#a80d2a', '#4d0010'],
+  white: ['#ffffff', '#e9e5ff', '#b7acef', '#4a3a9e'],
+};
+
+function gemSymbol(tier, [hi, mid, lo, ol]) {
+  const cx = 12;
+  const cy = 12.8;
+  const at = (r, deg) => `${(cx + r * Math.cos((deg * Math.PI) / 180)).toFixed(2)},${(cy + r * Math.sin((deg * Math.PI) / 180)).toFixed(2)}`;
+  const outer = (i) => at(11, -90 + 72 * i);
+  const inner = (i) => at(4.7, -54 + 72 * i);
+  const outline = Array.from({ length: 5 }, (_, i) => `${outer(i)} ${inner(i)}`).join(' ');
+  let facets = '';
+  for (let i = 0; i < 5; i++) {
+    facets += `<polygon points="${cx},${cy} ${inner((i + 4) % 5)} ${outer(i)}" fill="${i === 0 || i === 4 ? hi : mid}"/>`;
+    facets += `<polygon points="${cx},${cy} ${outer(i)} ${inner(i)}" fill="${i === 0 || i === 1 ? mid : lo}"/>`;
+  }
+  return `<symbol id="gem-${tier}" viewBox="0 0 24 24"><polygon points="${outline}" fill="${ol}" stroke="${ol}" stroke-width="2.6" stroke-linejoin="round"/>${facets}<polygon points="${outline}" fill="none" stroke="${ol}" stroke-width="0.8" stroke-linejoin="round"/></symbol>`;
+}
+
+export const GEM_SPRITE = `<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">${Object.entries(GEM_COLORS)
+  .map(([t, c]) => gemSymbol(t, c))
+  .join('')}</svg>`;
+
+export const gemStar = (tier) => `<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#gem-${tier}"/></svg>`;
+
 export const BRAND = svg(
   '<g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M16 2.5l11 6.2v12.6L16 29.5 5 21.3V8.7z"/><path d="M16 7.5l6.5 3.7v7.6L16 24.5l-6.5-5.7v-7.6z" fill="currentColor" fill-opacity=".18"/><path d="M16 2.5v5M27 8.7l-4.5 2.5M5 8.7l4.5 2.5M16 24.5v5"/></g>',
   '0 0 32 32',

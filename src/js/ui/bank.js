@@ -403,7 +403,7 @@ function renderList() {
   } else if (ui.view === 'list') {
     host.innerHTML = `<div class="bank-rows">${list.map(row).join('')}</div>`;
   } else {
-    host.innerHTML = `<div class="bank-grid z${ui.size}">${list.map(ui.size === 4 ? bigCard : tile).join('')}</div>`;
+    host.innerHTML = `<div class="bank-grid z${ui.size}${ui.selectMode ? ' selecting' : ''}">${list.map(ui.size === 4 ? bigCard : tile).join('')}</div>`;
   }
   renderBatch();
 }
@@ -447,7 +447,7 @@ function tile(h) {
   return `<div ${cardAttrs(h, e, 'bank-tile')}>
     <span class="fr" data-asc="${owned ? esc(e.asc) : ''}"><span class="fr-art">${heroArt(h)}</span>
       <span class="fr-fac">${factionIcon(h.faction)}</span>
-      ${owned ? lvlBadge(h, e, 'fr-lvl') : ''}${stars ? `<span class="fr-stars">${stars}</span>` : ''}
+      ${stars ? `<span class="fr-band">${stars}</span>` : ''}${owned ? lvlBadge(h, e, 'fr-lvl') : ''}
       ${cornerBadge(h, owned)}</span>
     <span class="nm">${esc(h.name)}</span>
   </div>`;

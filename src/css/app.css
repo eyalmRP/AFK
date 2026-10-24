@@ -431,10 +431,10 @@ a.btn { text-decoration: none; }
   line-height: 1.35;
   white-space: nowrap;
 }
-.portrait .stars { position: absolute; bottom: 9px; left: 0; right: 0; display: flex; justify-content: center; gap: 1px; }
-.portrait .stars svg { width: 10px; height: 10px; color: var(--star); filter: drop-shadow(0 0 1px rgb(0 0 0 / 70%)); }
-.portrait .stars.red svg { color: #ff5c6c; }
-.portrait .stars.white svg { color: #f2f0ff; }
+.portrait .stars { position: absolute; bottom: 9px; left: 0; right: 0; display: flex; justify-content: center; filter: drop-shadow(0 0 1px rgb(0 0 0 / 70%)); }
+.portrait .stars svg { width: 11px; height: 11px; flex: none; }
+.portrait .stars svg + svg { margin-left: -2.5px; }
+.portrait .stars.white { filter: drop-shadow(0 0 2px rgb(160 140 255 / 80%)); }
 .portrait[data-asc^='Elite'] .art { border-color: var(--asc-elite); }
 .portrait[data-asc^='Legendary'] .art { border-color: var(--asc-legendary); }
 .portrait[data-asc^='Mythic'] .art { border-color: var(--asc-mythic); }
@@ -443,15 +443,11 @@ a.btn { text-decoration: none; }
 .portrait.unowned .art { filter: grayscale(0.85); opacity: 0.55; }
 
 /* Stars as a row of icons in the game's colours: gold 1–5, red 6–10, white 11–15. */
-.star-row { display: inline-flex; gap: 1px; margin-left: 5px; vertical-align: -0.14em; }
-.star-row svg { width: var(--ss, 14px); height: var(--ss, 14px); }
-.star-row.gold svg { color: #f1b632; }
-.star-row.red svg { color: #ff4d5e; }
-.star-row.white svg { color: #fbfaff; filter: drop-shadow(0 0 2px rgb(150 130 255 / 70%)); }
-.star-row svg path { stroke-width: 1.3px; stroke-linejoin: round; paint-order: stroke; }
-.star-row.gold svg path { stroke: #9a6508; }
-.star-row.red svg path { stroke: #8f1424; }
-.star-row.white svg path { stroke: #6a55c8; stroke-width: 1.7px; paint-order: normal; }
+/* Stars overlap a little, like the in-game ones; white stars glow. */
+.star-row { display: inline-flex; margin-left: 5px; vertical-align: -0.16em; }
+.star-row svg { width: var(--ss, 14px); height: var(--ss, 14px); flex: none; }
+.star-row svg + svg { margin-left: calc(var(--ss, 14px) * -0.24); }
+.star-row.white { filter: drop-shadow(0 0 2.5px rgb(160 140 255 / 75%)); }
 .asc-text { font-weight: 700; color: var(--ink-2); }
 .asc-text[data-asc^='Elite'], .asc-select[data-asc^='Elite'] { color: var(--asc-t-elite); }
 .asc-text[data-asc^='Legendary'], .asc-select[data-asc^='Legendary'] { color: var(--asc-t-legendary); }
@@ -788,12 +784,15 @@ a.btn { text-decoration: none; }
 [data-owned='false'] .fr-art img, [data-owned='false'] .big-art img { filter: grayscale(0.9); opacity: 0.55; }
 .fr-fac { position: absolute; top: -7px; left: -7px; width: 30px; height: 30px; }
 .fr-fac .gi { width: 100%; height: 100%; filter: drop-shadow(0 1px 2px rgb(0 0 0 / 70%)); }
-.fr-lvl { position: absolute; left: 3px; bottom: 15px; font-family: var(--font-data); font-weight: 700; font-size: 0.82rem; line-height: 1.35; color: #fff; background: rgb(0 0 0 / 72%); border-radius: 6px; padding: 0 5px; font-variant-numeric: tabular-nums; }
+.fr-lvl { position: absolute; right: 3px; top: 3px; font-family: var(--font-data); font-weight: 700; font-size: 0.82rem; line-height: 1.35; color: #fff; background: rgb(0 0 0 / 72%); border-radius: 6px; padding: 0 5px; font-variant-numeric: tabular-nums; }
 .own-level { box-shadow: inset 0 0 0 1px var(--accent); }
 .fr-lvl.own-level, .big-lvl.own-level { color: var(--accent); }
-.fr-stars { position: absolute; left: 0; right: 0; bottom: -9px; display: flex; justify-content: center; pointer-events: none; }
-.fr-stars .star-row { margin: 0; --ss: 15px !important; filter: drop-shadow(0 1px 1px rgb(0 0 0 / 90%)); }
-.bank-tile { display: flex; flex-direction: column; gap: 13px; min-width: 0; text-align: center; }
+/* Stars sit in a dark band across the bottom of the art. */
+.fr-band { position: absolute; left: 0; right: 0; bottom: 0; height: 36%; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 1px; border-radius: 0 0 9px 9px; background: linear-gradient(180deg, transparent, rgb(6 8 14 / 74%) 52%, rgb(6 8 14 / 92%)); pointer-events: none; }
+.fr-band .star-row { margin: 0; --ss: 20px !important; filter: drop-shadow(0 1px 1px rgb(0 0 0 / 85%)); }
+.fr-band .star-row.white { filter: drop-shadow(0 0 3px rgb(170 150 255 / 85%)) drop-shadow(0 1px 1px rgb(0 0 0 / 85%)); }
+.selecting .fr-lvl { right: 24px; }
+.bank-tile { display: flex; flex-direction: column; gap: 8px; min-width: 0; text-align: center; }
 .bank-tile .nm { font-size: 0.84rem; font-weight: 600; line-height: 1.15; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .pick, .own-plus, .own-mark { position: absolute; top: -7px; right: -7px; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; padding: 0; z-index: 1; }
 .pick { border: 2px solid var(--line-2); background: var(--surface); color: var(--accent-ink); box-shadow: 0 1px 3px rgb(0 0 0 / 35%); }
@@ -807,18 +806,19 @@ a.btn { text-decoration: none; }
 .z1 .fr[data-asc$='+'] { border-width: 3px; }
 .z1 .fr-art { border-radius: 7px; }
 .z1 .fr-fac { width: 20px; height: 20px; top: -5px; left: -5px; }
-.z1 .fr-lvl { font-size: 0.64rem; left: 2px; bottom: 10px; padding: 0 3px; }
-.z1 .fr-stars { bottom: -7px; }
-.z1 .fr-stars .star-row { --ss: 11px !important; gap: 0; }
-.z1 .bank-tile { gap: 9px; }
+.z1 .fr-lvl { font-size: 0.64rem; right: 2px; top: 2px; padding: 0 3px; }
+.z1 .fr-band { border-radius: 0 0 7px 7px; padding-bottom: 0; }
+.z1.selecting .fr-lvl { right: 17px; }
+.z1 .fr-band .star-row { --ss: 13px !important; }
+.z1 .bank-tile { gap: 6px; }
 .z1 .bank-tile .nm { font-size: 0.66rem; }
 .z1 .pick, .z1 .own-plus { width: 20px; height: 20px; top: -5px; right: -5px; font-size: 0.9rem; }
 .z1 .pick svg { width: 12px; height: 12px; }
 .z2 .fr-fac { width: 24px; height: 24px; top: -6px; left: -6px; }
-.z2 .fr-lvl { font-size: 0.72rem; bottom: 12px; }
-.z2 .fr-stars { bottom: -8px; }
-.z2 .fr-stars .star-row { --ss: 13px !important; }
-.z2 .bank-tile { gap: 11px; }
+.z2 .fr-lvl { font-size: 0.72rem; }
+.z2.selecting .fr-lvl { right: 20px; }
+.z2 .fr-band .star-row { --ss: 17px !important; }
+.z2 .bank-tile { gap: 7px; }
 .z2 .bank-tile .nm { font-size: 0.76rem; }
 .z2 .pick, .z2 .own-plus { width: 23px; height: 23px; top: -6px; right: -6px; }
 /* zoom 4: portrait card */
