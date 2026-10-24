@@ -412,6 +412,8 @@ main {
 }
 .portrait .stars { position: absolute; bottom: 9px; left: 0; right: 0; display: flex; justify-content: center; gap: 1px; }
 .portrait .stars svg { width: 10px; height: 10px; color: var(--star); filter: drop-shadow(0 0 1px rgb(0 0 0 / 70%)); }
+.portrait .stars.red svg { color: #ff5c6c; }
+.portrait .stars.white svg { color: #f2f0ff; }
 .portrait[data-asc^='Elite'] .art { border-color: var(--asc-elite); }
 .portrait[data-asc^='Legendary'] .art { border-color: var(--asc-legendary); }
 .portrait[data-asc^='Mythic'] .art { border-color: var(--asc-mythic); }

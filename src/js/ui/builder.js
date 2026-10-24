@@ -155,7 +155,7 @@ function teamCard(t, i, ctx, { label = 'Team', saveable = true } = {}) {
   const syn = score.synergies.slice(0, 4).map((s) => `<li><b>${esc(getHero(s.a).name)} + ${esc(getHero(s.b).name)}</b><span>${esc(s.why || 'known synergy')}</span></li>`).join('');
   const up = ctx.entries ? nextUpgrade(ctx, Object.values(slots)) : null;
   const swaps = t.seed?.swaps?.length ? t.seed.swaps.map((s) => `${esc(getHero(s.from)?.name || s.from)} → ${esc(getHero(s.to)?.name || s.to)}`).join(', ') : '';
-  const title = t.name || score.template?.name || t.seed?.name || '';
+  const title = t.name || score.template?.name || '';
   return `<article class="result-card">
     <header><h4>${esc(label)} ${i + 1}${title ? `: ${esc(title)}` : ''}</h4><span class="score" title="Rules-engine score">${score.total.toFixed(1)} pts</span></header>
     ${board({ slots, artifacts: arts, showBank: ui.pool === 'mine' })}

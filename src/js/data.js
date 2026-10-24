@@ -31,13 +31,25 @@ export const TYPES = ['Strength', 'Intelligence', 'Agility'];
 export const ASCENSIONS = ['Elite', 'Elite+', 'Legendary', 'Legendary+', 'Mythic', 'Mythic+', 'Ascended'];
 
 export const LIMITS = {
-  level: 800,
+  level: 1500,
   si: 50,
   furniture: 9,
   engrave: 100,
-  stars: 5,
+  stars: 15,
   gear: 5,
 };
+
+// Ascended stars come in three colours of five: gold 1–5, red 6–10, white 11–15.
+export function starTier(stars) {
+  if (!stars) return null;
+  const tier = stars <= 5 ? 'gold' : stars <= 10 ? 'red' : 'white';
+  return { tier, count: ((stars - 1) % 5) + 1 };
+}
+
+export function starLabel(stars) {
+  const t = starTier(stars);
+  return t ? `${t.count}★ ${t.tier}` : 'no stars';
+}
 
 export const POSITIONS = ['F1', 'F2', 'B1', 'B2', 'B3'];
 

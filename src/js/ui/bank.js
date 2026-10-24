@@ -2,7 +2,7 @@
 // per-hero editing, screenshot import and the shared crystal level.
 
 import { esc, $, $$, toast, toInt, debounce } from '../util.js';
-import { data, FACTION_IDS, CLASSES, ASCENSIONS, LIMITS, TIERS, tierOf, hero as getHero } from '../data.js';
+import { data, FACTION_IDS, CLASSES, ASCENSIONS, LIMITS, TIERS, tierOf, hero as getHero, starLabel } from '../data.js';
 import { bank, updateHeroes, updateSettings, replaceBank, removeHeroes, effectiveLevel, exportBank, sanitizeEntry, defaultEntry, ownedIds } from '../store.js';
 import { aiState, initAi, readScreenshots, errorCopy } from '../ai.js';
 import { ICON, classIcon } from './icons.js';
@@ -177,8 +177,19 @@ function renderCounts() {
   if (tab) tab.textContent = owned ? String(owned) : '';
 }
 
+const dash = (v) => (v === null || v === undefined ? '–' : v);
+
 function statLine(e) {
-  return `${esc(e.asc)}${e.stars ? ` ${e.stars}★` : ''} · SI +${e.si ?? 0} · ${e.furniture}F · E${e.engrave}`;
+  const asc = `${esc(e.asc)}${e.stars ? ` ${esc(starLabel(e.stars))}` : ''}`;
+  if (e.si === null && e.furniture === null && e.engrave === null) return `${asc}<br><span class="muted">Upgrades not recorded</span>`;
+  return `${asc} · SI ${dash(e.si)} · ${dash(e.furniture)}F · E${dash(e.engrave)}`;
+}
+
+// Stars as the game shows them: gold 1–5, red 6–10, white 11–15.
+function starOptions(cur, withKeep = false) {
+  const opts = withKeep ? ['<option value="">No change</option>'] : [];
+  for (let i = 0; i <= LIMITS.stars; i++) opts.push(`<option value="${i}" ${cur === i ? 'selected' : ''}>${i ? starLabel(i) : 'None'}</option>`);
+  return opts.join('');
 }
 
 function renderList() {
@@ -206,7 +217,7 @@ function card(h) {
       <span class="nm">${esc(h.name)}</span>
       ${
         owned
-          ? `<span class="st">${statLine(e)}</span><span class="st">Lv ${effectiveLevel(h.id)} · T${e.gear ?? 0} gear</span>`
+          ? `<span class="st">${statLine(e)}</span><span class="st">Lv ${effectiveLevel(h.id)}${bank.settings.sharedLevel && e.crystal === false ? ' (own level)' : ''}${e.gear !== null ? ` · T${e.gear} gear` : ''}</span>`
           : `<span class="st muted cls-line">${classIcon(h.class)} ${esc(h.class)}</span>${ui.selectMode ? '' : `<button class="btn small own-btn" type="button" data-own-hero="${h.id}">+ I own this</button>`}`
       }
     </div>
@@ -214,7 +225,7 @@ function card(h) {
 }
 
 function numCell(id, field, value, max, disabled) {
-  return `<input class="input num-input" type="number" min="0" max="${max}" value="${value ?? 0}" data-cell="${id}" data-field="${field}" ${disabled ? 'disabled' : ''} aria-label="${field}">`;
+  return `<input class="input num-input" type="number" min="0" max="${max}" value="${value ?? ''}" placeholder="–" data-cell="${id}" data-field="${field}" ${disabled ? 'disabled' : ''} aria-label="${field}">`;
 }
 
 function tableView(list) {
@@ -230,8 +241,8 @@ function tableView(list) {
         <td><span class="hero-cell">${portrait(h, { size: 34, unowned: !owned })}<button class="btn ghost small" type="button" data-detail="${h.id}">${esc(h.name)}</button></span></td>
         <td><input type="checkbox" data-cell="${h.id}" data-field="owned" ${owned ? 'checked' : ''} aria-label="Owned"></td>
         <td><select class="select" data-cell="${h.id}" data-field="asc" ${dis ? 'disabled' : ''} aria-label="Ascension">${ASCENSIONS.map((a) => `<option ${e.asc === a ? 'selected' : ''}>${a}</option>`).join('')}</select></td>
-        <td>${numCell(h.id, 'stars', e.stars, LIMITS.stars, dis || e.asc !== 'Ascended')}</td>
-        <td>${shared ? `<span class="num muted" title="Shared level">${owned ? bank.settings.crystalLevel : '–'}</span>` : numCell(h.id, 'level', e.level, LIMITS.level, dis)}</td>
+        <td><select class="select" data-cell="${h.id}" data-field="stars" ${dis || e.asc !== 'Ascended' ? 'disabled' : ''} aria-label="Stars">${starOptions(e.stars)}</select></td>
+        <td>${shared && e.crystal !== false ? `<span class="num muted" title="Shared level">${owned ? bank.settings.crystalLevel : '–'}</span>` : numCell(h.id, 'level', e.level, LIMITS.level, dis)}</td>
         <td>${numCell(h.id, 'si', e.si, LIMITS.si, dis)}</td>
         <td>${numCell(h.id, 'furniture', e.furniture, LIMITS.furniture, dis)}</td>
         <td>${numCell(h.id, 'engrave', e.engrave, LIMITS.engrave, dis)}</td>
@@ -265,8 +276,9 @@ function renderBatch() {
     <span class="count">${ui.selected.size} selected</span>
     <label class="field"><span>Owned</span><select class="select" id="b-owned">${keep}${opt('yes', 'Owned')}${opt('no', 'Not owned')}</select></label>
     <label class="field"><span>Ascension</span><select class="select" id="b-asc">${keep}${ASCENSIONS.map((a) => opt(a)).join('')}</select></label>
-    <label class="field"><span>Stars</span><select class="select" id="b-stars">${keep}${range(LIMITS.stars)}</select></label>
-    <label class="field"><span>Level</span><input class="input num-input" id="b-level" type="number" min="1" max="${LIMITS.level}" placeholder="–" ${bank.settings.sharedLevel ? 'disabled title="Shared level is on"' : ''}></label>
+    <label class="field"><span>Stars</span><select class="select" id="b-stars">${starOptions(null, true)}</select></label>
+    <label class="field"><span>Shared level</span><select class="select" id="b-crystal">${keep}${opt('yes', 'Uses it')}${opt('no', 'Own level')}</select></label>
+    <label class="field"><span>Own level</span><input class="input num-input" id="b-level" type="number" min="1" max="${LIMITS.level}" placeholder="–"></label>
     <label class="field"><span>SI</span><input class="input num-input" id="b-si" type="number" min="0" max="${LIMITS.si}" placeholder="–"></label>
     <label class="field"><span>Furniture</span><select class="select" id="b-furniture">${keep}${range(LIMITS.furniture)}</select></label>
     <label class="field"><span>Engrave</span><input class="input num-input" id="b-engrave" type="number" min="0" max="${LIMITS.engrave}" placeholder="–"></label>
@@ -405,7 +417,8 @@ function applyBatch() {
   if (get('b-owned')) patch.owned = get('b-owned') === 'yes';
   if (get('b-asc')) patch.asc = get('b-asc');
   if (get('b-stars') !== '') patch.stars = toInt(get('b-stars'));
-  if (get('b-level') !== '' && !bank.settings.sharedLevel) patch.level = toInt(get('b-level'));
+  if (get('b-crystal')) patch.crystal = get('b-crystal') === 'yes';
+  if (get('b-level') !== '') patch.level = toInt(get('b-level'));
   if (get('b-si') !== '') patch.si = toInt(get('b-si'));
   if (get('b-furniture') !== '') patch.furniture = toInt(get('b-furniture'));
   if (get('b-engrave') !== '') patch.engrave = toInt(get('b-engrave'));
@@ -443,7 +456,8 @@ function onChange(ev) {
   if (t.dataset.cell) {
     const id = t.dataset.cell;
     const f = t.dataset.field;
-    const val = f === 'owned' ? t.checked : f === 'asc' ? t.value : toInt(t.value);
+    const optional = ['si', 'furniture', 'engrave', 'gear'].includes(f);
+    const val = f === 'owned' ? t.checked : f === 'asc' ? t.value : optional && t.value === '' ? null : toInt(t.value);
     updateHeroes({ [id]: { ...(bank.heroes[id] || { ...defaultEntry(), owned: false }), [f]: val } });
   }
 }
@@ -474,14 +488,14 @@ export function openEditor(id) {
     <label class="check"><input type="checkbox" id="ed-owned" ${cur.owned ? 'checked' : ''}> I own this hero</label>
     <div class="edit-grid">
       <label class="field"><span>Ascension</span><select class="select" id="ed-asc">${ASCENSIONS.map((a) => `<option ${cur.asc === a ? 'selected' : ''}>${a}</option>`).join('')}</select></label>
-      <label class="field"><span>Stars (Ascended)</span><select class="select" id="ed-stars" ${cur.asc === 'Ascended' ? '' : 'disabled'}>${Array.from({ length: LIMITS.stars + 1 }, (_, i) => `<option value="${i}" ${cur.stars === i ? 'selected' : ''}>${i ? i + '★' : 'None'}</option>`).join('')}</select></label>
-      <label class="field"><span>Level</span><input class="input" id="ed-level" type="number" min="1" max="${LIMITS.level}" value="${shared ? bank.settings.crystalLevel : cur.level}" ${shared ? 'disabled' : ''}></label>
-      <label class="field"><span>Signature item</span><input class="input" id="ed-si" type="number" min="0" max="${LIMITS.si}" value="${cur.si ?? 0}"></label>
-      <label class="field"><span>Furniture (0–9)</span><input class="input" id="ed-furniture" type="number" min="0" max="${LIMITS.furniture}" value="${cur.furniture}"></label>
-      <label class="field"><span>Engraving</span><input class="input" id="ed-engrave" type="number" min="0" max="${LIMITS.engrave}" value="${cur.engrave}"></label>
-      <label class="field"><span>Mythic gear tier</span><select class="select" id="ed-gear">${Array.from({ length: LIMITS.gear + 1 }, (_, i) => `<option value="${i}" ${cur.gear === i ? 'selected' : ''}>T${i}</option>`).join('')}</select></label>
+      <label class="field"><span>Stars (Ascended)</span><select class="select" id="ed-stars" ${cur.asc === 'Ascended' ? '' : 'disabled'}>${starOptions(cur.stars)}</select></label>
+      <label class="field"><span>Level</span><input class="input" id="ed-level" type="number" min="1" max="${LIMITS.level}" value="${shared && cur.crystal !== false ? bank.settings.crystalLevel : cur.level}" ${shared && cur.crystal !== false ? 'disabled' : ''}></label>
+      <label class="field"><span>Signature item</span><input class="input" id="ed-si" type="number" min="0" max="${LIMITS.si}" value="${cur.si ?? ''}" placeholder="not recorded"></label>
+      <label class="field"><span>Furniture (0–9)</span><input class="input" id="ed-furniture" type="number" min="0" max="${LIMITS.furniture}" value="${cur.furniture ?? ''}" placeholder="not recorded"></label>
+      <label class="field"><span>Engraving</span><input class="input" id="ed-engrave" type="number" min="0" max="${LIMITS.engrave}" value="${cur.engrave ?? ''}" placeholder="not recorded"></label>
+      <label class="field"><span>Mythic gear tier</span><select class="select" id="ed-gear"><option value="">Not recorded</option>${Array.from({ length: LIMITS.gear + 1 }, (_, i) => `<option value="${i}" ${cur.gear === i ? 'selected' : ''}>T${i}</option>`).join('')}</select></label>
     </div>
-    ${shared ? '<p class="small muted">Level follows the shared crystal level. Turn off "All heroes share the same level" on the Hero Bank tab to set it per hero.</p>' : ''}
+    ${shared ? `<label class="check"><input type="checkbox" id="ed-crystal" ${cur.crystal !== false ? 'checked' : ''}> Uses the shared level (${bank.settings.crystalLevel})</label>` : ''}
     ${h.investment?.note ? `<p class="callout info small"><strong>Investment tip:</strong> ${esc(h.investment.note)}</p>` : ''}
     <label class="field"><span>Notes</span><textarea class="input" id="ed-notes" rows="2" maxlength="500">${esc(cur.notes || '')}</textarea></label>
     ${cur.source && bank.heroes[id] ? `<p class="small muted">Last change: ${esc(cur.source)} · ${new Date(cur.updated).toLocaleString()}</p>` : ''}`;
@@ -493,6 +507,10 @@ export function openEditor(id) {
   $('#ed-asc', d).addEventListener('change', (e) => {
     $('#ed-stars', d).disabled = e.target.value !== 'Ascended';
   });
+  $('#ed-crystal', d)?.addEventListener('change', (e) => {
+    $('#ed-level', d).disabled = e.target.checked;
+    if (e.target.checked) $('#ed-level', d).value = bank.settings.crystalLevel;
+  });
   d.addEventListener('click', (ev) => {
     if (ev.target.closest('[data-cancel]')) closeDrawer();
     else if (ev.target.closest('[data-detail-open]')) {
@@ -503,17 +521,20 @@ export function openEditor(id) {
       closeDrawer();
       toast(`Removed ${h.name} from your bank.`);
     } else if (ev.target.closest('[data-save]')) {
+      const opt = (sel) => ($(sel, d).value === '' ? null : toInt($(sel, d).value));
       const patch = {
         owned: $('#ed-owned', d).checked,
         asc: $('#ed-asc', d).value,
         stars: toInt($('#ed-stars', d).value),
-        si: toInt($('#ed-si', d).value),
-        furniture: toInt($('#ed-furniture', d).value),
-        engrave: toInt($('#ed-engrave', d).value),
-        gear: toInt($('#ed-gear', d).value),
+        si: opt('#ed-si'),
+        furniture: opt('#ed-furniture'),
+        engrave: opt('#ed-engrave'),
+        gear: opt('#ed-gear'),
         notes: $('#ed-notes', d).value,
       };
-      if (!shared) patch.level = toInt($('#ed-level', d).value, cur.level);
+      const crystalBox = $('#ed-crystal', d);
+      if (crystalBox) patch.crystal = crystalBox.checked;
+      if (!shared || (crystalBox && !crystalBox.checked)) patch.level = toInt($('#ed-level', d).value, cur.level);
       updateHeroes({ [id]: { ...cur, ...patch } });
       closeDrawer();
       toast(`Saved ${h.name}.`);
@@ -750,7 +771,10 @@ function renderResults(d, results, notes) {
     host.innerHTML = notes.length ? `<p class="callout info small">${esc(notes.join(' '))}</p>` : '';
     return;
   }
-  const levels = [...new Set(results.map((r) => r.level).filter((x) => x))];
+  // The most common level in the screenshots is the crystal level.
+  const counts = {};
+  for (const r of results) if (r.level) counts[r.level] = (counts[r.level] || 0) + 1;
+  const common = Number(Object.entries(counts).sort((a, b) => b[1] - a[1])[0]?.[0]) || null;
   const rows = results
     .map((r, i) => {
       const h = getHero(r.id);
@@ -771,14 +795,17 @@ function renderResults(d, results, notes) {
     <div class="table-wrap"><table class="bank"><thead><tr><th></th><th>Hero</th>${FIELDS.map(([, l]) => `<th>${l}</th>`).join('')}<th>Confidence</th><th>What Claude saw</th></tr></thead><tbody>${rows}</tbody></table></div>
     ${notes.length ? `<p class="callout info small">${esc(notes.join(' '))}</p>` : ''}
     ${
-      bank.settings.sharedLevel && levels.length === 1 && levels[0] !== bank.settings.crystalLevel
-        ? `<label class="check"><input type="checkbox" id="up-crystal" checked> Set the shared level to ${levels[0]} (was ${bank.settings.crystalLevel})</label>`
+      bank.settings.sharedLevel && common && common !== bank.settings.crystalLevel
+        ? `<label class="check"><input type="checkbox" id="up-crystal" data-level="${common}" checked> Set the shared level to ${common} (was ${bank.settings.crystalLevel})</label>`
         : ''
     }
     <div class="toolbar"><button class="btn primary" type="button" data-apply>Apply checked updates</button><span class="small muted">Empty readings keep what you already have.</span></div>`;
 }
 
 function applyResults(d, results) {
+  const crystal = $('#up-crystal', d);
+  const crystalTo = crystal?.checked ? toInt(crystal.dataset.level) || null : null;
+  if (crystalTo) updateSettings({ crystalLevel: crystalTo });
   const patches = {};
   for (const box of $$('[data-take]', d)) {
     if (!box.checked) continue;
@@ -786,13 +813,9 @@ function applyResults(d, results) {
     const cur = bank.heroes[r.id] || { ...defaultEntry(), owned: false };
     const patch = { ...cur, owned: true };
     for (const [k] of FIELDS) if (r[k] !== null && r[k] !== undefined) patch[k] = r[k];
-    if (bank.settings.sharedLevel) delete patch.level;
+    // A level that differs from the shared level means the hero sits outside the crystal.
+    if (bank.settings.sharedLevel && r.level) patch.crystal = r.level === bank.settings.crystalLevel;
     patches[r.id] = patch;
-  }
-  const crystal = $('#up-crystal', d);
-  if (crystal?.checked) {
-    const lv = results.find((r) => r.level)?.level;
-    if (lv) updateSettings({ crystalLevel: lv });
   }
   const n = Object.keys(patches).length;
   if (n) updateHeroes(patches, 'screenshot');

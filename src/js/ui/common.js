@@ -1,7 +1,7 @@
 // Shared UI pieces: portraits, foldable panels, formation boards, drawers.
 
 import { esc, local, $ } from '../util.js';
-import { data, hero as getHero, POSITIONS, CLASSES, TYPES, FACTION_IDS } from '../data.js';
+import { data, hero as getHero, POSITIONS, CLASSES, TYPES, FACTION_IDS, starTier } from '../data.js';
 import { entry as bankEntry, effectiveLevel } from '../store.js';
 import { ICON, factionIcon, classIcon, typeIcon } from './icons.js';
 
@@ -74,7 +74,8 @@ export function portrait(h, { size = 64, showBank = false, unowned = false, badg
   if (!h) return '';
   const e = showBank ? bankEntry(h.id) : null;
   const asc = e?.owned ? e.asc : '';
-  const stars = e?.owned && e.asc === 'Ascended' && e.stars ? Array.from({ length: e.stars }, () => ICON.star).join('') : '';
+  const st = e?.owned && e.asc === 'Ascended' ? starTier(e.stars) : null;
+  const stars = st ? Array.from({ length: st.count }, () => ICON.star).join('') : '';
   const img = h.img
     ? `<img src="${esc(h.img)}" alt="" loading="lazy" data-fallback="${esc(initials(h.name))}">`
     : `<span class="initials">${esc(initials(h.name))}</span>`;
@@ -82,7 +83,7 @@ export function portrait(h, { size = 64, showBank = false, unowned = false, badg
     <span class="art">${img}</span>
     <span class="fac" title="${esc(h.faction)}">${factionIcon(h.faction)}</span>
     ${badge ? `<span class="badge-tr">${badge}</span>` : ''}
-    ${stars ? `<span class="stars">${stars}</span>` : ''}
+    ${stars ? `<span class="stars ${st.tier}">${stars}</span>` : ''}
     ${e?.owned ? `<span class="lvl">${effectiveLevel(h.id)}</span>` : ''}
   </span>`;
 }

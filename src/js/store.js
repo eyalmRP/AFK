@@ -29,6 +29,7 @@ export function defaultEntry() {
     asc: 'Ascended',
     stars: 0,
     level: 240,
+    crystal: true,
     si: 0,
     furniture: 0,
     engrave: 0,
@@ -39,6 +40,10 @@ export function defaultEntry() {
   };
 }
 
+// null means "not recorded" (for example a hero read from the hero list,
+// which does not show signature item, furniture or engraving).
+const optNum = (v, max) => (v === null || v === undefined || v === '' ? null : clamp(toInt(v, 0), 0, max));
+
 export function sanitizeEntry(e) {
   const d = defaultEntry();
   const out = { ...d, ...e };
@@ -46,10 +51,11 @@ export function sanitizeEntry(e) {
   out.asc = ASCENSIONS.includes(out.asc) ? out.asc : d.asc;
   out.stars = out.asc === 'Ascended' ? clamp(toInt(out.stars, 0), 0, LIMITS.stars) : 0;
   out.level = clamp(toInt(out.level, d.level), 1, LIMITS.level);
-  out.si = out.si === null || out.si === '' ? null : clamp(toInt(out.si, 0), 0, LIMITS.si);
-  out.furniture = clamp(toInt(out.furniture, 0), 0, LIMITS.furniture);
-  out.engrave = clamp(toInt(out.engrave, 0), 0, LIMITS.engrave);
-  out.gear = clamp(toInt(out.gear, 0), 0, LIMITS.gear);
+  out.crystal = out.crystal !== false;
+  out.si = optNum(out.si, LIMITS.si);
+  out.furniture = optNum(out.furniture, LIMITS.furniture);
+  out.engrave = optNum(out.engrave, LIMITS.engrave);
+  out.gear = optNum(out.gear, LIMITS.gear);
   out.notes = String(out.notes || '').slice(0, 500);
   return out;
 }
@@ -72,11 +78,12 @@ export function entry(id) {
 }
 
 // Level the game actually uses for a hero: the shared crystal level when the
-// "all heroes share the same level" setting is on.
+// "all heroes share the same level" setting is on, unless this hero sits
+// outside the crystal (crystal: false) and keeps its own level.
 export function effectiveLevel(id) {
   const e = bank.heroes[id];
   if (!e) return 0;
-  return bank.settings.sharedLevel ? bank.settings.crystalLevel : e.level;
+  return bank.settings.sharedLevel && e.crystal !== false ? bank.settings.crystalLevel : e.level;
 }
 
 export function updateHeroes(patches, source = 'manual') {

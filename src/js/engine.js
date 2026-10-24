@@ -48,22 +48,23 @@ export function investmentFactor(entry, hero) {
   const notes = [];
   if (!entry) return { factor: 1, notes };
   let f = ASC_FACTOR[entry.asc] ?? 0.8;
-  if (entry.asc === 'Ascended') f += (entry.stars || 0) * 0.015;
-  const si = entry.si ?? 0;
-  f *= lerpTable([[0, 0.9], [10, 0.94], [20, 0.97], [30, 1.0], [40, 1.02]], si);
-  f *= lerpTable([[0, 0.92], [3, 0.97], [9, 1.02]], entry.furniture || 0);
-  f *= lerpTable([[0, 0.96], [30, 1.0], [60, 1.02], [80, 1.03]], entry.engrave || 0);
+  if (entry.asc === 'Ascended') f += (entry.stars || 0) * 0.01;
+  // Unrecorded values (null) count as neutral rather than as zero.
+  const si = entry.si;
+  if (si !== null && si !== undefined) f *= lerpTable([[0, 0.9], [10, 0.94], [20, 0.97], [30, 1.0], [40, 1.02], [50, 1.03]], si);
+  if (entry.furniture !== null && entry.furniture !== undefined) f *= lerpTable([[0, 0.92], [3, 0.97], [9, 1.02]], entry.furniture);
+  if (entry.engrave !== null && entry.engrave !== undefined) f *= lerpTable([[0, 0.96], [30, 1.0], [60, 1.02], [80, 1.03]], entry.engrave);
   const need = hero?.investment || null;
   if (need) {
-    if (need.si && si < need.si) {
+    if (need.si && si !== null && si !== undefined && si < need.si) {
       f *= 0.94;
       notes.push(`needs SI +${need.si} (has +${si})`);
     }
-    if (need.furniture && (entry.furniture || 0) < need.furniture) {
+    if (need.furniture && entry.furniture !== null && entry.furniture !== undefined && entry.furniture < need.furniture) {
       f *= 0.95;
       notes.push(`needs ${need.furniture}F (has ${entry.furniture || 0}F)`);
     }
-    if (need.engrave && (entry.engrave || 0) < need.engrave) {
+    if (need.engrave && entry.engrave !== null && entry.engrave !== undefined && entry.engrave < need.engrave) {
       f *= 0.97;
       notes.push(`wants E${need.engrave} (has E${entry.engrave || 0})`);
     }
@@ -510,12 +511,19 @@ export function nextUpgrade(ctx, ids) {
     const base = investmentFactor(e, h).factor;
     const tries = [];
     if (e.asc !== 'Ascended') tries.push({ patch: { asc: ASCENSIONS[ASCENSIONS.indexOf(e.asc) + 1] }, label: `ascend to ${ASCENSIONS[ASCENSIONS.indexOf(e.asc) + 1]}` });
-    const siStep = h.investment?.si && (e.si ?? 0) < h.investment.si ? h.investment.si : Math.min(40, (Math.floor((e.si ?? 0) / 10) + 1) * 10);
-    if ((e.si ?? 0) < 40) tries.push({ patch: { si: siStep }, label: `SI to +${siStep}` });
-    const fStep = (e.furniture || 0) < 3 ? 3 : 9;
-    if ((e.furniture || 0) < 9) tries.push({ patch: { furniture: fStep }, label: `furniture to ${fStep}F` });
-    const eStep = (e.engrave || 0) < 30 ? 30 : (e.engrave || 0) < 60 ? 60 : 80;
-    if ((e.engrave || 0) < 80) tries.push({ patch: { engrave: eStep }, label: `engrave to E${eStep}` });
+    // Only suggest upgrades for values the player has recorded.
+    if (e.si !== null && e.si !== undefined && e.si < 40) {
+      const siStep = h.investment?.si && e.si < h.investment.si ? h.investment.si : Math.min(40, (Math.floor(e.si / 10) + 1) * 10);
+      tries.push({ patch: { si: siStep }, label: `SI to +${siStep}` });
+    }
+    if (e.furniture !== null && e.furniture !== undefined && e.furniture < 9) {
+      const fStep = e.furniture < 3 ? 3 : 9;
+      tries.push({ patch: { furniture: fStep }, label: `furniture to ${fStep}F` });
+    }
+    if (e.engrave !== null && e.engrave !== undefined && e.engrave < 80) {
+      const eStep = e.engrave < 30 ? 30 : e.engrave < 60 ? 60 : 80;
+      tries.push({ patch: { engrave: eStep }, label: `engrave to E${eStep}` });
+    }
     const v = heroValue(ctx, id).base;
     for (const t of tries) {
       const gain = v * (investmentFactor({ ...e, ...t.patch }, h).factor - base);

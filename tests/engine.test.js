@@ -71,3 +71,19 @@ test('a full team scores higher than a partial one', () => {
   const t = buildTeam(ctx, all);
   assert.ok(scoreTeam(ctx, t.ids).total > scoreTeam(ctx, t.ids.slice(0, 3)).total);
 });
+
+test('star tiers follow the game colours', async () => {
+  const { starTier } = await import('../src/js/data.js');
+  assert.deepEqual(starTier(3), { tier: 'gold', count: 3 });
+  assert.deepEqual(starTier(7), { tier: 'red', count: 2 });
+  assert.deepEqual(starTier(15), { tier: 'white', count: 5 });
+  assert.equal(starTier(0), null);
+});
+
+test('unrecorded upgrades count as neutral, not as zero', () => {
+  const h = data.heroById.get('liberta');
+  const unknown = { owned: true, asc: 'Ascended', stars: 5, si: null, furniture: null, engrave: null };
+  const zero = { ...unknown, si: 0, furniture: 0, engrave: 0 };
+  assert.ok(investmentFactor(unknown, h).factor > investmentFactor(zero, h).factor);
+  assert.deepEqual(investmentFactor(unknown, h).notes, []);
+});
