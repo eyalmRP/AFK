@@ -974,8 +974,8 @@ table.bank .input, table.bank .select { padding: 3px 6px; font-size: 0.85rem; }
 
 .loading { padding: 60px 16px; text-align: center; color: var(--ink-3); font-family: var(--font-display); font-size: 1.2rem; }
 
-@media (max-width: 760px) {
-  /* Phone: tabs move to a bar at the bottom; the header scrolls away. */
+/* Phones (and phones held sideways): tabs move to a bar at the bottom and the header scrolls away. */
+@media (max-width: 760px), (pointer: coarse) and (max-height: 500px) {
   .app-header { position: static; }
   .app-header .tabs { display: none; }
   .app-header .inner { padding-block: 10px; }
@@ -1022,7 +1022,32 @@ table.bank .input, table.bank .select { padding: 3px 6px; font-size: 0.85rem; }
   .bottom-nav .count:empty { display: none; }
   .bottom-nav .count:not(.alert) { display: none; }
   main { padding-block: 14px calc(84px + env(safe-area-inset-bottom, 0px)); }
+  #toast { bottom: calc(76px + env(safe-area-inset-bottom, 0px)); }
   #bank-batch { top: calc(env(safe-area-inset-top, 0px) + 6px); }
+}
+/* Sideways phones: a lower tab bar with the label beside the icon. */
+@media (pointer: coarse) and (max-height: 500px) {
+  .bottom-nav button { min-height: 44px; flex-direction: row; gap: 6px; font-size: 0.8rem; }
+  .bottom-nav .count { position: static; }
+  main { padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px)); }
+  #toast { bottom: calc(60px + env(safe-area-inset-bottom, 0px)); }
+}
+/* Touch screens of any size: 16px text in fields stops iOS zooming the page on focus, and controls are at least ~36px tall. */
+@media (pointer: coarse) {
+  .team-card .sources a, .code-meta a, .list li > a { display: inline-block; padding-block: 5px; }
+  details > summary { padding-block: 6px; }
+  p.small a { display: inline-block; padding-block: 5px; }
+  .input, .select, textarea.input { font-size: 16px; min-height: 38px; }
+  .check { min-height: 36px; }
+  .check input { width: 20px; height: 20px; }
+  .btn.small { min-height: 34px; min-width: 36px; justify-content: center; }
+  .own-plus::after { content: ''; position: absolute; inset: -9px; }
+  .seg button { min-height: 36px; }
+  .chip-btn { min-height: 34px; padding-inline: 11px; }
+  .et-node .input { min-height: 30px; font-size: 16px; }
+  .buff .input { font-size: 16px; }
+}
+@media (max-width: 760px) {
   .batch-bar { padding: 8px 10px; gap: 6px; }
   .bank-top { grid-template-columns: minmax(0, 1fr); }
   /* Phone order: level, Elder Tree, roster stats, then the find and filter rows. */
@@ -1049,7 +1074,6 @@ table.bank .input, table.bank .select { padding: 3px 6px; font-size: 0.85rem; }
   .bank-grid.z4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .bank-rows { grid-template-columns: minmax(0, 1fr); }
   .bank-top [data-view='table'] { display: none; }
-  #toast { bottom: calc(76px + env(safe-area-inset-bottom, 0px)); }
   .view-head h2 { font-size: 1.35rem; }
   .btn { min-height: 38px; }
   .panel-head { padding: 12px; }
@@ -1071,6 +1095,8 @@ table.bank .input, table.bank .select { padding: 3px 6px; font-size: 0.85rem; }
   .side-by-side, .compare, .grid-2 { grid-template-columns: minmax(0, 1fr); }
   .brand-meta { margin-left: 0; }
   .tier-table { --tm-size: 54px; }
+  .tier-heroes:not(.artifact-list) { display: grid; grid-template-columns: repeat(auto-fill, minmax(52px, 1fr)); }
+  .tier-heroes:not(.artifact-list) .tm-tile { width: auto; height: auto; aspect-ratio: 1; }
   .gamebar { padding: 6px; gap: 5px; }
   .gamebar .row { gap: 3px; }
   /* The widest row (All + 8 factions) fits on one line at any phone width. */
@@ -1089,22 +1115,10 @@ table.bank .input, table.bank .select { padding: 3px 6px; font-size: 0.85rem; }
   .slot { width: 62px; }
   .slot .portrait { --ps: 50px !important; }
   .drawer { width: 100%; }
-  /* Touch: 16px text in fields stops iOS zooming the page on focus; controls at least ~36px tall. */
-  .input, .select, textarea.input { font-size: 16px; min-height: 38px; }
-  .check { min-height: 36px; }
-  .check input { width: 20px; height: 20px; }
-  .btn.small { min-height: 34px; min-width: 36px; justify-content: center; }
-  .own-plus::after { content: ''; position: absolute; inset: -9px; }
-  p.small a { display: inline-block; padding-block: 5px; }
-  .seg button { min-height: 36px; }
-  .chip-btn { min-height: 34px; padding-inline: 11px; }
-  .et-node .input { min-height: 30px; font-size: 16px; }
   .beast-own .num-input { min-height: 34px; width: 4.4em; }
   .buffs { gap: 4px; }
   .buff { flex-direction: column; gap: 2px; }
-  .buff .input { min-height: 34px; padding: 2px; font-size: 16px; }
-  .team-card .sources a, .code-meta a, .list li > a { display: inline-block; padding-block: 5px; }
-  details > summary { padding-block: 6px; }
+  .buff .input { min-height: 34px; padding: 2px; }
   /* Small labels on formation boards stay readable. */
   .slot .pos { font-size: 0.68rem; }
   .slot .art-chip { font-size: 0.72rem; }
