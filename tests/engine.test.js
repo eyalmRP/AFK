@@ -174,3 +174,13 @@ test('a hero\'s combat rating correction scales its estimate, within limits', as
   assert.equal(estimateCR({ ...e, crFit: 1.1 }, { class: 'Mage' }, { level: 922 }), Math.round(base * 1.1));
   assert.equal(estimateCR({ ...e, crFit: 9 }, { class: 'Mage' }, { level: 922 }), Math.round(base * 2.5));
 });
+
+test('weighing by power ranks a hero by its combat rating against the strongest five', () => {
+  const ids = all.slice(0, 8);
+  const at = (cr) => new Map(ids.map((id, i) => [id, i === 0 ? cr : 10e9]));
+  const value = (power) => heroValue(ctxFor('arena-of-heroes', { power }), ids[0]).value;
+  assert.ok(value(at(12e9)) > value(at(6e9)));
+  // A hero as strong as the top five counts fully; ratings are capped either way.
+  assert.equal(value(at(10e9)), heroValue(ctxFor('arena-of-heroes'), ids[0]).value);
+  assert.equal(value(at(1)), value(at(2)));
+});

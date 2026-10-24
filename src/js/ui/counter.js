@@ -15,7 +15,9 @@ const ui = {
   enemy: {},
   modeId: 'arena-of-heroes',
   pool: 'mine',
-  invest: true,
+  // How hero strength counts: tier only, the player's upgrade levels, or
+  // their estimated combat rating (engine.js heroValue).
+  weigh: 'upgrades',
   claude: null,
   claudeNotes: '',
   busy: false,
@@ -28,6 +30,12 @@ const ui = {
   enemyBeast: null,
   enemyBeastLevel: 18,
 };
+
+const WEIGH = [
+  ['tier', 'Tier', 'Tier ratings, counters and synergies only'],
+  ['upgrades', 'My upgrades', 'Also weigh ascension, stars, signature item, furniture, engraving and the Elder Tree'],
+  ['power', 'Combat power', 'Weigh each hero by its estimated combat rating against your five strongest'],
+];
 
 const ENEMY_BUILDS = {
   max: { label: 'Maxed · SI +50 · 36F · E100', si: 50, furniture: 36, engrave: 100, gear: 5 },
@@ -88,13 +96,14 @@ function poolIds() {
 function context() {
   return makeContext({
     heroes: data.heroById,
-    entries: ui.pool === 'mine' && ui.invest ? bank.heroes : null,
+    entries: ui.pool === 'mine' && ui.weigh !== 'tier' ? bank.heroes : null,
     mode: data.modeById.get(ui.modeId),
     category: data.modeById.get(ui.modeId)?.category || 'pvp',
     enemy: enemyIds(),
     combos: [...(data.combos.community || []), ...(data.combos.ai || [])],
     archetypes: data.archetypes,
-    elderTree: ui.pool === 'mine' && ui.invest ? bank.settings.elderTree : null,
+    elderTree: ui.pool === 'mine' && ui.weigh === 'upgrades' ? bank.settings.elderTree : null,
+    power: ui.pool === 'mine' && ui.weigh === 'power' ? new Map(ownedIds().map((id) => [id, heroCR(getHero(id))])) : null,
   });
 }
 
@@ -142,7 +151,7 @@ function render() {
     <div class="controls-rail">
       <label class="field"><span>Mode</span><select class="select" id="ct-mode">${modes.map((m) => `<option value="${esc(m.id)}" ${m.id === ui.modeId ? 'selected' : ''}>${esc(m.name)}</option>`).join('')}</select></label>
       <div class="field"><span>Heroes</span><div class="seg" role="group"><button type="button" data-pool="mine" aria-pressed="${ui.pool === 'mine'}">My heroes (${owned})</button><button type="button" data-pool="all" aria-pressed="${ui.pool === 'all'}">Full roster</button></div></div>
-      <label class="check" ${ui.pool === 'mine' ? '' : 'hidden'}><input type="checkbox" id="ct-invest" ${ui.invest ? 'checked' : ''}> Weigh my upgrade levels</label>
+      <div class="field" ${ui.pool === 'mine' ? '' : 'hidden'}><span>Weigh heroes by</span><div class="seg" role="group" aria-label="Weigh heroes by">${WEIGH.map(([k, l, t]) => `<button type="button" data-weigh="${k}" aria-pressed="${ui.weigh === k}" title="${t}">${l}</button>`).join('')}</div></div>
       <label class="field"><span>Load a common enemy</span><select class="select" id="ct-load"><option value="">Choose…</option>${archetypeOpts}</select></label>
     </div>
     ${ui.pool === 'all' ? `<p class="callout small">${owned ? 'Countering with the full roster at full investment.' : 'Your hero bank is empty, so counters use the full roster. Add your heroes in the Hero Bank tab for counters you can field.'}</p>` : ''}
@@ -371,6 +380,13 @@ function onClick(ev) {
     render();
     return;
   }
+  const w = t.closest('[data-weigh]');
+  if (w) {
+    ui.weigh = w.dataset.weigh;
+    ui.claude = null;
+    render();
+    return;
+  }
   const bb = t.closest('[data-beast-detail]');
   if (bb) {
     openBeastDetail(bb.dataset.beastDetail);
@@ -412,9 +428,6 @@ function onChange(ev) {
   if (t.id === 'ct-mode') {
     ui.modeId = t.value;
     ui.claude = null;
-    render();
-  } else if (t.id === 'ct-invest') {
-    ui.invest = t.checked;
     render();
   } else if (t.id === 'ct-elevel') {
     // Empty goes back to the player's own level.

@@ -105,9 +105,11 @@ export function estimateCR(entry, hero, { level, elderTree } = {}) {
 }
 
 // How much of a hero's potential the player's copy delivers (about 0.4–1.1).
+// `need` is the part from the hero's own requirements (SI, furniture or
+// engraving it needs to work), kept apart for weighing by power.
 export function investmentFactor(entry, hero) {
   const notes = [];
-  if (!entry) return { factor: 1, notes };
+  if (!entry) return { factor: 1, notes, need: 1 };
   let f = ASC_FACTOR[entry.asc] ?? 0.8;
   if (entry.asc === 'Ascended') f += Math.min(5, entry.stars || 0) * 0.02;
   // Unrecorded values (null) count as neutral rather than as zero.
@@ -116,21 +118,22 @@ export function investmentFactor(entry, hero) {
   if (entry.furniture !== null && entry.furniture !== undefined) f *= lerpTable([[0, 0.92], [3, 0.97], [9, 1.02], [36, 1.05]], entry.furniture);
   if (entry.engrave !== null && entry.engrave !== undefined) f *= lerpTable([[0, 0.96], [30, 1.0], [60, 1.02], [80, 1.03]], entry.engrave);
   const need = hero?.investment || null;
+  let needF = 1;
   if (need) {
     if (need.si && si !== null && si !== undefined && si < need.si) {
-      f *= 0.94;
+      needF *= 0.94;
       notes.push(`needs SI +${need.si} (has +${si})`);
     }
     if (need.furniture && entry.furniture !== null && entry.furniture !== undefined && entry.furniture < need.furniture) {
-      f *= 0.95;
+      needF *= 0.95;
       notes.push(`needs ${need.furniture}F (has ${entry.furniture || 0}F)`);
     }
     if (need.engrave && entry.engrave !== null && entry.engrave !== undefined && entry.engrave < need.engrave) {
-      f *= 0.97;
+      needF *= 0.97;
       notes.push(`wants E${need.engrave} (has E${entry.engrave || 0})`);
     }
   }
-  return { factor: Math.max(0.3, f), notes };
+  return { factor: Math.max(0.3, f * needF), notes, need: needF };
 }
 
 function heroGroups(h) {
@@ -187,7 +190,10 @@ export function elderTreeFactors(tree) {
   return out;
 }
 
-export function makeContext({ heroes, entries = null, mode = null, category, enemy = [], combos = [], archetypes = [], elderTree = null }) {
+// `power` (optional) maps hero id to its estimated combat rating; with it, a
+// hero's strength is weighed by its rating against the pool's strongest five
+// instead of by its upgrade levels (see heroValue).
+export function makeContext({ heroes, entries = null, mode = null, category, enemy = [], combos = [], archetypes = [], elderTree = null, power = null }) {
   const cat = category || mode?.category || 'pve';
   const ctx = {
     heroes,
@@ -200,8 +206,15 @@ export function makeContext({ heroes, entries = null, mode = null, category, ene
     combos,
     archetypes,
     elder: elderTreeFactors(elderTree),
+    power: power && power.size ? power : null,
+    powerRef: 0,
     cache: new Map(),
   };
+  if (ctx.power) {
+    const top = [...ctx.power.values()].filter((v) => v > 0).sort((a, b) => b - a).slice(0, 5);
+    ctx.powerRef = top.length ? top.reduce((s, v) => s + v, 0) / top.length : 0;
+    if (!ctx.powerRef) ctx.power = null;
+  }
   ctx.enemyArchetypes = detectArchetypes(ctx.enemy, archetypes);
   ctx.enemyThreats = enemyThreats(ctx.enemy);
   return ctx;
@@ -258,6 +271,14 @@ export function heroValue(ctx, id) {
   if (elder) {
     inv.factor *= elder.factor;
     if (Math.abs(elder.dev) >= 0.03) reasons.push(`Elder Tree ${h.class} ${elder.level} (${elder.dev > 0 ? 'above' : 'below'} your average)`);
+  }
+  // Weighing by power: the rating already counts ascension, stars, upgrades,
+  // level, gear and the Elder Tree, so it replaces those factors; the hero's
+  // own requirements still apply.
+  if (ctx.power) {
+    const r = (ctx.power.get(id) || 0) / ctx.powerRef;
+    inv.factor = Math.max(0.2, Math.min(1.2, r)) * (inv.need ?? 1);
+    reasons.push(`${Math.round(r * 100)}% of your top five's power`);
   }
   const classBonus = ctx.mode?.classBonus?.[h.class] || 0;
   if (classBonus) reasons.push(`${h.class.toLowerCase()}s suit ${ctx.mode.name}`);

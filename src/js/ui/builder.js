@@ -8,7 +8,7 @@ import { bank, ownedIds, ownedBeasts, saveFormation, deleteFormation, formations
 import { makeContext, buildTeams, scoreTeam, nextUpgrade, suggestBeast } from '../engine.js';
 import { aiState, initAi, claudeBuild, errorCopy } from '../ai.js';
 import { ICON } from './icons.js';
-import { board, panel, pickHero, bindFolding, portrait, beastAllowed } from './common.js';
+import { board, panel, pickHero, bindFolding, portrait, beastAllowed, heroCR } from './common.js';
 import { openHeroDetail } from './heroDetail.js';
 import { openBeastDetail } from './beastDetail.js';
 
@@ -19,7 +19,9 @@ const ui = {
   count: 1,
   strategy: 'strongest',
   pool: 'mine',
-  invest: true,
+  // How hero strength counts: tier only, the player's upgrade levels, or
+  // their estimated combat rating (engine.js heroValue).
+  weigh: 'upgrades',
   exclude: new Set(),
   result: null,
   claude: null,
@@ -27,6 +29,12 @@ const ui = {
   busy: false,
   ctl: null,
 };
+
+const WEIGH = [
+  ['tier', 'Tier', 'Tier ratings, counters and synergies only'],
+  ['upgrades', 'My upgrades', 'Also weigh ascension, stars, signature item, furniture, engraving and the Elder Tree'],
+  ['power', 'Combat power', 'Weigh each hero by its estimated combat rating against your five strongest'],
+];
 
 let root;
 
@@ -67,11 +75,12 @@ function poolIds() {
 function context() {
   return makeContext({
     heroes: data.heroById,
-    entries: ui.pool === 'mine' && ui.invest ? bank.heroes : null,
+    entries: ui.pool === 'mine' && ui.weigh !== 'tier' ? bank.heroes : null,
     mode: mode(),
     combos: [...(data.combos.community || []), ...(data.combos.ai || [])],
     archetypes: data.archetypes,
-    elderTree: ui.pool === 'mine' && ui.invest ? bank.settings.elderTree : null,
+    elderTree: ui.pool === 'mine' && ui.weigh === 'upgrades' ? bank.settings.elderTree : null,
+    power: ui.pool === 'mine' && ui.weigh === 'power' ? new Map(ownedIds().map((id) => [id, heroCR(getHero(id))])) : null,
   });
 }
 
@@ -107,7 +116,7 @@ function render() {
       <div class="field"><span>Formations</span>${seg('count', [1, 2, 3, 4, 5, 6, 7].map((n) => [n, n]), ui.count)}</div>
       <div class="field"><span>Priority</span>${seg('strategy', [['strongest', 'Strongest first'], ['balanced', 'Balanced']], ui.strategy)}</div>
       <div class="field"><span>Heroes</span>${seg('pool', [['mine', `My heroes (${owned})`], ['all', 'Full roster']], ui.pool)}</div>
-      <label class="check" ${ui.pool === 'mine' ? '' : 'hidden'}><input type="checkbox" id="bd-invest" ${ui.invest ? 'checked' : ''}> Weigh my upgrade levels</label>
+      <div class="field" ${ui.pool === 'mine' ? '' : 'hidden'}><span>Weigh heroes by</span><div class="seg" role="group" aria-label="Weigh heroes by">${WEIGH.map(([k, l, t]) => `<button type="button" data-weigh="${k}" aria-pressed="${ui.weigh === k}" title="${t}">${l}</button>`).join('')}</div></div>
       <div class="field" style="flex:1 1 220px"><span>Leave out</span><div class="chips">${[...ui.exclude]
         .map((id) => `<button type="button" class="chip plain" data-unexclude="${id}" aria-label="Allow ${esc(getHero(id)?.name)}">${esc(getHero(id)?.name || id)} ${ICON.close}</button>`)
         .join('')}<button class="btn" type="button" data-act="exclude">+ Leave out a hero</button></div></div>
@@ -299,6 +308,8 @@ function onClick(ev) {
   if (s) return set('strategy', s.dataset.strategy);
   const p = t.closest('[data-pool]');
   if (p) return set('pool', p.dataset.pool);
+  const w = t.closest('[data-weigh]');
+  if (w) return set('weigh', w.dataset.weigh);
   const un = t.closest('[data-unexclude]');
   if (un) {
     ui.exclude.delete(un.dataset.unexclude);
@@ -347,10 +358,6 @@ function onChange(ev) {
     ui.count = mode()?.teams || 1;
     ui.strategy = defaultStrategy(mode());
     ui.claude = null;
-    build();
-    render();
-  } else if (t.id === 'bd-invest') {
-    ui.invest = t.checked;
     build();
     render();
   }
