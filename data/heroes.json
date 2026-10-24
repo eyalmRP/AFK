@@ -29,12 +29,12 @@
     "overall": "A"
    },
    "raw": {
-    "afkglobal": "A (AllClash's Aug 2026 list)",
-    "pockettactics": "A (2026-04-30)"
+    "pockettactics": "A (2026-04-30)",
+    "allclash": "A (live list, Oct 2026)"
    },
    "consensus": "strong",
    "trend": null,
-   "tierNote": "Added on 2026-10-24 (missing from the first read of the lists): AllClash's list via AFK Global A (Aug 2026), Pocket Tactics A (2026-04-30).",
+   "tierNote": "Added 2026-10-24 from the newest lists: Pocket Tactics (Apr) A, AllClash A.",
    "gameId": 182
   },
   {
@@ -66,14 +66,15 @@
    "investment": null,
    "modes": [],
    "tiers": {
-    "overall": "D"
+    "overall": "C"
    },
    "raw": {
-    "afkguide": "Dimensional guide v1.190: F-tier"
+    "afkguide": "Dimensional guide v1.190: F-tier",
+    "allclash": "C+ (live list, Oct 2026)"
    },
-   "consensus": "single-source",
+   "consensus": "strong",
    "trend": null,
-   "tierNote": "Overlord collab hero, now not worth investing in.",
+   "tierNote": "Overlord collab hero, now not worth investing in. Overall updated 2026-10-24 to C from the newest lists (afk.guide (Jun) Dimensional guide v1.190: F-tier, AllClash C+).",
    "gameId": 98
   },
   {
@@ -103,12 +104,12 @@
     "overall": "C"
    },
    "raw": {
-    "afkglobal": "C (AllClash's Aug 2026 list)",
-    "pockettactics": "C (2026-04-30)"
+    "pockettactics": "C (2026-04-30)",
+    "allclash": "C+ (live list, Oct 2026)"
    },
    "consensus": "strong",
    "trend": null,
-   "tierNote": "Added on 2026-10-24 (missing from the first read of the lists): AllClash's list via AFK Global C (Aug 2026), Pocket Tactics C (2026-04-30).",
+   "tierNote": "Added 2026-10-24 from the newest lists: Pocket Tactics (Apr) C, AllClash C+.",
    "gameId": 131
   },
   {
@@ -140,14 +141,15 @@
    "investment": null,
    "modes": [],
    "tiers": {
-    "overall": "A"
+    "overall": "B"
    },
    "raw": {
-    "afkguide": "Dimensional guide v1.190: A-tier"
+    "afkguide": "Dimensional guide v1.190: A-tier",
+    "allclash": "B (live list, Oct 2026)"
    },
-   "consensus": "single-source",
+   "consensus": "strong",
    "trend": null,
-   "tierNote": "Overlord collab. afk.guide's PvP guide still names an Albedo/Merlin/Ezio Dimensional comp, but that page may be outdated.",
+   "tierNote": "Overlord collab. afk.guide's PvP guide still names an Albedo/Merlin/Ezio Dimensional comp, but that page may be outdated. Overall updated 2026-10-24 to B from the newest lists (afk.guide (Jun) Dimensional guide v1.190: A-tier, AllClash B).",
    "gameId": 97
   },
   {
@@ -174,14 +176,15 @@
    "investment": null,
    "modes": [],
    "tiers": {
-    "overall": "A"
+    "overall": "B"
    },
    "raw": {
-    "afkguide": "Celestial guide v1.197: A-tier"
+    "afkguide": "Celestial guide v1.197: A-tier",
+    "allclash": "B+ (live list, Oct 2026)"
    },
-   "consensus": "single-source",
+   "consensus": "strong",
    "trend": null,
-   "tierNote": "Celestial.",
+   "tierNote": "Celestial. Overall updated 2026-10-24 to B from the newest lists (afk.guide (Jun) Celestial guide v1.197: A-tier, AllClash B+).",
    "gameId": 102
   },
   {
@@ -209,14 +212,15 @@
    "investment": null,
    "modes": [],
    "tiers": {
-    "overall": "S"
+    "overall": "A"
    },
    "raw": {
-    "driffle": "S (DPS / utility)"
+    "driffle": "S (DPS / utility)",
+    "allclash": "A+ (live list, Oct 2026)"
    },
-   "consensus": "single-source",
+   "consensus": "strong",
    "trend": null,
-   "tierNote": "DPS/utility hero. AllClash commenters call her one of the newer heroes.",
+   "tierNote": "DPS/utility hero. AllClash commenters call her one of the newer heroes. Overall updated 2026-10-24 to A from the newest lists (Driffle S, AllClash A+).",
    "gameId": 220
   },
   {
@@ -246,12 +250,12 @@
     "overall": "A"
    },
    "raw": {
-    "afkglobal": "A (AllClash's Aug 2026 list)",
-    "pockettactics": "A (2026-04-30)"
+    "pockettactics": "A (2026-04-30)",
+    "allclash": "A (live list, Oct 2026)"
    },
    "consensus": "strong",
    "trend": null,
-   "tierNote": "Added on 2026-10-24 (missing from the first read of the lists): AllClash's list via AFK Global A (Aug 2026), Pocket Tactics A (2026-04-30).",
+   "tierNote": "Added 2026-10-24 from the newest lists: Pocket Tactics (Apr) A, AllClash A.",
    "gameId": 137
   },
   {
@@ -281,12 +285,12 @@
     "overall": "C"
    },
    "raw": {
-    "afkglobal": "C (AllClash's Aug 2026 list)",
-    "pockettactics": "C (2026-04-30)"
+    "pockettactics": "C (2026-04-30)",
+    "allclash": "C+ (live list, Oct 2026)"
    },
    "consensus": "strong",
    "trend": null,
-   "tierNote": "Added on 2026-10-24 (missing from the first read of the lists): AllClash's list via AFK Global C (Aug 2026), Pocket Tactics C (2026-04-30).",
+   "tierNote": "Added 2026-10-24 from the newest lists: Pocket Tactics (Apr) C, AllClash C+.",
    "gameId": 87
   },
   {
@@ -317,12 +321,12 @@
    },
    "raw": {
     "pocketgamer": "PvP SS ('Dragonflame Spear')",
-    "afkglobal": "A (AllClash's Aug 2026 list)",
-    "pockettactics": "A (2026-04-30)"
+    "pockettactics": "A (2026-04-30)",
+    "allclash": "A (live list, Oct 2026)"
    },
    "consensus": "strong",
    "trend": null,
-   "tierNote": "Added on 2026-10-24 (missing from the first read of the lists): AllClash's list via AFK Global A (Aug 2026), Pocket Tactics A (2026-04-30).",
+   "tierNote": "Added 2026-10-24 from the newest lists: Pocket Tactics (Apr) A, AllClash A.",
    "gameId": 47
   },
   {
@@ -349,14 +353,15 @@
    "investment": null,
    "modes": [],
    "tiers": {
-    "overall": "D"
+    "overall": "C"
    },
    "raw": {
-    "afkguide": "Dimensional guide v1.190: D-tier"
+    "afkguide": "Dimensional guide v1.190: D-tier",
+    "allclash": "C+ (live list, Oct 2026)"
    },
-   "consensus": "single-source",
+   "consensus": "strong",
    "trend": null,
-   "tierNote": "Dimensional.",
+   "tierNote": "Dimensional. Overall updated 2026-10-24 to C from the newest lists (afk.guide (Jun) Dimensional guide v1.190: D-tier, AllClash C+).",
    "gameId": 78
   },
   {
@@ -386,9 +391,10 @@
     "overall": "C"
    },
    "raw": {
-    "pocketgamer": "General C"
+    "pocketgamer": "General C",
+    "allclash": "B (live list, Oct 2026)"
    },
-   "consensus": "single-source",
+   "consensus": "strong",
    "trend": null,
    "tierNote": "In Pocket Gamer's bottom tier.",
    "gameId": 126
@@ -420,12 +426,12 @@
     "overall": "B"
    },
    "raw": {
-    "afkglobal": "B (AllClash's Aug 2026 list)",
-    "pockettactics": "B (2026-04-30)"
+    "pockettactics": "B (2026-04-30)",
+    "allclash": "B (live list, Oct 2026)"
    },
    "consensus": "strong",
    "trend": null,
-   "tierNote": "Added on 2026-10-24 (missing from the first read of the lists): AllClash's list via AFK Global B (Aug 2026), Pocket Tactics B (2026-04-30).",
+   "tierNote": "Added 2026-10-24 from the newest lists: Pocket Tactics (Apr) B, AllClash B.",
    "gameId": 55
   },
   {
@@ -468,8 +474,7 @@
     "overall": "S"
    },
    "raw": {
-    "allclash": "S ('absolutely busted' tank kit)",
-    "afkglobal": "S",
+    "allclash": "S (live list, Oct 2026)",
     "pocketgamer": "General SS"
    },
    "consensus": "strong",
@@ -501,14 +506,15 @@
    "investment": null,
    "modes": [],
    "tiers": {
-    "overall": "S"
+    "overall": "A"
    },
    "raw": {
-    "driffle": "S (control / debuffs); #9 in its boss-damage ranking"
+    "driffle": "S (control / debuffs); #9 in its boss-damage ranking",
+    "allclash": "A+ (live list, Oct 2026)"
    },
-   "consensus": "single-source",
+   "consensus": "strong",
    "trend": null,
-   "tierNote": "Control and debuffs, with decent boss damage.",
+   "tierNote": "Control and debuffs, with decent boss damage. Overall updated 2026-10-24 to A from the newest lists (Driffle S, AllClash A+).",
    "gameId": 179
   },
   {
@@ -535,14 +541,15 @@
    "investment": null,
    "modes": [],
    "tiers": {
-    "overall": "D"
+    "overall": "B"
    },
    "raw": {
-    "afkguide": "Celestial guide v1.197: F-tier"
+    "afkguide": "Celestial guide v1.197: F-tier",
+    "allclash": "B (live list, Oct 2026)"
    },
-   "consensus": "single-source",
+   "consensus": "mixed",
    "trend": null,
-   "tierNote": "Not worth investing in.",
+   "tierNote": "Not worth investing in. Overall updated 2026-10-24 to B from the newest lists (afk.guide (Jun) Celestial guide v1.197: F-tier, AllClash B).",
    "gameId": 132
   },
   {
@@ -569,17 +576,18 @@
    "investment": null,
    "modes": [],
    "tiers": {
-    "overall": "S",
+    "overall": "A",
     "pvp": "S+"
    },
    "raw": {
     "afkguide": "Celestial guide v1.197: S-tier",
     "rosenberry": "PvP S+ ('Dimensional team')",
-    "mobigg": "S+? (tentative)"
+    "mobigg": "S+? (tentative)",
+    "allclash": "A+ (live list, Oct 2026)"
    },
    "consensus": "strong",
    "trend": null,
-   "tierNote": "Celestial, S-tier in afk.guide's June 2026 guide and part of the PvP 'Dimensional team' comp.",
+   "tierNote": "Celestial, S-tier in afk.guide's June 2026 guide and part of the PvP 'Dimensional team' comp. Overall updated 2026-10-24 to A from the newest lists (afk.guide (Jun) Celestial guide v1.197: S-tier, AllClash A+).",
    "gameId": 202
   },
   {
@@ -609,7 +617,7 @@
     "overall": "S"
    },
    "raw": {
-    "afkglobal": "S"
+    "allclash": "S (live list, Oct 2026)"
    },
    "consensus": "single-source",
    "trend": null,
@@ -645,8 +653,7 @@
     "overall": "S+"
    },
    "raw": {
-    "allclash": "S+ (noted as strong in Nightmare Corridor)",
-    "afkglobal": "S+",
+    "allclash": "S+ (live list, Oct 2026)",
     "driffle": "S+ (in its PvP team)",
     "pockettactics": "SS",
     "afkguide": "Celestial guide v1.197: S-tier"
@@ -686,8 +693,7 @@
     "overall": "S+"
    },
    "raw": {
-    "allclash": "S+",
-    "afkglobal": "S+",
+    "allclash": "S+ (live list, Oct 2026)",
     "driffle": "S+",
     "pockettactics": "SS"
    },
@@ -720,17 +726,17 @@
    "investment": null,
    "modes": [],
    "tiers": {
-    "overall": "S",
+    "overall": "A",
     "pvp": "S+"
    },
    "raw": {
     "driffle": "S (mage / burst DPS)",
     "rosenberry": "PvP S+",
-    "allclash": "Awakened priority #2 (after Envydiel)"
+    "allclash": "A+ (live list, Oct 2026); earlier: Awakened priority #2 (after Envydiel)"
    },
    "consensus": "strong",
    "trend": null,
-   "tierNote": "Awakened burst mage and the second Awakened build priority after Envydiel.",
+   "tierNote": "Awakened burst mage and the second Awakened build priority after Envydiel. Overall updated 2026-10-24 to A from the newest lists (Driffle S, AllClash A+).",
    "gameId": 153
   },
   {
@@ -760,12 +766,12 @@
     "overall": "A"
    },
    "raw": {
-    "afkglobal": "A+ (AllClash's Aug 2026 list)",
-    "pockettactics": "A (2026-04-30)"
+    "pockettactics": "A (2026-04-30)",
+    "allclash": "A+ (live list, Oct 2026)"
    },
    "consensus": "strong",
    "trend": null,
-   "tierNote": "Added on 2026-10-24 (missing from the first read of the lists): AllClash's list via AFK Global A+ (Aug 2026), Pocket Tactics A (2026-04-30).",
+   "tierNote": "Added 2026-10-24 from the newest lists: Pocket Tactics (Apr) A, AllClash A+.",
    "gameId": 139
   },
   {
@@ -795,12 +801,12 @@
     "overall": "A"
    },
    "raw": {
-    "afkglobal": "A+ (AllClash's Aug 2026 list)",
-    "pockettactics": "S (2026-04-30)"
+    "pockettactics": "S (2026-04-30)",
+    "allclash": "A+ (live list, Oct 2026)"
    },
    "consensus": "strong",
    "trend": null,
-   "tierNote": "Added on 2026-10-24 (missing from the first read of the lists): AllClash's list via AFK Global A+ (Aug 2026), Pocket Tactics S (2026-04-30).",
+   "tierNote": "Added 2026-10-24 from the newest lists: Pocket Tactics (Apr) S, AllClash A+.",
    "gameId": 201
   },
   {
@@ -830,11 +836,11 @@
     "overall": "A"
    },
    "raw": {
-    "afkglobal": "A+ (AllClash's Aug 2026 list)"
+    "allclash": "A+ (live list, Oct 2026)"
    },
    "consensus": "single-source",
    "trend": null,
-   "tierNote": "Added on 2026-10-24 (missing from the first read of the lists): AllClash's list via AFK Global A+ (Aug 2026).",
+   "tierNote": "Added 2026-10-24 from the newest lists: AllClash A+.",
    "gameId": 248
   },
   {
@@ -864,11 +870,11 @@
     "overall": "A"
    },
    "raw": {
-    "afkglobal": "A+ (AllClash's Aug 2026 list)"
+    "allclash": "A+ (live list, Oct 2026)"
    },
    "consensus": "single-source",
    "trend": null,
-   "tierNote": "Added on 2026-10-24 (missing from the first read of the lists): AllClash's list via AFK Global A+ (Aug 2026).",
+   "tierNote": "Added 2026-10-24 from the newest lists: AllClash A+.",
    "gameId": 221
   },
   {
@@ -898,12 +904,12 @@
     "overall": "B"
    },
    "raw": {
-    "afkglobal": "B+ (AllClash's Aug 2026 list)",
-    "pockettactics": "A (2026-04-30)"
+    "pockettactics": "A (2026-04-30)",
+    "allclash": "B+ (live list, Oct 2026)"
    },
    "consensus": "strong",
    "trend": null,
-   "tierNote": "Added on 2026-10-24 (missing from the first read of the lists): AllClash's list via AFK Global B+ (Aug 2026), Pocket Tactics A (2026-04-30).",
+   "tierNote": "Added 2026-10-24 from the newest lists: Pocket Tactics (Apr) A, AllClash B+.",
    "gameId": 130
   },
   {
@@ -933,11 +939,11 @@
     "overall": "A"
    },
    "raw": {
-    "afkglobal": "A+ (AllClash's Aug 2026 list)"
+    "allclash": "A+ (live list, Oct 2026)"
    },
    "consensus": "single-source",
    "trend": null,
-   "tierNote": "Added on 2026-10-24 (missing from the first read of the lists): AllClash's list via AFK Global A+ (Aug 2026).",
+   "tierNote": "Added 2026-10-24 from the newest lists: AllClash A+.",
    "gameId": 232
   },
   {
@@ -967,12 +973,12 @@
     "overall": "A"
    },
    "raw": {
-    "afkglobal": "A+ (AllClash's Aug 2026 list)",
-    "pockettactics": "S (2026-04-30)"
+    "pockettactics": "S (2026-04-30)",
+    "allclash": "A+ (live list, Oct 2026)"
    },
    "consensus": "strong",
    "trend": null,
-   "tierNote": "Added on 2026-10-24 (missing from the first read of the lists): AllClash's list via AFK Global A+ (Aug 2026), Pocket Tactics S (2026-04-30).",
+   "tierNote": "Added 2026-10-24 from the newest lists: Pocket Tactics (Apr) S, AllClash A+.",
    "gameId": 181
   },
   {
@@ -1002,8 +1008,8 @@
     "overall": "S+"
    },
    "raw": {
-    "afkglobal": "S+",
-    "pockettactics": "SS"
+    "pockettactics": "SS",
+    "allclash": "S+ (live list, Oct 2026)"
    },
    "consensus": "strong",
    "trend": null,
@@ -1040,7 +1046,7 @@
     "boss": "S"
    },
    "raw": {
-    "allclash": "S overall; build guide (Jan 2026): Campaign S+, Tower S+, NC S, CR S; Awakened priority: after Envydiel/Belinda/Shemira/Safiya/Athalia/Lucius"
+    "allclash": "S (live list, Oct 2026)"
    },
    "consensus": "single-source",
    "trend": null,
@@ -1074,12 +1080,12 @@
     "overall": "A"
    },
    "raw": {
-    "afkglobal": "A+ (AllClash's Aug 2026 list)",
-    "pockettactics": "A (2026-04-30)"
+    "pockettactics": "A (2026-04-30)",
+    "allclash": "A+ (live list, Oct 2026)"
    },
    "consensus": "strong",
    "trend": null,
-   "tierNote": "Added on 2026-10-24 (missing from the first read of the lists): AllClash's list via AFK Global A+ (Aug 2026), Pocket Tactics A (2026-04-30).",
+   "tierNote": "Added 2026-10-24 from the newest lists: Pocket Tactics (Apr) A, AllClash A+.",
    "gameId": 165
   },
   {
@@ -1109,12 +1115,12 @@
     "overall": "A"
    },
    "raw": {
-    "afkglobal": "A+ (AllClash's Aug 2026 list)",
-    "pockettactics": "S (2026-04-30)"
+    "pockettactics": "S (2026-04-30)",
+    "allclash": "A+ (live list, Oct 2026)"
    },
    "consensus": "strong",
    "trend": null,
-   "tierNote": "Added on 2026-10-24 (missing from the first read of the lists): AllClash's list via AFK Global A+ (Aug 2026), Pocket Tactics S (2026-04-30).",
+   "tierNote": "Added 2026-10-24 from the newest lists: Pocket Tactics (Apr) S, AllClash A+.",
    "gameId": 173
   },
   {
@@ -1144,11 +1150,11 @@
     "overall": "A"
    },
    "raw": {
-    "afkglobal": "A (AllClash's Aug 2026 list)"
+    "allclash": "A (live list, Oct 2026)"
    },
    "consensus": "single-source",
    "trend": null,
-   "tierNote": "Added on 2026-10-24 (missing from the first read of the lists): AllClash's list via AFK Global A (Aug 2026).",
+   "tierNote": "Added 2026-10-24 from the newest lists: AllClash A.",
    "gameId": 228
   },
   {
@@ -1178,8 +1184,7 @@
     "overall": "S+"
    },
    "raw": {
-    "allclash": "S+",
-    "afkglobal": "S+",
+    "allclash": "S+ (live list, Oct 2026)",
     "pockettactics": "SS"
    },
    "consensus": "strong",
@@ -1212,14 +1217,15 @@
    "investment": null,
    "modes": [],
    "tiers": {
-    "overall": "C"
+    "overall": "B"
    },
    "raw": {
-    "afkguide": "Celestial guide v1.197: C-tier"
+    "afkguide": "Celestial guide v1.197: C-tier",
+    "allclash": "B+ (live list, Oct 2026)"
    },
-   "consensus": "single-source",
+   "consensus": "strong",
    "trend": null,
-   "tierNote": "Low-priority Awakened.",
+   "tierNote": "Low-priority Awakened. Overall updated 2026-10-24 to B from the newest lists (afk.guide (Jun) Celestial guide v1.197: C-tier, AllClash B+).",
    "gameId": 124
   },
   {
@@ -1249,12 +1255,12 @@
     "overall": "A"
    },
    "raw": {
-    "afkglobal": "A (AllClash's Aug 2026 list)",
-    "pockettactics": "A (2026-04-30)"
+    "pockettactics": "A (2026-04-30)",
+    "allclash": "A (live list, Oct 2026)"
    },
    "consensus": "strong",
    "trend": null,
-   "tierNote": "Added on 2026-10-24 (missing from the first read of the lists): AllClash's list via AFK Global A (Aug 2026), Pocket Tactics A (2026-04-30).",
+   "tierNote": "Added 2026-10-24 from the newest lists: Pocket Tactics (Apr) A, AllClash A.",
    "gameId": 134
   },
   {
@@ -1314,9 +1320,10 @@
     "overall": "S"
    },
    "raw": {
-    "afkguide": "Graveborn guide: S-tier"
+    "afkguide": "Graveborn guide: S-tier",
+    "allclash": "S (live list, Oct 2026)"
    },
-   "consensus": "single-source",
+   "consensus": "strong",
    "trend": null,
    "tierNote": "Top Graveborn investment.",
    "gameId": 205
@@ -1348,9 +1355,10 @@
     "overall": "C"
    },
    "raw": {
-    "pocketgamer": "General C"
+    "pocketgamer": "General C",
+    "allclash": "B (live list, Oct 2026)"
    },
-   "consensus": "single-source",
+   "consensus": "strong",
    "trend": null,
    "tierNote": "Base Baden. The Awakened form is S+.",
    "gameId": 49
@@ -1383,7 +1391,8 @@
    },
    "raw": {
     "afkguide": "Draconis guide v1.191: S-tier ('top-tier buffer across all game modes')",
-    "driffle": "A (support / utility)"
+    "driffle": "A (support / utility)",
+    "allclash": "A (live list, Oct 2026)"
    },
    "consensus": "strong",
    "trend": null,
@@ -1418,12 +1427,12 @@
     "overall": "B"
    },
    "raw": {
-    "afkglobal": "B (AllClash's Aug 2026 list)",
-    "pockettactics": "B (2026-04-30)"
+    "pockettactics": "B (2026-04-30)",
+    "allclash": "B (live list, Oct 2026)"
    },
    "consensus": "strong",
    "trend": null,
-   "tierNote": "Added on 2026-10-24 (missing from the first read of the lists): AllClash's list via AFK Global B (Aug 2026), Pocket Tactics B (2026-04-30).",
+   "tierNote": "Added 2026-10-24 from the newest lists: Pocket Tactics (Apr) B, AllClash B.",
    "gameId": 20
   },
   {
@@ -1453,12 +1462,12 @@
     "overall": "B"
    },
    "raw": {
-    "afkglobal": "B+ (AllClash's Aug 2026 list)",
-    "pockettactics": "A (2026-04-30)"
+    "pockettactics": "A (2026-04-30)",
+    "allclash": "B+ (live list, Oct 2026)"
    },
    "consensus": "strong",
    "trend": null,
-   "tierNote": "Added on 2026-10-24 (missing from the first read of the lists): AllClash's list via AFK Global B+ (Aug 2026), Pocket Tactics A (2026-04-30).",
+   "tierNote": "Added 2026-10-24 from the newest lists: Pocket Tactics (Apr) A, AllClash B+.",
    "gameId": 183
   },
   {
@@ -1488,12 +1497,12 @@
     "overall": "B"
    },
    "raw": {
-    "afkglobal": "B+ (AllClash's Aug 2026 list)",
-    "pockettactics": "B (2026-04-30)"
+    "pockettactics": "B (2026-04-30)",
+    "allclash": "B+ (live list, Oct 2026)"
    },
    "consensus": "strong",
    "trend": null,
-   "tierNote": "Added on 2026-10-24 (missing from the first read of the lists): AllClash's list via AFK Global B+ (Aug 2026), Pocket Tactics B (2026-04-30).",
+   "tierNote": "Added 2026-10-24 from the newest lists: Pocket Tactics (Apr) B, AllClash B+.",
    "gameId": 9
   },
   {
@@ -1523,12 +1532,12 @@
     "overall": "B"
    },
    "raw": {
-    "afkglobal": "B+ (AllClash's Aug 2026 list)",
-    "pockettactics": "A (2026-04-30)"
+    "pockettactics": "A (2026-04-30)",
+    "allclash": "B+ (live list, Oct 2026)"
    },
    "consensus": "strong",
    "trend": null,
-   "tierNote": "Added on 2026-10-24 (missing from the first read of the lists): AllClash's list via AFK Global B+ (Aug 2026), Pocket Tactics A (2026-04-30).",
+   "tierNote": "Added 2026-10-24 from the newest lists: Pocket Tactics (Apr) A, AllClash B+.",
    "gameId": 146
   },
   {
@@ -1555,14 +1564,15 @@
    "investment": null,
    "modes": [],
    "tiers": {
-    "overall": "D"
+    "overall": "B"
    },
    "raw": {
-    "afkguide": "Draconis guide v1.191: D-tier"
+    "afkguide": "Draconis guide v1.191: D-tier",
+    "allclash": "B+ (live list, Oct 2026)"
    },
-   "consensus": "single-source",
+   "consensus": "mixed",
    "trend": null,
-   "tierNote": "Draconis.",
+   "tierNote": "Draconis. Overall updated 2026-10-24 to B from the newest lists (afk.guide (Jun) Draconis guide v1.191: D-tier, AllClash B+).",
    "gameId": 189
   },
   {
@@ -1592,12 +1602,12 @@
     "overall": "C"
    },
    "raw": {
-    "afkglobal": "C (AllClash's Aug 2026 list)",
-    "pockettactics": "C (2026-04-30)"
+    "pockettactics": "C (2026-04-30)",
+    "allclash": "C+ (live list, Oct 2026)"
    },
    "consensus": "strong",
    "trend": null,
-   "tierNote": "Added on 2026-10-24 (missing from the first read of the lists): AllClash's list via AFK Global C (Aug 2026), Pocket Tactics C (2026-04-30).",
+   "tierNote": "Added 2026-10-24 from the newest lists: Pocket Tactics (Apr) C, AllClash C+.",
    "gameId": 66
   },
   {
@@ -1633,10 +1643,10 @@
     "pve": "S"
    },
    "raw": {
-    "afkglobal": "S+",
     "driffle": "S+",
     "afkguide": "Dimensional guide v1.190: A-tier (event-only)",
-    "pocketgamer": "PvE S"
+    "pocketgamer": "PvE S",
+    "allclash": "S+ (live list, Oct 2026)"
    },
    "consensus": "mixed",
    "trend": null,
@@ -1670,12 +1680,12 @@
     "overall": "B"
    },
    "raw": {
-    "afkglobal": "B+ (AllClash's Aug 2026 list)",
-    "pockettactics": "A (2026-04-30)"
+    "pockettactics": "A (2026-04-30)",
+    "allclash": "B+ (live list, Oct 2026)"
    },
    "consensus": "strong",
    "trend": null,
-   "tierNote": "Added on 2026-10-24 (missing from the first read of the lists): AllClash's list via AFK Global B+ (Aug 2026), Pocket Tactics A (2026-04-30).",
+   "tierNote": "Added 2026-10-24 from the newest lists: Pocket Tactics (Apr) A, AllClash B+.",
    "gameId": 158
   },
   {
@@ -1707,8 +1717,7 @@
     "boss": "S"
    },
    "raw": {
-    "allclash": "S+ (build guide, possibly older: Campaign S, Tower S+, NC S+, CR S+)",
-    "afkglobal": "S+",
+    "allclash": "S+ (live list, Oct 2026)",
     "driffle": "S+",
     "pockettactics": "SS (top-tier pick)",
     "afkguide": "Celestial guide v1.197: S-tier; Meta in most modes"
@@ -1742,14 +1751,15 @@
    "investment": null,
    "modes": [],
    "tiers": {
-    "overall": "S+"
+    "overall": "A"
    },
    "raw": {
-    "pockettactics": "SS"
+    "pockettactics": "SS",
+    "allclash": "A (live list, Oct 2026)"
    },
-   "consensus": "single-source",
+   "consensus": "mixed",
    "trend": null,
-   "tierNote": "Top tier only in Pocket Tactics (April 2026). A low-reliability site also lists Daimon as an early-game S+.",
+   "tierNote": "Top tier only in Pocket Tactics (April 2026). A low-reliability site also lists Daimon as an early-game S+. Overall updated 2026-10-24 to A from the newest lists (Pocket Tactics (Apr) SS, AllClash A).",
    "gameId": 90
   },
   {
@@ -1779,12 +1789,12 @@
     "overall": "B"
    },
    "raw": {
-    "afkglobal": "B (AllClash's Aug 2026 list)",
-    "pockettactics": "B (2026-04-30)"
+    "pockettactics": "B (2026-04-30)",
+    "allclash": "B (live list, Oct 2026)"
    },
    "consensus": "strong",
    "trend": null,
-   "tierNote": "Added on 2026-10-24 (missing from the first read of the lists): AllClash's list via AFK Global B (Aug 2026), Pocket Tactics B (2026-04-30).",
+   "tierNote": "Added 2026-10-24 from the newest lists: Pocket Tactics (Apr) B, AllClash B.",
    "gameId": 109
   },
   {
@@ -1815,11 +1825,11 @@
     "overall": "B"
    },
    "raw": {
-    "afkglobal": "B+ (AllClash's Aug 2026 list)"
+    "allclash": "B+ (live list, Oct 2026)"
    },
    "consensus": "single-source",
    "trend": null,
-   "tierNote": "Added on 2026-10-24 (missing from the first read of the lists): AllClash's list via AFK Global B+ (Aug 2026).",
+   "tierNote": "Added 2026-10-24 from the newest lists: AllClash B+.",
    "gameId": 242
   },
   {
@@ -1849,12 +1859,12 @@
     "overall": "B"
    },
    "raw": {
-    "afkglobal": "B (AllClash's Aug 2026 list)",
-    "pockettactics": "B (2026-04-30)"
+    "pockettactics": "B (2026-04-30)",
+    "allclash": "B (live list, Oct 2026)"
    },
    "consensus": "strong",
    "trend": null,
-   "tierNote": "Added on 2026-10-24 (missing from the first read of the lists): AllClash's list via AFK Global B (Aug 2026), Pocket Tactics B (2026-04-30).",
+   "tierNote": "Added 2026-10-24 from the newest lists: Pocket Tactics (Apr) B, AllClash B.",
    "gameId": 77
   },
   {
@@ -1885,12 +1895,12 @@
    },
    "raw": {
     "pocketgamer": "Bosses SS",
-    "afkglobal": "B+ (AllClash's Aug 2026 list)",
-    "pockettactics": "A (2026-04-30)"
+    "pockettactics": "A (2026-04-30)",
+    "allclash": "B+ (live list, Oct 2026)"
    },
    "consensus": "strong",
    "trend": null,
-   "tierNote": "Added on 2026-10-24 (missing from the first read of the lists): AllClash's list via AFK Global B+ (Aug 2026), Pocket Tactics A (2026-04-30).",
+   "tierNote": "Added 2026-10-24 from the newest lists: Pocket Tactics (Apr) A, AllClash B+.",
    "gameId": 156
   },
   {
@@ -1920,12 +1930,12 @@
     "overall": "B"
    },
    "raw": {
-    "afkglobal": "B+ (AllClash's Aug 2026 list)",
-    "pockettactics": "SS (2026-04-30)"
+    "pockettactics": "SS (2026-04-30)",
+    "allclash": "B+ (live list, Oct 2026)"
    },
    "consensus": "mixed",
    "trend": null,
-   "tierNote": "Added on 2026-10-24 (missing from the first read of the lists): AllClash's list via AFK Global B+ (Aug 2026), Pocket Tactics SS (2026-04-30).",
+   "tierNote": "Added 2026-10-24 from the newest lists: Pocket Tactics (Apr) SS, AllClash B+.",
    "gameId": 48
   },
   {
@@ -1952,16 +1962,17 @@
    "investment": null,
    "modes": [],
    "tiers": {
-    "overall": "B",
+    "overall": "S",
     "pve": "S+"
    },
    "raw": {
     "pocketgamer": "General SS, PvE SS (PvP SS appeared in one snippet only, so it is not counted)",
-    "afkguide": "Celestial guide v1.197: B-tier"
+    "afkguide": "Celestial guide v1.197: B-tier",
+    "allclash": "S (live list, Oct 2026)"
    },
    "consensus": "mixed",
    "trend": null,
-   "tierNote": "INT supports that add haste and healing. Pocket Gamer still rates them highly, afk.guide treats them as a low-priority investment.",
+   "tierNote": "INT supports that add haste and healing. Pocket Gamer still rates them highly, afk.guide treats them as a low-priority investment. Overall updated 2026-10-24 to S from the newest lists (Pocket Gamer General SS, PvE SS, afk.guide (Jun) Celestial guide v1.197: B-tier, AllClash S).",
    "gameId": 62
   },
   {
@@ -1992,7 +2003,7 @@
     "overall": "A"
    },
    "raw": {
-    "allclash": "A+ ('promising all-around: attack, defense, debuff, control, heal'; needs SI+30/E60)",
+    "allclash": "A+ (live list, Oct 2026)",
     "afkguide": "Draconis guide v1.191: S-tier"
    },
    "consensus": "strong",
@@ -2027,12 +2038,12 @@
     "overall": "C"
    },
    "raw": {
-    "afkglobal": "C (AllClash's Aug 2026 list)",
-    "pockettactics": "C (2026-04-30)"
+    "pockettactics": "C (2026-04-30)",
+    "allclash": "C+ (live list, Oct 2026)"
    },
    "consensus": "strong",
    "trend": null,
-   "tierNote": "Added on 2026-10-24 (missing from the first read of the lists): AllClash's list via AFK Global C (Aug 2026), Pocket Tactics C (2026-04-30).",
+   "tierNote": "Added 2026-10-24 from the newest lists: Pocket Tactics (Apr) C, AllClash C+.",
    "gameId": 105
   },
   {
@@ -2063,9 +2074,10 @@
    },
    "raw": {
     "afkguide": "Dimensional guide v1.190: A-tier",
-    "mobigg": "S+? (tentative)"
+    "mobigg": "S+? (tentative)",
+    "allclash": "A (live list, Oct 2026)"
    },
-   "consensus": "single-source",
+   "consensus": "strong",
    "trend": null,
    "tierNote": "Re:Zero collab Dimensional hero.",
    "gameId": 159
@@ -2100,8 +2112,7 @@
     "boss": "S+"
    },
    "raw": {
-    "allclash": "S+ overall (Campaign S, Tower S+, NC S+, CR S+, TR S+); build guide gives Campaign S+; #1 Awakened priority",
-    "afkglobal": "S+",
+    "allclash": "S+ (live list, Oct 2026)",
     "driffle": "S+ (DPS / damage dealer)",
     "afkguide": "Hypogean guide v1.194: S-tier; 'strongest DPS hero in the entire game, great on literally all game modes'",
     "rosenberry": "PvP S+ (core of 'Dimensional team')"
@@ -2138,12 +2149,12 @@
     "overall": "A"
    },
    "raw": {
-    "afkglobal": "A (AllClash's Aug 2026 list)",
-    "pockettactics": "A (2026-04-30)"
+    "pockettactics": "A (2026-04-30)",
+    "allclash": "A (live list, Oct 2026)"
    },
    "consensus": "strong",
    "trend": null,
-   "tierNote": "Added on 2026-10-24 (missing from the first read of the lists): AllClash's list via AFK Global A (Aug 2026), Pocket Tactics A (2026-04-30).",
+   "tierNote": "Added 2026-10-24 from the newest lists: Pocket Tactics (Apr) A, AllClash A.",
    "gameId": 141
   },
   {
@@ -2174,12 +2185,12 @@
    },
    "raw": {
     "pocketgamer": "PvP S, Bosses S ('Crimson Reaver')",
-    "afkglobal": "A (AllClash's Aug 2026 list)",
-    "pockettactics": "A (2026-04-30)"
+    "pockettactics": "A (2026-04-30)",
+    "allclash": "A (live list, Oct 2026)"
    },
    "consensus": "strong",
    "trend": null,
-   "tierNote": "Added on 2026-10-24 (missing from the first read of the lists): AllClash's list via AFK Global A (Aug 2026), Pocket Tactics A (2026-04-30).",
+   "tierNote": "Added 2026-10-24 from the newest lists: Pocket Tactics (Apr) A, AllClash A.",
    "gameId": 4
   },
   {
@@ -2206,14 +2217,15 @@
    "investment": null,
    "modes": [],
    "tiers": {
-    "overall": "B"
+    "overall": "A"
    },
    "raw": {
-    "afkguide": "Hypogean guide v1.194: B-tier"
+    "afkguide": "Hypogean guide v1.194: B-tier",
+    "allclash": "A+ (live list, Oct 2026)"
    },
-   "consensus": "single-source",
+   "consensus": "strong",
    "trend": null,
-   "tierNote": "Hypogean.",
+   "tierNote": "Hypogean. Overall updated 2026-10-24 to A from the newest lists (afk.guide (Jun) Hypogean guide v1.194: B-tier, AllClash A+).",
    "gameId": 178
   },
   {
@@ -2243,9 +2255,10 @@
     "overall": "C"
    },
    "raw": {
-    "afkguide": "Dimensional guide v1.190: C-tier"
+    "afkguide": "Dimensional guide v1.190: C-tier",
+    "allclash": "C+ (live list, Oct 2026)"
    },
-   "consensus": "single-source",
+   "consensus": "strong",
    "trend": null,
    "tierNote": "Dimensional.",
    "gameId": 92
@@ -2277,12 +2290,12 @@
     "overall": "A"
    },
    "raw": {
-    "afkglobal": "A (AllClash's Aug 2026 list)",
-    "pockettactics": "A (2026-04-30)"
+    "pockettactics": "A (2026-04-30)",
+    "allclash": "A (live list, Oct 2026)"
    },
    "consensus": "strong",
    "trend": null,
-   "tierNote": "Added on 2026-10-24 (missing from the first read of the lists): AllClash's list via AFK Global A (Aug 2026), Pocket Tactics A (2026-04-30).",
+   "tierNote": "Added 2026-10-24 from the newest lists: Pocket Tactics (Apr) A, AllClash A.",
    "gameId": 56
   },
   {
@@ -2312,12 +2325,12 @@
     "overall": "C"
    },
    "raw": {
-    "afkglobal": "C (AllClash's Aug 2026 list)",
-    "pockettactics": "C (2026-04-30)"
+    "pockettactics": "C (2026-04-30)",
+    "allclash": "C+ (live list, Oct 2026)"
    },
    "consensus": "strong",
    "trend": null,
-   "tierNote": "Added on 2026-10-24 (missing from the first read of the lists): AllClash's list via AFK Global C (Aug 2026), Pocket Tactics C (2026-04-30).",
+   "tierNote": "Added 2026-10-24 from the newest lists: Pocket Tactics (Apr) C, AllClash C+.",
    "gameId": 129
   },
   {
@@ -2347,12 +2360,12 @@
     "overall": "C"
    },
    "raw": {
-    "afkglobal": "C (AllClash's Aug 2026 list)",
-    "pockettactics": "C (2026-04-30)"
+    "pockettactics": "C (2026-04-30)",
+    "allclash": "C+ (live list, Oct 2026)"
    },
    "consensus": "strong",
    "trend": null,
-   "tierNote": "Added on 2026-10-24 (missing from the first read of the lists): AllClash's list via AFK Global C (Aug 2026), Pocket Tactics C (2026-04-30).",
+   "tierNote": "Added 2026-10-24 from the newest lists: Pocket Tactics (Apr) C, AllClash C+.",
    "gameId": 37
   },
   {
@@ -2382,12 +2395,12 @@
     "overall": "B"
    },
    "raw": {
-    "afkglobal": "B (AllClash's Aug 2026 list)",
-    "pockettactics": "B (2026-04-30)"
+    "pockettactics": "B (2026-04-30)",
+    "allclash": "B (live list, Oct 2026)"
    },
    "consensus": "strong",
    "trend": null,
-   "tierNote": "Added on 2026-10-24 (missing from the first read of the lists): AllClash's list via AFK Global B (Aug 2026), Pocket Tactics B (2026-04-30).",
+   "tierNote": "Added 2026-10-24 from the newest lists: Pocket Tactics (Apr) B, AllClash B.",
    "gameId": 41
   },
   {
@@ -2414,14 +2427,15 @@
    "investment": null,
    "modes": [],
    "tiers": {
-    "overall": "B"
+    "overall": "C"
    },
    "raw": {
-    "afkguide": "Celestial guide v1.197: B-tier"
+    "afkguide": "Celestial guide v1.197: B-tier",
+    "allclash": "C+ (live list, Oct 2026)"
    },
-   "consensus": "single-source",
+   "consensus": "strong",
    "trend": null,
-   "tierNote": "Celestial.",
+   "tierNote": "Celestial. Overall updated 2026-10-24 to C from the newest lists (afk.guide (Jun) Celestial guide v1.197: B-tier, AllClash C+).",
    "gameId": 89
   },
   {
@@ -2451,12 +2465,12 @@
     "overall": "B"
    },
    "raw": {
-    "afkglobal": "B (AllClash's Aug 2026 list)",
-    "pockettactics": "B (2026-04-30)"
+    "pockettactics": "B (2026-04-30)",
+    "allclash": "B (live list, Oct 2026)"
    },
    "consensus": "strong",
    "trend": null,
-   "tierNote": "Added on 2026-10-24 (missing from the first read of the lists): AllClash's list via AFK Global B (Aug 2026), Pocket Tactics B (2026-04-30).",
+   "tierNote": "Added 2026-10-24 from the newest lists: Pocket Tactics (Apr) B, AllClash B.",
    "gameId": 125
   },
   {
@@ -2487,9 +2501,10 @@
    },
    "raw": {
     "afkguide": "Celestial guide v1.197: A-tier",
-    "mobigg": "S+? (tentative)"
+    "mobigg": "S+? (tentative)",
+    "allclash": "A+ (live list, Oct 2026)"
    },
-   "consensus": "single-source",
+   "consensus": "strong",
    "trend": null,
    "tierNote": "Celestial.",
    "gameId": 177
@@ -2521,9 +2536,10 @@
     "overall": "C"
    },
    "raw": {
-    "afkguide": "Dimensional guide v1.190: C-tier"
+    "afkguide": "Dimensional guide v1.190: C-tier",
+    "allclash": "C+ (live list, Oct 2026)"
    },
-   "consensus": "single-source",
+   "consensus": "strong",
    "trend": null,
    "tierNote": "Dimensional.",
    "gameId": 144
@@ -2555,12 +2571,12 @@
     "overall": "B"
    },
    "raw": {
-    "afkglobal": "B (AllClash's Aug 2026 list)",
-    "pockettactics": "B (2026-04-30)"
+    "pockettactics": "B (2026-04-30)",
+    "allclash": "B (live list, Oct 2026)"
    },
    "consensus": "strong",
    "trend": null,
-   "tierNote": "Added on 2026-10-24 (missing from the first read of the lists): AllClash's list via AFK Global B (Aug 2026), Pocket Tactics B (2026-04-30).",
+   "tierNote": "Added 2026-10-24 from the newest lists: Pocket Tactics (Apr) B, AllClash B.",
    "gameId": 162
   },
   {
@@ -2590,11 +2606,11 @@
     "overall": "A"
    },
    "raw": {
-    "afkglobal": "A (AllClash's Aug 2026 list)"
+    "allclash": "A (live list, Oct 2026)"
    },
    "consensus": "single-source",
    "trend": null,
-   "tierNote": "Added on 2026-10-24 (missing from the first read of the lists): AllClash's list via AFK Global A (Aug 2026).",
+   "tierNote": "Added 2026-10-24 from the newest lists: AllClash A.",
    "gameId": 229
   },
   {
@@ -2624,12 +2640,12 @@
     "overall": "A"
    },
    "raw": {
-    "afkglobal": "A (AllClash's Aug 2026 list)",
-    "pockettactics": "A (2026-04-30)"
+    "pockettactics": "A (2026-04-30)",
+    "allclash": "A (live list, Oct 2026)"
    },
    "consensus": "strong",
    "trend": null,
-   "tierNote": "Added on 2026-10-24 (missing from the first read of the lists): AllClash's list via AFK Global A (Aug 2026), Pocket Tactics A (2026-04-30).",
+   "tierNote": "Added 2026-10-24 from the newest lists: Pocket Tactics (Apr) A, AllClash A.",
    "gameId": 208
   },
   {
@@ -2659,12 +2675,12 @@
     "overall": "C"
    },
    "raw": {
-    "afkglobal": "C (AllClash's Aug 2026 list)",
-    "pockettactics": "C (2026-04-30)"
+    "pockettactics": "C (2026-04-30)",
+    "allclash": "C+ (live list, Oct 2026)"
    },
    "consensus": "strong",
    "trend": null,
-   "tierNote": "Added on 2026-10-24 (missing from the first read of the lists): AllClash's list via AFK Global C (Aug 2026), Pocket Tactics C (2026-04-30).",
+   "tierNote": "Added 2026-10-24 from the newest lists: Pocket Tactics (Apr) C, AllClash C+.",
    "gameId": 57
   },
   {
@@ -2694,12 +2710,12 @@
     "overall": "B"
    },
    "raw": {
-    "afkglobal": "B (AllClash's Aug 2026 list)",
-    "pockettactics": "B (2026-04-30)"
+    "pockettactics": "B (2026-04-30)",
+    "allclash": "B (live list, Oct 2026)"
    },
    "consensus": "strong",
    "trend": null,
-   "tierNote": "Added on 2026-10-24 (missing from the first read of the lists): AllClash's list via AFK Global B (Aug 2026), Pocket Tactics B (2026-04-30).",
+   "tierNote": "Added 2026-10-24 from the newest lists: Pocket Tactics (Apr) B, AllClash B.",
    "gameId": 118
   },
   {
@@ -2726,17 +2742,17 @@
    "investment": null,
    "modes": [],
    "tiers": {
-    "overall": "A",
+    "overall": "S",
     "boss": "S+"
    },
    "raw": {
     "pocketgamer": "Bosses SS ('ideal tank for boss encounters')",
-    "afkglobal": "S",
-    "afkguide": "Graveborn guide: A-tier"
+    "afkguide": "Graveborn guide: A-tier",
+    "allclash": "S (live list, Oct 2026)"
    },
    "consensus": "strong",
    "trend": null,
-   "tierNote": "The standard tank for boss fights.",
+   "tierNote": "The standard tank for boss fights. Overall updated 2026-10-24 to S from the newest lists (afk.guide (Jun) Graveborn guide: A-tier, AllClash S).",
    "gameId": 25
   },
   {
@@ -2766,9 +2782,10 @@
     "overall": "C"
    },
    "raw": {
-    "afkguide": "Draconis guide v1.191: C-tier"
+    "afkguide": "Draconis guide v1.191: C-tier",
+    "allclash": "C+ (live list, Oct 2026)"
    },
-   "consensus": "single-source",
+   "consensus": "strong",
    "trend": null,
    "tierNote": "Draconis.",
    "gameId": 60
@@ -2836,7 +2853,8 @@
    },
    "raw": {
     "afkguide": "Draconis guide v1.191: A-tier",
-    "pockettactics": "S"
+    "pockettactics": "S",
+    "allclash": "A+ (live list, Oct 2026)"
    },
    "consensus": "strong",
    "trend": null,
@@ -2867,14 +2885,15 @@
    "investment": null,
    "modes": [],
    "tiers": {
-    "overall": "C"
+    "overall": "A"
    },
    "raw": {
-    "afkguide": "Celestial guide v1.197: C-tier"
+    "afkguide": "Celestial guide v1.197: C-tier",
+    "allclash": "A (live list, Oct 2026)"
    },
-   "consensus": "single-source",
+   "consensus": "mixed",
    "trend": null,
-   "tierNote": "Celestial.",
+   "tierNote": "Celestial. Overall updated 2026-10-24 to A from the newest lists (afk.guide (Jun) Celestial guide v1.197: C-tier, AllClash A).",
    "gameId": 121
   },
   {
@@ -2901,14 +2920,15 @@
    "investment": null,
    "modes": [],
    "tiers": {
-    "overall": "B"
+    "overall": "A"
    },
    "raw": {
-    "afkguide": "Hypogean guide v1.194: B-tier"
+    "afkguide": "Hypogean guide v1.194: B-tier",
+    "allclash": "A+ (live list, Oct 2026)"
    },
-   "consensus": "single-source",
+   "consensus": "strong",
    "trend": null,
-   "tierNote": "Hypogean (v1.189, 2026-03-10). Mid-tier investment.",
+   "tierNote": "Hypogean (v1.189, 2026-03-10). Mid-tier investment. Overall updated 2026-10-24 to A from the newest lists (afk.guide (Jun) Hypogean guide v1.194: B-tier, AllClash A+).",
    "gameId": 241
   },
   {
@@ -2938,12 +2958,12 @@
     "overall": "B"
    },
    "raw": {
-    "afkglobal": "B (AllClash's Aug 2026 list)",
-    "pockettactics": "B (2026-04-30)"
+    "pockettactics": "B (2026-04-30)",
+    "allclash": "B (live list, Oct 2026)"
    },
    "consensus": "strong",
    "trend": null,
-   "tierNote": "Added on 2026-10-24 (missing from the first read of the lists): AllClash's list via AFK Global B (Aug 2026), Pocket Tactics B (2026-04-30).",
+   "tierNote": "Added 2026-10-24 from the newest lists: Pocket Tactics (Apr) B, AllClash B.",
    "gameId": 50
   },
   {
@@ -2970,14 +2990,15 @@
    "investment": null,
    "modes": [],
    "tiers": {
-    "overall": "A"
+    "overall": "B"
    },
    "raw": {
-    "afkguide": "Draconis guide v1.191: A-tier ('buy from store; do not spend temple cards')"
+    "afkguide": "Draconis guide v1.191: A-tier ('buy from store; do not spend temple cards')",
+    "allclash": "B+ (live list, Oct 2026)"
    },
-   "consensus": "single-source",
+   "consensus": "strong",
    "trend": null,
-   "tierNote": "Available from the store.",
+   "tierNote": "Available from the store. Overall updated 2026-10-24 to B from the newest lists (afk.guide (Jun) Draconis guide v1.191: A-tier, AllClash B+).",
    "gameId": 185
   },
   {
@@ -3007,12 +3028,12 @@
     "overall": "A"
    },
    "raw": {
-    "afkglobal": "A (AllClash's Aug 2026 list)",
-    "pockettactics": "A (2026-04-30)"
+    "pockettactics": "A (2026-04-30)",
+    "allclash": "A (live list, Oct 2026)"
    },
    "consensus": "strong",
    "trend": null,
-   "tierNote": "Added on 2026-10-24 (missing from the first read of the lists): AllClash's list via AFK Global A (Aug 2026), Pocket Tactics A (2026-04-30).",
+   "tierNote": "Added 2026-10-24 from the newest lists: Pocket Tactics (Apr) A, AllClash A.",
    "gameId": 115
   },
   {
@@ -3042,8 +3063,7 @@
     "overall": "S+"
    },
    "raw": {
-    "allclash": "S+ (damage plus debuffs/CC)",
-    "afkglobal": "S+",
+    "allclash": "S+ (live list, Oct 2026)",
     "driffle": "S+",
     "pocketgamer": "General SS",
     "afkguide": "Hypogean guide v1.194: S-tier; afk.guide Guild Trials team guide is built around Hybris"
@@ -3080,11 +3100,11 @@
     "overall": "B"
    },
    "raw": {
-    "afkglobal": "B+ (AllClash's Aug 2026 list)"
+    "allclash": "B+ (live list, Oct 2026)"
    },
    "consensus": "single-source",
    "trend": null,
-   "tierNote": "Added on 2026-10-24 (missing from the first read of the lists): AllClash's list via AFK Global B+ (Aug 2026).",
+   "tierNote": "Added 2026-10-24 from the newest lists: AllClash B+.",
    "gameId": 239
   },
   {
@@ -3111,14 +3131,15 @@
    "investment": null,
    "modes": [],
    "tiers": {
-    "overall": "D"
+    "overall": "C"
    },
    "raw": {
-    "afkguide": "Graveborn guide: F-tier"
+    "afkguide": "Graveborn guide: F-tier",
+    "allclash": "C (live list, Oct 2026)"
    },
-   "consensus": "single-source",
+   "consensus": "strong",
    "trend": null,
-   "tierNote": "Not worth investing in.",
+   "tierNote": "Not worth investing in. Overall updated 2026-10-24 to C from the newest lists (afk.guide (Jun) Graveborn guide: F-tier, AllClash C).",
    "gameId": 33
   },
   {
@@ -3148,8 +3169,7 @@
     "overall": "S+"
    },
    "raw": {
-    "allclash": "S+ (buffs damage and energy, debuffs enemy protection)",
-    "afkglobal": "S+",
+    "allclash": "S+ (live list, Oct 2026)",
     "driffle": "S+ (in its PvP team)",
     "pockettactics": "SS (top-tier pick)",
     "afkguide": "Graveborn guide: S-tier"
@@ -3186,12 +3206,12 @@
     "overall": "B"
    },
    "raw": {
-    "afkglobal": "B (AllClash's Aug 2026 list)",
-    "pockettactics": "B (2026-04-30)"
+    "pockettactics": "B (2026-04-30)",
+    "allclash": "B (live list, Oct 2026)"
    },
    "consensus": "strong",
    "trend": null,
-   "tierNote": "Added on 2026-10-24 (missing from the first read of the lists): AllClash's list via AFK Global B (Aug 2026), Pocket Tactics B (2026-04-30).",
+   "tierNote": "Added 2026-10-24 from the newest lists: Pocket Tactics (Apr) B, AllClash B.",
    "gameId": 71
   },
   {
@@ -3218,14 +3238,15 @@
    "investment": null,
    "modes": [],
    "tiers": {
-    "overall": "D"
+    "overall": "C"
    },
    "raw": {
-    "afkguide": "Dimensional guide v1.190: F-tier"
+    "afkguide": "Dimensional guide v1.190: F-tier",
+    "allclash": "C (live list, Oct 2026)"
    },
-   "consensus": "single-source",
+   "consensus": "strong",
    "trend": null,
-   "tierNote": "Not worth investing in.",
+   "tierNote": "Not worth investing in. Overall updated 2026-10-24 to C from the newest lists (afk.guide (Jun) Dimensional guide v1.190: F-tier, AllClash C).",
    "gameId": 101
   },
   {
@@ -3257,8 +3278,7 @@
     "overall": "S+"
    },
    "raw": {
-    "allclash": "S+ (good buffer, strong vs bosses, some PvP potential)",
-    "afkglobal": "S+"
+    "allclash": "S+ (live list, Oct 2026)"
    },
    "consensus": "single-source",
    "trend": null,
@@ -3292,9 +3312,10 @@
     "overall": "B"
    },
    "raw": {
-    "afkguide": "Dimensional guide v1.190: B-tier ('best Lab Store Dimensional, but not meta')"
+    "afkguide": "Dimensional guide v1.190: B-tier ('best Lab Store Dimensional, but not meta')",
+    "allclash": "B+ (live list, Oct 2026)"
    },
-   "consensus": "single-source",
+   "consensus": "strong",
    "trend": null,
    "tierNote": "Lab Store hero.",
    "gameId": 140
@@ -3327,7 +3348,7 @@
    },
    "raw": {
     "pocketgamer": "General SS",
-    "allclash": "A",
+    "allclash": "A (live list, Oct 2026)",
     "driffle": "A (mage / control)"
    },
    "consensus": "mixed",
@@ -3362,7 +3383,7 @@
     "overall": "A"
    },
    "raw": {
-    "allclash": "A (heavy investment)",
+    "allclash": "A (live list, Oct 2026)",
     "driffle": "A (DPS / utility)",
     "afkguide": "Draconis guide v1.191: A-tier",
     "pocketgamer": "S (category unclear in snippet)"
@@ -3415,7 +3436,7 @@
    },
    "consensus": "single-source",
    "trend": null,
-   "tierNote": "Added on 2026-10-24 (missing from the first read of the lists): r/afkarena usage tier list (Sept 2026) A (2026-10-01).",
+   "tierNote": "Added 2026-10-24 from the newest lists: r/afkarena usage list A.",
    "gameId": 256
   },
   {
@@ -3445,12 +3466,12 @@
     "overall": "C"
    },
    "raw": {
-    "afkglobal": "C (AllClash's Aug 2026 list)",
-    "pockettactics": "C (2026-04-30)"
+    "pockettactics": "C (2026-04-30)",
+    "allclash": "C+ (live list, Oct 2026)"
    },
    "consensus": "strong",
    "trend": null,
-   "tierNote": "Added on 2026-10-24 (missing from the first read of the lists): AllClash's list via AFK Global C (Aug 2026), Pocket Tactics C (2026-04-30).",
+   "tierNote": "Added 2026-10-24 from the newest lists: Pocket Tactics (Apr) C, AllClash C+.",
    "gameId": 138
   },
   {
@@ -3480,9 +3501,10 @@
     "overall": "B"
    },
    "raw": {
-    "afkguide": "Hypogean guide v1.194: B-tier"
+    "afkguide": "Hypogean guide v1.194: B-tier",
+    "allclash": "B+ (live list, Oct 2026)"
    },
-   "consensus": "single-source",
+   "consensus": "strong",
    "trend": null,
    "tierNote": "Hypogean.",
    "gameId": 184
@@ -3511,15 +3533,15 @@
    "investment": null,
    "modes": [],
    "tiers": {
-    "overall": "D"
+    "overall": "C"
    },
    "raw": {
-    "afkglobal": "D (AllClash's Aug 2026 list)",
-    "pockettactics": "D (2026-04-30)"
+    "pockettactics": "D (2026-04-30)",
+    "allclash": "C (live list, Oct 2026)"
    },
    "consensus": "strong",
    "trend": null,
-   "tierNote": "Added on 2026-10-24 (missing from the first read of the lists): AllClash's list via AFK Global D (Aug 2026), Pocket Tactics D (2026-04-30).",
+   "tierNote": "Added 2026-10-24 from the newest lists: Pocket Tactics (Apr) D, AllClash C.",
    "gameId": 14
   },
   {
@@ -3549,11 +3571,11 @@
     "overall": "B"
    },
    "raw": {
-    "afkglobal": "B (AllClash's Aug 2026 list)"
+    "allclash": "B (live list, Oct 2026)"
    },
    "consensus": "single-source",
    "trend": null,
-   "tierNote": "Added on 2026-10-24 (missing from the first read of the lists): AllClash's list via AFK Global B (Aug 2026).",
+   "tierNote": "Added 2026-10-24 from the newest lists: AllClash B.",
    "gameId": 58
   },
   {
@@ -3580,15 +3602,15 @@
    "investment": null,
    "modes": [],
    "tiers": {
-    "overall": "D"
+    "overall": "C"
    },
    "raw": {
-    "afkglobal": "D (AllClash's Aug 2026 list)",
-    "pockettactics": "D (2026-04-30)"
+    "pockettactics": "D (2026-04-30)",
+    "allclash": "C (live list, Oct 2026)"
    },
    "consensus": "strong",
    "trend": null,
-   "tierNote": "Added on 2026-10-24 (missing from the first read of the lists): AllClash's list via AFK Global D (Aug 2026), Pocket Tactics D (2026-04-30).",
+   "tierNote": "Added 2026-10-24 from the newest lists: Pocket Tactics (Apr) D, AllClash C.",
    "gameId": 26
   },
   {
@@ -3618,12 +3640,12 @@
     "overall": "B"
    },
    "raw": {
-    "afkglobal": "B+ (AllClash's Aug 2026 list)",
-    "pockettactics": "A (2026-04-30)"
+    "pockettactics": "A (2026-04-30)",
+    "allclash": "B+ (live list, Oct 2026)"
    },
    "consensus": "strong",
    "trend": null,
-   "tierNote": "Added on 2026-10-24 (missing from the first read of the lists): AllClash's list via AFK Global B+ (Aug 2026), Pocket Tactics A (2026-04-30).",
+   "tierNote": "Added 2026-10-24 from the newest lists: Pocket Tactics (Apr) A, AllClash B+.",
    "gameId": 76
   },
   {
@@ -3688,7 +3710,7 @@
     "overall": "A"
    },
    "raw": {
-    "allclash": "A+ ('very strong but much of the kit unlocks only when built')",
+    "allclash": "A+ (live list, Oct 2026)",
     "afkguide": "Hypogean guide v1.194: S-tier; highest Hypogean ascension priority",
     "mobigg": "S+? (tentative)"
    },
@@ -3725,9 +3747,10 @@
     "overall": "B"
    },
    "raw": {
-    "afkguide": "Draconis guide v1.191: B-tier"
+    "afkguide": "Draconis guide v1.191: B-tier",
+    "allclash": "B+ (live list, Oct 2026)"
    },
-   "consensus": "single-source",
+   "consensus": "strong",
    "trend": null,
    "tierNote": "Draconis.",
    "gameId": 203
@@ -3759,12 +3782,12 @@
     "overall": "A"
    },
    "raw": {
-    "afkglobal": "A (AllClash's Aug 2026 list)",
-    "pockettactics": "A (2026-04-30)"
+    "pockettactics": "A (2026-04-30)",
+    "allclash": "A (live list, Oct 2026)"
    },
    "consensus": "strong",
    "trend": null,
-   "tierNote": "Added on 2026-10-24 (missing from the first read of the lists): AllClash's list via AFK Global A (Aug 2026), Pocket Tactics A (2026-04-30).",
+   "tierNote": "Added 2026-10-24 from the newest lists: Pocket Tactics (Apr) A, AllClash A.",
    "gameId": 103
   },
   {
@@ -3798,12 +3821,11 @@
     "overall": "S"
    },
    "raw": {
-    "allclash": "build guide: Campaign S+, Dragonforge S+, NC S, CR S+",
-    "afkglobal": "S (AllClash's Aug 2026 list)"
+    "allclash": "S (live list, Oct 2026); earlier: build guide: Campaign S+, Dragonforge S+, NC S, CR S+"
    },
    "consensus": "single-source",
    "trend": null,
-   "tierNote": "Added on 2026-10-24 (missing from the first read of the lists): AllClash's list via AFK Global S (Aug 2026).",
+   "tierNote": "Added 2026-10-24 from the newest lists: AllClash S.",
    "gameId": 250
   },
   {
@@ -3833,9 +3855,10 @@
     "overall": "A"
    },
    "raw": {
-    "afkguide": "Graveborn guide: A-tier"
+    "afkguide": "Graveborn guide: A-tier",
+    "allclash": "A (live list, Oct 2026)"
    },
-   "consensus": "single-source",
+   "consensus": "strong",
    "trend": null,
    "tierNote": "Graveborn.",
    "gameId": 174
@@ -3879,16 +3902,17 @@
    },
    "modes": [],
    "tiers": {
-    "overall": "S",
+    "overall": "B",
     "boss": "S"
    },
    "raw": {
     "pocketgamer": "Bosses S",
-    "afkguide": "Dimensional guide v1.190: S-tier"
+    "afkguide": "Dimensional guide v1.190: S-tier",
+    "allclash": "B (live list, Oct 2026)"
    },
-   "consensus": "strong",
+   "consensus": "mixed",
    "trend": null,
-   "tierNote": "Dimensional collab hero (Delicious in Dungeon). Good in boss content.",
+   "tierNote": "Dimensional collab hero (Delicious in Dungeon). Good in boss content. Overall updated 2026-10-24 to B from the newest lists (afk.guide (Jun) Dimensional guide v1.190: S-tier, AllClash B).",
    "gameId": 218
   },
   {
@@ -3915,16 +3939,17 @@
    "investment": null,
    "modes": [],
    "tiers": {
-    "overall": "S"
+    "overall": "A"
    },
    "raw": {
     "afkguide": "Draconis guide v1.191: S-tier; 'one of the strongest supports in the game'",
     "pockettactics": "S",
-    "mobigg": "S+? (tentative)"
+    "mobigg": "S+? (tentative)",
+    "allclash": "A+ (live list, Oct 2026)"
    },
    "consensus": "strong",
    "trend": null,
-   "tierNote": "Draconis support, one of the strongest in the game.",
+   "tierNote": "Draconis support, one of the strongest in the game. Overall updated 2026-10-24 to A from the newest lists (afk.guide (Jun) Draconis guide v1.191: S-tier, Pocket Tactics (Apr) S, AllClash A+).",
    "gameId": 199
   },
   {
@@ -3951,17 +3976,18 @@
    "investment": null,
    "modes": [],
    "tiers": {
-    "overall": "S",
+    "overall": "A",
     "pvp": "S+",
     "boss": "S+"
    },
    "raw": {
     "pocketgamer": "PvP SS, Bosses SS",
-    "afkguide": "Hypogean guide v1.194: S-tier"
+    "afkguide": "Hypogean guide v1.194: S-tier",
+    "allclash": "A+ (live list, Oct 2026)"
    },
    "consensus": "strong",
    "trend": null,
-   "tierNote": "Hypogean 'Abyssal Rocker'. Top tier in both PvP and boss content.",
+   "tierNote": "Hypogean 'Abyssal Rocker'. Top tier in both PvP and boss content. Overall updated 2026-10-24 to A from the newest lists (afk.guide (Jun) Hypogean guide v1.194: S-tier, AllClash A+).",
    "gameId": 175
   },
   {
@@ -3988,15 +4014,15 @@
    "investment": null,
    "modes": [],
    "tiers": {
-    "overall": "D"
+    "overall": "C"
    },
    "raw": {
-    "afkglobal": "D (AllClash's Aug 2026 list)",
-    "pockettactics": "D (2026-04-30)"
+    "pockettactics": "D (2026-04-30)",
+    "allclash": "C (live list, Oct 2026)"
    },
    "consensus": "strong",
    "trend": null,
-   "tierNote": "Added on 2026-10-24 (missing from the first read of the lists): AllClash's list via AFK Global D (Aug 2026), Pocket Tactics D (2026-04-30).",
+   "tierNote": "Added 2026-10-24 from the newest lists: Pocket Tactics (Apr) D, AllClash C.",
    "gameId": 111
   },
   {
@@ -4028,9 +4054,10 @@
    },
    "raw": {
     "pocketgamer": "PvE SS",
-    "afkguide": "Dimensional guide v1.190: B-tier ('no longer meta')"
+    "afkguide": "Dimensional guide v1.190: B-tier ('no longer meta')",
+    "allclash": "B (live list, Oct 2026)"
    },
-   "consensus": "mixed",
+   "consensus": "strong",
    "trend": "falling",
    "tierNote": "Challenger Store Dimensional that afk.guide says is no longer meta.",
    "gameId": 119
@@ -4062,11 +4089,11 @@
     "overall": "B"
    },
    "raw": {
-    "afkglobal": "B+ (AllClash's Aug 2026 list)"
+    "allclash": "B+ (live list, Oct 2026)"
    },
    "consensus": "single-source",
    "trend": null,
-   "tierNote": "Added on 2026-10-24 (missing from the first read of the lists): AllClash's list via AFK Global B+ (Aug 2026).",
+   "tierNote": "Added 2026-10-24 from the newest lists: AllClash B+.",
    "gameId": 233
   },
   {
@@ -4096,9 +4123,10 @@
     "overall": "S"
    },
    "raw": {
-    "afkguide": "Draconis guide v1.191: S-tier"
+    "afkguide": "Draconis guide v1.191: S-tier",
+    "allclash": "S (live list, Oct 2026)"
    },
-   "consensus": "single-source",
+   "consensus": "strong",
    "trend": null,
    "tierNote": "Top Draconis investment.",
    "gameId": 219
@@ -4133,8 +4161,7 @@
     "boss": "S+"
    },
    "raw": {
-    "allclash": "S+ (rated S+ across modes)",
-    "afkglobal": "S+",
+    "allclash": "S+ (live list, Oct 2026)",
     "driffle": "S+ (also in its PvP team)",
     "pockettactics": "SS",
     "afkguide": "Celestial guide v1.197: S-tier; Meta in Nightmare Corridor, Temporal Rift, Campaign/King's Tower",
@@ -4173,12 +4200,12 @@
     "overall": "A"
    },
    "raw": {
-    "afkglobal": "A+ (AllClash's Aug 2026 list)",
-    "pockettactics": "A (2026-04-30)"
+    "pockettactics": "A (2026-04-30)",
+    "allclash": "A+ (live list, Oct 2026)"
    },
    "consensus": "strong",
    "trend": null,
-   "tierNote": "Added on 2026-10-24 (missing from the first read of the lists): AllClash's list via AFK Global A+ (Aug 2026), Pocket Tactics A (2026-04-30).",
+   "tierNote": "Added 2026-10-24 from the newest lists: Pocket Tactics (Apr) A, AllClash A+.",
    "gameId": 65
   },
   {
@@ -4211,9 +4238,10 @@
    "raw": {
     "pocketgamer": "Bosses SS",
     "afkguide": "Hypogean guide v1.194: A-tier",
-    "driffle": "listed in its PvP team (no grade)"
+    "driffle": "listed in its PvP team (no grade)",
+    "allclash": "A+ (live list, Oct 2026)"
    },
-   "consensus": "mixed",
+   "consensus": "strong",
    "trend": null,
    "tierNote": "Hypogean boss damage. Also appears in Driffle's PvP team.",
    "gameId": 168
@@ -4251,12 +4279,12 @@
     "overall": "C"
    },
    "raw": {
-    "afkglobal": "C (AllClash's Aug 2026 list)",
-    "pockettactics": "C (2026-04-30)"
+    "pockettactics": "C (2026-04-30)",
+    "allclash": "C+ (live list, Oct 2026)"
    },
    "consensus": "strong",
    "trend": null,
-   "tierNote": "Added on 2026-10-24 (missing from the first read of the lists): AllClash's list via AFK Global C (Aug 2026), Pocket Tactics C (2026-04-30).",
+   "tierNote": "Added 2026-10-24 from the newest lists: Pocket Tactics (Apr) C, AllClash C+.",
    "gameId": 44
   },
   {
@@ -4286,12 +4314,12 @@
     "overall": "A"
    },
    "raw": {
-    "afkglobal": "A (AllClash's Aug 2026 list)",
-    "pockettactics": "A (2026-04-30)"
+    "pockettactics": "A (2026-04-30)",
+    "allclash": "A (live list, Oct 2026)"
    },
    "consensus": "strong",
    "trend": null,
-   "tierNote": "Added on 2026-10-24 (missing from the first read of the lists): AllClash's list via AFK Global A (Aug 2026), Pocket Tactics A (2026-04-30).",
+   "tierNote": "Added 2026-10-24 from the newest lists: Pocket Tactics (Apr) A, AllClash A.",
    "gameId": 93
   },
   {
@@ -4318,15 +4346,16 @@
    "investment": null,
    "modes": [],
    "tiers": {
-    "overall": "S"
+    "overall": "B"
    },
    "raw": {
     "pockettactics": "S",
-    "mobigg": "S+? (tentative)"
+    "mobigg": "S+? (tentative)",
+    "allclash": "B+ (live list, Oct 2026)"
    },
-   "consensus": "single-source",
+   "consensus": "mixed",
    "trend": null,
-   "tierNote": "Base Lyca. The Awakened form is rated higher.",
+   "tierNote": "Base Lyca. The Awakened form is rated higher. Overall updated 2026-10-24 to B from the newest lists (Pocket Tactics (Apr) S, AllClash B+).",
    "gameId": 16
   },
   {
@@ -4357,7 +4386,8 @@
    },
    "raw": {
     "afkguide": "Celestial guide v1.197: A-tier ('great across all game modes, works even at Elite')",
-    "driffle": "A (support / buffs)"
+    "driffle": "A (support / buffs)",
+    "allclash": "A (live list, Oct 2026)"
    },
    "consensus": "strong",
    "trend": null,
@@ -4391,9 +4421,10 @@
     "overall": "A"
    },
    "raw": {
-    "afkguide": "Hypogean guide v1.194: A-tier"
+    "afkguide": "Hypogean guide v1.194: A-tier",
+    "allclash": "A (live list, Oct 2026)"
    },
-   "consensus": "single-source",
+   "consensus": "strong",
    "trend": null,
    "tierNote": "Hypogean.",
    "gameId": 157
@@ -4422,14 +4453,15 @@
    "investment": null,
    "modes": [],
    "tiers": {
-    "overall": "D"
+    "overall": "B"
    },
    "raw": {
-    "afkguide": "Celestial guide v1.197: D-tier"
+    "afkguide": "Celestial guide v1.197: D-tier",
+    "allclash": "B+ (live list, Oct 2026)"
    },
-   "consensus": "single-source",
+   "consensus": "mixed",
    "trend": null,
-   "tierNote": "Celestial.",
+   "tierNote": "Celestial. Overall updated 2026-10-24 to B from the newest lists (afk.guide (Jun) Celestial guide v1.197: D-tier, AllClash B+).",
    "gameId": 180
   },
   {
@@ -4461,16 +4493,17 @@
    "investment": null,
    "modes": [],
    "tiers": {
-    "overall": "S",
+    "overall": "B",
     "boss": "S"
    },
    "raw": {
     "pocketgamer": "Bosses S",
-    "afkguide": "Dimensional guide v1.190: S-tier"
+    "afkguide": "Dimensional guide v1.190: S-tier",
+    "allclash": "B (live list, Oct 2026)"
    },
-   "consensus": "strong",
+   "consensus": "mixed",
    "trend": null,
-   "tierNote": "Dimensional collab hero (Delicious in Dungeon). Good in boss content.",
+   "tierNote": "Dimensional collab hero (Delicious in Dungeon). Good in boss content. Overall updated 2026-10-24 to B from the newest lists (afk.guide (Jun) Dimensional guide v1.190: S-tier, AllClash B).",
    "gameId": 217
   },
   {
@@ -4510,8 +4543,7 @@
     "overall": "S"
    },
    "raw": {
-    "allclash": "S (best paired with Athena)",
-    "afkglobal": "S"
+    "allclash": "S (live list, Oct 2026)"
    },
    "consensus": "single-source",
    "trend": null,
@@ -4542,17 +4574,18 @@
    "investment": null,
    "modes": [],
    "tiers": {
-    "overall": "B",
+    "overall": "A",
     "pve": "S",
     "boss": "D"
    },
    "raw": {
     "pocketgamer": "General SS, PvE SS (PvP SS appeared in one snippet only, so it is not counted)",
-    "afkguide": "Hypogean guide v1.194: B-tier; Meta in Campaign/King's Tower & Faction Tower, Useless in CR/NC/Treasure Scramble"
+    "afkguide": "Hypogean guide v1.194: B-tier; Meta in Campaign/King's Tower & Faction Tower, Useless in CR/NC/Treasure Scramble",
+    "allclash": "A (live list, Oct 2026)"
    },
    "consensus": "mixed",
    "trend": null,
-   "tierNote": "Campaign and Tower specialist that works at low ascension. No use in end-game boss modes.",
+   "tierNote": "Campaign and Tower specialist that works at low ascension. No use in end-game boss modes. Overall updated 2026-10-24 to A from the newest lists (Pocket Gamer General SS, PvE SS, afk.guide (Jun) Hypogean guide v1.194: B-tier, AllClash A).",
    "gameId": 59
   },
   {
@@ -4579,14 +4612,15 @@
    "investment": null,
    "modes": [],
    "tiers": {
-    "overall": "A"
+    "overall": "B"
    },
    "raw": {
-    "afkguide": "Draconis guide v1.191: A-tier"
+    "afkguide": "Draconis guide v1.191: A-tier",
+    "allclash": "B+ (live list, Oct 2026)"
    },
-   "consensus": "single-source",
+   "consensus": "strong",
    "trend": null,
-   "tierNote": "Got adjustments in v1.191 (2026-04, mostly bug fixes).",
+   "tierNote": "Got adjustments in v1.191 (2026-04, mostly bug fixes). Overall updated 2026-10-24 to B from the newest lists (afk.guide (Jun) Draconis guide v1.191: A-tier, AllClash B+).",
    "gameId": 197
   },
   {
@@ -4613,14 +4647,15 @@
    "investment": null,
    "modes": [],
    "tiers": {
-    "overall": "D"
+    "overall": "C"
    },
    "raw": {
-    "afkguide": "Dimensional guide v1.190: D-tier"
+    "afkguide": "Dimensional guide v1.190: D-tier",
+    "allclash": "C (live list, Oct 2026)"
    },
-   "consensus": "single-source",
+   "consensus": "strong",
    "trend": null,
-   "tierNote": "Dimensional.",
+   "tierNote": "Dimensional. Overall updated 2026-10-24 to C from the newest lists (afk.guide (Jun) Dimensional guide v1.190: D-tier, AllClash C).",
    "gameId": 128
   },
   {
@@ -4652,9 +4687,10 @@
    },
    "raw": {
     "pocketgamer": "PvE SS (healer)",
-    "afkguide": "Dimensional guide v1.190: B-tier ('no longer meta')"
+    "afkguide": "Dimensional guide v1.190: B-tier ('no longer meta')",
+    "allclash": "B (live list, Oct 2026)"
    },
-   "consensus": "mixed",
+   "consensus": "strong",
    "trend": "falling",
    "tierNote": "Challenger Store healer that afk.guide says is no longer meta.",
    "gameId": 112
@@ -4683,15 +4719,15 @@
    "investment": null,
    "modes": [],
    "tiers": {
-    "overall": "D"
+    "overall": "C"
    },
    "raw": {
-    "afkglobal": "D (AllClash's Aug 2026 list)",
-    "pockettactics": "D (2026-04-30)"
+    "pockettactics": "D (2026-04-30)",
+    "allclash": "C (live list, Oct 2026)"
    },
    "consensus": "strong",
    "trend": null,
-   "tierNote": "Added on 2026-10-24 (missing from the first read of the lists): AllClash's list via AFK Global D (Aug 2026), Pocket Tactics D (2026-04-30).",
+   "tierNote": "Added 2026-10-24 from the newest lists: Pocket Tactics (Apr) D, AllClash C.",
    "gameId": 85
   },
   {
@@ -4718,16 +4754,17 @@
    "investment": null,
    "modes": [],
    "tiers": {
-    "overall": "A",
+    "overall": "B",
     "boss": "S"
    },
    "raw": {
     "pocketgamer": "Bosses S",
-    "afkguide": "Graveborn guide: A-tier"
+    "afkguide": "Graveborn guide: A-tier",
+    "allclash": "B+ (live list, Oct 2026)"
    },
    "consensus": "strong",
    "trend": null,
-   "tierNote": "Graveborn, good in boss content.",
+   "tierNote": "Graveborn, good in boss content. Overall updated 2026-10-24 to B from the newest lists (afk.guide (Jun) Graveborn guide: A-tier, AllClash B+).",
    "gameId": 213
   },
   {
@@ -4756,17 +4793,17 @@
    "investment": null,
    "modes": [],
    "tiers": {
-    "overall": "S",
+    "overall": "A",
     "boss": "A"
    },
    "raw": {
-    "allclash": "A ('not as strong as the kit reads; outside Tower Showdown sees little use')",
+    "allclash": "A (live list, Oct 2026)",
     "pocketgamer": "General SS (not in PvE/PvP SS)",
     "afkguide": "Celestial guide v1.197: S-tier; 'strongest Celestial for PvP'; Good in CR/NC, Meta in Treasure Scramble"
    },
    "consensus": "mixed",
    "trend": null,
-   "tierNote": "Celestial INT tank (v1.193, ~2026-05). afk.guide calls him the strongest PvP Celestial. AllClash says he underperforms outside Tower Showdown.",
+   "tierNote": "Celestial INT tank (v1.193, ~2026-05). afk.guide calls him the strongest PvP Celestial. AllClash says he underperforms outside Tower Showdown. Overall updated 2026-10-24 to A from the newest lists (AllClash A, Pocket Gamer General SS, afk.guide (Jun) Celestial guide v1.197: S-tier).",
    "gameId": 245
   },
   {
@@ -4793,15 +4830,16 @@
    "investment": null,
    "modes": [],
    "tiers": {
-    "overall": "S"
+    "overall": "A"
    },
    "raw": {
     "driffle": "S (control / team support)",
-    "mobigg": "S+? (tentative)"
+    "mobigg": "S+? (tentative)",
+    "allclash": "A+ (live list, Oct 2026)"
    },
-   "consensus": "single-source",
+   "consensus": "strong",
    "trend": null,
-   "tierNote": "Control / team support.",
+   "tierNote": "Control / team support. Overall updated 2026-10-24 to A from the newest lists (Driffle S, AllClash A+).",
    "gameId": 200
   },
   {
@@ -4831,12 +4869,12 @@
     "overall": "A"
    },
    "raw": {
-    "afkglobal": "A (AllClash's Aug 2026 list)",
-    "pockettactics": "A (2026-04-30)"
+    "pockettactics": "A (2026-04-30)",
+    "allclash": "A (live list, Oct 2026)"
    },
    "consensus": "strong",
    "trend": null,
-   "tierNote": "Added on 2026-10-24 (missing from the first read of the lists): AllClash's list via AFK Global A (Aug 2026), Pocket Tactics A (2026-04-30).",
+   "tierNote": "Added 2026-10-24 from the newest lists: Pocket Tactics (Apr) A, AllClash A.",
    "gameId": 120
   },
   {
@@ -4863,14 +4901,15 @@
    "investment": null,
    "modes": [],
    "tiers": {
-    "overall": "D"
+    "overall": "C"
    },
    "raw": {
-    "afkguide": "Celestial guide v1.197: F-tier"
+    "afkguide": "Celestial guide v1.197: F-tier",
+    "allclash": "C+ (live list, Oct 2026)"
    },
-   "consensus": "single-source",
+   "consensus": "strong",
    "trend": null,
-   "tierNote": "Not worth investing in.",
+   "tierNote": "Not worth investing in. Overall updated 2026-10-24 to C from the newest lists (afk.guide (Jun) Celestial guide v1.197: F-tier, AllClash C+).",
    "gameId": 108
   },
   {
@@ -4900,12 +4939,12 @@
     "overall": "B"
    },
    "raw": {
-    "afkglobal": "B (AllClash's Aug 2026 list)",
-    "pockettactics": "B (2026-04-30)"
+    "pockettactics": "B (2026-04-30)",
+    "allclash": "B (live list, Oct 2026)"
    },
    "consensus": "strong",
    "trend": null,
-   "tierNote": "Added on 2026-10-24 (missing from the first read of the lists): AllClash's list via AFK Global B (Aug 2026), Pocket Tactics B (2026-04-30).",
+   "tierNote": "Added 2026-10-24 from the newest lists: Pocket Tactics (Apr) B, AllClash B.",
    "gameId": 116
   },
   {
@@ -4935,12 +4974,12 @@
     "overall": "A"
    },
    "raw": {
-    "afkglobal": "A+ (AllClash's Aug 2026 list)",
-    "pockettactics": "S (2026-04-30)"
+    "pockettactics": "S (2026-04-30)",
+    "allclash": "A+ (live list, Oct 2026)"
    },
    "consensus": "strong",
    "trend": null,
-   "tierNote": "Added on 2026-10-24 (missing from the first read of the lists): AllClash's list via AFK Global A+ (Aug 2026), Pocket Tactics S (2026-04-30).",
+   "tierNote": "Added 2026-10-24 from the newest lists: Pocket Tactics (Apr) S, AllClash A+.",
    "gameId": 99
   },
   {
@@ -4967,14 +5006,15 @@
    "investment": null,
    "modes": [],
    "tiers": {
-    "overall": "C"
+    "overall": "B"
    },
    "raw": {
-    "afkguide": "Dimensional guide v1.190: C-tier ('no longer meta')"
+    "afkguide": "Dimensional guide v1.190: C-tier ('no longer meta')",
+    "allclash": "B (live list, Oct 2026)"
    },
-   "consensus": "single-source",
+   "consensus": "strong",
    "trend": "falling",
-   "tierNote": "Challenger Store hero that is no longer meta.",
+   "tierNote": "Challenger Store hero that is no longer meta. Overall updated 2026-10-24 to B from the newest lists (afk.guide (Jun) Dimensional guide v1.190: C-tier, AllClash B).",
    "gameId": 152
   },
   {
@@ -5001,15 +5041,16 @@
    "investment": null,
    "modes": [],
    "tiers": {
-    "overall": "D"
+    "overall": "C"
    },
    "raw": {
     "afkguide": "Dimensional guide v1.190: F-tier",
-    "pocketgamer": "called 'top tier in PvP' as an assassin in commentary (no grade)"
+    "pocketgamer": "called 'top tier in PvP' as an assassin in commentary (no grade)",
+    "allclash": "C (live list, Oct 2026)"
    },
-   "consensus": "mixed",
+   "consensus": "strong",
    "trend": null,
-   "tierNote": "Sources disagree: afk.guide says do not invest, Pocket Gamer's commentary praises Nakoruru as a PvP assassin.",
+   "tierNote": "Sources disagree: afk.guide says do not invest, Pocket Gamer's commentary praises Nakoruru as a PvP assassin. Overall updated 2026-10-24 to C from the newest lists (afk.guide (Jun) Dimensional guide v1.190: F-tier, AllClash C).",
    "gameId": 75
   },
   {
@@ -5039,12 +5080,12 @@
     "overall": "B"
    },
    "raw": {
-    "afkglobal": "B (AllClash's Aug 2026 list)",
-    "pockettactics": "B (2026-04-30)"
+    "pockettactics": "B (2026-04-30)",
+    "allclash": "B (live list, Oct 2026)"
    },
    "consensus": "strong",
    "trend": null,
-   "tierNote": "Added on 2026-10-24 (missing from the first read of the lists): AllClash's list via AFK Global B (Aug 2026), Pocket Tactics B (2026-04-30).",
+   "tierNote": "Added 2026-10-24 from the newest lists: Pocket Tactics (Apr) B, AllClash B.",
    "gameId": 39
   },
   {
@@ -5075,12 +5116,12 @@
     "overall": "A"
    },
    "raw": {
-    "afkglobal": "A+ (AllClash's Aug 2026 list)",
-    "pockettactics": "S (2026-04-30)"
+    "pockettactics": "S (2026-04-30)",
+    "allclash": "A+ (live list, Oct 2026)"
    },
    "consensus": "strong",
    "trend": null,
-   "tierNote": "Added on 2026-10-24 (missing from the first read of the lists): AllClash's list via AFK Global A+ (Aug 2026), Pocket Tactics S (2026-04-30).",
+   "tierNote": "Added 2026-10-24 from the newest lists: Pocket Tactics (Apr) S, AllClash A+.",
    "gameId": 167
   },
   {
@@ -5110,12 +5151,12 @@
     "overall": "B"
    },
    "raw": {
-    "afkglobal": "B (AllClash's Aug 2026 list)",
-    "pockettactics": "B (2026-04-30)"
+    "pockettactics": "B (2026-04-30)",
+    "allclash": "B (live list, Oct 2026)"
    },
    "consensus": "strong",
    "trend": null,
-   "tierNote": "Added on 2026-10-24 (missing from the first read of the lists): AllClash's list via AFK Global B (Aug 2026), Pocket Tactics B (2026-04-30).",
+   "tierNote": "Added 2026-10-24 from the newest lists: Pocket Tactics (Apr) B, AllClash B.",
    "gameId": 5
   },
   {
@@ -5145,12 +5186,12 @@
     "overall": "A"
    },
    "raw": {
-    "afkglobal": "A+ (AllClash's Aug 2026 list)",
-    "pockettactics": "A (2026-04-30)"
+    "pockettactics": "A (2026-04-30)",
+    "allclash": "A+ (live list, Oct 2026)"
    },
    "consensus": "strong",
    "trend": null,
-   "tierNote": "Added on 2026-10-24 (missing from the first read of the lists): AllClash's list via AFK Global A+ (Aug 2026), Pocket Tactics A (2026-04-30).",
+   "tierNote": "Added 2026-10-24 from the newest lists: Pocket Tactics (Apr) A, AllClash A+.",
    "gameId": 147
   },
   {
@@ -5180,12 +5221,12 @@
     "overall": "B"
    },
    "raw": {
-    "afkglobal": "B (AllClash's Aug 2026 list)",
-    "pockettactics": "B (2026-04-30)"
+    "pockettactics": "B (2026-04-30)",
+    "allclash": "B (live list, Oct 2026)"
    },
    "consensus": "strong",
    "trend": null,
-   "tierNote": "Added on 2026-10-24 (missing from the first read of the lists): AllClash's list via AFK Global B (Aug 2026), Pocket Tactics B (2026-04-30).",
+   "tierNote": "Added 2026-10-24 from the newest lists: Pocket Tactics (Apr) B, AllClash B.",
    "gameId": 36
   },
   {
@@ -5212,14 +5253,15 @@
    "investment": null,
    "modes": [],
    "tiers": {
-    "overall": "B"
+    "overall": "C"
    },
    "raw": {
-    "afkguide": "Draconis guide v1.191: B-tier"
+    "afkguide": "Draconis guide v1.191: B-tier",
+    "allclash": "C+ (live list, Oct 2026)"
    },
-   "consensus": "single-source",
+   "consensus": "strong",
    "trend": null,
-   "tierNote": "Draconis.",
+   "tierNote": "Draconis. Overall updated 2026-10-24 to C from the newest lists (afk.guide (Jun) Draconis guide v1.191: B-tier, AllClash C+).",
    "gameId": 187
   },
   {
@@ -5249,12 +5291,12 @@
     "overall": "A"
    },
    "raw": {
-    "afkglobal": "A (AllClash's Aug 2026 list)",
-    "pockettactics": "A (2026-04-30)"
+    "pockettactics": "A (2026-04-30)",
+    "allclash": "A (live list, Oct 2026)"
    },
    "consensus": "strong",
    "trend": null,
-   "tierNote": "Added on 2026-10-24 (missing from the first read of the lists): AllClash's list via AFK Global A (Aug 2026), Pocket Tactics A (2026-04-30).",
+   "tierNote": "Added 2026-10-24 from the newest lists: Pocket Tactics (Apr) A, AllClash A.",
    "gameId": 67
   },
   {
@@ -5284,11 +5326,11 @@
     "overall": "A"
    },
    "raw": {
-    "afkglobal": "A+ (AllClash's Aug 2026 list)"
+    "allclash": "A+ (live list, Oct 2026)"
    },
    "consensus": "single-source",
    "trend": null,
-   "tierNote": "Added on 2026-10-24 (missing from the first read of the lists): AllClash's list via AFK Global A+ (Aug 2026).",
+   "tierNote": "Added 2026-10-24 from the newest lists: AllClash A+.",
    "gameId": 240
   },
   {
@@ -5318,12 +5360,12 @@
     "overall": "C"
    },
    "raw": {
-    "afkglobal": "C (AllClash's Aug 2026 list)",
-    "pockettactics": "C (2026-04-30)"
+    "pockettactics": "C (2026-04-30)",
+    "allclash": "C+ (live list, Oct 2026)"
    },
    "consensus": "strong",
    "trend": null,
-   "tierNote": "Added on 2026-10-24 (missing from the first read of the lists): AllClash's list via AFK Global C (Aug 2026), Pocket Tactics C (2026-04-30).",
+   "tierNote": "Added 2026-10-24 from the newest lists: Pocket Tactics (Apr) C, AllClash C+.",
    "gameId": 133
   },
   {
@@ -5353,12 +5395,12 @@
     "overall": "B"
    },
    "raw": {
-    "afkglobal": "B+ (AllClash's Aug 2026 list)",
-    "pockettactics": "A (2026-04-30)"
+    "pockettactics": "A (2026-04-30)",
+    "allclash": "B+ (live list, Oct 2026)"
    },
    "consensus": "strong",
    "trend": null,
-   "tierNote": "Added on 2026-10-24 (missing from the first read of the lists): AllClash's list via AFK Global B+ (Aug 2026), Pocket Tactics A (2026-04-30).",
+   "tierNote": "Added 2026-10-24 from the newest lists: Pocket Tactics (Apr) A, AllClash B+.",
    "gameId": 155
   },
   {
@@ -5415,14 +5457,15 @@
    "investment": null,
    "modes": [],
    "tiers": {
-    "overall": "A"
+    "overall": "B"
    },
    "raw": {
-    "afkguide": "Celestial guide v1.197: A-tier"
+    "afkguide": "Celestial guide v1.197: A-tier",
+    "allclash": "B+ (live list, Oct 2026)"
    },
-   "consensus": "single-source",
+   "consensus": "strong",
    "trend": null,
-   "tierNote": "Got adjustments in v1.191 (2026-04, mostly bug fixes).",
+   "tierNote": "Got adjustments in v1.191 (2026-04, mostly bug fixes). Overall updated 2026-10-24 to B from the newest lists (afk.guide (Jun) Celestial guide v1.197: A-tier, AllClash B+).",
    "gameId": 69
   },
   {
@@ -5449,15 +5492,15 @@
    "investment": null,
    "modes": [],
    "tiers": {
-    "overall": "D"
+    "overall": "C"
    },
    "raw": {
-    "afkglobal": "D (AllClash's Aug 2026 list)",
-    "pockettactics": "D (2026-04-30)"
+    "pockettactics": "D (2026-04-30)",
+    "allclash": "C (live list, Oct 2026)"
    },
    "consensus": "strong",
    "trend": null,
-   "tierNote": "Added on 2026-10-24 (missing from the first read of the lists): AllClash's list via AFK Global D (Aug 2026), Pocket Tactics D (2026-04-30).",
+   "tierNote": "Added 2026-10-24 from the newest lists: Pocket Tactics (Apr) D, AllClash C.",
    "gameId": 72
   },
   {
@@ -5493,8 +5536,7 @@
     "boss": "S+"
    },
    "raw": {
-    "allclash": "S+ (build guide: Campaign S, Tower S+, NC S+, CR S+; 'not useful in end-game campaign')",
-    "afkglobal": "S+ (Campaign S; Faction Towers, Twisted Realm, Cursed World, NC, Treasure Hunt S+)",
+    "allclash": "S+ (live list, Oct 2026)",
     "driffle": "S+",
     "pockettactics": "SS",
     "pocketgamer": "General SS, PvE SS, PvP SS",
@@ -5533,12 +5575,12 @@
     "overall": "C"
    },
    "raw": {
-    "afkglobal": "C (AllClash's Aug 2026 list)",
-    "pockettactics": "C (2026-04-30)"
+    "pockettactics": "C (2026-04-30)",
+    "allclash": "C+ (live list, Oct 2026)"
    },
    "consensus": "strong",
    "trend": null,
-   "tierNote": "Added on 2026-10-24 (missing from the first read of the lists): AllClash's list via AFK Global C (Aug 2026), Pocket Tactics C (2026-04-30).",
+   "tierNote": "Added 2026-10-24 from the newest lists: Pocket Tactics (Apr) C, AllClash C+.",
    "gameId": 107
   },
   {
@@ -5568,7 +5610,7 @@
     "overall": "B"
    },
    "raw": {
-    "allclash": "B ('works in campaign in certain setups')"
+    "allclash": "B (live list, Oct 2026)"
    },
    "consensus": "single-source",
    "trend": null,
@@ -5599,14 +5641,15 @@
    "investment": null,
    "modes": [],
    "tiers": {
-    "overall": "D"
+    "overall": "C"
    },
    "raw": {
-    "afkguide": "Dimensional guide v1.190: D-tier"
+    "afkguide": "Dimensional guide v1.190: D-tier",
+    "allclash": "C (live list, Oct 2026)"
    },
-   "consensus": "single-source",
+   "consensus": "strong",
    "trend": null,
-   "tierNote": "Dimensional.",
+   "tierNote": "Dimensional. Overall updated 2026-10-24 to C from the newest lists (afk.guide (Jun) Dimensional guide v1.190: D-tier, AllClash C).",
    "gameId": 95
   },
   {
@@ -5636,7 +5679,7 @@
     "overall": "A"
    },
    "raw": {
-    "allclash": "A ('one of the stronger Dragonic heroes currently available')",
+    "allclash": "A (live list, Oct 2026)",
     "driffle": "A (control / support)",
     "afkguide": "Draconis guide v1.191: D-tier"
    },
@@ -5672,9 +5715,10 @@
     "overall": "B"
    },
    "raw": {
-    "afkguide": "Dimensional guide v1.190: B-tier"
+    "afkguide": "Dimensional guide v1.190: B-tier",
+    "allclash": "B+ (live list, Oct 2026)"
    },
-   "consensus": "single-source",
+   "consensus": "strong",
    "trend": null,
    "tierNote": "Dimensional.",
    "gameId": 100
@@ -5706,12 +5750,12 @@
     "overall": "A"
    },
    "raw": {
-    "afkglobal": "A+ (AllClash's Aug 2026 list)",
-    "pockettactics": "A (2026-04-30)"
+    "pockettactics": "A (2026-04-30)",
+    "allclash": "A+ (live list, Oct 2026)"
    },
    "consensus": "strong",
    "trend": null,
-   "tierNote": "Added on 2026-10-24 (missing from the first read of the lists): AllClash's list via AFK Global A+ (Aug 2026), Pocket Tactics A (2026-04-30).",
+   "tierNote": "Added 2026-10-24 from the newest lists: Pocket Tactics (Apr) A, AllClash A+.",
    "gameId": 34
   },
   {
@@ -5742,12 +5786,12 @@
    },
    "raw": {
     "pocketgamer": "PvP S",
-    "afkglobal": "B+ (AllClash's Aug 2026 list)",
-    "pockettactics": "A (2026-04-30)"
+    "pockettactics": "A (2026-04-30)",
+    "allclash": "B+ (live list, Oct 2026)"
    },
    "consensus": "strong",
    "trend": null,
-   "tierNote": "Added on 2026-10-24 (missing from the first read of the lists): AllClash's list via AFK Global B+ (Aug 2026), Pocket Tactics A (2026-04-30).",
+   "tierNote": "Added 2026-10-24 from the newest lists: Pocket Tactics (Apr) A, AllClash B+.",
    "gameId": 106
   },
   {
@@ -5774,15 +5818,16 @@
    "investment": null,
    "modes": [],
    "tiers": {
-    "overall": "S"
+    "overall": "A"
    },
    "raw": {
     "afkguide": "Graveborn guide: S-tier",
-    "mobigg": "S+? (tentative)"
+    "mobigg": "S+? (tentative)",
+    "allclash": "A (live list, Oct 2026)"
    },
-   "consensus": "single-source",
+   "consensus": "strong",
    "trend": null,
-   "tierNote": "Top Graveborn investment.",
+   "tierNote": "Top Graveborn investment. Overall updated 2026-10-24 to A from the newest lists (afk.guide (Jun) Graveborn guide: S-tier, AllClash A).",
    "gameId": 204
   },
   {
@@ -5812,12 +5857,12 @@
     "overall": "A"
    },
    "raw": {
-    "afkglobal": "A+ (AllClash's Aug 2026 list)",
-    "pockettactics": "A (2026-04-30)"
+    "pockettactics": "A (2026-04-30)",
+    "allclash": "A+ (live list, Oct 2026)"
    },
    "consensus": "strong",
    "trend": null,
-   "tierNote": "Added on 2026-10-24 (missing from the first read of the lists): AllClash's list via AFK Global A+ (Aug 2026), Pocket Tactics A (2026-04-30).",
+   "tierNote": "Added 2026-10-24 from the newest lists: Pocket Tactics (Apr) A, AllClash A+.",
    "gameId": 198
   },
   {
@@ -5843,15 +5888,16 @@
    "investment": null,
    "modes": [],
    "tiers": {
-    "overall": "S"
+    "overall": "A"
    },
    "raw": {
     "afkguide": "Dimensional guide v1.190: S-tier",
-    "mobigg": "S+? (tentative)"
+    "mobigg": "S+? (tentative)",
+    "allclash": "A+ (live list, Oct 2026)"
    },
-   "consensus": "single-source",
+   "consensus": "strong",
    "trend": null,
-   "tierNote": "Re:Zero collab Dimensional hero.",
+   "tierNote": "Re:Zero collab Dimensional hero. Overall updated 2026-10-24 to A from the newest lists (afk.guide (Jun) Dimensional guide v1.190: S-tier, AllClash A+).",
    "gameId": 160
   },
   {
@@ -5881,12 +5927,12 @@
     "overall": "C"
    },
    "raw": {
-    "afkglobal": "C (AllClash's Aug 2026 list)",
-    "pockettactics": "C (2026-04-30)"
+    "pockettactics": "C (2026-04-30)",
+    "allclash": "C+ (live list, Oct 2026)"
    },
    "consensus": "strong",
    "trend": null,
-   "tierNote": "Added on 2026-10-24 (missing from the first read of the lists): AllClash's list via AFK Global C (Aug 2026), Pocket Tactics C (2026-04-30).",
+   "tierNote": "Added 2026-10-24 from the newest lists: Pocket Tactics (Apr) C, AllClash C+.",
    "gameId": 104
   },
   {
@@ -5913,15 +5959,15 @@
    "investment": null,
    "modes": [],
    "tiers": {
-    "overall": "D"
+    "overall": "C"
    },
    "raw": {
-    "afkglobal": "D (AllClash's Aug 2026 list)",
-    "pockettactics": "D (2026-04-30)"
+    "pockettactics": "D (2026-04-30)",
+    "allclash": "C (live list, Oct 2026)"
    },
    "consensus": "strong",
    "trend": null,
-   "tierNote": "Added on 2026-10-24 (missing from the first read of the lists): AllClash's list via AFK Global D (Aug 2026), Pocket Tactics D (2026-04-30).",
+   "tierNote": "Added 2026-10-24 from the newest lists: Pocket Tactics (Apr) D, AllClash C.",
    "gameId": 68
   },
   {
@@ -5951,9 +5997,9 @@
     "overall": "A"
    },
    "raw": {
-    "afkglobal": "A+",
     "driffle": "S (DPS / control / support)",
-    "afkguide": "Dimensional guide v1.190: A-tier"
+    "afkguide": "Dimensional guide v1.190: A-tier",
+    "allclash": "A+ (live list, Oct 2026)"
    },
    "consensus": "strong",
    "trend": null,
@@ -5984,14 +6030,15 @@
    "investment": null,
    "modes": [],
    "tiers": {
-    "overall": "B"
+    "overall": "C"
    },
    "raw": {
-    "afkguide": "Dimensional guide v1.190: B-tier ('best Lab Store Dimensional, but not meta')"
+    "afkguide": "Dimensional guide v1.190: B-tier ('best Lab Store Dimensional, but not meta')",
+    "allclash": "C (live list, Oct 2026)"
    },
-   "consensus": "single-source",
+   "consensus": "strong",
    "trend": null,
-   "tierNote": "Lab Store hero.",
+   "tierNote": "Lab Store hero. Overall updated 2026-10-24 to C from the newest lists (afk.guide (Jun) Dimensional guide v1.190: B-tier, AllClash C).",
    "gameId": 172
   },
   {
@@ -6021,8 +6068,7 @@
     "overall": "S+"
    },
    "raw": {
-    "allclash": "S+ (energy + damage buffs for main carry)",
-    "afkglobal": "S+",
+    "allclash": "S+ (live list, Oct 2026)",
     "driffle": "S+"
    },
    "consensus": "strong",
@@ -6060,14 +6106,15 @@
    "investment": null,
    "modes": [],
    "tiers": {
-    "overall": "S+"
+    "overall": "A"
    },
    "raw": {
-    "pockettactics": "SS"
+    "pockettactics": "SS",
+    "allclash": "A (live list, Oct 2026)"
    },
-   "consensus": "single-source",
+   "consensus": "mixed",
    "trend": null,
-   "tierNote": "Top tier only in Pocket Tactics (April 2026). Mostly valued for early-game and campaign.",
+   "tierNote": "Top tier only in Pocket Tactics (April 2026). Mostly valued for early-game and campaign. Overall updated 2026-10-24 to A from the newest lists (Pocket Tactics (Apr) SS, AllClash A).",
    "gameId": 52
   },
   {
@@ -6097,12 +6144,12 @@
     "overall": "B"
    },
    "raw": {
-    "afkglobal": "B (AllClash's Aug 2026 list)",
-    "pockettactics": "B (2026-04-30)"
+    "pockettactics": "B (2026-04-30)",
+    "allclash": "B (live list, Oct 2026)"
    },
    "consensus": "strong",
    "trend": null,
-   "tierNote": "Added on 2026-10-24 (missing from the first read of the lists): AllClash's list via AFK Global B (Aug 2026), Pocket Tactics B (2026-04-30).",
+   "tierNote": "Added 2026-10-24 from the newest lists: Pocket Tactics (Apr) B, AllClash B.",
    "gameId": 51
   },
   {
@@ -6129,15 +6176,16 @@
    "investment": null,
    "modes": [],
    "tiers": {
-    "overall": "S"
+    "overall": "B"
    },
    "raw": {
     "pockettactics": "S",
-    "afkguide": "Dimensional guide v1.190: S-tier (event-only)"
+    "afkguide": "Dimensional guide v1.190: S-tier (event-only)",
+    "allclash": "B+ (live list, Oct 2026)"
    },
-   "consensus": "strong",
+   "consensus": "mixed",
    "trend": null,
-   "tierNote": "One Punch Man collab hero. Got bug-fix adjustments in v1.191 (2026-04).",
+   "tierNote": "One Punch Man collab hero. Got bug-fix adjustments in v1.191 (2026-04). Overall updated 2026-10-24 to B from the newest lists (Pocket Tactics (Apr) S, afk.guide (Jun) Dimensional guide v1.190: S-tier, AllClash B+).",
    "gameId": 236
   },
   {
@@ -6167,12 +6215,12 @@
     "overall": "C"
    },
    "raw": {
-    "afkglobal": "C (AllClash's Aug 2026 list)",
-    "pockettactics": "C (2026-04-30)"
+    "pockettactics": "C (2026-04-30)",
+    "allclash": "C+ (live list, Oct 2026)"
    },
    "consensus": "strong",
    "trend": null,
-   "tierNote": "Added on 2026-10-24 (missing from the first read of the lists): AllClash's list via AFK Global C (Aug 2026), Pocket Tactics C (2026-04-30).",
+   "tierNote": "Added 2026-10-24 from the newest lists: Pocket Tactics (Apr) C, AllClash C+.",
    "gameId": 149
   },
   {
@@ -6199,15 +6247,15 @@
    "investment": null,
    "modes": [],
    "tiers": {
-    "overall": "D"
+    "overall": "C"
    },
    "raw": {
-    "afkglobal": "D (AllClash's Aug 2026 list)",
-    "pockettactics": "D (2026-04-30)"
+    "pockettactics": "D (2026-04-30)",
+    "allclash": "C (live list, Oct 2026)"
    },
    "consensus": "strong",
    "trend": null,
-   "tierNote": "Added on 2026-10-24 (missing from the first read of the lists): AllClash's list via AFK Global D (Aug 2026), Pocket Tactics D (2026-04-30).",
+   "tierNote": "Added 2026-10-24 from the newest lists: Pocket Tactics (Apr) D, AllClash C.",
    "gameId": 54
   },
   {
@@ -6238,12 +6286,12 @@
    },
    "raw": {
     "pocketgamer": "Bosses SS ('continuous damage, self-sufficient')",
-    "afkglobal": "A (AllClash's Aug 2026 list)",
-    "pockettactics": "A (2026-04-30)"
+    "pockettactics": "A (2026-04-30)",
+    "allclash": "A (live list, Oct 2026)"
    },
    "consensus": "strong",
    "trend": null,
-   "tierNote": "Added on 2026-10-24 (missing from the first read of the lists): AllClash's list via AFK Global A (Aug 2026), Pocket Tactics A (2026-04-30).",
+   "tierNote": "Added 2026-10-24 from the newest lists: Pocket Tactics (Apr) A, AllClash A.",
    "gameId": 74
   },
   {
@@ -6274,10 +6322,9 @@
     "boss": "S+"
    },
    "raw": {
-    "afkglobal": "S",
     "pockettactics": "SS (top-tier pick)",
     "pocketgamer": "Bosses SS",
-    "allclash": "named a strong pick (no grade in snippet)"
+    "allclash": "S (live list, Oct 2026); earlier: named a strong pick (no grade in snippet)"
    },
    "consensus": "strong",
    "trend": null,
@@ -6308,15 +6355,15 @@
    "investment": null,
    "modes": [],
    "tiers": {
-    "overall": "D"
+    "overall": "C"
    },
    "raw": {
-    "afkglobal": "D (AllClash's Aug 2026 list)",
-    "pockettactics": "D (2026-04-30)"
+    "pockettactics": "D (2026-04-30)",
+    "allclash": "C (live list, Oct 2026)"
    },
    "consensus": "strong",
    "trend": null,
-   "tierNote": "Added on 2026-10-24 (missing from the first read of the lists): AllClash's list via AFK Global D (Aug 2026), Pocket Tactics D (2026-04-30).",
+   "tierNote": "Added 2026-10-24 from the newest lists: Pocket Tactics (Apr) D, AllClash C.",
    "gameId": 46
   },
   {
@@ -6346,11 +6393,11 @@
     "overall": "A"
    },
    "raw": {
-    "afkglobal": "A+ (AllClash's Aug 2026 list)"
+    "allclash": "A+ (live list, Oct 2026)"
    },
    "consensus": "single-source",
    "trend": null,
-   "tierNote": "Added on 2026-10-24 (missing from the first read of the lists): AllClash's list via AFK Global A+ (Aug 2026).",
+   "tierNote": "Added 2026-10-24 from the newest lists: AllClash A+.",
    "gameId": 230
   },
   {
@@ -6380,9 +6427,10 @@
     "overall": "A"
    },
    "raw": {
-    "afkguide": "Hypogean guide v1.194: A-tier"
+    "afkguide": "Hypogean guide v1.194: A-tier",
+    "allclash": "A (live list, Oct 2026)"
    },
-   "consensus": "single-source",
+   "consensus": "strong",
    "trend": null,
    "tierNote": "Hypogean.",
    "gameId": 223
@@ -6414,11 +6462,11 @@
     "overall": "B"
    },
    "raw": {
-    "afkglobal": "B (AllClash's Aug 2026 list)"
+    "allclash": "B (live list, Oct 2026)"
    },
    "consensus": "single-source",
    "trend": null,
-   "tierNote": "Added on 2026-10-24 (missing from the first read of the lists): AllClash's list via AFK Global B (Aug 2026).",
+   "tierNote": "Added 2026-10-24 from the newest lists: AllClash B.",
    "gameId": 243
   },
   {
@@ -6448,11 +6496,11 @@
     "overall": "A"
    },
    "raw": {
-    "afkglobal": "A+ (AllClash's Aug 2026 list)"
+    "allclash": "A+ (live list, Oct 2026)"
    },
    "consensus": "single-source",
    "trend": null,
-   "tierNote": "Added on 2026-10-24 (missing from the first read of the lists): AllClash's list via AFK Global A+ (Aug 2026).",
+   "tierNote": "Added 2026-10-24 from the newest lists: AllClash A+.",
    "gameId": 246
   },
   {
@@ -6479,17 +6527,18 @@
    "investment": null,
    "modes": [],
    "tiers": {
-    "overall": "A",
+    "overall": "B",
     "pve": "S",
     "boss": "S"
    },
    "raw": {
     "pocketgamer": "PvE S, Bosses S",
-    "afkguide": "Dimensional guide v1.190: A-tier"
+    "afkguide": "Dimensional guide v1.190: A-tier",
+    "allclash": "B+ (live list, Oct 2026)"
    },
    "consensus": "strong",
    "trend": null,
-   "tierNote": "Overlord collab Dimensional hero.",
+   "tierNote": "Overlord collab Dimensional hero. Overall updated 2026-10-24 to B from the newest lists (afk.guide (Jun) Dimensional guide v1.190: A-tier, AllClash B+).",
    "gameId": 210
   },
   {
@@ -6518,15 +6567,16 @@
    "investment": null,
    "modes": [],
    "tiers": {
-    "overall": "D"
+    "overall": "C"
    },
    "raw": {
     "afkguide": "Graveborn guide: F-tier",
-    "pocketgamer": "named a strong self-sufficient boss pick for life-leech in commentary (no grade)"
+    "pocketgamer": "named a strong self-sufficient boss pick for life-leech in commentary (no grade)",
+    "allclash": "C (live list, Oct 2026)"
    },
-   "consensus": "mixed",
+   "consensus": "strong",
    "trend": null,
-   "tierNote": "Base Shemira. Awakened Shemira is a separate, much stronger hero but has no letter grade.",
+   "tierNote": "Base Shemira. Awakened Shemira is a separate, much stronger hero but has no letter grade. Overall updated 2026-10-24 to C from the newest lists (afk.guide (Jun) Graveborn guide: F-tier, AllClash C).",
    "gameId": 27
   },
   {
@@ -6553,14 +6603,15 @@
    "investment": null,
    "modes": [],
    "tiers": {
-    "overall": "S"
+    "overall": "A"
    },
    "raw": {
-    "afkguide": "Dimensional guide v1.190: S-tier"
+    "afkguide": "Dimensional guide v1.190: S-tier",
+    "allclash": "A+ (live list, Oct 2026)"
    },
-   "consensus": "single-source",
+   "consensus": "strong",
    "trend": null,
-   "tierNote": "TenSura collab Dimensional hero.",
+   "tierNote": "TenSura collab Dimensional hero. Overall updated 2026-10-24 to A from the newest lists (afk.guide (Jun) Dimensional guide v1.190: S-tier, AllClash A+).",
    "gameId": 194
   },
   {
@@ -6590,12 +6641,12 @@
     "overall": "A"
    },
    "raw": {
-    "afkglobal": "A+ (AllClash's Aug 2026 list)",
-    "pockettactics": "A (2026-04-30)"
+    "pockettactics": "A (2026-04-30)",
+    "allclash": "A+ (live list, Oct 2026)"
    },
    "consensus": "strong",
    "trend": null,
-   "tierNote": "Added on 2026-10-24 (missing from the first read of the lists): AllClash's list via AFK Global A+ (Aug 2026), Pocket Tactics A (2026-04-30).",
+   "tierNote": "Added 2026-10-24 from the newest lists: Pocket Tactics (Apr) A, AllClash A+.",
    "gameId": 63
   },
   {
@@ -6625,18 +6676,19 @@
     "towers"
    ],
    "tiers": {
-    "overall": "S",
+    "overall": "A",
     "pve": "S+",
     "pvp": "S+",
     "boss": "S+"
    },
    "raw": {
     "pocketgamer": "PvE SS, PvP SS, Bosses SS",
-    "afkguide": "Draconis guide v1.191: S-tier"
+    "afkguide": "Draconis guide v1.191: S-tier",
+    "allclash": "A+ (live list, Oct 2026)"
    },
    "consensus": "strong",
    "trend": null,
-   "tierNote": "'Unyielding Wing'. Pocket Gamer puts Sion at SS in all three of its mode rankings.",
+   "tierNote": "'Unyielding Wing'. Pocket Gamer puts Sion at SS in all three of its mode rankings. Overall updated 2026-10-24 to A from the newest lists (afk.guide (Jun) Draconis guide v1.191: S-tier, AllClash A+).",
    "gameId": 211
   },
   {
@@ -6666,12 +6718,12 @@
     "overall": "B"
    },
    "raw": {
-    "afkglobal": "B+ (AllClash's Aug 2026 list)",
-    "pockettactics": "A (2026-04-30)"
+    "pockettactics": "A (2026-04-30)",
+    "allclash": "B+ (live list, Oct 2026)"
    },
    "consensus": "strong",
    "trend": null,
-   "tierNote": "Added on 2026-10-24 (missing from the first read of the lists): AllClash's list via AFK Global B+ (Aug 2026), Pocket Tactics A (2026-04-30).",
+   "tierNote": "Added 2026-10-24 from the newest lists: Pocket Tactics (Apr) A, AllClash B+.",
    "gameId": 38
   },
   {
@@ -6701,12 +6753,12 @@
     "overall": "B"
    },
    "raw": {
-    "afkglobal": "B+ (AllClash's Aug 2026 list)",
-    "pockettactics": "A (2026-04-30)"
+    "pockettactics": "A (2026-04-30)",
+    "allclash": "B+ (live list, Oct 2026)"
    },
    "consensus": "strong",
    "trend": null,
-   "tierNote": "Added on 2026-10-24 (missing from the first read of the lists): AllClash's list via AFK Global B+ (Aug 2026), Pocket Tactics A (2026-04-30).",
+   "tierNote": "Added 2026-10-24 from the newest lists: Pocket Tactics (Apr) A, AllClash B+.",
    "gameId": 83
   },
   {
@@ -6733,14 +6785,15 @@
    "investment": null,
    "modes": [],
    "tiers": {
-    "overall": "S"
+    "overall": "A"
    },
    "raw": {
-    "afkguide": "Draconis guide v1.191: S-tier"
+    "afkguide": "Draconis guide v1.191: S-tier",
+    "allclash": "A+ (live list, Oct 2026)"
    },
-   "consensus": "single-source",
+   "consensus": "strong",
    "trend": null,
-   "tierNote": "Top Draconis investment.",
+   "tierNote": "Top Draconis investment. Overall updated 2026-10-24 to A from the newest lists (afk.guide (Jun) Draconis guide v1.191: S-tier, AllClash A+).",
    "gameId": 207
   },
   {
@@ -6767,14 +6820,15 @@
    "investment": null,
    "modes": [],
    "tiers": {
-    "overall": "D"
+    "overall": "C"
    },
    "raw": {
-    "pockettactics": "D"
+    "pockettactics": "D",
+    "allclash": "C (live list, Oct 2026)"
    },
-   "consensus": "single-source",
+   "consensus": "strong",
    "trend": null,
-   "tierNote": "Base Solise. The Awakened form is S+.",
+   "tierNote": "Base Solise. The Awakened form is S+. Overall updated 2026-10-24 to C from the newest lists (Pocket Tactics (Apr) D, AllClash C).",
    "gameId": 80
   },
   {
@@ -6804,12 +6858,12 @@
     "overall": "C"
    },
    "raw": {
-    "afkglobal": "C (AllClash's Aug 2026 list)",
-    "pockettactics": "C (2026-04-30)"
+    "pockettactics": "C (2026-04-30)",
+    "allclash": "C+ (live list, Oct 2026)"
    },
    "consensus": "strong",
    "trend": null,
-   "tierNote": "Added on 2026-10-24 (missing from the first read of the lists): AllClash's list via AFK Global C (Aug 2026), Pocket Tactics C (2026-04-30).",
+   "tierNote": "Added 2026-10-24 from the newest lists: Pocket Tactics (Apr) C, AllClash C+.",
    "gameId": 136
   },
   {
@@ -6848,8 +6902,7 @@
     "boss": "S+"
    },
    "raw": {
-    "allclash": "S+ (V191 edition: S+ in Campaign, Tower, NC, CR; 'absolutely broken')",
-    "afkglobal": "S+",
+    "allclash": "S+ (live list, Oct 2026)",
     "driffle": "S+",
     "afkguide": "Dimensional guide v1.190: S-tier (event-only)",
     "pocketgamer": "PvE S"
@@ -6886,12 +6939,12 @@
     "overall": "A"
    },
    "raw": {
-    "afkglobal": "A (AllClash's Aug 2026 list)",
-    "pockettactics": "S (2026-04-30)"
+    "pockettactics": "S (2026-04-30)",
+    "allclash": "A (live list, Oct 2026)"
    },
    "consensus": "strong",
    "trend": null,
-   "tierNote": "Added on 2026-10-24 (missing from the first read of the lists): AllClash's list via AFK Global A (Aug 2026), Pocket Tactics S (2026-04-30).",
+   "tierNote": "Added 2026-10-24 from the newest lists: Pocket Tactics (Apr) S, AllClash A.",
    "gameId": 73
   },
   {
@@ -6927,9 +6980,10 @@
    },
    "raw": {
     "pocketgamer": "PvE SS, PvP SS",
-    "driffle": "A (support / utility)"
+    "driffle": "A (support / utility)",
+    "allclash": "A (live list, Oct 2026)"
    },
-   "consensus": "mixed",
+   "consensus": "strong",
    "trend": null,
    "tierNote": "Mauler ('Hook of the Wastes'). afk.guide's v1.198 snippet lists Talimar as a new hero (~2026-07). Pocket Gamer rates Talimar top tier in PvE and PvP, Driffle only A.",
    "gameId": 227
@@ -6961,12 +7015,12 @@
     "overall": "A"
    },
    "raw": {
-    "afkglobal": "A+ (AllClash's Aug 2026 list)",
-    "pockettactics": "A (2026-04-30)"
+    "pockettactics": "A (2026-04-30)",
+    "allclash": "A+ (live list, Oct 2026)"
    },
    "consensus": "strong",
    "trend": null,
-   "tierNote": "Added on 2026-10-24 (missing from the first read of the lists): AllClash's list via AFK Global A+ (Aug 2026), Pocket Tactics A (2026-04-30).",
+   "tierNote": "Added 2026-10-24 from the newest lists: Pocket Tactics (Apr) A, AllClash A+.",
    "gameId": 154
   },
   {
@@ -6993,14 +7047,15 @@
    "investment": null,
    "modes": [],
    "tiers": {
-    "overall": "B"
+    "overall": "C"
    },
    "raw": {
-    "afkguide": "Celestial guide v1.197: B-tier"
+    "afkguide": "Celestial guide v1.197: B-tier",
+    "allclash": "C+ (live list, Oct 2026)"
    },
-   "consensus": "single-source",
+   "consensus": "strong",
    "trend": null,
-   "tierNote": "Celestial.",
+   "tierNote": "Celestial. Overall updated 2026-10-24 to C from the newest lists (afk.guide (Jun) Celestial guide v1.197: B-tier, AllClash C+).",
    "gameId": 142
   },
   {
@@ -7030,12 +7085,12 @@
     "overall": "B"
    },
    "raw": {
-    "afkglobal": "B (AllClash's Aug 2026 list)",
-    "pockettactics": "B (2026-04-30)"
+    "pockettactics": "B (2026-04-30)",
+    "allclash": "B (live list, Oct 2026)"
    },
    "consensus": "strong",
    "trend": null,
-   "tierNote": "Added on 2026-10-24 (missing from the first read of the lists): AllClash's list via AFK Global B (Aug 2026), Pocket Tactics B (2026-04-30).",
+   "tierNote": "Added 2026-10-24 from the newest lists: Pocket Tactics (Apr) B, AllClash B.",
    "gameId": 28
   },
   {
@@ -7065,9 +7120,10 @@
     "overall": "A"
    },
    "raw": {
-    "afkguide": "Draconis guide v1.191: A-tier"
+    "afkguide": "Draconis guide v1.191: A-tier",
+    "allclash": "A+ (live list, Oct 2026)"
    },
-   "consensus": "single-source",
+   "consensus": "strong",
    "trend": null,
    "tierNote": "Draconis.",
    "gameId": 235
@@ -7096,14 +7152,15 @@
    "investment": null,
    "modes": [],
    "tiers": {
-    "overall": "B"
+    "overall": "A"
    },
    "raw": {
-    "afkguide": "Dimensional guide v1.190: B-tier (event-only)"
+    "afkguide": "Dimensional guide v1.190: B-tier (event-only)",
+    "allclash": "A (live list, Oct 2026)"
    },
-   "consensus": "single-source",
+   "consensus": "strong",
    "trend": null,
-   "tierNote": "One Punch Man collab hero.",
+   "tierNote": "One Punch Man collab hero. Overall updated 2026-10-24 to A from the newest lists (afk.guide (Jun) Dimensional guide v1.190: B-tier, AllClash A).",
    "gameId": 237
   },
   {
@@ -7146,8 +7203,7 @@
     "overall": "S"
    },
    "raw": {
-    "allclash": "S ('really strong support with amazing utility and heal')",
-    "afkglobal": "S"
+    "allclash": "S (live list, Oct 2026)"
    },
    "consensus": "single-source",
    "trend": null,
@@ -7178,15 +7234,15 @@
    "investment": null,
    "modes": [],
    "tiers": {
-    "overall": "D"
+    "overall": "C"
    },
    "raw": {
-    "afkglobal": "D (AllClash's Aug 2026 list)",
-    "pockettactics": "D (2026-04-30)"
+    "pockettactics": "D (2026-04-30)",
+    "allclash": "C (live list, Oct 2026)"
    },
    "consensus": "strong",
    "trend": null,
-   "tierNote": "Added on 2026-10-24 (missing from the first read of the lists): AllClash's list via AFK Global D (Aug 2026), Pocket Tactics D (2026-04-30).",
+   "tierNote": "Added 2026-10-24 from the newest lists: Pocket Tactics (Apr) D, AllClash C.",
    "gameId": 113
   },
   {
@@ -7216,12 +7272,12 @@
     "overall": "C"
    },
    "raw": {
-    "afkglobal": "C (AllClash's Aug 2026 list)",
-    "pockettactics": "C (2026-04-30)"
+    "pockettactics": "C (2026-04-30)",
+    "allclash": "C+ (live list, Oct 2026)"
    },
    "consensus": "strong",
    "trend": null,
-   "tierNote": "Added on 2026-10-24 (missing from the first read of the lists): AllClash's list via AFK Global C (Aug 2026), Pocket Tactics C (2026-04-30).",
+   "tierNote": "Added 2026-10-24 from the newest lists: Pocket Tactics (Apr) C, AllClash C+.",
    "gameId": 45
   },
   {
@@ -7248,15 +7304,15 @@
    "investment": null,
    "modes": [],
    "tiers": {
-    "overall": "D"
+    "overall": "C"
    },
    "raw": {
-    "afkglobal": "D (AllClash's Aug 2026 list)",
-    "pockettactics": "D (2026-04-30)"
+    "pockettactics": "D (2026-04-30)",
+    "allclash": "C (live list, Oct 2026)"
    },
    "consensus": "strong",
    "trend": null,
-   "tierNote": "Added on 2026-10-24 (missing from the first read of the lists): AllClash's list via AFK Global D (Aug 2026), Pocket Tactics D (2026-04-30).",
+   "tierNote": "Added 2026-10-24 from the newest lists: Pocket Tactics (Apr) D, AllClash C.",
    "gameId": 91
   },
   {
@@ -7286,9 +7342,10 @@
     "overall": "C"
    },
    "raw": {
-    "pocketgamer": "General C"
+    "pocketgamer": "General C",
+    "allclash": "C+ (live list, Oct 2026)"
    },
-   "consensus": "single-source",
+   "consensus": "strong",
    "trend": null,
    "tierNote": "In Pocket Gamer's bottom tier.",
    "gameId": 123
@@ -7318,15 +7375,16 @@
    "investment": null,
    "modes": [],
    "tiers": {
-    "overall": "A"
+    "overall": "B"
    },
    "raw": {
     "afkguide": "Graveborn guide: A-tier",
-    "mobigg": "S+? (tentative)"
+    "mobigg": "S+? (tentative)",
+    "allclash": "B+ (live list, Oct 2026)"
    },
-   "consensus": "single-source",
+   "consensus": "strong",
    "trend": null,
-   "tierNote": "Base Thoran. The Awakened form is S.",
+   "tierNote": "Base Thoran. The Awakened form is S. Overall updated 2026-10-24 to B from the newest lists (afk.guide (Jun) Graveborn guide: A-tier, AllClash B+).",
    "gameId": 32
   },
   {
@@ -7356,12 +7414,12 @@
     "overall": "C"
    },
    "raw": {
-    "afkglobal": "C (AllClash's Aug 2026 list)",
-    "pockettactics": "C (2026-04-30)"
+    "pockettactics": "C (2026-04-30)",
+    "allclash": "C+ (live list, Oct 2026)"
    },
    "consensus": "strong",
    "trend": null,
-   "tierNote": "Added on 2026-10-24 (missing from the first read of the lists): AllClash's list via AFK Global C (Aug 2026), Pocket Tactics C (2026-04-30).",
+   "tierNote": "Added 2026-10-24 from the newest lists: Pocket Tactics (Apr) C, AllClash C+.",
    "gameId": 70
   },
   {
@@ -7388,14 +7446,15 @@
    "investment": null,
    "modes": [],
    "tiers": {
-    "overall": "D"
+    "overall": "C"
    },
    "raw": {
-    "afkguide": "Celestial guide v1.197: F-tier"
+    "afkguide": "Celestial guide v1.197: F-tier",
+    "allclash": "C (live list, Oct 2026)"
    },
-   "consensus": "single-source",
+   "consensus": "strong",
    "trend": null,
-   "tierNote": "Not worth investing in.",
+   "tierNote": "Not worth investing in. Overall updated 2026-10-24 to C from the newest lists (afk.guide (Jun) Celestial guide v1.197: F-tier, AllClash C).",
    "gameId": 114
   },
   {
@@ -7425,12 +7484,12 @@
     "overall": "C"
    },
    "raw": {
-    "afkglobal": "C (AllClash's Aug 2026 list)",
-    "pockettactics": "C (2026-04-30)"
+    "pockettactics": "C (2026-04-30)",
+    "allclash": "C+ (live list, Oct 2026)"
    },
    "consensus": "strong",
    "trend": null,
-   "tierNote": "Added on 2026-10-24 (missing from the first read of the lists): AllClash's list via AFK Global C (Aug 2026), Pocket Tactics C (2026-04-30).",
+   "tierNote": "Added 2026-10-24 from the newest lists: Pocket Tactics (Apr) C, AllClash C+.",
    "gameId": 88
   },
   {
@@ -7460,12 +7519,12 @@
     "overall": "C"
    },
    "raw": {
-    "afkglobal": "C (AllClash's Aug 2026 list)",
-    "pockettactics": "C (2026-04-30)"
+    "pockettactics": "C (2026-04-30)",
+    "allclash": "C+ (live list, Oct 2026)"
    },
    "consensus": "strong",
    "trend": null,
-   "tierNote": "Added on 2026-10-24 (missing from the first read of the lists): AllClash's list via AFK Global C (Aug 2026), Pocket Tactics C (2026-04-30).",
+   "tierNote": "Added 2026-10-24 from the newest lists: Pocket Tactics (Apr) C, AllClash C+.",
    "gameId": 122
   },
   {
@@ -7495,12 +7554,12 @@
     "overall": "A"
    },
    "raw": {
-    "afkglobal": "A+ (AllClash's Aug 2026 list)",
-    "pockettactics": "A (2026-04-30)"
+    "pockettactics": "A (2026-04-30)",
+    "allclash": "A+ (live list, Oct 2026)"
    },
    "consensus": "strong",
    "trend": null,
-   "tierNote": "Added on 2026-10-24 (missing from the first read of the lists): AllClash's list via AFK Global A+ (Aug 2026), Pocket Tactics A (2026-04-30).",
+   "tierNote": "Added 2026-10-24 from the newest lists: Pocket Tactics (Apr) A, AllClash A+.",
    "gameId": 164
   },
   {
@@ -7530,11 +7589,11 @@
     "overall": "A"
    },
    "raw": {
-    "afkglobal": "A (AllClash's Aug 2026 list)"
+    "allclash": "A (live list, Oct 2026)"
    },
    "consensus": "single-source",
    "trend": null,
-   "tierNote": "Added on 2026-10-24 (missing from the first read of the lists): AllClash's list via AFK Global A (Aug 2026).",
+   "tierNote": "Added 2026-10-24 from the newest lists: AllClash A.",
    "gameId": 249
   },
   {
@@ -7561,15 +7620,16 @@
    "investment": null,
    "modes": [],
    "tiers": {
-    "overall": "D"
+    "overall": "C"
    },
    "raw": {
     "pocketgamer": "General C",
-    "afkguide": "Dimensional guide v1.190: F-tier (do not invest past SI 10/20)"
+    "afkguide": "Dimensional guide v1.190: F-tier (do not invest past SI 10/20)",
+    "allclash": "C (live list, Oct 2026)"
    },
    "consensus": "strong",
    "trend": null,
-   "tierNote": "Not worth investing in.",
+   "tierNote": "Not worth investing in. Overall updated 2026-10-24 to C from the newest lists (Pocket Gamer General C, afk.guide (Jun) Dimensional guide v1.190: F-tier, AllClash C).",
    "gameId": 86
   },
   {
@@ -7596,15 +7656,15 @@
    "investment": null,
    "modes": [],
    "tiers": {
-    "overall": "D"
+    "overall": "C"
    },
    "raw": {
-    "afkglobal": "D (AllClash's Aug 2026 list)",
-    "pockettactics": "D (2026-04-30)"
+    "pockettactics": "D (2026-04-30)",
+    "allclash": "C (live list, Oct 2026)"
    },
    "consensus": "strong",
    "trend": null,
-   "tierNote": "Added on 2026-10-24 (missing from the first read of the lists): AllClash's list via AFK Global D (Aug 2026), Pocket Tactics D (2026-04-30).",
+   "tierNote": "Added 2026-10-24 from the newest lists: Pocket Tactics (Apr) D, AllClash C.",
    "gameId": 42
   },
   {
@@ -7631,17 +7691,18 @@
    "investment": null,
    "modes": [],
    "tiers": {
-    "overall": "C",
+    "overall": "B",
     "pvp": "S",
     "boss": "S"
    },
    "raw": {
     "pocketgamer": "PvP S, Bosses S ('Ashlight Sentinel')",
-    "afkguide": "Draconis guide v1.191: C-tier"
+    "afkguide": "Draconis guide v1.191: C-tier",
+    "allclash": "B+ (live list, Oct 2026)"
    },
-   "consensus": "mixed",
+   "consensus": "strong",
    "trend": null,
-   "tierNote": "Sources split by three tiers: S in Pocket Gamer's PvP and boss lists, C as an afk.guide investment.",
+   "tierNote": "Sources split by three tiers: S in Pocket Gamer's PvP and boss lists, C as an afk.guide investment. Overall updated 2026-10-24 to B from the newest lists (afk.guide (Jun) Draconis guide v1.191: C-tier, AllClash B+).",
    "gameId": 222
   },
   {
@@ -7684,8 +7745,7 @@
     "boss": "B"
    },
    "raw": {
-    "allclash": "A (Campaign S, Tower S+, NC B+, CR B+, TR C+)",
-    "afkglobal": "A",
+    "allclash": "A (live list, Oct 2026)",
     "driffle": "A (tank / frontline)"
    },
    "consensus": "strong",
@@ -7717,14 +7777,15 @@
    "investment": null,
    "modes": [],
    "tiers": {
-    "overall": "B"
+    "overall": "A"
    },
    "raw": {
-    "afkguide": "Celestial guide v1.197: B-tier"
+    "afkguide": "Celestial guide v1.197: B-tier",
+    "allclash": "A+ (live list, Oct 2026)"
    },
-   "consensus": "single-source",
+   "consensus": "strong",
    "trend": null,
-   "tierNote": "Celestial.",
+   "tierNote": "Celestial. Overall updated 2026-10-24 to A from the newest lists (afk.guide (Jun) Celestial guide v1.197: B-tier, AllClash A+).",
    "gameId": 151
   },
   {
@@ -7754,8 +7815,7 @@
     "overall": "S+"
    },
    "raw": {
-    "allclash": "S+",
-    "afkglobal": "S+",
+    "allclash": "S+ (live list, Oct 2026)",
     "driffle": "S+",
     "afkguide": "Draconis guide v1.191: A-tier"
    },
@@ -7791,12 +7851,12 @@
     "overall": "C"
    },
    "raw": {
-    "afkglobal": "C (AllClash's Aug 2026 list)",
-    "pockettactics": "C (2026-04-30)"
+    "pockettactics": "C (2026-04-30)",
+    "allclash": "C+ (live list, Oct 2026)"
    },
    "consensus": "strong",
    "trend": null,
-   "tierNote": "Added on 2026-10-24 (missing from the first read of the lists): AllClash's list via AFK Global C (Aug 2026), Pocket Tactics C (2026-04-30).",
+   "tierNote": "Added 2026-10-24 from the newest lists: Pocket Tactics (Apr) C, AllClash C+.",
    "gameId": 176
   },
   {
@@ -7823,14 +7883,15 @@
    "investment": null,
    "modes": [],
    "tiers": {
-    "overall": "S"
+    "overall": "A"
    },
    "raw": {
-    "driffle": "S (DPS / damage support)"
+    "driffle": "S (DPS / damage support)",
+    "allclash": "A+ (live list, Oct 2026)"
    },
-   "consensus": "single-source",
+   "consensus": "strong",
    "trend": null,
-   "tierNote": "DPS / damage support.",
+   "tierNote": "DPS / damage support. Overall updated 2026-10-24 to A from the newest lists (Driffle S, AllClash A+).",
    "gameId": 193
   },
   {
@@ -7860,12 +7921,12 @@
     "overall": "C"
    },
    "raw": {
-    "afkglobal": "C (AllClash's Aug 2026 list)",
-    "pockettactics": "C (2026-04-30)"
+    "pockettactics": "C (2026-04-30)",
+    "allclash": "C+ (live list, Oct 2026)"
    },
    "consensus": "strong",
    "trend": null,
-   "tierNote": "Added on 2026-10-24 (missing from the first read of the lists): AllClash's list via AFK Global C (Aug 2026), Pocket Tactics C (2026-04-30).",
+   "tierNote": "Added 2026-10-24 from the newest lists: Pocket Tactics (Apr) C, AllClash C+.",
    "gameId": 35
   },
   {
@@ -7892,15 +7953,15 @@
    "investment": null,
    "modes": [],
    "tiers": {
-    "overall": "D"
+    "overall": "C"
    },
    "raw": {
-    "afkglobal": "D (AllClash's Aug 2026 list)",
-    "pockettactics": "D (2026-04-30)"
+    "pockettactics": "D (2026-04-30)",
+    "allclash": "C (live list, Oct 2026)"
    },
    "consensus": "strong",
    "trend": null,
-   "tierNote": "Added on 2026-10-24 (missing from the first read of the lists): AllClash's list via AFK Global D (Aug 2026), Pocket Tactics D (2026-04-30).",
+   "tierNote": "Added 2026-10-24 from the newest lists: Pocket Tactics (Apr) D, AllClash C.",
    "gameId": 135
   },
   {
@@ -7927,15 +7988,15 @@
    "investment": null,
    "modes": [],
    "tiers": {
-    "overall": "D"
+    "overall": "C"
    },
    "raw": {
-    "afkglobal": "D (AllClash's Aug 2026 list)",
-    "pockettactics": "D (2026-04-30)"
+    "pockettactics": "D (2026-04-30)",
+    "allclash": "C (live list, Oct 2026)"
    },
    "consensus": "strong",
    "trend": null,
-   "tierNote": "Added on 2026-10-24 (missing from the first read of the lists): AllClash's list via AFK Global D (Aug 2026), Pocket Tactics D (2026-04-30).",
+   "tierNote": "Added 2026-10-24 from the newest lists: Pocket Tactics (Apr) D, AllClash C.",
    "gameId": 110
   },
   {
@@ -7965,12 +8026,12 @@
     "overall": "B"
    },
    "raw": {
-    "afkglobal": "B (AllClash's Aug 2026 list)",
-    "pockettactics": "B (2026-04-30)"
+    "pockettactics": "B (2026-04-30)",
+    "allclash": "B (live list, Oct 2026)"
    },
    "consensus": "strong",
    "trend": null,
-   "tierNote": "Added on 2026-10-24 (missing from the first read of the lists): AllClash's list via AFK Global B (Aug 2026), Pocket Tactics B (2026-04-30).",
+   "tierNote": "Added 2026-10-24 from the newest lists: Pocket Tactics (Apr) B, AllClash B.",
    "gameId": 43
   },
   {
@@ -7997,15 +8058,16 @@
    "investment": null,
    "modes": [],
    "tiers": {
-    "overall": "D"
+    "overall": "C"
    },
    "raw": {
     "pockettactics": "D",
-    "afkguide": "Celestial guide v1.197: F-tier"
+    "afkguide": "Celestial guide v1.197: F-tier",
+    "allclash": "C (live list, Oct 2026)"
    },
    "consensus": "strong",
    "trend": null,
-   "tierNote": "Not worth investing in.",
+   "tierNote": "Not worth investing in. Overall updated 2026-10-24 to C from the newest lists (Pocket Tactics (Apr) D, afk.guide (Jun) Celestial guide v1.197: F-tier, AllClash C).",
    "gameId": 84
   },
   {
@@ -8032,14 +8094,15 @@
    "investment": null,
    "modes": [],
    "tiers": {
-    "overall": "D"
+    "overall": "C"
    },
    "raw": {
-    "afkguide": "Dimensional guide v1.190: D-tier"
+    "afkguide": "Dimensional guide v1.190: D-tier",
+    "allclash": "C+ (live list, Oct 2026)"
    },
-   "consensus": "single-source",
+   "consensus": "strong",
    "trend": null,
-   "tierNote": "Dimensional.",
+   "tierNote": "Dimensional. Overall updated 2026-10-24 to C from the newest lists (afk.guide (Jun) Dimensional guide v1.190: D-tier, AllClash C+).",
    "gameId": 145
   },
   {
@@ -8066,14 +8129,15 @@
    "investment": null,
    "modes": [],
    "tiers": {
-    "overall": "D"
+    "overall": "B"
    },
    "raw": {
-    "afkguide": "Celestial guide v1.197: D-tier"
+    "afkguide": "Celestial guide v1.197: D-tier",
+    "allclash": "B (live list, Oct 2026)"
    },
-   "consensus": "single-source",
+   "consensus": "mixed",
    "trend": null,
-   "tierNote": "Celestial.",
+   "tierNote": "Celestial. Overall updated 2026-10-24 to B from the newest lists (afk.guide (Jun) Celestial guide v1.197: D-tier, AllClash B).",
    "gameId": 96
   },
   {
@@ -8100,15 +8164,15 @@
    "investment": null,
    "modes": [],
    "tiers": {
-    "overall": "D"
+    "overall": "C"
    },
    "raw": {
-    "afkglobal": "D (AllClash's Aug 2026 list)",
-    "pockettactics": "D (2026-04-30)"
+    "pockettactics": "D (2026-04-30)",
+    "allclash": "C (live list, Oct 2026)"
    },
    "consensus": "strong",
    "trend": null,
-   "tierNote": "Added on 2026-10-24 (missing from the first read of the lists): AllClash's list via AFK Global D (Aug 2026), Pocket Tactics D (2026-04-30).",
+   "tierNote": "Added 2026-10-24 from the newest lists: Pocket Tactics (Apr) D, AllClash C.",
    "gameId": 117
   },
   {
@@ -8140,9 +8204,10 @@
    },
    "raw": {
     "pocketgamer": "PvE SS",
-    "afkguide": "Celestial guide v1.197: A-tier"
+    "afkguide": "Celestial guide v1.197: A-tier",
+    "allclash": "A+ (live list, Oct 2026)"
    },
-   "consensus": "mixed",
+   "consensus": "strong",
    "trend": null,
    "tierNote": "Strong in PvE (AoE). Mid-priority as an investment.",
    "gameId": 209
@@ -8174,12 +8239,12 @@
     "overall": "B"
    },
    "raw": {
-    "afkglobal": "B+ (AllClash's Aug 2026 list)",
-    "pockettactics": "A (2026-04-30)"
+    "pockettactics": "A (2026-04-30)",
+    "allclash": "B+ (live list, Oct 2026)"
    },
    "consensus": "strong",
    "trend": null,
-   "tierNote": "Added on 2026-10-24 (missing from the first read of the lists): AllClash's list via AFK Global B+ (Aug 2026), Pocket Tactics A (2026-04-30).",
+   "tierNote": "Added 2026-10-24 from the newest lists: Pocket Tactics (Apr) A, AllClash B+.",
    "gameId": 64
   }
  ]

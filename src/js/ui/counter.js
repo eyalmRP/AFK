@@ -221,6 +221,7 @@ function renderResult(ctx) {
   const bp = beastFor(ctx, Object.values(s.layout));
   host.innerHTML = `<div class="side-title">${ICON.spark} Your counter (rules engine)</div>
     <p class="small muted">Recalculated each time you change the enemy, the mode or your heroes.</p>
+    ${counterKnowledge(ctx) ? '' : `<p class="callout small"><strong>No counter data for these enemies yet.</strong> The sources this week don't say which heroes beat ${esc(ctx.enemy.map((h) => h.name).join(', '))}, so this is your strongest team for ${esc(ctx.mode?.name || 'this mode')}, adjusted for faction advantage and positions. Ask Claude below for a matchup-based counter.</p>`}
     <article class="result-card">
       ${verdict(Object.values(s.layout))}
       <header><h4>${esc(s.template?.name || 'Counter formation')}</h4><span class="score">${s.total.toFixed(1)} pts</span></header>
@@ -264,6 +265,15 @@ function verdict(ids) {
   else v = ['bad', "You probably can't win this", `The enemy is about ${pct}% stronger. Counters and faction edge rarely make up that much: upgrade your heroes first or pick another opponent.`];
   return `<div class="verdict ${v[0]}" role="status" title="${esc(CR_NOTE)}"><strong>${v[0] === 'bad' ? '⚠ ' : ''}${v[1]}</strong><span>${v[2]}</span>
     <span class="small">Team power ≈ <b class="num">${fmtCR(ours)}</b> vs enemy ≈ <b class="num">${fmtCR(theirs)}</b> (estimates; enemy assumed ${esc(ENEMY_BUILDS[ui.enemyBuild]?.label || '')} at level ${enemyLevel()})</span></div>`;
+}
+
+// Whether the data knows anything about beating this enemy: a hero listed as
+// countering one of them, or a recognised enemy comp with known answers.
+function counterKnowledge(ctx) {
+  const ids = new Set(ctx.enemy.map((h) => h.id));
+  if (ctx.enemy.some((h) => (h.counteredBy || []).length)) return true;
+  if (ctx.enemyArchetypes.some((a) => (a.counteredBy || []).length)) return true;
+  return data.heroes.some((h) => (h.counters || []).some((c) => ids.has(c)));
 }
 
 function beastFor(ctx, ids) {

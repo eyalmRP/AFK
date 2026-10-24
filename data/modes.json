@@ -259,7 +259,7 @@
      "name": "Best lineup",
      "heroes": [
       {
-       "id": "kyno",
+       "id": "mehira",
        "pos": "F1"
       },
       {
@@ -267,30 +267,29 @@
        "pos": "F2"
       },
       {
-       "id": "sion",
+       "id": "elijah-lailah",
        "pos": "B1"
       },
       {
-       "id": "elijah-lailah",
+       "id": "liberta",
        "pos": "B2"
       },
       {
-       "id": "rowan",
+       "id": "sion",
        "pos": "B3"
       }
      ],
      "artifacts": {
-      "kyno": "duras-call",
+      "mehira": "duras-eye",
       "awakened-athalia": "duras-eye",
-      "sion": "duras-eye",
       "elijah-lailah": "duras-call",
-      "rowan": "duras-call"
+      "liberta": "duras-call",
+      "sion": "duras-eye"
      },
-     "score": 64.5,
+     "score": 65.2,
      "why": "Built around Elijah & Lailah (S+ PVE) and Sion (S+ PVE). Covers frontline, sustain, damage, control.",
-     "differs": "Agrees on Elijah & Lailah, Rowan. Adds Kyno, Awakened Athalia, Sion, which the community teams don't name.",
-     "confidence": "medium",
-     "reviewed": true
+     "differs": "Agrees on Mehira, Elijah & Lailah, Liberta. Adds Awakened Athalia, Sion, which the community teams don't name.",
+     "confidence": "medium"
     }
    ],
    "group": "pve",
@@ -311,7 +310,7 @@
      "name": "Best lineup",
      "heroes": [
       {
-       "id": "kyno",
+       "id": "athena",
        "pos": "F1"
       },
       {
@@ -319,30 +318,29 @@
        "pos": "F2"
       },
       {
-       "id": "awakened-baden",
+       "id": "medusa",
        "pos": "B1"
       },
       {
-       "id": "awakened-lyca",
+       "id": "awakened-baden",
        "pos": "B2"
       },
       {
-       "id": "awakened-pippa",
+       "id": "awakened-lyca",
        "pos": "B3"
       }
      ],
      "artifacts": {
-      "kyno": "duras-call",
+      "athena": "duras-call",
       "awakened-athalia": "duras-eye",
+      "medusa": "duras-eye",
       "awakened-baden": "duras-eye",
-      "awakened-lyca": "duras-eye",
-      "awakened-pippa": "duras-eye"
+      "awakened-lyca": "duras-eye"
      },
-     "score": 62.5,
-     "why": "Built around Kyno (S+ PVE) and Awakened Athalia (S+ PVE). Covers frontline, sustain, damage, control.",
+     "score": 61.3,
+     "why": "Built around Awakened Athalia (S+ PVE) and Awakened Baden (S+ PVE). Covers frontline, sustain, damage, control. Synergy: Athena + Medusa.",
      "differs": "No community lineup was found for this mode this week, so there is nothing to compare against.",
-     "confidence": "low",
-     "reviewed": true
+     "confidence": "medium"
     }
    ],
    "group": "pve",
@@ -363,11 +361,11 @@
      "name": "Tower of Light",
      "heroes": [
       {
-       "id": "alvida",
+       "id": "jerome",
        "pos": "F1"
       },
       {
-       "id": "jerome",
+       "id": "adrian-elyse",
        "pos": "F2"
       },
       {
@@ -375,26 +373,25 @@
        "pos": "B1"
       },
       {
-       "id": "rowan",
+       "id": "palmer",
        "pos": "B2"
       },
       {
-       "id": "awakened-belinda",
+       "id": "scarlet",
        "pos": "B3"
       }
      ],
      "artifacts": {
-      "alvida": "duras-call",
       "jerome": "duras-eye",
+      "adrian-elyse": "duras-eye",
       "rosaline": "duras-call",
-      "rowan": "duras-call",
-      "awakened-belinda": "duras-eye"
+      "palmer": "duras-call",
+      "scarlet": "duras-eye"
      },
-     "score": 57,
-     "why": "Built around Rosaline (S+ PVE) and Rowan (S+ PVE). Covers frontline, sustain, damage. Light on control.",
+     "score": 56.5,
+     "why": "Built around Jerome (S+ PVE) and Rosaline (S+ PVE). Covers frontline, sustain, damage, control.",
      "differs": "No community lineup was found for this mode this week, so there is nothing to compare against.",
-     "confidence": "medium",
-     "reviewed": true
+     "confidence": "medium"
     },
     {
      "name": "Brutal Citadel",
@@ -404,34 +401,33 @@
        "pos": "F1"
       },
       {
-       "id": "awakened-antandra",
+       "id": "anasta",
        "pos": "F2"
       },
       {
-       "id": "talimar",
+       "id": "awakened-antandra",
        "pos": "B1"
       },
       {
-       "id": "villanelle",
+       "id": "antandra",
        "pos": "B2"
       },
       {
-       "id": "thesku",
+       "id": "talimar",
        "pos": "B3"
       }
      ],
      "artifacts": {
       "valeri": "duras-call",
+      "anasta": "duras-eye",
       "awakened-antandra": "duras-eye",
-      "talimar": "duras-call",
-      "villanelle": "duras-call",
-      "thesku": "duras-eye"
+      "antandra": "duras-eye",
+      "talimar": "duras-call"
      },
-     "score": 52,
+     "score": 53.5,
      "why": "Built around Talimar (S+ PVE) and Valeri (S PVE). Covers frontline, sustain, damage, control.",
      "differs": "No community lineup was found for this mode this week, so there is nothing to compare against.",
-     "confidence": "medium",
-     "reviewed": true
+     "confidence": "medium"
     },
     {
      "name": "World Tree",
@@ -441,7 +437,7 @@
        "pos": "F1"
       },
       {
-       "id": "awakened-lyca",
+       "id": "gorok",
        "pos": "F2"
       },
       {
@@ -449,36 +445,35 @@
        "pos": "B1"
       },
       {
-       "id": "awakened-solise",
+       "id": "awakened-lyca",
        "pos": "B2"
       },
       {
-       "id": "lyca",
+       "id": "awakened-solise",
        "pos": "B3"
       }
      ],
      "artifacts": {
       "atheus": "duras-call",
-      "awakened-lyca": "duras-eye",
+      "gorok": "duras-eye",
       "awakened-pippa": "duras-eye",
-      "awakened-solise": "duras-call",
-      "lyca": "duras-eye"
+      "awakened-lyca": "duras-eye",
+      "awakened-solise": "duras-call"
      },
-     "score": 58,
-     "why": "Built around Awakened Lyca (S+ PVE) and Awakened Pippa (S+ PVE). Covers frontline, sustain, damage, control.",
+     "score": 56.5,
+     "why": "Built around Awakened Pippa (S+ PVE) and Awakened Lyca (S+ PVE). Covers frontline, sustain, damage, control.",
      "differs": "No community lineup was found for this mode this week, so there is nothing to compare against.",
-     "confidence": "medium",
-     "reviewed": true
+     "confidence": "medium"
     },
     {
      "name": "Forsaken Necropolis",
      "heroes": [
       {
-       "id": "daimon",
+       "id": "awakened-thoran",
        "pos": "F1"
       },
       {
-       "id": "thoran",
+       "id": "grezhul",
        "pos": "F2"
       },
       {
@@ -490,22 +485,21 @@
        "pos": "B2"
       },
       {
-       "id": "randle",
+       "id": "silas",
        "pos": "B3"
       }
      ],
      "artifacts": {
-      "daimon": "duras-call",
-      "thoran": "duras-call",
+      "awakened-thoran": "duras-call",
+      "grezhul": "duras-call",
       "awakened-baden": "duras-eye",
       "ivan": "duras-call",
-      "randle": "duras-call"
+      "silas": "duras-call"
      },
-     "score": 58,
-     "why": "Built around Daimon (S+ PVE) and Awakened Baden (S+ PVE). Covers frontline, sustain, damage, control.",
+     "score": 56.5,
+     "why": "Built around Awakened Baden (S+ PVE) and Ivan (S+ PVE). Covers frontline, sustain, damage, control.",
      "differs": "No community lineup was found for this mode this week, so there is nothing to compare against.",
-     "confidence": "medium",
-     "reviewed": true
+     "confidence": "medium"
     },
     {
      "name": "Celestial Sanctum",
@@ -527,7 +521,7 @@
        "pos": "B2"
       },
       {
-       "id": "aurelia",
+       "id": "daemia",
        "pos": "B3"
       }
      ],
@@ -536,13 +530,12 @@
       "awakened-athalia": "duras-eye",
       "zohra": "duras-eye",
       "elijah-lailah": "duras-call",
-      "aurelia": "duras-eye"
+      "daemia": "duras-eye"
      },
-     "score": 59.5,
+     "score": 58,
      "why": "Built around Zohra (S+ PVE) and Awakened Athalia (S+ PVE). Covers frontline, sustain, damage, control.",
      "differs": "No community lineup was found for this mode this week, so there is nothing to compare against.",
-     "confidence": "medium",
-     "reviewed": true
+     "confidence": "medium"
     },
     {
      "name": "Infernal Fortress",
@@ -560,11 +553,11 @@
        "pos": "B1"
       },
       {
-       "id": "lavatune",
+       "id": "mortas",
        "pos": "B2"
       },
       {
-       "id": "knox",
+       "id": "eugene",
        "pos": "B3"
       }
      ],
@@ -572,14 +565,13 @@
       "mehira": "duras-eye",
       "hybris": "duras-eye",
       "envydiel": "duras-eye",
-      "lavatune": "duras-call",
-      "knox": "duras-call"
+      "mortas": "duras-call",
+      "eugene": "duras-eye"
      },
-     "score": 52.5,
-     "why": "Built around Hybris (S+ PVE) and Mehira (S PVE). Covers frontline, damage, control. Light on sustain.",
+     "score": 53.5,
+     "why": "Built around Hybris (S+ PVE) and Mehira (S PVE). Covers frontline, sustain, damage, control.",
      "differs": "No community lineup was found for this mode this week, so there is nothing to compare against.",
-     "confidence": "medium",
-     "reviewed": true
+     "confidence": "medium"
     }
    ],
    "group": "pve",
@@ -600,7 +592,7 @@
      "name": "Best lineup",
      "heroes": [
       {
-       "id": "kyno",
+       "id": "athena",
        "pos": "F1"
       },
       {
@@ -608,30 +600,29 @@
        "pos": "F2"
       },
       {
-       "id": "awakened-solise",
+       "id": "medusa",
        "pos": "B1"
       },
       {
-       "id": "awakened-baden",
+       "id": "awakened-solise",
        "pos": "B2"
       },
       {
-       "id": "awakened-lyca",
+       "id": "awakened-baden",
        "pos": "B3"
       }
      ],
      "artifacts": {
-      "kyno": "duras-call",
+      "athena": "duras-call",
       "awakened-athalia": "duras-eye",
+      "medusa": "duras-eye",
       "awakened-solise": "duras-call",
-      "awakened-baden": "duras-eye",
-      "awakened-lyca": "duras-eye"
+      "awakened-baden": "duras-eye"
      },
-     "score": 65,
-     "why": "Built around Kyno (S+ PVE) and Awakened Solise (S+ PVE). Covers frontline, sustain, damage, control.",
+     "score": 63.8,
+     "why": "Built around Awakened Solise (S+ PVE) and Awakened Athalia (S+ PVE). Covers frontline, sustain, damage, control. Synergy: Athena + Medusa.",
      "differs": "No community lineup was found for this mode this week, so there is nothing to compare against.",
-     "confidence": "low",
-     "reviewed": true
+     "confidence": "medium"
     }
    ],
    "group": "pve",
@@ -655,7 +646,7 @@
      "name": "Team 1",
      "heroes": [
       {
-       "id": "kyno",
+       "id": "athena",
        "pos": "F1"
       },
       {
@@ -663,44 +654,43 @@
        "pos": "F2"
       },
       {
-       "id": "awakened-baden",
+       "id": "medusa",
        "pos": "B1"
       },
       {
-       "id": "awakened-lyca",
+       "id": "awakened-baden",
        "pos": "B2"
       },
       {
-       "id": "sion",
+       "id": "awakened-lyca",
        "pos": "B3"
       }
      ],
      "artifacts": {
-      "kyno": "duras-call",
+      "athena": "duras-call",
       "awakened-athalia": "duras-eye",
+      "medusa": "duras-eye",
       "awakened-baden": "duras-eye",
-      "awakened-lyca": "duras-eye",
-      "sion": "duras-eye"
+      "awakened-lyca": "duras-eye"
      },
-     "score": 65.5,
-     "why": "Built around Awakened Baden (S+ PVE) and Awakened Lyca (S+ PVE). Covers frontline, sustain, damage, control.",
+     "score": 64.3,
+     "why": "Built around Awakened Baden (S+ PVE) and Awakened Lyca (S+ PVE). Covers frontline, sustain, damage, control. Synergy: Athena + Medusa.",
      "differs": "No community lineup was found for this mode this week, so there is nothing to compare against.",
-     "confidence": "medium",
-     "reviewed": true
+     "confidence": "medium"
     },
     {
      "name": "Team 2",
      "heroes": [
       {
-       "id": "athena",
+       "id": "jerome",
        "pos": "F1"
       },
       {
-       "id": "daimon",
+       "id": "hybris",
        "pos": "F2"
       },
       {
-       "id": "medusa",
+       "id": "sion",
        "pos": "B1"
       },
       {
@@ -713,17 +703,16 @@
       }
      ],
      "artifacts": {
-      "athena": "duras-call",
-      "daimon": "duras-call",
-      "medusa": "duras-eye",
+      "jerome": "duras-eye",
+      "hybris": "duras-eye",
+      "sion": "duras-eye",
       "awakened-pippa": "duras-eye",
       "awakened-solise": "duras-call"
      },
-     "score": 62.3,
-     "why": "Built around Daimon (S+ PVE) and Awakened Pippa (S+ PVE). Covers frontline, sustain, damage, control. Synergy: Athena + Medusa.",
+     "score": 63.5,
+     "why": "Built around Sion (S+ PVE) and Jerome (S+ PVE). Covers frontline, sustain, damage, control.",
      "differs": "No community lineup was found for this mode this week, so there is nothing to compare against.",
-     "confidence": "medium",
-     "reviewed": true
+     "confidence": "medium"
     }
    ],
    "group": "pve",
@@ -923,11 +912,11 @@
        "pos": "B1"
       },
       {
-       "id": "scarlet",
+       "id": "rosaline",
        "pos": "B2"
       },
       {
-       "id": "rosaline",
+       "id": "scarlet",
        "pos": "B3"
       }
      ],
@@ -935,14 +924,13 @@
       "grezhul": "duras-call",
       "saurus": "duras-eye",
       "awakened-solise": "duras-call",
-      "scarlet": "duras-eye",
-      "rosaline": "duras-call"
+      "rosaline": "duras-call",
+      "scarlet": "duras-eye"
      },
-     "score": 68.9,
-     "why": "Built around Rosaline (S+ BOSS) and Saurus (S+ BOSS). Covers sustain, damage, buffs/debuffs.",
+     "score": 65.9,
+     "why": "Built around Rosaline (S+ BOSS) and Grezhul (S+ BOSS). Covers sustain, damage, buffs/debuffs.",
      "differs": "Agrees on Grezhul, Saurus, Rosaline. Adds Awakened Solise, Scarlet, which the community teams don't name.",
-     "confidence": "low",
-     "reviewed": true
+     "confidence": "medium"
     }
    ],
    "group": "boss",
@@ -985,118 +973,7 @@
        "pos": "F1"
       },
       {
-       "id": "cha-hae-in",
-       "pos": "F2"
-      },
-      {
        "id": "awakened-athalia",
-       "pos": "B1"
-      },
-      {
-       "id": "awakened-solise",
-       "pos": "B2"
-      },
-      {
-       "id": "sung-jinwoo",
-       "pos": "B3"
-      }
-     ],
-     "artifacts": {
-      "jerome": "duras-eye",
-      "cha-hae-in": "duras-eye",
-      "awakened-athalia": "duras-eye",
-      "awakened-solise": "duras-call",
-      "sung-jinwoo": "duras-eye"
-     },
-     "score": 64.8,
-     "why": "Built around Jerome (S+ BOSS) and Awakened Solise (S+ BOSS). Covers sustain, damage, buffs/debuffs. Synergy: Cha Hae-in + Sung Jinwoo.",
-     "differs": "No community lineup was found for this mode this week, so there is nothing to compare against.",
-     "confidence": "medium",
-     "reviewed": true
-    },
-    {
-     "name": "Team 2",
-     "heroes": [
-      {
-       "id": "kyno",
-       "pos": "F1"
-      },
-      {
-       "id": "daimon",
-       "pos": "F2"
-      },
-      {
-       "id": "hybris",
-       "pos": "B1"
-      },
-      {
-       "id": "awakened-baden",
-       "pos": "B2"
-      },
-      {
-       "id": "awakened-lyca",
-       "pos": "B3"
-      }
-     ],
-     "artifacts": {
-      "kyno": "duras-call",
-      "daimon": "duras-call",
-      "hybris": "duras-eye",
-      "awakened-baden": "duras-eye",
-      "awakened-lyca": "duras-eye"
-     },
-     "score": 62.5,
-     "why": "Built around Kyno (S+ BOSS) and Hybris (S+ BOSS). Covers sustain, damage, buffs/debuffs.",
-     "differs": "No community lineup was found for this mode this week, so there is nothing to compare against.",
-     "confidence": "medium",
-     "reviewed": true
-    },
-    {
-     "name": "Team 3",
-     "heroes": [
-      {
-       "id": "athena",
-       "pos": "F1"
-      },
-      {
-       "id": "grezhul",
-       "pos": "F2"
-      },
-      {
-       "id": "saurus",
-       "pos": "B1"
-      },
-      {
-       "id": "scarlet",
-       "pos": "B2"
-      },
-      {
-       "id": "medusa",
-       "pos": "B3"
-      }
-     ],
-     "artifacts": {
-      "athena": "duras-call",
-      "grezhul": "duras-call",
-      "saurus": "duras-eye",
-      "scarlet": "duras-eye",
-      "medusa": "duras-eye"
-     },
-     "score": 65.7,
-     "why": "Built around Saurus (S+ BOSS) and Grezhul (S+ BOSS). Covers sustain, damage, buffs/debuffs. Synergy: Athena + Medusa.",
-     "differs": "No community lineup was found for this mode this week, so there is nothing to compare against.",
-     "confidence": "medium",
-     "reviewed": true
-    },
-    {
-     "name": "Team 4",
-     "heroes": [
-      {
-       "id": "edwin",
-       "pos": "F1"
-      },
-      {
-       "id": "envydiel",
        "pos": "F2"
       },
       {
@@ -1113,23 +990,94 @@
       }
      ],
      "artifacts": {
-      "edwin": "duras-call",
-      "envydiel": "duras-eye",
+      "jerome": "duras-eye",
+      "awakened-athalia": "duras-eye",
       "liberta": "duras-call",
       "lucilla": "duras-call",
       "ivan": "duras-call"
      },
-     "score": 63.2,
-     "why": "Built around Envydiel (S+ BOSS) and Liberta (S+ BOSS). Covers sustain, damage, buffs/debuffs.",
+     "score": 65.2,
+     "why": "Built around Jerome (S+ BOSS) and Awakened Athalia (S+ BOSS). Covers sustain, damage, buffs/debuffs.",
      "differs": "No community lineup was found for this mode this week, so there is nothing to compare against.",
-     "confidence": "medium",
-     "reviewed": true
+     "confidence": "medium"
     },
     {
-     "name": "Team 5",
+     "name": "Team 2",
      "heroes": [
       {
-       "id": "rowan",
+       "id": "grezhul",
+       "pos": "F1"
+      },
+      {
+       "id": "cha-hae-in",
+       "pos": "F2"
+      },
+      {
+       "id": "awakened-solise",
+       "pos": "B1"
+      },
+      {
+       "id": "sung-jinwoo",
+       "pos": "B2"
+      },
+      {
+       "id": "awakened-baden",
+       "pos": "B3"
+      }
+     ],
+     "artifacts": {
+      "grezhul": "duras-call",
+      "cha-hae-in": "duras-eye",
+      "awakened-solise": "duras-call",
+      "sung-jinwoo": "duras-eye",
+      "awakened-baden": "duras-eye"
+     },
+     "score": 64.3,
+     "why": "Built around Cha Hae-in (S+ BOSS) and Awakened Solise (S+ BOSS). Covers sustain, damage, buffs/debuffs. Synergy: Cha Hae-in + Sung Jinwoo.",
+     "differs": "No community lineup was found for this mode this week, so there is nothing to compare against.",
+     "confidence": "medium"
+    },
+    {
+     "name": "Team 3",
+     "heroes": [
+      {
+       "id": "athena",
+       "pos": "F1"
+      },
+      {
+       "id": "hybris",
+       "pos": "F2"
+      },
+      {
+       "id": "medusa",
+       "pos": "B1"
+      },
+      {
+       "id": "awakened-lyca",
+       "pos": "B2"
+      },
+      {
+       "id": "envydiel",
+       "pos": "B3"
+      }
+     ],
+     "artifacts": {
+      "athena": "duras-call",
+      "hybris": "duras-eye",
+      "medusa": "duras-eye",
+      "awakened-lyca": "duras-eye",
+      "envydiel": "duras-eye"
+     },
+     "score": 61.3,
+     "why": "Built around Hybris (S+ BOSS) and Awakened Lyca (S+ BOSS). Covers sustain, damage, buffs/debuffs. Synergy: Athena + Medusa.",
+     "differs": "No community lineup was found for this mode this week, so there is nothing to compare against.",
+     "confidence": "medium"
+    },
+    {
+     "name": "Team 4",
+     "heroes": [
+      {
+       "id": "saurus",
        "pos": "F1"
       },
       {
@@ -1141,36 +1089,35 @@
        "pos": "B1"
       },
       {
-       "id": "awakened-belinda",
+       "id": "palmer",
        "pos": "B2"
       },
       {
-       "id": "palmer",
+       "id": "scarlet",
        "pos": "B3"
       }
      ],
      "artifacts": {
-      "rowan": "duras-call",
+      "saurus": "duras-eye",
       "rosaline": "duras-call",
       "lavatune": "duras-call",
-      "awakened-belinda": "duras-eye",
-      "palmer": "duras-call"
+      "palmer": "duras-call",
+      "scarlet": "duras-eye"
      },
      "score": 60.2,
-     "why": "Built around Rowan (S+ BOSS) and Rosaline (S+ BOSS). Covers sustain, damage, buffs/debuffs.",
+     "why": "Built around Rosaline (S+ BOSS) and Lavatune (S+ BOSS). Covers sustain, damage, buffs/debuffs.",
      "differs": "No community lineup was found for this mode this week, so there is nothing to compare against.",
-     "confidence": "medium",
-     "reviewed": true
+     "confidence": "medium"
     },
     {
-     "name": "Team 6",
+     "name": "Team 5",
      "heroes": [
       {
-       "id": "alvida",
+       "id": "awakened-thoran",
        "pos": "F1"
       },
       {
-       "id": "atheus",
+       "id": "awakened-antandra",
        "pos": "F2"
       },
       {
@@ -1187,8 +1134,8 @@
       }
      ],
      "artifacts": {
-      "alvida": "duras-call",
-      "atheus": "duras-call",
+      "awakened-thoran": "duras-call",
+      "awakened-antandra": "duras-eye",
       "thalassa": "duras-call",
       "sion": "duras-eye",
       "velufira": "duras-call"
@@ -1196,8 +1143,43 @@
      "score": 58,
      "why": "Built around Sion (S+ BOSS) and Velufira (S+ BOSS). Covers sustain, damage, buffs/debuffs.",
      "differs": "No community lineup was found for this mode this week, so there is nothing to compare against.",
-     "confidence": "medium",
-     "reviewed": true
+     "confidence": "medium"
+    },
+    {
+     "name": "Team 6",
+     "heroes": [
+      {
+       "id": "kyno",
+       "pos": "F1"
+      },
+      {
+       "id": "umbriel",
+       "pos": "F2"
+      },
+      {
+       "id": "awakened-pippa",
+       "pos": "B1"
+      },
+      {
+       "id": "daemia",
+       "pos": "B2"
+      },
+      {
+       "id": "elijah-lailah",
+       "pos": "B3"
+      }
+     ],
+     "artifacts": {
+      "kyno": "duras-call",
+      "umbriel": "duras-eye",
+      "awakened-pippa": "duras-eye",
+      "daemia": "duras-eye",
+      "elijah-lailah": "duras-call"
+     },
+     "score": 55,
+     "why": "Built around Kyno (S BOSS) and Umbriel (S BOSS). Covers sustain, damage, buffs/debuffs.",
+     "differs": "No community lineup was found for this mode this week, so there is nothing to compare against.",
+     "confidence": "medium"
     }
    ],
    "group": "boss",
@@ -1260,7 +1242,7 @@
      "name": "Best lineup",
      "heroes": [
       {
-       "id": "kyno",
+       "id": "athena",
        "pos": "F1"
       },
       {
@@ -1281,17 +1263,16 @@
       }
      ],
      "artifacts": {
-      "kyno": "duras-call",
+      "athena": "duras-call",
       "cha-hae-in": "duras-eye",
       "sung-jinwoo": "duras-eye",
       "envydiel": "duras-eye",
       "sion": "duras-eye"
      },
-     "score": 67.3,
+     "score": 65.8,
      "why": "Built around Cha Hae-in (S+ BOSS) and Envydiel (S+ BOSS). Covers sustain, damage, buffs/debuffs. Synergy: Cha Hae-in + Sung Jinwoo.",
-     "differs": "Agrees on Cha Hae-in, Envydiel, Sion. Adds Kyno, Sung Jinwoo, which the community teams don't name.",
-     "confidence": "low",
-     "reviewed": true
+     "differs": "Agrees on Cha Hae-in, Envydiel, Sion. Adds Athena, Sung Jinwoo, which the community teams don't name.",
+     "confidence": "medium"
     }
    ],
    "group": "boss",
@@ -1708,7 +1689,7 @@
      "name": "Best lineup",
      "heroes": [
       {
-       "id": "daimon",
+       "id": "awakened-shemira",
        "pos": "F1"
       },
       {
@@ -1729,17 +1710,16 @@
       }
      ],
      "artifacts": {
-      "daimon": "duras-call",
+      "awakened-shemira": "duras-call",
       "cha-hae-in": "duras-eye",
       "aurelia": "duras-eye",
       "liberta": "duras-call",
       "sung-jinwoo": "duras-eye"
      },
-     "score": 66.3,
+     "score": 66.5,
      "why": "Built around Sung Jinwoo (S+ PVP) and Aurelia (S+ PVP). Covers frontline, sustain, damage, control. Synergy: Sung Jinwoo + Cha Hae-in.",
-     "differs": "Agrees on Aurelia, Liberta, Sung Jinwoo. Adds Daimon, Cha Hae-in, which the community teams don't name. Leaves out Awakened Shemira only because she has no rating this week.",
-     "confidence": "medium",
-     "reviewed": true
+     "differs": "Agrees on Awakened Shemira, Aurelia, Liberta, Sung Jinwoo. Adds Cha Hae-in, which the community teams don't name.",
+     "confidence": "medium"
     }
    ],
    "group": "pvp",
@@ -1760,89 +1740,15 @@
      "name": "Team 1",
      "heroes": [
       {
-       "id": "athena",
-       "pos": "F1"
-      },
-      {
-       "id": "antandra",
-       "pos": "F2"
-      },
-      {
-       "id": "awakened-athalia",
-       "pos": "B1"
-      },
-      {
-       "id": "awakened-baden",
-       "pos": "B2"
-      },
-      {
-       "id": "aurelia",
-       "pos": "B3"
-      }
-     ],
-     "artifacts": {
-      "athena": "duras-call",
-      "antandra": "duras-eye",
-      "awakened-athalia": "duras-eye",
-      "awakened-baden": "duras-eye",
-      "aurelia": "duras-eye"
-     },
-     "score": 61,
-     "why": "Built around Awakened Baden (S+ PVP) and Antandra (S+ PVP). Covers frontline, sustain, damage, control.",
-     "differs": "No community lineup was found for this mode this week, so there is nothing to compare against.",
-     "confidence": "medium",
-     "reviewed": true
-    },
-    {
-     "name": "Team 2",
-     "heroes": [
-      {
-       "id": "daimon",
-       "pos": "F1"
-      },
-      {
-       "id": "cha-hae-in",
-       "pos": "F2"
-      },
-      {
-       "id": "liberta",
-       "pos": "B1"
-      },
-      {
-       "id": "ivan",
-       "pos": "B2"
-      },
-      {
-       "id": "sung-jinwoo",
-       "pos": "B3"
-      }
-     ],
-     "artifacts": {
-      "daimon": "duras-call",
-      "cha-hae-in": "duras-eye",
-      "liberta": "duras-call",
-      "ivan": "duras-call",
-      "sung-jinwoo": "duras-eye"
-     },
-     "score": 64.3,
-     "why": "Built around Daimon (S+ PVP) and Liberta (S+ PVP). Covers frontline, sustain, damage, control. Synergy: Cha Hae-in + Sung Jinwoo.",
-     "differs": "No community lineup was found for this mode this week, so there is nothing to compare against.",
-     "confidence": "medium",
-     "reviewed": true
-    },
-    {
-     "name": "Team 3",
-     "heroes": [
-      {
        "id": "jerome",
        "pos": "F1"
       },
       {
-       "id": "laios",
+       "id": "awakened-athalia",
        "pos": "F2"
       },
       {
-       "id": "marcille",
+       "id": "awakened-solise",
        "pos": "B1"
       },
       {
@@ -1856,16 +1762,87 @@
      ],
      "artifacts": {
       "jerome": "duras-eye",
-      "laios": "duras-eye",
-      "marcille": "duras-eye",
+      "awakened-athalia": "duras-eye",
+      "awakened-solise": "duras-call",
       "awakened-belinda": "duras-eye",
       "lavatune": "duras-call"
      },
-     "score": 63.5,
-     "why": "Built around Jerome (S+ PVP) and Awakened Belinda (S+ PVP). Covers frontline, sustain, damage, control. Synergy: Laios + Marcille.",
+     "score": 64.7,
+     "why": "Built around Jerome (S+ PVP) and Awakened Solise (S+ PVP). Covers frontline, sustain, damage, control.",
      "differs": "No community lineup was found for this mode this week, so there is nothing to compare against.",
-     "confidence": "medium",
-     "reviewed": true
+     "confidence": "medium"
+    },
+    {
+     "name": "Team 2",
+     "heroes": [
+      {
+       "id": "athena",
+       "pos": "F1"
+      },
+      {
+       "id": "cha-hae-in",
+       "pos": "F2"
+      },
+      {
+       "id": "medusa",
+       "pos": "B1"
+      },
+      {
+       "id": "sung-jinwoo",
+       "pos": "B2"
+      },
+      {
+       "id": "aurelia",
+       "pos": "B3"
+      }
+     ],
+     "artifacts": {
+      "athena": "duras-call",
+      "cha-hae-in": "duras-eye",
+      "medusa": "duras-eye",
+      "sung-jinwoo": "duras-eye",
+      "aurelia": "duras-eye"
+     },
+     "score": 63.1,
+     "why": "Built around Cha Hae-in (S+ PVP) and Sung Jinwoo (S+ PVP). Covers frontline, sustain, damage, control. Synergy: Athena + Medusa, Cha Hae-in + Sung Jinwoo.",
+     "differs": "No community lineup was found for this mode this week, so there is nothing to compare against.",
+     "confidence": "medium"
+    },
+    {
+     "name": "Team 3",
+     "heroes": [
+      {
+       "id": "kyno",
+       "pos": "F1"
+      },
+      {
+       "id": "hybris",
+       "pos": "F2"
+      },
+      {
+       "id": "awakened-baden",
+       "pos": "B1"
+      },
+      {
+       "id": "awakened-lyca",
+       "pos": "B2"
+      },
+      {
+       "id": "daemia",
+       "pos": "B3"
+      }
+     ],
+     "artifacts": {
+      "kyno": "duras-call",
+      "hybris": "duras-eye",
+      "awakened-baden": "duras-eye",
+      "awakened-lyca": "duras-eye",
+      "daemia": "duras-eye"
+     },
+     "score": 61,
+     "why": "Built around Hybris (S+ PVP) and Awakened Baden (S+ PVP). Covers frontline, sustain, damage, control.",
+     "differs": "No community lineup was found for this mode this week, so there is nothing to compare against.",
+     "confidence": "medium"
     }
    ],
    "group": "pvp",
@@ -1886,89 +1863,15 @@
      "name": "Team 1",
      "heroes": [
       {
-       "id": "athena",
-       "pos": "F1"
-      },
-      {
-       "id": "antandra",
-       "pos": "F2"
-      },
-      {
-       "id": "awakened-athalia",
-       "pos": "B1"
-      },
-      {
-       "id": "awakened-baden",
-       "pos": "B2"
-      },
-      {
-       "id": "aurelia",
-       "pos": "B3"
-      }
-     ],
-     "artifacts": {
-      "athena": "duras-call",
-      "antandra": "duras-eye",
-      "awakened-athalia": "duras-eye",
-      "awakened-baden": "duras-eye",
-      "aurelia": "duras-eye"
-     },
-     "score": 61,
-     "why": "Built around Awakened Baden (S+ PVP) and Antandra (S+ PVP). Covers frontline, sustain, damage, control.",
-     "differs": "No community lineup was found for this mode this week, so there is nothing to compare against.",
-     "confidence": "low",
-     "reviewed": true
-    },
-    {
-     "name": "Team 2",
-     "heroes": [
-      {
-       "id": "daimon",
-       "pos": "F1"
-      },
-      {
-       "id": "cha-hae-in",
-       "pos": "F2"
-      },
-      {
-       "id": "liberta",
-       "pos": "B1"
-      },
-      {
-       "id": "ivan",
-       "pos": "B2"
-      },
-      {
-       "id": "sung-jinwoo",
-       "pos": "B3"
-      }
-     ],
-     "artifacts": {
-      "daimon": "duras-call",
-      "cha-hae-in": "duras-eye",
-      "liberta": "duras-call",
-      "ivan": "duras-call",
-      "sung-jinwoo": "duras-eye"
-     },
-     "score": 64.3,
-     "why": "Built around Daimon (S+ PVP) and Liberta (S+ PVP). Covers frontline, sustain, damage, control. Synergy: Cha Hae-in + Sung Jinwoo.",
-     "differs": "No community lineup was found for this mode this week, so there is nothing to compare against.",
-     "confidence": "low",
-     "reviewed": true
-    },
-    {
-     "name": "Team 3",
-     "heroes": [
-      {
        "id": "jerome",
        "pos": "F1"
       },
       {
-       "id": "laios",
+       "id": "awakened-athalia",
        "pos": "F2"
       },
       {
-       "id": "marcille",
+       "id": "awakened-solise",
        "pos": "B1"
       },
       {
@@ -1982,16 +1885,87 @@
      ],
      "artifacts": {
       "jerome": "duras-eye",
-      "laios": "duras-eye",
-      "marcille": "duras-eye",
+      "awakened-athalia": "duras-eye",
+      "awakened-solise": "duras-call",
       "awakened-belinda": "duras-eye",
       "lavatune": "duras-call"
      },
-     "score": 63.5,
-     "why": "Built around Jerome (S+ PVP) and Awakened Belinda (S+ PVP). Covers frontline, sustain, damage, control. Synergy: Laios + Marcille.",
+     "score": 64.7,
+     "why": "Built around Jerome (S+ PVP) and Awakened Solise (S+ PVP). Covers frontline, sustain, damage, control.",
      "differs": "No community lineup was found for this mode this week, so there is nothing to compare against.",
-     "confidence": "low",
-     "reviewed": true
+     "confidence": "medium"
+    },
+    {
+     "name": "Team 2",
+     "heroes": [
+      {
+       "id": "athena",
+       "pos": "F1"
+      },
+      {
+       "id": "cha-hae-in",
+       "pos": "F2"
+      },
+      {
+       "id": "medusa",
+       "pos": "B1"
+      },
+      {
+       "id": "sung-jinwoo",
+       "pos": "B2"
+      },
+      {
+       "id": "aurelia",
+       "pos": "B3"
+      }
+     ],
+     "artifacts": {
+      "athena": "duras-call",
+      "cha-hae-in": "duras-eye",
+      "medusa": "duras-eye",
+      "sung-jinwoo": "duras-eye",
+      "aurelia": "duras-eye"
+     },
+     "score": 63.1,
+     "why": "Built around Cha Hae-in (S+ PVP) and Sung Jinwoo (S+ PVP). Covers frontline, sustain, damage, control. Synergy: Athena + Medusa, Cha Hae-in + Sung Jinwoo.",
+     "differs": "No community lineup was found for this mode this week, so there is nothing to compare against.",
+     "confidence": "medium"
+    },
+    {
+     "name": "Team 3",
+     "heroes": [
+      {
+       "id": "kyno",
+       "pos": "F1"
+      },
+      {
+       "id": "hybris",
+       "pos": "F2"
+      },
+      {
+       "id": "awakened-baden",
+       "pos": "B1"
+      },
+      {
+       "id": "awakened-lyca",
+       "pos": "B2"
+      },
+      {
+       "id": "daemia",
+       "pos": "B3"
+      }
+     ],
+     "artifacts": {
+      "kyno": "duras-call",
+      "hybris": "duras-eye",
+      "awakened-baden": "duras-eye",
+      "awakened-lyca": "duras-eye",
+      "daemia": "duras-eye"
+     },
+     "score": 61,
+     "why": "Built around Hybris (S+ PVP) and Awakened Baden (S+ PVP). Covers frontline, sustain, damage, control.",
+     "differs": "No community lineup was found for this mode this week, so there is nothing to compare against.",
+     "confidence": "medium"
     }
    ],
    "group": "pvp",
@@ -2036,48 +2010,11 @@
      "name": "Team 1",
      "heroes": [
       {
-       "id": "kyno",
+       "id": "jerome",
        "pos": "F1"
       },
       {
        "id": "hybris",
-       "pos": "F2"
-      },
-      {
-       "id": "awakened-athalia",
-       "pos": "B1"
-      },
-      {
-       "id": "awakened-baden",
-       "pos": "B2"
-      },
-      {
-       "id": "awakened-lyca",
-       "pos": "B3"
-      }
-     ],
-     "artifacts": {
-      "kyno": "duras-call",
-      "hybris": "duras-eye",
-      "awakened-athalia": "duras-eye",
-      "awakened-baden": "duras-eye",
-      "awakened-lyca": "duras-eye"
-     },
-     "score": 63.5,
-     "why": "Built around Hybris (S+ PVE) and Kyno (S+ PVE). Covers frontline, sustain, damage, control.",
-     "differs": "Agrees on Hybris. Adds Kyno, Awakened Athalia, Awakened Baden, Awakened Lyca, which the community teams don't name.",
-     "confidence": "medium",
-     "reviewed": true
-    },
-    {
-     "name": "Team 2",
-     "heroes": [
-      {
-       "id": "daimon",
-       "pos": "F1"
-      },
-      {
-       "id": "jerome",
        "pos": "F2"
       },
       {
@@ -2094,35 +2031,70 @@
       }
      ],
      "artifacts": {
-      "daimon": "duras-call",
       "jerome": "duras-eye",
+      "hybris": "duras-eye",
       "awakened-pippa": "duras-eye",
       "awakened-solise": "duras-call",
       "elijah-lailah": "duras-call"
      },
-     "score": 62.5,
-     "why": "Built around Jerome (S+ PVE) and Awakened Pippa (S+ PVE). Covers frontline, sustain, damage, control.",
-     "differs": "Adds Daimon, Jerome, Awakened Pippa, Awakened Solise, Elijah & Lailah, which the community teams don't name.",
-     "confidence": "medium",
-     "reviewed": true
+     "score": 63.5,
+     "why": "Built around Hybris (S+ PVE) and Jerome (S+ PVE). Covers frontline, sustain, damage, control.",
+     "differs": "Agrees on Hybris. Adds Jerome, Awakened Pippa, Awakened Solise, Elijah & Lailah, which the community teams don't name.",
+     "confidence": "medium"
     },
     {
-     "name": "Team 3",
+     "name": "Team 2",
      "heroes": [
       {
        "id": "athena",
        "pos": "F1"
       },
       {
-       "id": "medusa",
+       "id": "awakened-athalia",
        "pos": "F2"
       },
       {
-       "id": "ivan",
+       "id": "medusa",
        "pos": "B1"
       },
       {
+       "id": "awakened-baden",
+       "pos": "B2"
+      },
+      {
+       "id": "awakened-lyca",
+       "pos": "B3"
+      }
+     ],
+     "artifacts": {
+      "athena": "duras-call",
+      "awakened-athalia": "duras-eye",
+      "medusa": "duras-eye",
+      "awakened-baden": "duras-eye",
+      "awakened-lyca": "duras-eye"
+     },
+     "score": 61.3,
+     "why": "Built around Awakened Athalia (S+ PVE) and Awakened Baden (S+ PVE). Covers frontline, sustain, damage, control. Synergy: Athena + Medusa.",
+     "differs": "Adds Athena, Awakened Athalia, Medusa, Awakened Baden, Awakened Lyca, which the community teams don't name.",
+     "confidence": "medium"
+    },
+    {
+     "name": "Team 3",
+     "heroes": [
+      {
+       "id": "kyno",
+       "pos": "F1"
+      },
+      {
        "id": "leonardo",
+       "pos": "F2"
+      },
+      {
+       "id": "rosaline",
+       "pos": "B1"
+      },
+      {
+       "id": "ivan",
        "pos": "B2"
       },
       {
@@ -2131,23 +2103,22 @@
       }
      ],
      "artifacts": {
-      "athena": "duras-call",
-      "medusa": "duras-eye",
-      "ivan": "duras-call",
+      "kyno": "duras-call",
       "leonardo": "duras-eye",
+      "rosaline": "duras-call",
+      "ivan": "duras-call",
       "merlin": "duras-call"
      },
-     "score": 59.8,
-     "why": "Built around Ivan (S+ PVE) and Leonardo (S+ PVE). Covers frontline, sustain, damage, control. Synergy: Athena + Medusa.",
-     "differs": "Adds Athena, Medusa, Ivan, Leonardo, Merlin, which the community teams don't name.",
-     "confidence": "medium",
-     "reviewed": true
+     "score": 59.5,
+     "why": "Built around Leonardo (S+ PVE) and Rosaline (S+ PVE). Covers frontline, sustain, damage, control.",
+     "differs": "Adds Kyno, Leonardo, Rosaline, Ivan, Merlin, which the community teams don't name.",
+     "confidence": "medium"
     },
     {
      "name": "Team 4",
      "heroes": [
       {
-       "id": "alvida",
+       "id": "valeri",
        "pos": "F1"
       },
       {
@@ -2155,44 +2126,7 @@
        "pos": "F2"
       },
       {
-       "id": "rowan",
-       "pos": "B1"
-      },
-      {
-       "id": "rosaline",
-       "pos": "B2"
-      },
-      {
        "id": "sion",
-       "pos": "B3"
-      }
-     ],
-     "artifacts": {
-      "alvida": "duras-call",
-      "zohra": "duras-eye",
-      "rowan": "duras-call",
-      "rosaline": "duras-call",
-      "sion": "duras-eye"
-     },
-     "score": 59.5,
-     "why": "Built around Zohra (S+ PVE) and Rowan (S+ PVE). Covers frontline, sustain, damage, control.",
-     "differs": "Adds Alvida, Zohra, Rowan, Rosaline, Sion, which the community teams don't name.",
-     "confidence": "medium",
-     "reviewed": true
-    },
-    {
-     "name": "Team 5",
-     "heroes": [
-      {
-       "id": "awakened-thoran",
-       "pos": "F1"
-      },
-      {
-       "id": "atheus",
-       "pos": "F2"
-      },
-      {
-       "id": "thalassa",
        "pos": "B1"
       },
       {
@@ -2205,17 +2139,52 @@
       }
      ],
      "artifacts": {
-      "awakened-thoran": "duras-call",
-      "atheus": "duras-call",
-      "thalassa": "duras-call",
+      "valeri": "duras-call",
+      "zohra": "duras-eye",
+      "sion": "duras-eye",
       "talimar": "duras-call",
       "velufira": "duras-call"
      },
-     "score": 58,
-     "why": "Built around Talimar (S+ PVE) and Velufira (S+ PVE). Covers frontline, sustain, damage, control.",
-     "differs": "Adds Awakened Thoran, Atheus, Thalassa, Talimar, Velufira, which the community teams don't name.",
-     "confidence": "medium",
-     "reviewed": true
+     "score": 59.5,
+     "why": "Built around Zohra (S+ PVE) and Sion (S+ PVE). Covers frontline, sustain, damage, control.",
+     "differs": "Adds Valeri, Zohra, Sion, Talimar, Velufira, which the community teams don't name.",
+     "confidence": "medium"
+    },
+    {
+     "name": "Team 5",
+     "heroes": [
+      {
+       "id": "awakened-shemira",
+       "pos": "F1"
+      },
+      {
+       "id": "awakened-antandra",
+       "pos": "F2"
+      },
+      {
+       "id": "cha-hae-in",
+       "pos": "B1"
+      },
+      {
+       "id": "thalassa",
+       "pos": "B2"
+      },
+      {
+       "id": "sung-jinwoo",
+       "pos": "B3"
+      }
+     ],
+     "artifacts": {
+      "awakened-shemira": "duras-call",
+      "awakened-antandra": "duras-eye",
+      "cha-hae-in": "duras-eye",
+      "thalassa": "duras-call",
+      "sung-jinwoo": "duras-eye"
+     },
+     "score": 57.5,
+     "why": "Built around Thalassa (S PVE) and Awakened Antandra (S PVE). Covers frontline, sustain, damage, control. Synergy: Cha Hae-in + Sung Jinwoo.",
+     "differs": "Adds Awakened Shemira, Awakened Antandra, Cha Hae-in, Thalassa, Sung Jinwoo, which the community teams don't name.",
+     "confidence": "medium"
     }
    ],
    "group": "event",
@@ -2503,34 +2472,34 @@
   "ai": [
    {
     "heroes": [
-     "awakened-athalia",
-     "awakened-baden"
+     "athena",
+     "medusa"
     ],
-    "name": "Awakened Athalia + Awakened Baden",
-    "why": "Paired in 6 calculated lineups (King's Tower, Arcane Labyrinth, Abyssal Expedition, Legends Championship…). Awakened Athalia brings burst, Awakened Baden brings sustained-dps.",
+    "name": "Athena + Medusa",
+    "why": "Paired in 7 calculated lineups (King's Tower, Arcane Labyrinth, Abyssal Expedition, Cursed Realm…). Athena brings tank, Medusa brings debuffer.",
     "modes": [
      "King's Tower",
      "Arcane Labyrinth",
      "Abyssal Expedition",
+     "Cursed Realm",
      "Legends Championship",
      "Treasure Scramble",
      "Guild Trials"
-    ],
-    "reviewed": true
+    ]
    },
    {
     "heroes": [
-     "awakened-athalia",
-     "kyno"
+     "cha-hae-in",
+     "sung-jinwoo"
     ],
-    "name": "Awakened Athalia + Kyno",
-    "why": "Paired in 5 calculated lineups (Campaign, King's Tower, Arcane Labyrinth, Abyssal Expedition…). Awakened Athalia brings burst, Kyno brings tank.",
+    "name": "Cha Hae-in + Sung Jinwoo",
+    "why": "Paired in 5 calculated lineups (Cursed Realm, Nightmare Corridor, Arena of Heroes, Legends Championship…). Cha Hae-in brings sustained-dps, Sung Jinwoo brings sustained-dps.",
     "modes": [
-     "Campaign",
-     "King's Tower",
-     "Arcane Labyrinth",
-     "Abyssal Expedition",
-     "Guild Trials"
+     "Cursed Realm",
+     "Nightmare Corridor",
+     "Arena of Heroes",
+     "Legends Championship",
+     "Treasure Scramble"
     ],
     "reviewed": true
    },
@@ -2552,108 +2521,104 @@
    },
    {
     "heroes": [
-     "awakened-baden",
-     "kyno"
+     "athena",
+     "awakened-athalia"
     ],
-    "name": "Awakened Baden + Kyno",
-    "why": "Paired in 5 calculated lineups (King's Tower, Arcane Labyrinth, Abyssal Expedition, Cursed Realm…). Awakened Baden brings sustained-dps, Kyno brings tank.",
+    "name": "Athena + Awakened Athalia",
+    "why": "Paired in 4 calculated lineups (King's Tower, Arcane Labyrinth, Abyssal Expedition, Guild Trials). Athena brings tank, Awakened Athalia brings burst.",
     "modes": [
      "King's Tower",
      "Arcane Labyrinth",
      "Abyssal Expedition",
-     "Cursed Realm",
      "Guild Trials"
-    ],
-    "reviewed": true
+    ]
    },
    {
     "heroes": [
-     "awakened-lyca",
-     "kyno"
+     "athena",
+     "awakened-baden"
     ],
-    "name": "Awakened Lyca + Kyno",
-    "why": "Paired in 5 calculated lineups (King's Tower, Arcane Labyrinth, Abyssal Expedition, Cursed Realm…). Awakened Lyca brings sustained-dps, Kyno brings tank.",
+    "name": "Athena + Awakened Baden",
+    "why": "Paired in 4 calculated lineups (King's Tower, Arcane Labyrinth, Abyssal Expedition, Guild Trials). Athena brings tank, Awakened Baden brings sustained-dps.",
     "modes": [
      "King's Tower",
      "Arcane Labyrinth",
      "Abyssal Expedition",
-     "Cursed Realm",
      "Guild Trials"
-    ],
-    "reviewed": true
+    ]
    },
    {
     "heroes": [
-     "cha-hae-in",
-     "sung-jinwoo"
+     "athena",
+     "awakened-lyca"
     ],
-    "name": "Cha Hae-in + Sung Jinwoo",
-    "why": "Paired in 5 calculated lineups (Cursed Realm, Nightmare Corridor, Arena of Heroes, Legends Championship…). Cha Hae-in brings sustained-dps, Sung Jinwoo brings sustained-dps.",
+    "name": "Athena + Awakened Lyca",
+    "why": "Paired in 4 calculated lineups (King's Tower, Abyssal Expedition, Cursed Realm, Guild Trials). Athena brings tank, Awakened Lyca brings sustained-dps.",
     "modes": [
+     "King's Tower",
+     "Abyssal Expedition",
      "Cursed Realm",
-     "Nightmare Corridor",
-     "Arena of Heroes",
+     "Guild Trials"
+    ]
+   },
+   {
+    "heroes": [
+     "awakened-athalia",
+     "awakened-baden"
+    ],
+    "name": "Awakened Athalia + Awakened Baden",
+    "why": "Paired in 6 calculated lineups (King's Tower, Arcane Labyrinth, Abyssal Expedition, Legends Championship…). Awakened Athalia brings burst, Awakened Baden brings sustained-dps.",
+    "modes": [
+     "King's Tower",
+     "Arcane Labyrinth",
+     "Abyssal Expedition",
      "Legends Championship",
-     "Treasure Scramble"
+     "Treasure Scramble",
+     "Guild Trials"
     ],
     "reviewed": true
    },
    {
     "heroes": [
      "awakened-athalia",
-     "awakened-lyca"
+     "medusa"
     ],
-    "name": "Awakened Athalia + Awakened Lyca",
-    "why": "Paired in 4 calculated lineups (King's Tower, Arcane Labyrinth, Abyssal Expedition, Guild Trials). Awakened Athalia brings burst, Awakened Lyca brings sustained-dps.",
+    "name": "Awakened Athalia + Medusa",
+    "why": "Paired in 4 calculated lineups (King's Tower, Arcane Labyrinth, Abyssal Expedition, Guild Trials). Awakened Athalia brings burst, Medusa brings debuffer.",
     "modes": [
      "King's Tower",
      "Arcane Labyrinth",
      "Abyssal Expedition",
      "Guild Trials"
-    ],
-    "reviewed": true
+    ]
    },
    {
     "heroes": [
-     "kyno",
-     "sion"
+     "awakened-baden",
+     "medusa"
     ],
-    "name": "Kyno + Sion",
-    "why": "Paired in 3 calculated lineups (Campaign, Abyssal Expedition, Nightmare Corridor). Kyno brings tank, Sion brings sustained-dps.",
+    "name": "Awakened Baden + Medusa",
+    "why": "Paired in 4 calculated lineups (King's Tower, Arcane Labyrinth, Abyssal Expedition, Guild Trials). Awakened Baden brings sustained-dps, Medusa brings debuffer.",
     "modes": [
-     "Campaign",
+     "King's Tower",
+     "Arcane Labyrinth",
      "Abyssal Expedition",
-     "Nightmare Corridor"
-    ],
-    "reviewed": true
+     "Guild Trials"
+    ]
    },
    {
     "heroes": [
-     "awakened-belinda",
-     "jerome"
+     "awakened-lyca",
+     "medusa"
     ],
-    "name": "Awakened Belinda + Jerome",
-    "why": "Paired in 3 calculated lineups (Faction Towers, Legends Championship, Treasure Scramble). Awakened Belinda brings burst, Jerome brings buffer.",
+    "name": "Awakened Lyca + Medusa",
+    "why": "Paired in 4 calculated lineups (King's Tower, Abyssal Expedition, Cursed Realm, Guild Trials). Awakened Lyca brings sustained-dps, Medusa brings debuffer.",
     "modes": [
-     "Faction Towers",
-     "Legends Championship",
-     "Treasure Scramble"
-    ],
-    "reviewed": true
-   },
-   {
-    "heroes": [
-     "rosaline",
-     "rowan"
-    ],
-    "name": "Rosaline + Rowan",
-    "why": "Paired in 3 calculated lineups (Faction Towers, Cursed Realm, Guild Trials). Rosaline brings buffer, Rowan brings energy-gain.",
-    "modes": [
-     "Faction Towers",
+     "King's Tower",
+     "Abyssal Expedition",
      "Cursed Realm",
      "Guild Trials"
-    ],
-    "reviewed": true
+    ]
    }
   ]
  },

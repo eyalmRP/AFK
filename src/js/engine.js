@@ -165,12 +165,8 @@ function modePresence(mode, id) {
       }
     }
   }
-  for (const t of mode?.ai || []) {
-    if (t.heroes?.some((x) => x.id === id) && best < 0.7) {
-      best = 0.7;
-      label = `in Claude's ${mode.name} lineup`;
-    }
-  }
+  // The AI lineups are this engine's own output, so they earn no bonus here
+  // (that would reward a hero for having been picked before).
   return { bonus: best, label };
 }
 
@@ -250,7 +246,8 @@ export function heroValue(ctx, id) {
   const reasons = [];
   const tier = tierOf(h, ctx.tierCategory);
   let base = tierScore(tier);
-  reasons.push(tier ? `${tier} in ${ctx.tierCategory.toUpperCase()}` : 'not rated yet, counted as B');
+  const own = h.tiers?.[ctx.tierCategory];
+  reasons.push(!tier ? 'not rated yet, counted as B' : own || ctx.tierCategory === 'overall' ? `${tier} in ${ctx.tierCategory.toUpperCase()}` : `${tier} overall (no ${ctx.tierCategory.toUpperCase()} rating)`);
   const p = modePresence(ctx.mode, id);
   if (p.bonus) {
     base += p.bonus;
