@@ -425,9 +425,9 @@ function cornerBadge(h, owned, { ownedMark = false } = {}) {
   return ownedMark ? `<span class="own-mark" aria-hidden="true">${ICON.check}</span>` : '';
 }
 
-function lvlBadge(h, e, cls) {
+function lvlBadge(h, e, cls, { prefix = false } = {}) {
   const own = bank.settings.sharedLevel && e.crystal === false;
-  return `<span class="${cls}${own ? ' own-level' : ''}"${own ? ' title="Own level (outside the shared level)"' : ''}>${effectiveLevel(h.id)}</span>`;
+  return `<span class="${cls}${own ? ' own-level' : ''}"${own ? ' title="Own level (outside the shared level)"' : ''}>${prefix ? '<span class="lv-l">Lvl </span>' : ''}${effectiveLevel(h.id)}</span>`;
 }
 
 function cardTitle(h, e) {
@@ -443,11 +443,13 @@ function cardAttrs(h, e, cls) {
 function tile(h) {
   const e = bank.heroes[h.id];
   const owned = !!e?.owned;
-  const stars = owned && e.asc === 'Ascended' && e.stars ? starRow(e.stars, { title: false }) : '';
+  const st = owned && e.asc === 'Ascended' ? starTier(e.stars) : null;
+  const stars = st ? starRow(e.stars, { title: false }) : '';
+  // Laid out like the in-game hero icon: emblem and "Lvl" across the top, stars on the bottom edge.
   return `<div ${cardAttrs(h, e, 'bank-tile')}>
-    <span class="fr" data-asc="${owned ? esc(e.asc) : ''}"><span class="fr-art">${heroArt(h)}</span>
+    <span class="fr" data-asc="${owned ? esc(e.asc) : ''}"${st ? ` data-st="${st.tier}"` : ''}><span class="fr-art">${heroArt(h)}</span>
       <span class="fr-fac">${factionIcon(h.faction)}</span>
-      ${stars ? `<span class="fr-band">${stars}</span>` : ''}${owned ? lvlBadge(h, e, 'fr-lvl') : ''}
+      ${stars ? `<span class="fr-band">${stars}</span>` : ''}${owned ? lvlBadge(h, e, 'fr-lvl', { prefix: true }) : ''}
       ${cornerBadge(h, owned)}</span>
     <span class="nm">${esc(h.name)}</span>
   </div>`;
