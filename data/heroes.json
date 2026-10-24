@@ -3406,11 +3406,15 @@
     "note": "E30 'Absolute Defense' engraving: attackers take counter-damage = 10% of Kaiju No. 8's max HP"
    },
    "modes": [],
-   "tiers": {},
-   "raw": {},
-   "consensus": null,
+   "tiers": {
+    "overall": "A"
+   },
+   "raw": {
+    "redditusage": "A (2026-10-01)"
+   },
+   "consensus": "single-source",
    "trend": null,
-   "tierNote": null,
+   "tierNote": "Added on 2026-10-24 (missing from the first read of the lists): r/afkarena usage tier list (Sept 2026) A (2026-10-01).",
    "gameId": 256
   },
   {
