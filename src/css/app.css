@@ -563,19 +563,6 @@ input.switch.small:checked::before { transform: translateX(14px); }
 .tierpill[data-tier='C'] { --tc: var(--t-c); }
 .tierpill[data-tier='D'] { --tc: var(--t-d); }
 
-/* ---------- artifacts ---------- */
-.artifact-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(260px, 100%), 1fr)); gap: 8px; padding: 8px; min-width: 0; }
-.artifact-card { display: grid; grid-template-columns: 52px minmax(0, 1fr); gap: 10px; padding: 10px; border-radius: var(--r-sm); background: var(--surface); border: 1px solid var(--line); }
-.artifact-glyph { width: 42px; height: 42px; border-radius: 50%; display: grid; place-items: center; background: radial-gradient(circle at 35% 30%, var(--accent-soft), color-mix(in srgb, var(--accent) 50%, var(--surface-2))); color: var(--ink); font-family: var(--font-display); font-size: 1rem; border: 1px solid color-mix(in srgb, var(--accent) 50%, transparent); }
-.artifact-card > .art-img { width: 52px; height: 52px; }
-.artifact-card h4 { font-size: 1rem; }
-.artifact-card p { font-size: 0.88rem; color: var(--ink-2); }
-.artifact-card .row { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin-top: 6px; }
-.art-chip { display: inline-flex; align-items: center; gap: 5px; font-size: 0.8rem; color: var(--ink-2); }
-.art-chip .artifact-glyph { width: 20px; height: 20px; font-size: 0.6rem; }
-.art-img { width: 42px; height: 42px; border-radius: 8px; object-fit: cover; display: block; flex: none; box-shadow: 0 0 0 1px rgb(0 0 0 / 35%); }
-.art-chip .art-img { width: 20px; height: 20px; border-radius: 4px; }
-
 /* ---------- modes & formations ---------- */
 .mode-group { display: flex; flex-direction: column; gap: 8px; }
 .mode-group > h4 { font-family: var(--font-data); text-transform: uppercase; letter-spacing: 0.08em; font-size: 0.8rem; color: var(--ink-3); font-weight: 700; padding-top: 4px; }
@@ -621,13 +608,10 @@ input.switch.small:checked::before { transform: translateX(14px); }
 .beast-why { font-size: 0.84rem; color: var(--ink-2); }
 .list li > .beast-img { display: inline-block; vertical-align: middle; margin-right: 2px; }
 .board .row-label { font-family: var(--font-data); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--ink-3); }
-.slot { display: flex; flex-direction: column; align-items: center; gap: 3px; width: 74px; min-width: 0; position: relative; }
-.slot .name { font-size: 0.76rem; text-align: center; line-height: 1.15; max-width: 100%; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; overflow-wrap: anywhere; }
-.slot .pos { font-family: var(--font-data); font-size: 0.62rem; line-height: 1; letter-spacing: 0.04em; color: var(--ink-3); }
+.slot { display: flex; flex-direction: column; align-items: center; gap: 3px; width: 62px; min-width: 0; position: relative; }
+.slot .name { font-size: 0.72rem; text-align: center; line-height: 1.15; max-width: 100%; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; overflow-wrap: anywhere; }
 .slot.empty .initials { font-family: var(--font-data); font-size: 1.3rem; color: var(--ink-3); }
 .slot button { appearance: none; border: 0; background: none; padding: 0; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 4px; color: var(--ink); max-width: 100%; }
-.slot .art-chip { font-size: 0.68rem; max-width: 74px; }
-.slot .art-chip span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 .combo-list { display: flex; flex-direction: column; gap: 8px; }
 .combo { display: flex; gap: 10px; align-items: flex-start; padding: 8px; border-radius: var(--r-sm); border: 1px solid var(--line); background: var(--surface-2); min-width: 0; }
@@ -1115,8 +1099,8 @@ table.bank .input, table.bank .select { padding: 3px 6px; min-height: 30px; font
   .side-by-side, .compare, .grid-2 { grid-template-columns: minmax(0, 1fr); }
   .brand-meta { margin-left: 0; }
   .tier-table { --tm-size: 54px; }
-  .tier-heroes:not(.artifact-list) { display: grid; grid-template-columns: repeat(auto-fill, minmax(52px, 1fr)); }
-  .tier-heroes:not(.artifact-list) .tm-tile { width: auto; height: auto; aspect-ratio: 1; }
+  .tier-heroes { display: grid; grid-template-columns: repeat(auto-fill, minmax(52px, 1fr)); }
+  .tier-heroes .tm-tile { width: auto; height: auto; aspect-ratio: 1; }
   .gamebar { padding: 6px; gap: 5px; }
   .gamebar .row { gap: 3px; }
   /* The widest row (All + 8 factions) fits on one line at any phone width. */
@@ -1138,17 +1122,10 @@ table.bank .input, table.bank .select { padding: 3px 6px; min-height: 30px; font
   .buff { flex-direction: column; gap: 2px; }
   .buff .input { min-height: 34px; padding: 2px; }
   /* Small labels on formation boards stay readable. */
-  .slot .pos { font-size: 0.68rem; }
-  .slot .art-chip { font-size: 0.72rem; }
   .board-beast { min-width: 44px; }
   .board-beast .beast-img, .board-beast .beast-add { width: 36px !important; height: 36px !important; }
   .board-beast span { font-size: 0.68rem; }
   .tier-label .desc { font-size: 0.72rem; }
-  /* Artifact tiers: the label becomes a bar above the cards so they get the full width. */
-  .tier-row.art-row { grid-template-columns: minmax(0, 1fr); }
-  .art-row .tier-label { flex-direction: row; justify-content: flex-start; gap: 10px; padding: 6px 12px; text-align: left; }
-  .art-row .tier-label .cnt { margin-left: auto; }
-  .art-row .tier-folded { padding: 4px; }
   /* Bank: the ownership filter takes its own row so sort and its arrow stay together. */
   .bank-top [aria-label='Ownership'] { flex: 1 1 100%; }
   .bank-top [aria-label='Ownership'] button { flex: 1; }

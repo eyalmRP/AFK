@@ -4,7 +4,7 @@
 import { esc, $, toast } from '../util.js';
 import { data, hero as getHero, POSITIONS, FACTIONS, LIMITS, factionAdvantage } from '../data.js';
 import { bank, ownedIds, ownedBeasts } from '../store.js';
-import { makeContext, buildTeam, heroValue, suggestArtifact, scoreTeam, suggestBeast } from '../engine.js';
+import { makeContext, buildTeam, heroValue, scoreTeam, suggestBeast } from '../engine.js';
 import { aiState, initAi, claudeCounter, readEnemyScreenshot, errorCopy } from '../ai.js';
 import { ICON } from './icons.js';
 import { board, pickHero, pickBeast, portrait, slotsFromList, beastAllowed, entryCR, heroCR, fmtCR, CR_NOTE } from './common.js';
@@ -149,7 +149,7 @@ function render() {
     <div class="compare ct-compare">
       <section>
         <div class="side-title">${ICON.swords} Enemy formation</div>
-        ${board({ slots: ui.enemy, editable: true, cls: 'enemy-board', mirror: true, size: 60, build: enemyBuild(), level: enemyLevel(), beastEdit: beasts, beast: beasts ? ui.enemyBeast : null, beastLevel: ui.enemyBeastLevel })}
+        ${board({ slots: ui.enemy, editable: true, cls: 'enemy-board', mirror: true, build: enemyBuild(), level: enemyLevel(), beastEdit: beasts, beast: beasts ? ui.enemyBeast : null, beastLevel: ui.enemyBeastLevel })}
         <div class="enemy-opts">
           <label class="field"><span>Hero level</span><input class="input" id="ct-elevel" type="number" inputmode="numeric" min="1" max="${LIMITS.level}" value="${enemyLevel()}" placeholder="${myLevel()}" title="Yours: ${myLevel()}"></label>
           <label class="field"><span>Upgrades (assumed)</span><select class="select" id="ct-ebuild">${Object.entries(ENEMY_BUILDS)
@@ -201,11 +201,6 @@ function renderResult(ctx) {
     return;
   }
   const s = best.score;
-  const arts = {};
-  for (const id of Object.values(s.layout)) {
-    const a = suggestArtifact(getHero(id), { mode: ctx.mode, artifacts: data.artifacts, category: 'pvp' });
-    if (a) arts[id] = a.id;
-  }
   const reasons = POSITIONS.map((p) => s.layout[p])
     .filter(Boolean)
     .map((id) => {
@@ -220,7 +215,7 @@ function renderResult(ctx) {
     <article class="result-card">
       ${verdict(Object.values(s.layout))}
       <header><h4>${esc(s.template?.name || 'Counter formation')}</h4><span class="score">${s.total.toFixed(1)} pts</span></header>
-      ${board({ slots: s.layout, artifacts: arts, showBank: ui.pool === 'mine', beast: bp.id })}
+      ${board({ slots: s.layout, showBank: ui.pool === 'mine', beast: bp.id })}
       ${bp.html}
       <ul class="reasons">${reasons}</ul>
       ${s.synergies.length ? `<p class="small"><span class="muted">Synergy:</span> ${s.synergies.map((x) => `${esc(getHero(x.a).name)} + ${esc(getHero(x.b).name)}`).join(', ')}</p>` : ''}
@@ -290,7 +285,7 @@ function renderClaude() {
         .map((t, i) => {
           const s = scoreTeam(ctx, Object.values(t.slots));
           return `<article class="result-card"><header><h4>${i ? 'Alternative' : 'Primary'}: ${esc(t.name)}</h4><span class="score">${s.total.toFixed(1)} pts</span></header>
-            ${board({ slots: t.slots, artifacts: t.artifacts || {}, showBank: ui.pool === 'mine', beast: t.beast })}
+            ${board({ slots: t.slots, showBank: ui.pool === 'mine', beast: t.beast })}
             ${t.why ? `<p class="small prose">${esc(t.why)}</p>` : ''}${t.risks ? `<p class="small muted">Risk: ${esc(t.risks)}</p>` : ''}</article>`;
         })
         .join('')}${ui.claudeNotes ? `<p class="callout small">${esc(ui.claudeNotes)}</p>` : ''}

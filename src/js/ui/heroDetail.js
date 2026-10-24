@@ -1,12 +1,11 @@
 // Hero detail drawer: ratings by category and source, kit, synergies,
-// counters, artifacts and the player's own copy.
+// counters and the player's own copy.
 
 import { esc } from '../util.js';
 import { data, CATEGORIES, tierOf, hero as getHero } from '../data.js';
 import { entry as bankEntry, effectiveLevel } from '../store.js';
-import { suggestArtifact } from '../engine.js';
 import { upgradeText } from './emblem.js';
-import { portrait, tierPill, openDrawer, closeDrawer, classLabel, typeLabel, factionLabel, trendBadge, artifactChip, starRow, ascText, heroCR, fmtCR, CR_NOTE } from './common.js';
+import { portrait, tierPill, openDrawer, closeDrawer, classLabel, typeLabel, factionLabel, trendBadge, starRow, ascText, heroCR, fmtCR, CR_NOTE } from './common.js';
 
 const MODE_LABEL = {
   pvp: 'PvP',
@@ -42,8 +41,6 @@ export function openHeroDetail(id) {
   const syn = (h.synergies || []).filter((s) => getHero(s.id));
   const counters = (h.counters || []).map((x) => getHero(x)?.name || x);
   const countered = (h.counteredBy || []).map((x) => getHero(x)?.name || x);
-  const bis = data.artifacts.filter((a) => (a.bis || []).includes(h.id));
-  const sugg = !bis.length ? suggestArtifact(h, { artifacts: data.artifacts, category: 'pve' }) : null;
   const inv = h.investment;
   const body = `
     <div style="display:flex;gap:14px;align-items:center">
@@ -80,9 +77,6 @@ export function openHeroDetail(id) {
         <div class="side"><div class="side-title">Struggles against</div><p class="small">${countered.map(esc).join(', ') || '<span class="muted">–</span>'}</p></div></div>`
         : ''
     }
-    <div class="side"><div class="side-title">Artifacts</div><div class="chips">${
-      bis.length ? bis.map((a) => artifactChip(a.id)).join('') : sugg ? `${artifactChip(sugg.id)} <span class="muted small">${esc(sugg.why)}</span>` : '<span class="muted small">No recommendation recorded.</span>'
-    }</div></div>
     ${
       inv
         ? `<div class="side"><div class="side-title">Investment priorities</div><dl class="kv small">

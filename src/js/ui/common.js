@@ -149,36 +149,6 @@ export function tierPill(t) {
   return t ? `<span class="tierpill" data-tier="${esc(t)}">${esc(t)}</span>` : '<span class="tierpill">–</span>';
 }
 
-export function artifactName(id) {
-  return data.artifactById.get(id)?.name || id;
-}
-
-function artInitials(name) {
-  return String(name)
-    .replace(/^Dura's\s+/i, '')
-    .split(/\s+/)
-    .filter((w) => !/^(of|the)$/i.test(w))
-    .slice(0, 2)
-    .map((w) => w[0])
-    .join('');
-}
-
-export function artifactGlyph(name) {
-  return `<span class="artifact-glyph" aria-hidden="true">${esc(artInitials(name))}</span>`;
-}
-
-// The artifact's in-game art when we have it, else a lettered medallion.
-export function artifactArt(id, name = artifactName(id)) {
-  const a = data.artifactById.get(id);
-  return a?.img ? `<img class="art-img" src="${esc(a.img)}" alt="" loading="lazy">` : artifactGlyph(name);
-}
-
-export function artifactChip(id) {
-  if (!id) return '';
-  const name = artifactName(id);
-  return `<span class="art-chip" title="${esc(name)}">${artifactArt(id, name)}<span>${esc(name.replace(/^Dura's\s+/i, ''))}</span></span>`;
-}
-
 // ---- stars & ascension -----------------------------------------------------------
 
 // The star row as the game draws it: up to five stars in gold (1–5),
@@ -248,18 +218,18 @@ export function beastLine(pick, { owned = true } = {}) {
 // `build` draws every hero as an assumed copy at `level` (enemy formations);
 // `beastEdit` turns the beast corner into a button (data-act="beast") showing
 // `beastLevel`.
-export function board({ slots = {}, artifacts = {}, showBank = false, size = 60, editable = false, cls = '', emptyLabel = '+', beast = null, build = null, level = null, beastEdit = false, beastLevel = null, mirror = false } = {}) {
+export function board({ slots = {}, showBank = false, size = 50, editable = false, cls = '', emptyLabel = '+', beast = null, build = null, level = null, beastEdit = false, beastLevel = null, mirror = false } = {}) {
   const cell = (pos) => {
     const id = slots[pos];
     const h = id ? getHero(id) : null;
     if (!h) {
       const inner = `${emptyPortrait(size, editable ? emptyLabel : '')}<span class="name muted">${editable ? 'Add' : 'Open'}</span>`;
-      return `<div class="slot empty"><span class="pos">${pos}</span>${editable ? `<button type="button" data-slot="${pos}" aria-label="Choose hero for ${pos}">${inner}</button>` : inner}</div>`;
+      return `<div class="slot empty">${editable ? `<button type="button" data-slot="${pos}" aria-label="Choose hero for ${pos}">${inner}</button>` : inner}</div>`;
     }
     const inner = `${portrait(h, { size, showBank, build, level, badge: showBank || build ? '' : trendBadge(h) })}<span class="name">${esc(h.name)}</span>`;
-    return `<div class="slot"><span class="pos">${pos}</span>${
+    return `<div class="slot">${
       editable ? `<button type="button" data-slot="${pos}" aria-label="Change ${esc(h.name)} at ${pos}">${inner}</button>` : `<button type="button" data-hero="${esc(h.id)}">${inner}</button>`
-    }${artifacts[id] ? artifactChip(artifacts[id]) : ''}</div>`;
+    }</div>`;
   };
   const b = beast ? data.beastById?.get(beast) : null;
   // The beast sits in the corner, like the beast button on the battle screen.

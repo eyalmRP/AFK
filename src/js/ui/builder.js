@@ -5,10 +5,10 @@
 import { esc, $, toast } from '../util.js';
 import { data, hero as getHero, POSITIONS } from '../data.js';
 import { bank, ownedIds, ownedBeasts, saveFormation, deleteFormation, formations } from '../store.js';
-import { makeContext, buildTeams, scoreTeam, suggestArtifact, nextUpgrade, suggestBeast } from '../engine.js';
+import { makeContext, buildTeams, scoreTeam, nextUpgrade, suggestBeast } from '../engine.js';
 import { aiState, initAi, claudeBuild, errorCopy } from '../ai.js';
 import { ICON } from './icons.js';
-import { board, panel, pickHero, artifactChip, bindFolding, portrait, beastAllowed } from './common.js';
+import { board, panel, pickHero, bindFolding, portrait, beastAllowed } from './common.js';
 import { openHeroDetail } from './heroDetail.js';
 import { openBeastDetail } from './beastDetail.js';
 
@@ -138,13 +138,6 @@ function coverageTags(score) {
 function teamCard(t, i, ctx, { label = 'Team', saveable = true } = {}) {
   const score = t.score || scoreTeam(ctx, t.ids);
   const slots = t.slots || score.layout;
-  const arts = t.artifacts && Object.keys(t.artifacts).length ? t.artifacts : {};
-  for (const id of Object.values(slots)) {
-    if (!arts[id]) {
-      const s = suggestArtifact(getHero(id), { mode: ctx.mode, artifacts: data.artifacts, category: ctx.category });
-      if (s) arts[id] = s.id;
-    }
-  }
   const members = POSITIONS.map((p) => slots[p])
     .filter(Boolean)
     .map((id) => {
@@ -177,7 +170,7 @@ function teamCard(t, i, ctx, { label = 'Team', saveable = true } = {}) {
   const title = t.name || score.template?.name || '';
   return `<article class="result-card">
     <header><h4>${esc(label)} ${i + 1}${title ? `: ${esc(title)}` : ''}</h4><span class="score" title="Rules-engine score">${score.total.toFixed(1)} pts</span></header>
-    ${board({ slots, artifacts: arts, showBank: ui.pool === 'mine', beast: beastId })}
+    ${board({ slots, showBank: ui.pool === 'mine', beast: beastId })}
     ${beastHtml}
     <div class="chips">${coverageTags(score)}</div>
     ${score.template ? `<p class="small"><span class="tag accent">Community template</span> matches "${esc(score.template.name)}" (${score.template.overlap}/${score.template.size} heroes)${swaps ? `, swapping ${swaps}` : ''}</p>` : ''}
@@ -185,7 +178,7 @@ function teamCard(t, i, ctx, { label = 'Team', saveable = true } = {}) {
     ${t.risks ? `<p class="small muted">Risk: ${esc(t.risks)}</p>` : ''}
     <details><summary class="small">Why these heroes</summary><ul class="reasons" style="margin-top:6px">${members}${syn}</ul></details>
     ${up ? `<p class="small"><strong>Best next upgrade:</strong> ${esc(getHero(up.id).name)} ${esc(up.label)}</p>` : ''}
-    ${saveable ? `<div class="toolbar"><button class="btn small" type="button" data-save='${esc(JSON.stringify({ slots, artifacts: arts, beast: beastId, name: title || `${mode()?.name || 'Team'} ${i + 1}` }))}'>${ICON.save} Save formation</button></div>` : ''}
+    ${saveable ? `<div class="toolbar"><button class="btn small" type="button" data-save='${esc(JSON.stringify({ slots, beast: beastId, name: title || `${mode()?.name || 'Team'} ${i + 1}` }))}'>${ICON.save} Save formation</button></div>` : ''}
   </article>`;
 }
 
@@ -256,7 +249,7 @@ function renderSaved() {
       ? `<div class="results">${items
           .map(
             (f) => `<article class="result-card"><header><h4>${esc(f.name)}</h4><span class="score">${esc(data.modeById.get(f.mode)?.name || f.mode || '')}</span></header>
-          ${board({ slots: f.slots, artifacts: f.artifacts || {}, showBank: true, size: 48, beast: f.beast && data.beastById.get(f.beast) ? f.beast : null })}
+          ${board({ slots: f.slots, showBank: true, size: 44, beast: f.beast && data.beastById.get(f.beast) ? f.beast : null })}
           <div class="toolbar"><span class="small muted">${new Date(f.saved).toLocaleDateString()}</span><span class="spacer"></span><button class="btn small ghost" type="button" data-del="${esc(f.id)}">${ICON.trash} Delete</button></div></article>`
           )
           .join('')}</div>`

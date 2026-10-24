@@ -1,4 +1,4 @@
-// Meta tab: weekly summary, hero tiers, artifacts, formations per mode
+// Meta tab: weekly summary, hero tiers, beasts, formations per mode
 // (community vs AI side by side), combinations and PvP archetypes.
 
 import { esc, fmtDate, $, local } from '../util.js';
@@ -6,7 +6,7 @@ import { data, TIERS, CATEGORIES, tierOf, tierScore, hero as getHero } from '../
 import { entry as bankEntry, bank } from '../store.js';
 import { ICON } from './icons.js';
 import { makeContext, suggestBeast } from '../engine.js';
-import { panel, heroTile, portrait, board, slotsFromList, artifactChip, artifactGlyph, tierPill, bindFolding, foldAll, isFolded, trendBadge, ownedBadge, gameFilterBar, handleGameFilter, artifactArt, beastArt, beastAllowed } from './common.js';
+import { panel, heroTile, portrait, board, slotsFromList, tierPill, bindFolding, foldAll, isFolded, trendBadge, ownedBadge, gameFilterBar, handleGameFilter, beastArt, beastAllowed } from './common.js';
 import { openHeroDetail } from './heroDetail.js';
 import { openBeastDetail } from './beastDetail.js';
 
@@ -21,7 +21,6 @@ const TIER_DESC = {
   D: 'Skip',
   '?': 'Not rated this week',
 };
-const ARTIFACT_DESC = { 'S+': 'Best in slot for most', S: 'Strong', A: 'Good', B: 'Situational', C: 'Niche', D: 'Skip', '?': 'Not rated yet' };
 
 const ui = {
   category: 'overall',
@@ -98,7 +97,7 @@ function render() {
       <div>
         <p class="eyebrow">Week of ${esc(fmtDate(m.asOf))}</p>
         <h2>The current meta</h2>
-        <p>Hero tiers, artifacts and the formations that win each game mode right now. Community picks and Claude's own analysis sit side by side so you can see where they agree.</p>
+        <p>Hero tiers, beasts and the formations that win each game mode right now. Community picks and Claude's own analysis sit side by side so you can see where they agree.</p>
       </div>
       <div class="toolbar">
         <button class="btn small" type="button" data-fold-all="open">Expand all</button>
@@ -107,7 +106,6 @@ function render() {
     </div>
     ${summaryPanel()}
     ${panel({ id: 'meta-tiers', title: 'Hero tiers', sub: `${data.heroes.length} heroes`, body: '<div id="tiers-host"></div>' })}
-    ${artifactsPanel()}
     ${beastsPanel()}
     ${modesPanel()}
     ${combosPanel()}
@@ -215,69 +213,6 @@ function tmTile(h, { mini = false } = {}) {
   return `<button class="tm-tile" type="button" data-hero="${esc(h.id)}" title="${esc(h.name)} · ${esc(h.faction)} ${esc(h.class)}" aria-label="${esc(h.name)}">${img}${trendBadge(h)}${ownedBadge(h.id)}<span class="tm-name">${esc(h.name)}</span></button>`;
 }
 
-// ---- artifacts ---------------------------------------------------------------
-
-function artifactsPanel() {
-  const list = data.artifacts;
-  if (!list.length) return '';
-  const rank = (t) => TIERS.indexOf(t);
-  const groups = new Map();
-  for (const a of list) {
-    const best = [a.tier?.pve, a.tier?.pvp].filter(Boolean).sort((x, y) => rank(x) - rank(y))[0] || '?';
-    if (!groups.has(best)) groups.set(best, []);
-    groups.get(best).push(a);
-  }
-  const rows = [...TIERS, '?']
-    .filter((t) => groups.has(t))
-    .map((t) => {
-      const id = `art-tier-${t}`;
-      const folded = isFolded(id, false);
-      const items = groups.get(t);
-      return `<div class="tier-row art-row" data-tier="${t}" data-fold-id="${id}" data-folded="${folded}">
-        <button class="tier-label" type="button" data-fold-toggle aria-expanded="${!folded}"><span class="letter">${t === '?' ? '–' : t}</span><span class="desc">${ARTIFACT_DESC[t] || ''}</span><span class="cnt">${items.length}${ICON.chevron}</span></button>
-        <div class="tier-heroes artifact-list">${items.map(artifactCard).join('')}</div>
-        <div class="tier-folded" data-fold-toggle>${items.map((a) => `<span class="tm-tile" aria-hidden="true" title="${esc(a.name)}">${a.img ? `<img src="${esc(a.img)}" alt="">` : ''}</span>`).join('')}<span class="more">${items.length} artifact${items.length === 1 ? '' : 's'} folded</span></div>
-      </div>`;
-    })
-    .join('');
-  const tw = data.teamWide;
-  const twBody =
-    tw && tw.items?.length
-      ? `<div class="side"><div class="side-title">${esc(tw.name)}</div><div class="artifact-list" style="padding:0">${tw.items
-          .map(
-            (x) => `<div class="artifact-card">${artifactGlyph(x.name)}<div><h4>${esc(x.name)}</h4><p>${esc(x.effect || '')}</p>${x.meta ? `<p class="small"><strong>Meta:</strong> ${esc(x.meta)}</p>` : ''}</div></div>`
-          )
-          .join('')}</div></div>`
-      : '';
-  return panel({
-    id: 'meta-artifacts',
-    title: 'Artifacts',
-    sub: `${list.length} artifacts`,
-    body: `<div class="tier-table">${rows}</div>${twBody}${
-      (data.collections || []).length
-        ? `<p class="small"><span class="muted">Ghoulish Gallery collections (fit the artifact slot, not rated yet):</span> ${data.collections.map((c) => esc(c.name)).join(', ')}</p>`
-        : ''
-    }<p class="small muted">Each artifact sits in the row of its better rating (PvE or PvP). The card shows both.</p>`,
-  });
-}
-
-function artifactCard(a) {
-  const bis = (a.bis || []).map(getHero).filter(Boolean);
-  return `<div class="artifact-card">
-    ${artifactArt(a.id, a.name)}
-    <div>
-      <h4>${esc(a.name)}</h4>
-      <p>${esc(a.effect || a.note || '')}</p>
-      <div class="row"><span class="tag">PvE ${tierPill(a.tier?.pve)}</span><span class="tag">PvP ${tierPill(a.tier?.pvp)}</span>${(a.suits || [])
-        .slice(0, 4)
-        .map((s) => `<span class="tag">${esc(s)}</span>`)
-        .join('')}</div>
-      ${a.restriction ? `<p class="small muted" style="margin-top:4px">${esc(a.restriction)}</p>` : ''}
-      ${bis.length ? `<div class="row">${bis.slice(0, 6).map((h) => `<button type="button" class="hero-tile" style="width:auto;padding:2px" data-hero="${h.id}" title="${esc(h.name)}">${portrait(h, { size: 30 })}</button>`).join('')}</div>` : ''}
-    </div>
-  </div>`;
-}
-
 // ---- beasts ------------------------------------------------------------------------
 
 const BEAST_DESC = { 'S+': 'Best beasts', S: 'Strong', A: 'Good', B: 'Situational', C: 'Niche', D: 'Skip', '?': 'Not rated yet' };
@@ -378,14 +313,13 @@ function communityCard(t) {
           .filter(Boolean)
           .map((h) => heroTile(h, { size: 48 }))
           .join('')}</div>`
-      : board({ slots: slotsFromList(t.heroes), artifacts: t.artifacts || {}, emptyLabel: '?' });
+      : board({ slots: slotsFromList(t.heroes), emptyLabel: '?' });
   return `<div class="team-card">
     <h5>${esc(t.name)} <span class="tag ${cls}">${label}</span>${flags}</h5>
     ${body}
     ${t.why ? `<p class="why">${esc(t.why)}</p>` : ''}
     ${opts}
     ${subs ? `<p class="small"><span class="muted">Substitutes:</span> ${subs}</p>` : ''}
-    ${t.artifactNote ? `<p class="small"><span class="muted">Artifacts:</span> ${esc(t.artifactNote)}</p>` : ''}
     ${srcs ? `<p class="sources">${t.date ? `${esc(t.date)} · ` : ''}${srcs}</p>` : ''}
   </div>`;
 }
@@ -403,7 +337,7 @@ function aiCard(t, mode) {
   const bp = aiBeast(t, mode);
   return `<div class="team-card">
     <h5>${esc(t.name)} ${t.confidence ? `<span class="tag accent">${esc(t.confidence)} confidence</span>` : ''}</h5>
-    ${board({ slots: slotsFromList(t.heroes), artifacts: t.artifacts || {}, beast: bp?.id || null })}
+    ${board({ slots: slotsFromList(t.heroes), beast: bp?.id || null })}
     ${bp && !t.beast ? `<p class="beast-why"><strong>${esc(data.beastById.get(bp.id).name)}</strong>${bp.reasons?.length ? ` · ${esc(bp.reasons.slice(0, 2).join(' · '))}` : ''}</p>` : ''}
     ${t.why ? `<p class="why">${esc(t.why)}</p>` : ''}
     ${t.differs ? `<p class="small"><span class="muted">Compared with the community:</span> ${esc(t.differs)}</p>` : ''}
@@ -435,7 +369,7 @@ function modeCard(mode) {
     ? `<div class="side"><div class="side-title">${ICON.people} Full ${mode.teams}-team sets (community)</div>${mode.teamSets
         .map(
           (set, i) => `<div class="team-card"><h5>Set ${i + 1}</h5><div class="results" style="grid-template-columns:repeat(auto-fill,minmax(250px,1fr))">${set
-            .map((t) => `<div>${t.name ? `<p class="small"><strong>${esc(t.name)}</strong></p>` : ''}${board({ slots: slotsFromList(t.heroes), artifacts: t.artifacts || {}, size: 46 })}</div>`)
+            .map((t) => `<div>${t.name ? `<p class="small"><strong>${esc(t.name)}</strong></p>` : ''}${board({ slots: slotsFromList(t.heroes), size: 44 })}</div>`)
             .join('')}</div></div>`
         )
         .join('')}</div>`
@@ -516,7 +450,7 @@ function archetypesPanel() {
   return panel({ id: 'meta-archetypes', title: 'PvP archetypes and their counters', sub: `${list.length} archetypes`, body: `<div class="combo-list">${rows}</div>`, folded: true });
 }
 
-const KIND_LABEL = { tiers: 'Tier lists', formations: 'Formations and modes', systems: 'Artifacts and systems', beasts: 'Beasts', roster: 'Hero roster and portraits' };
+const KIND_LABEL = { tiers: 'Tier lists', formations: 'Formations and modes', systems: 'Game systems', beasts: 'Beasts', roster: 'Hero roster and portraits' };
 
 function sourcesPanel() {
   const m = data.meta;
