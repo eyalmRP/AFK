@@ -156,6 +156,21 @@ export function artifactChip(id) {
   return `<span class="art-chip" title="${esc(name)}">${artifactArt(id, name)}<span>${esc(name.replace(/^Dura's\s+/i, ''))}</span></span>`;
 }
 
+// ---- stars & ascension -----------------------------------------------------------
+
+// The star row as the game draws it: up to five stars in gold (1–5),
+// red (6–10) or white (11–15).
+export function starRow(stars, { size = 14, title = true } = {}) {
+  const t = starTier(stars);
+  if (!t) return '';
+  return `<span class="star-row ${t.tier}" style="--ss:${size}px"${title ? ` title="${stars} of 15 stars (${t.count} ${t.tier})"` : ''} aria-label="${stars} stars">${ICON.star.repeat(t.count)}</span>`;
+}
+
+// Ascension name coloured like its card frame.
+export function ascText(asc) {
+  return `<span class="asc-text" data-asc="${esc(asc)}">${esc(asc)}</span>`;
+}
+
 // ---- beasts -------------------------------------------------------------------
 
 export function beastArt(id, size = 40) {
@@ -180,7 +195,7 @@ export function beastLine(pick, { owned = true } = {}) {
 
 // ---- formation board (2 front / 3 back) -------------------------------------
 
-export function board({ slots = {}, artifacts = {}, showBank = false, size = 56, editable = false, cls = '', emptyLabel = '+' } = {}) {
+export function board({ slots = {}, artifacts = {}, showBank = false, size = 56, editable = false, cls = '', emptyLabel = '+', beast = null } = {}) {
   const cell = (pos) => {
     const id = slots[pos];
     const h = id ? getHero(id) : null;
@@ -193,7 +208,13 @@ export function board({ slots = {}, artifacts = {}, showBank = false, size = 56,
       editable ? `<button type="button" data-slot="${pos}" aria-label="Change ${esc(h.name)} at ${pos}">${inner}</button>` : `<button type="button" data-hero="${esc(h.id)}">${inner}</button>`
     }${artifacts[id] ? artifactChip(artifacts[id]) : ''}</div>`;
   };
-  return `<div class="board ${cls}">
+  const b = beast ? data.beastById?.get(beast) : null;
+  // The beast sits in the corner, like the beast button on the battle screen.
+  const beastSlot = b
+    ? `<button type="button" class="board-beast" data-beast-detail="${esc(b.id)}" title="Beast: ${esc(b.name)}">${beastArt(b.id, 42)}<span>${esc(b.name)}</span></button>`
+    : '';
+  return `<div class="board ${cls}${b ? ' has-beast' : ''}">
+    ${beastSlot}
     <span class="row-label">Front</span>
     <div class="row">${cell('F1')}${cell('F2')}</div>
     <span class="row-label">Back</span>

@@ -7,8 +7,9 @@ import { bank, ownedIds, ownedBeasts } from '../store.js';
 import { makeContext, buildTeam, heroValue, suggestArtifact, scoreTeam, suggestBeast } from '../engine.js';
 import { aiState, initAi, claudeCounter, readEnemyScreenshot, errorCopy } from '../ai.js';
 import { ICON } from './icons.js';
-import { board, pickHero, portrait, slotsFromList, beastLine, beastAllowed } from './common.js';
+import { board, pickHero, portrait, slotsFromList, beastAllowed } from './common.js';
 import { openHeroDetail } from './heroDetail.js';
+import { openBeastDetail } from './beastDetail.js';
 
 const ui = {
   enemy: {},
@@ -166,11 +167,12 @@ function renderResult(ctx) {
       return `<li><b>${esc(getHero(id).name)}</b><span>${esc((counterReasons.length ? counterReasons : m.reasons.slice(0, 2)).join(' · '))}</span></li>`;
     })
     .join('');
+  const bp = beastFor(ctx, Object.values(s.layout));
   host.innerHTML = `<div class="side-title">${ICON.spark} Your counter (rules engine)</div>
     <article class="result-card">
       <header><h4>${esc(s.template?.name || 'Counter formation')}</h4><span class="score">${s.total.toFixed(1)} pts</span></header>
-      ${board({ slots: s.layout, artifacts: arts, showBank: ui.pool === 'mine' })}
-      ${beastFor(ctx, Object.values(s.layout))}
+      ${board({ slots: s.layout, artifacts: arts, showBank: ui.pool === 'mine', beast: bp.id })}
+      ${bp.html}
       <ul class="reasons">${reasons}</ul>
       ${s.synergies.length ? `<p class="small"><span class="muted">Synergy:</span> ${s.synergies.map((x) => `${esc(getHero(x.a).name)} + ${esc(getHero(x.b).name)}`).join(', ')}</p>` : ''}
     </article>`;
@@ -191,10 +193,12 @@ function renderResult(ctx) {
 }
 
 function beastFor(ctx, ids) {
-  if (!data.beasts?.length || !beastAllowed(ctx.mode)) return '';
+  if (!data.beasts?.length || !beastAllowed(ctx.mode)) return { id: null, html: '' };
   const mine = ui.pool === 'mine';
-  if (mine && !ownedBeasts().length) return '<p class="small muted">Mark your beasts in the Hero Bank to get a beast pick.</p>';
-  return beastLine(suggestBeast(ctx, ids, { beasts: data.beasts, owned: mine ? bank.beasts : null, recommendations: data.beastModes }), { owned: mine });
+  if (mine && !ownedBeasts().length) return { id: null, html: '<p class="beast-why">Mark your beasts in the Bank to get a beast pick.</p>' };
+  const pick = suggestBeast(ctx, ids, { beasts: data.beasts, owned: mine ? bank.beasts : null, recommendations: data.beastModes });
+  if (!pick) return { id: null, html: '' };
+  return { id: pick.id, html: `<p class="beast-why"><strong>${esc(data.beastById.get(pick.id).name)}</strong>${pick.reasons?.length ? ` · ${esc(pick.reasons.slice(0, 3).join(' · '))}` : ''}</p>` };
 }
 
 function renderClaude() {
@@ -216,8 +220,7 @@ function renderClaude() {
         .map((t, i) => {
           const s = scoreTeam(ctx, Object.values(t.slots));
           return `<article class="result-card"><header><h4>${i ? 'Alternative' : 'Primary'}: ${esc(t.name)}</h4><span class="score">${s.total.toFixed(1)} pts</span></header>
-            ${board({ slots: t.slots, artifacts: t.artifacts || {}, showBank: ui.pool === 'mine' })}
-            ${t.beast ? beastLine({ id: t.beast, reasons: ["Claude's pick"] }) : ''}
+            ${board({ slots: t.slots, artifacts: t.artifacts || {}, showBank: ui.pool === 'mine', beast: t.beast })}
             ${t.why ? `<p class="small prose">${esc(t.why)}</p>` : ''}${t.risks ? `<p class="small muted">Risk: ${esc(t.risks)}</p>` : ''}</article>`;
         })
         .join('')}${ui.claudeNotes ? `<p class="callout small">${esc(ui.claudeNotes)}</p>` : ''}
@@ -298,6 +301,11 @@ function onClick(ev) {
     ui.pool = p.dataset.pool;
     ui.claude = null;
     render();
+    return;
+  }
+  const bb = t.closest('[data-beast-detail]');
+  if (bb) {
+    openBeastDetail(bb.dataset.beastDetail);
     return;
   }
   const hb = t.closest('[data-hero]');

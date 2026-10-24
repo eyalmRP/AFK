@@ -8,8 +8,9 @@ import { bank, ownedIds, ownedBeasts, saveFormation, deleteFormation, formations
 import { makeContext, buildTeams, scoreTeam, suggestArtifact, nextUpgrade, suggestBeast } from '../engine.js';
 import { aiState, initAi, claudeBuild, errorCopy } from '../ai.js';
 import { ICON } from './icons.js';
-import { board, panel, pickHero, artifactChip, bindFolding, portrait, beastLine, beastAllowed, beastArt } from './common.js';
+import { board, panel, pickHero, artifactChip, bindFolding, portrait, beastAllowed } from './common.js';
 import { openHeroDetail } from './heroDetail.js';
+import { openBeastDetail } from './beastDetail.js';
 
 const GROUP_LABEL = { pve: 'Campaign & towers', boss: 'Bosses & realms', pvp: 'PvP', event: 'Events & other' };
 
@@ -161,20 +162,22 @@ function teamCard(t, i, ctx, { label = 'Team', saveable = true } = {}) {
     const mine = ui.pool === 'mine';
     if (t.beast) {
       beastId = t.beast;
-      beastHtml = beastLine({ id: t.beast, reasons: ["Claude's pick"] });
+      beastHtml = `<p class="beast-why">Beast: Claude's pick</p>`;
     } else if (mine && !ownedBeasts().length) {
-      beastHtml = '<p class="small muted">Mark your beasts in the Hero Bank to get a beast pick for this team.</p>';
+      beastHtml = '<p class="beast-why">Mark your beasts in the Bank to get a beast for this team.</p>';
     } else {
       const pick = t.beastPick !== undefined ? t.beastPick : suggestBeast(ctx, Object.values(slots), { beasts: data.beasts, owned: mine ? bank.beasts : null, recommendations: data.beastModes });
       beastId = pick?.id || null;
-      beastHtml = pick ? beastLine(pick, { owned: mine }) : '<p class="small muted">No spare beast for this team.</p>';
+      beastHtml = pick
+        ? `<p class="beast-why"><strong>${esc(data.beastById.get(pick.id).name)}</strong>${pick.reasons?.length ? ` · ${esc(pick.reasons.slice(0, 3).join(' · '))}` : ''}</p>`
+        : '<p class="beast-why">No spare beast for this team.</p>';
     }
   }
   const swaps = t.seed?.swaps?.length ? t.seed.swaps.map((s) => `${esc(getHero(s.from)?.name || s.from)} → ${esc(getHero(s.to)?.name || s.to)}`).join(', ') : '';
   const title = t.name || score.template?.name || '';
   return `<article class="result-card">
     <header><h4>${esc(label)} ${i + 1}${title ? `: ${esc(title)}` : ''}</h4><span class="score" title="Rules-engine score">${score.total.toFixed(1)} pts</span></header>
-    ${board({ slots, artifacts: arts, showBank: ui.pool === 'mine' })}
+    ${board({ slots, artifacts: arts, showBank: ui.pool === 'mine', beast: beastId })}
     ${beastHtml}
     <div class="chips">${coverageTags(score)}</div>
     ${score.template ? `<p class="small"><span class="tag accent">Community template</span> matches "${esc(score.template.name)}" (${score.template.overlap}/${score.template.size} heroes)${swaps ? `, swapping ${swaps}` : ''}</p>` : ''}
@@ -253,8 +256,7 @@ function renderSaved() {
       ? `<div class="results">${items
           .map(
             (f) => `<article class="result-card"><header><h4>${esc(f.name)}</h4><span class="score">${esc(data.modeById.get(f.mode)?.name || f.mode || '')}</span></header>
-          ${board({ slots: f.slots, artifacts: f.artifacts || {}, showBank: true, size: 48 })}
-          ${f.beast && data.beastById.get(f.beast) ? `<p class="small">${beastArt(f.beast, 22)} ${esc(data.beastById.get(f.beast).name)}</p>` : ''}
+          ${board({ slots: f.slots, artifacts: f.artifacts || {}, showBank: true, size: 48, beast: f.beast && data.beastById.get(f.beast) ? f.beast : null })}
           <div class="toolbar"><span class="small muted">${new Date(f.saved).toLocaleDateString()}</span><span class="spacer"></span><button class="btn small ghost" type="button" data-del="${esc(f.id)}">${ICON.trash} Delete</button></div></article>`
           )
           .join('')}</div>`
@@ -321,6 +323,11 @@ function onClick(ev) {
   if (del) {
     deleteFormation(del.dataset.del);
     renderSaved();
+    return;
+  }
+  const bb = t.closest('[data-beast-detail]');
+  if (bb) {
+    openBeastDetail(bb.dataset.beastDetail);
     return;
   }
   const hb = t.closest('[data-hero]');

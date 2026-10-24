@@ -112,6 +112,11 @@ async function start() {
     ${bottomNav()}
     <div id="toast" role="status" aria-live="polite" hidden></div>`;
   bindImageFallback(document.body);
+  // Sticky bars inside the views sit just below the sticky header (on phones the header scrolls away).
+  const head = app.querySelector('.app-header');
+  const setHeaderH = () => document.documentElement.style.setProperty('--header-h', getComputedStyle(head).position === 'sticky' ? `${head.offsetHeight}px` : '0px');
+  setHeaderH();
+  if (window.ResizeObserver) new ResizeObserver(setHeaderH).observe(head);
   $$('[data-tab]').forEach((b) => b.addEventListener('click', () => show(b.dataset.tab)));
   const fromHash = (location.hash || '').replace('#', '');
   show(TABS.some((t) => t.id === fromHash) ? fromHash : 'meta');

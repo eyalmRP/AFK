@@ -2,10 +2,10 @@
 // counters, artifacts and the player's own copy.
 
 import { esc } from '../util.js';
-import { data, CATEGORIES, tierOf, hero as getHero, starLabel } from '../data.js';
+import { data, CATEGORIES, tierOf, hero as getHero } from '../data.js';
 import { entry as bankEntry, effectiveLevel } from '../store.js';
 import { suggestArtifact } from '../engine.js';
-import { portrait, tierPill, openDrawer, closeDrawer, classLabel, typeLabel, factionLabel, trendBadge, artifactChip } from './common.js';
+import { portrait, tierPill, openDrawer, closeDrawer, classLabel, typeLabel, factionLabel, trendBadge, artifactChip, starRow, ascText } from './common.js';
 
 const MODE_LABEL = {
   pvp: 'PvP',
@@ -91,7 +91,7 @@ export function openHeroDetail(id) {
     ${(h.modes || []).length ? `<div class="side"><div class="side-title">Shines in</div><div class="chips">${h.modes.map((m) => `<span class="tag">${esc(MODE_LABEL[m] || data.modeById.get(m)?.name || m)}</span>`).join('')}</div></div>` : ''}
     <div class="side"><div class="side-title">Your copy</div>${
       e?.owned
-        ? `<p class="num">${esc(e.asc)}${e.stars ? ` ${esc(starLabel(e.stars))}` : ''} · Lv ${effectiveLevel(id)} · SI ${e.si ?? '–'} · ${e.furniture ?? '–'}F · E${e.engrave ?? '–'} · T${e.gear ?? '–'} gear</p>`
+        ? `<p class="num">${ascText(e.asc)}${e.asc === 'Ascended' ? starRow(e.stars) : ''} · Lv ${effectiveLevel(id)} · SI ${e.si ?? '–'} · ${e.furniture ?? '–'}F · E${e.engrave ?? '–'} · T${e.gear ?? '–'} gear</p>`
         : '<p class="muted small">Not in your hero bank.</p>'
     }</div>`;
   const d = openDrawer({

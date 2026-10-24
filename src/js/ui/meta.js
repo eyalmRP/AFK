@@ -5,8 +5,10 @@ import { esc, fmtDate, $, local } from '../util.js';
 import { data, TIERS, CATEGORIES, tierOf, tierScore, hero as getHero } from '../data.js';
 import { entry as bankEntry, bank } from '../store.js';
 import { ICON } from './icons.js';
-import { panel, heroTile, portrait, board, slotsFromList, artifactChip, artifactGlyph, tierPill, bindFolding, foldAll, isFolded, trendBadge, ownedBadge, gameFilterBar, handleGameFilter, artifactArt, openDrawer, beastArt } from './common.js';
+import { makeContext, suggestBeast } from '../engine.js';
+import { panel, heroTile, portrait, board, slotsFromList, artifactChip, artifactGlyph, tierPill, bindFolding, foldAll, isFolded, trendBadge, ownedBadge, gameFilterBar, handleGameFilter, artifactArt, beastArt, beastAllowed } from './common.js';
 import { openHeroDetail } from './heroDetail.js';
+import { openBeastDetail } from './beastDetail.js';
 
 // Short descriptions shown under each tier letter, in the style of the
 // reference tier list. data/meta.json can override them with `tierLabels`.
@@ -234,7 +236,7 @@ function artifactsPanel() {
       return `<div class="tier-row" data-tier="${t}" data-fold-id="${id}" data-folded="${folded}">
         <button class="tier-label" type="button" data-fold-toggle aria-expanded="${!folded}"><span class="letter">${t === '?' ? '–' : t}</span><span class="desc">${ARTIFACT_DESC[t] || ''}</span><span class="cnt">${items.length}${ICON.chevron}</span></button>
         <div class="tier-heroes artifact-list">${items.map(artifactCard).join('')}</div>
-        <div class="tier-folded" data-fold-toggle><span class="more">${items.map((a) => esc(a.name)).join(' · ')}</span></div>
+        <div class="tier-folded" data-fold-toggle>${items.map((a) => `<span class="tm-tile" aria-hidden="true" title="${esc(a.name)}">${a.img ? `<img src="${esc(a.img)}" alt="">` : ''}</span>`).join('')}<span class="more">${items.length} artifact${items.length === 1 ? '' : 's'} folded</span></div>
       </div>`;
     })
     .join('');
@@ -305,7 +307,7 @@ function beastsPanel() {
       return `<div class="tier-row" data-tier="${t}" data-fold-id="${id}" data-folded="${folded}">
         <button class="tier-label" type="button" data-fold-toggle aria-expanded="${!folded}"><span class="letter">${t === '?' ? '–' : t}</span><span class="desc">${BEAST_DESC[t]}</span><span class="cnt">${items.length}${ICON.chevron}</span></button>
         <div class="tier-heroes">${items.map(beastTile).join('')}</div>
-        <div class="tier-folded" data-fold-toggle><span class="more">${items.map((b) => esc(b.name)).join(' · ')}</span></div>
+        <div class="tier-folded" data-fold-toggle>${items.map((b) => `<span class="tm-tile" aria-hidden="true" title="${esc(b.name)}"><img src="${esc(b.img)}" alt=""></span>`).join('')}<span class="more">${items.length} beast${items.length === 1 ? '' : 's'} folded</span></div>
       </div>`;
     })
     .join('');
@@ -326,25 +328,6 @@ function beastsPanel() {
       <div class="tier-table">${rows}</div>
       ${recs ? `<div class="side"><div class="side-title">Community beast picks</div><ul class="list small">${recs}</ul></div>` : ''}
       <p class="small muted">Each beast sits in the row of its best rating across PvE, PvP and bosses. Select a beast for its skill and buffs. ✓ marks beasts in your bank.</p>`,
-  });
-}
-
-function openBeastDetail(id) {
-  const b = data.beastById.get(id);
-  if (!b) return;
-  const e = bank.beasts?.[id];
-  const tiers = ['pve', 'pvp', 'boss'].map((c) => `<div class="cell"><span class="eyebrow">${c === 'boss' ? 'Bosses' : c.toUpperCase()}</span>${tierPill(b.tiers?.[c])}</div>`).join('');
-  const best = (b.bestFor || []).map((x) => esc(getHero(x)?.name || data.modeById.get(x)?.name || x)).join(', ');
-  openDrawer({
-    title: esc(b.name),
-    body: `<div style="display:flex;gap:14px;align-items:center">${beastArt(b.id, 88)}<div><span class="tag rarity-${esc(b.rarity)}">${esc(b.rarity)}</span><p class="small muted" style="margin-top:6px">Buffs go up to ${b.maxBuff}.</p></div></div>
-      <div class="tier-grid" style="grid-template-columns:repeat(3,minmax(0,1fr))">${tiers}</div>
-      ${b.skill ? `<div class="side"><div class="side-title">Skill</div><p class="prose">${esc(b.skill)}</p>${(b.roles || []).length ? `<div class="chips">${b.roles.map((r) => `<span class="tag">${esc(r)}</span>`).join('')}</div>` : ''}</div>` : '<p class="small muted">Skill not researched yet. The weekly update fills this in.</p>'}
-      ${b.suits ? `<div class="side"><div class="side-title">Suits</div><p class="prose">${esc(b.suits)}</p></div>` : ''}
-      ${best ? `<div class="side"><div class="side-title">Best for</div><p class="small">${best}</p></div>` : ''}
-      <div class="side"><div class="side-title">Your beast</div>${
-        e?.owned ? `<p class="num">Level ${e.level ?? '–'} · Strength ${e.str ?? '–'} · Intelligence ${e.int ?? '–'} · Agility ${e.agi ?? '–'}</p>` : '<p class="small muted">Not in your bank. Add it in the Hero Bank tab.</p>'
-      }</div>`,
   });
 }
 
@@ -407,10 +390,21 @@ function communityCard(t) {
   </div>`;
 }
 
-function aiCard(t) {
+// Beast for an AI team: the stored pick, or the best-rated beast for the
+// team and mode when the weekly analysis has not named one.
+function aiBeast(t, mode) {
+  if (t.beast) return { id: t.beast, reasons: [] };
+  if (!data.beasts?.length || !beastAllowed(mode)) return null;
+  const ctx = makeContext({ heroes: data.heroById, mode });
+  return suggestBeast(ctx, (t.heroes || []).map((x) => x.id), { beasts: data.beasts, owned: null, recommendations: data.beastModes });
+}
+
+function aiCard(t, mode) {
+  const bp = aiBeast(t, mode);
   return `<div class="team-card">
     <h5>${esc(t.name)} ${t.confidence ? `<span class="tag accent">${esc(t.confidence)} confidence</span>` : ''}</h5>
-    ${board({ slots: slotsFromList(t.heroes), artifacts: t.artifacts || {} })}
+    ${board({ slots: slotsFromList(t.heroes), artifacts: t.artifacts || {}, beast: bp?.id || null })}
+    ${bp && !t.beast ? `<p class="beast-why"><strong>${esc(data.beastById.get(bp.id).name)}</strong>${bp.reasons?.length ? ` · ${esc(bp.reasons.slice(0, 2).join(' · '))}` : ''}</p>` : ''}
     ${t.why ? `<p class="why">${esc(t.why)}</p>` : ''}
     ${t.differs ? `<p class="small"><span class="muted">Compared with the community:</span> ${esc(t.differs)}</p>` : ''}
     ${t.upgrade ? `<p class="small"><span class="muted">Swap-ins:</span> ${esc(t.upgrade)}</p>` : ''}
@@ -459,7 +453,7 @@ function modeCard(mode) {
       ${bosses}
       <div class="side-by-side">
         <div class="side"><div class="side-title">${ICON.people} Community consensus</div>${(mode.community || []).map(communityCard).join('') || '<p class="muted small">No community team recorded yet.</p>'}</div>
-        <div class="side ai"><div class="side-title">${ICON.spark} AI analysis</div>${(mode.ai || []).map(aiCard).join('') || '<p class="muted small">No AI analysis yet.</p>'}${
+        <div class="side ai"><div class="side-title">${ICON.spark} AI analysis</div>${(mode.ai || []).map((t) => aiCard(t, mode)).join('') || '<p class="muted small">No AI analysis yet.</p>'}${
           mode.aiNotes ? `<p class="small prose">${esc(mode.aiNotes)}</p>` : ''
         }</div>
       </div>

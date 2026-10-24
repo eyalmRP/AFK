@@ -1,14 +1,18 @@
 // Hero Bank tab: the player's roster with find, sort, filter, batch edit,
-// per-hero editing, screenshot import and the shared crystal level.
+// per-hero editing, screenshot import, the shared crystal level, the Elder
+// Tree, and a Beasts sub-tab.
 
-import { esc, $, $$, toast, toInt, debounce, fmtDate } from '../util.js';
-import { data, FACTION_IDS, CLASSES, ASCENSIONS, LIMITS, TIERS, tierOf, hero as getHero, starLabel, ELDER_BRANCHES, ELDER_MAX } from '../data.js';
-import { bank, updateHeroes, updateSettings, updateElderTree, replaceBank, removeHeroes, effectiveLevel, exportBank, sanitizeEntry, defaultEntry, ownedIds } from '../store.js';
+import { esc, $, $$, toast, toInt, debounce, fmtDate, local } from '../util.js';
+import { data, FACTION_IDS, CLASSES, ASCENSIONS, LIMITS, TIERS, tierOf, hero as getHero, starTier, ELDER_MAX } from '../data.js';
+import { bank, updateHeroes, updateSettings, updateElderTree, replaceBank, removeHeroes, effectiveLevel, exportBank, sanitizeEntry, defaultEntry, ownedIds, ownedBeasts } from '../store.js';
 import { aiState, initAi, readScreenshots, readElderTree, errorCopy } from '../ai.js';
-import { ICON, classIcon } from './icons.js';
-import { portrait, openDrawer, closeDrawer, tierPill, gameFilterBar, handleGameFilter, syncGameFilter, panel, bindFolding } from './common.js';
+import { ICON, classIcon, factionIcon } from './icons.js';
+import { portrait, openDrawer, closeDrawer, tierPill, gameFilterBar, handleGameFilter, syncGameFilter, bindFolding, starRow, ascText } from './common.js';
 import { openHeroDetail } from './heroDetail.js';
 import { beastPanel, bindBeastPanel, refreshBeastPanel } from './beastPanel.js';
+
+const SUB_KEY = 'afk-codex-bank-sub';
+const SIZE_KEY = 'afk-codex-bank-size';
 
 const ui = {
   q: '',
@@ -16,13 +20,45 @@ const ui = {
   dir: 1,
   own: 'all',
   asc: 'any',
+  missing: 'any',
   factions: new Set(),
   classes: new Set(),
   types: new Set(),
   view: 'cards',
   selectMode: false,
   selected: new Set(),
+  sub: local.get(SUB_KEY, 'heroes') === 'beasts' ? 'beasts' : 'heroes',
+  // Card size: 1 portraits only, 2 small, 3 standard, 4 large.
+  size: Math.min(4, Math.max(1, toInt(local.get(SIZE_KEY, 3), 3))),
 };
+
+// "Missing data" filter: owned heroes with an upgrade not recorded yet.
+const MISSING = [
+  ['any', 'Any'],
+  ['upgrades', 'SI, furniture or engraving'],
+  ['si', 'Signature item'],
+  ['furniture', 'Furniture'],
+  ['engrave', 'Engraving'],
+  ['gear', 'Gear tier'],
+  ['complete', 'Nothing (complete)'],
+];
+const MISSING_SHORT = { si: 'SI', furniture: 'Furniture', engrave: 'Engraving', gear: 'Gear' };
+const unset = (v) => v === null || v === undefined;
+function missingMatch(e, what = ui.missing) {
+  switch (what) {
+    case 'upgrades':
+      return unset(e.si) || unset(e.furniture) || unset(e.engrave);
+    case 'si':
+    case 'furniture':
+    case 'engrave':
+    case 'gear':
+      return unset(e[what]);
+    case 'complete':
+      return !unset(e.si) && !unset(e.furniture) && !unset(e.engrave) && !unset(e.gear);
+    default:
+      return true;
+  }
+}
 
 const SORTS = [
   ['tier', 'Tier'],
@@ -54,41 +90,46 @@ export function refreshBank() {
   if (!root) return;
   renderList();
   renderCounts();
+  renderStats();
   syncElderInputs();
   refreshBeastPanel();
 }
 
 // ---- Elder Tree -------------------------------------------------------------
 
+// Laid out like the in-game screen: Warrior at the top, Mage and Tank on
+// the upper arch, Support and Ranger below them, the tree level at the foot.
+const ELDER_NODES = ['Warrior', 'Mage', 'Tank', 'Support', 'Ranger', 'core'];
+
 function elderSummary() {
   const t = bank.settings.elderTree || {};
-  const known = ['core', ...ELDER_BRANCHES].filter((k) => t[k] !== null && t[k] !== undefined);
-  if (!known.length) return 'not recorded yet';
-  return `tree ${t.core ?? '–'}${t.updated ? ` · updated ${fmtDate(new Date(t.updated).toISOString().slice(0, 10))}` : ''}`;
+  if (!ELDER_NODES.some((k) => !unset(t[k]))) return 'not recorded yet';
+  return t.updated ? `updated ${fmtDate(new Date(t.updated).toISOString().slice(0, 10))}` : '';
 }
 
-function elderNode(key, label, icon) {
+function elderNode(key) {
   const v = bank.settings.elderTree?.[key];
-  return `<label class="elder-node${key === 'core' ? ' core' : ''}">
-    <span class="elder-ico">${icon}</span>
-    <span class="elder-name">${label}</span>
-    <input class="input num-input" type="number" min="0" max="${ELDER_MAX}" data-et="${key}" value="${v ?? ''}" placeholder="–" aria-label="${label} level">
+  const label = key === 'core' ? 'Tree level' : key;
+  return `<label class="et-node et-${key.toLowerCase()}" title="${label}">
+    <img src="img/icons/elder/${key.toLowerCase()}.webp" alt="" draggable="false">
+    <input class="input num-input" type="number" min="0" max="${ELDER_MAX}" inputmode="numeric" data-et="${key}" value="${v ?? ''}" placeholder="–" aria-label="${label} level">
   </label>`;
 }
 
-function elderPanel() {
-  const body = `<div class="elder" role="group" aria-label="Elder Tree levels">
-      ${elderNode('core', 'Tree level', `<span class="elder-core-ico">${ICON.star}</span>`)}
-      ${ELDER_BRANCHES.map((c) => elderNode(c, c, classIcon(c))).join('')}
-    </div>
-    <div class="toolbar">
-      <button class="btn" type="button" data-act="elder-upload" id="et-upload" hidden>${ICON.upload} Read a screenshot</button>
+function elderCard() {
+  return `<section class="elder-card" aria-labelledby="et-title">
+    <div class="elder-head">
+      <h3 id="et-title">Elder Tree</h3>
+      <span class="small muted" id="et-sub">${esc(elderSummary())}</span>
+      <button class="btn small ghost" type="button" data-act="elder-upload" id="et-upload" hidden title="Read the levels from a screenshot" aria-label="Read the levels from a screenshot">${ICON.upload}</button>
       <input type="file" id="et-file" accept="image/png,image/jpeg,image/webp" hidden>
-      <span class="small muted" id="et-status"></span>
     </div>
+    <div class="elder-arch" role="group" aria-label="Elder Tree levels" title="Each branch boosts every hero of its class. The builder and counter favour classes levelled further than the rest.">
+      ${ELDER_NODES.map(elderNode).join('')}
+    </div>
+    <p class="small muted" id="et-status"></p>
     <div id="et-review"></div>
-    <p class="small muted">Each branch boosts every hero of its class. The builder and counter favour classes you've levelled further than the rest. Type a level and it saves; leave a box empty if you don't know it.</p>`;
-  return panel({ id: 'bank-elder', title: 'Elder Tree', sub: `<span id="et-sub">${esc(elderSummary())}</span>`, body });
+  </section>`;
 }
 
 function syncElderInputs() {
@@ -107,7 +148,7 @@ async function readElderShot(file) {
   try {
     const out = await readElderTree(file);
     const t = bank.settings.elderTree || {};
-    const keys = ['core', ...ELDER_BRANCHES].filter((k) => out[k] !== null);
+    const keys = ELDER_NODES.filter((k) => out[k] !== null);
     if (!keys.length) {
       status.textContent = 'No levels found. Try a screenshot of the whole Elder Tree screen.';
       return;
@@ -120,8 +161,8 @@ async function readElderShot(file) {
       inp.classList.toggle('diff', t[k] !== out[k]);
     }
     status.textContent = out.notes || '';
-    $('#et-review', root).innerHTML = `<div class="callout small toolbar">Read ${keys.length} level${keys.length === 1 ? '' : 's'} from the screenshot. Changed values are highlighted.
-      <span class="spacer"></span><button class="btn small primary" type="button" data-act="elder-save">Save these levels</button><button class="btn small ghost" type="button" data-act="elder-discard">Discard</button></div>`;
+    $('#et-review', root).innerHTML = `<div class="callout small">Read ${keys.length} level${keys.length === 1 ? '' : 's'}. Changed ones are highlighted.
+      <div class="toolbar"><button class="btn small primary" type="button" data-act="elder-save">Save</button><button class="btn small ghost" type="button" data-act="elder-discard">Discard</button></div></div>`;
   } catch (e) {
     status.textContent = errorCopy(e);
   }
@@ -158,6 +199,7 @@ function visibleHeroes() {
     if (ui.own === 'owned' && !owned) return false;
     if (ui.own === 'unowned' && owned) return false;
     if (ui.asc !== 'any' && (!owned || e.asc !== ui.asc)) return false;
+    if (ui.missing !== 'any' && (!owned || !missingMatch(e))) return false;
     if (ui.factions.size && !ui.factions.has(h.faction)) return false;
     if (ui.classes.size && !ui.classes.has(h.class)) return false;
     if (ui.types.size && !ui.types.has(h.type)) return false;
@@ -175,15 +217,15 @@ function visibleHeroes() {
       case 'class':
         return CLASSES.indexOf(h.class) * 1000 + tierRank(h);
       case 'asc':
-        return owned ? -(ASCENSIONS.indexOf(e.asc) * 10 + (e.stars || 0)) : 999;
+        return owned ? -(ASCENSIONS.indexOf(e.asc) * 100 + (e.stars || 0)) : 999;
       case 'level':
         return owned ? -effectiveLevel(h.id) : 1;
       case 'si':
         return owned ? -(e.si ?? 0) : 1;
       case 'furniture':
-        return owned ? -e.furniture : 1;
+        return owned ? -(e.furniture ?? 0) : 1;
       case 'engrave':
-        return owned ? -e.engrave : 1;
+        return owned ? -(e.engrave ?? 0) : 1;
       case 'recent':
         return owned || e ? -(e.updated || 0) : 1;
       default:
@@ -202,31 +244,50 @@ function visibleHeroes() {
 // ---- render -------------------------------------------------------------------
 
 function render() {
+  const beasts = ui.sub === 'beasts';
   root.innerHTML = `
     <div class="view-head">
       <div>
         <p class="eyebrow">Your roster</p>
-        <h2>Hero bank</h2>
-        <p>Mark the heroes you own and how far each is built. The formation builder and counter planner only use heroes from here.</p>
+        <h2>${beasts ? 'Beasts' : 'Hero bank'}</h2>
+        <p>${
+          beasts
+            ? 'Mark the beasts you own and their buff levels. The builder and counter add your best-fitting beast to each team.'
+            : 'Mark the heroes you own and how far each is built. The formation builder and counter planner only use heroes from here.'
+        }</p>
       </div>
       <div class="toolbar">
-        <button class="btn primary" type="button" data-act="upload">${ICON.upload} Upload screenshots</button>
+        ${beasts ? '' : `<button class="btn primary" type="button" data-act="upload">${ICON.upload} Upload screenshots</button>`}
         <button class="btn" type="button" data-act="import">Import</button>
         <button class="btn" type="button" data-act="export">Export</button>
       </div>
     </div>
-    <div class="level-box">
-      <label class="check"><input type="checkbox" id="bank-shared" ${bank.settings.sharedLevel ? 'checked' : ''}> All heroes share the same level</label>
-      <label class="check">Level <input class="input num-input" id="bank-crystal" type="number" min="1" max="${LIMITS.level}" value="${bank.settings.crystalLevel}" ${bank.settings.sharedLevel ? '' : 'disabled'}></label>
-      <span class="small muted" id="bank-shared-note">${sharedNote()}</span>
+    <div class="subtabs" role="tablist" aria-label="Bank sections">
+      <button type="button" role="tab" data-sub="heroes" aria-selected="${!beasts}">Heroes <span class="count" id="sub-heroes"></span></button>
+      <button type="button" role="tab" data-sub="beasts" aria-selected="${beasts}">Beasts <span class="count" id="sub-beasts"></span></button>
     </div>
-    ${elderPanel()}
-    ${beastPanel()}
-    <div class="bank-controls">
-      <div class="toolbar">
-        <label class="search">${ICON.search}<input class="input" id="bank-q" type="search" placeholder="Find hero, faction or title" autocomplete="off"></label>
-        <label class="check">Sort <select class="select" id="bank-sort">${SORTS.map(([v, l]) => `<option value="${v}" ${ui.sort === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
-        <button class="btn small" type="button" data-act="dir" title="Reverse order" aria-label="Reverse order">${ui.dir === 1 ? '↓' : '↑'}</button>
+    ${beasts ? beastPanel({ bare: true }) : heroesPane()}`;
+  renderList();
+  renderCounts();
+  renderStats();
+  initAi().then(() => {
+    const b = $('#et-upload', root);
+    if (b) b.hidden = !(aiState.images && !aiState.disabled);
+  });
+}
+
+function heroesPane() {
+  return `
+    <div class="bank-top">
+      <div class="bank-summary">
+        <div class="level-box">
+          <label class="check"><input type="checkbox" id="bank-shared" ${bank.settings.sharedLevel ? 'checked' : ''}> All heroes share the same level</label>
+          <label class="check">Level <input class="input num-input" id="bank-crystal" type="number" min="1" max="${LIMITS.level}" value="${bank.settings.crystalLevel}" ${bank.settings.sharedLevel ? '' : 'disabled'}></label>
+          <span class="small muted" id="bank-shared-note">${sharedNote()}</span>
+        </div>
+        <div class="bank-stats" id="bank-stats"></div>
+        <div class="toolbar">
+        <label class="search">${ICON.search}<input class="input" id="bank-q" type="search" placeholder="Find hero, faction or title" autocomplete="off" value="${esc(ui.q)}"></label>
         <div class="seg" role="group" aria-label="Ownership">${[
           ['all', 'All'],
           ['owned', 'Owned'],
@@ -234,27 +295,31 @@ function render() {
         ]
           .map(([v, l]) => `<button type="button" data-own="${v}" aria-pressed="${ui.own === v}">${l}</button>`)
           .join('')}</div>
+        <label class="check">Sort <select class="select" id="bank-sort">${SORTS.map(([v, l]) => `<option value="${v}" ${ui.sort === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
+        <button class="btn small" type="button" data-act="dir" title="Reverse order" aria-label="Reverse order">${ui.dir === 1 ? '↓' : '↑'}</button>
+      </div>
+      <div class="toolbar">
         <label class="check">Ascension <select class="select" id="bank-asc"><option value="any">Any</option>${ASCENSIONS.map((a) => `<option ${ui.asc === a ? 'selected' : ''}>${a}</option>`).join('')}</select></label>
+        <label class="check" title="Owned heroes with an upgrade not recorded yet">Missing <select class="select" id="bank-missing">${MISSING.map(([v, l]) => `<option value="${v}" ${ui.missing === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
         <span class="spacer"></span>
+        <label class="check size-ctl" id="bank-size-ctl" title="Card size" ${ui.view === 'table' ? 'hidden' : ''}><span class="size-ico small" aria-hidden="true">▦</span><input type="range" id="bank-size" min="1" max="4" step="1" value="${ui.size}" aria-label="Card size"><span class="size-ico" aria-hidden="true">▦</span></label>
         <div class="seg" role="group" aria-label="Layout">${[
           ['cards', 'Cards'],
           ['table', 'Table'],
         ]
           .map(([v, l]) => `<button type="button" data-view="${v}" aria-pressed="${ui.view === v}">${l}</button>`)
           .join('')}</div>
-        <button class="btn small" type="button" data-act="select" aria-pressed="${ui.selectMode}">${ui.selectMode ? 'Done selecting' : 'Select'}</button>
+        <button class="btn small" type="button" data-act="select" aria-pressed="${ui.selectMode}">${ICON.edit} Batch edit</button>
+        </div>
       </div>
+      ${elderCard()}
+    </div>
+    <div class="bank-controls">
       ${gameFilterBar(ui)}
       <p class="small muted" id="bank-counts"></p>
     </div>
-    <div id="bank-list"></div>
-    <div id="bank-batch"></div>`;
-  renderList();
-  renderCounts();
-  initAi().then(() => {
-    const b = $('#et-upload', root);
-    if (b) b.hidden = !(aiState.images && !aiState.disabled);
-  });
+    <div id="bank-batch"></div>
+    <div id="bank-list"></div>`;
 }
 
 function sharedNote() {
@@ -264,26 +329,64 @@ function sharedNote() {
 }
 
 function renderCounts() {
+  const owned = ownedIds().length;
+  for (const tab of document.querySelectorAll('[data-tab="bank"] .count')) tab.textContent = owned ? String(owned) : '';
+  const sh = $('#sub-heroes', root);
+  if (sh) sh.textContent = `${owned}/${data.heroes.length}`;
+  const sb = $('#sub-beasts', root);
+  if (sb) sb.textContent = `${ownedBeasts().length}/${data.beasts?.length || 0}`;
   const el = $('#bank-counts', root);
   if (!el) return;
-  const owned = ownedIds().length;
   const shown = visibleHeroes().length;
   el.textContent = `${owned} owned of ${data.heroes.length} heroes · showing ${shown}${ui.selected.size ? ` · ${ui.selected.size} selected` : ''}`;
-  for (const tab of document.querySelectorAll('[data-tab="bank"] .count')) tab.textContent = owned ? String(owned) : '';
 }
 
-const dash = (v) => (v === null || v === undefined ? '–' : v);
+// Roster at a glance: owned heroes per ascension and upgrades not recorded.
+// Each chip filters the list.
+function renderStats() {
+  const host = $('#bank-stats', root);
+  if (!host) return;
+  const owned = data.heroes.map((h) => bank.heroes[h.id]).filter((e) => e?.owned);
+  if (!owned.length) {
+    host.innerHTML = '<p class="small muted">Mark the heroes you own to see your roster at a glance here.</p>';
+    return;
+  }
+  const byAsc = [...ASCENSIONS]
+    .reverse()
+    .map((a) => [a, owned.filter((e) => e.asc === a).length])
+    .filter(([, n]) => n);
+  const miss = Object.keys(MISSING_SHORT).map((k) => [k, owned.filter((e) => missingMatch(e, k)).length]);
+  host.innerHTML = `<div class="stat-row"><span class="eyebrow">Ascension</span>${byAsc
+    .map(([a, n]) => `<button type="button" class="chip-btn" data-asc-chip="${esc(a)}" aria-pressed="${ui.asc === a}">${ascText(a)}<b>${n}</b></button>`)
+    .join('')}</div>
+    <div class="stat-row"><span class="eyebrow">Not recorded</span>${miss
+      .map(([k, n]) => `<button type="button" class="chip-btn" data-missing-chip="${k}" aria-pressed="${ui.missing === k}" ${n ? '' : 'disabled'}>${MISSING_SHORT[k]}<b>${n}</b></button>`)
+      .join('')}</div>`;
+}
 
-function statLine(e) {
-  const asc = `${esc(e.asc)}${e.stars ? ` ${esc(starLabel(e.stars))}` : ''}`;
-  if (e.si === null && e.furniture === null && e.engrave === null) return `${asc}<br><span class="muted">Upgrades not recorded</span>`;
-  return `${asc} · SI ${dash(e.si)} · ${dash(e.furniture)}F · E${dash(e.engrave)}`;
+const dash = (v) => (unset(v) ? '–' : v);
+
+function ascLine(e, size = 12) {
+  return `${ascText(e.asc)}${e.asc === 'Ascended' && e.stars ? starRow(e.stars, { size }) : ''}`;
+}
+
+function upgradeLine(e) {
+  if (unset(e.si) && unset(e.furniture) && unset(e.engrave)) return '<span class="muted" title="Signature item, furniture and engraving not recorded">SI – · –F · E–</span>';
+  return `SI ${dash(e.si)} · ${dash(e.furniture)}F · E${dash(e.engrave)}`;
+}
+
+function levelLine(h, e) {
+  return `Lv ${effectiveLevel(h.id)}${bank.settings.sharedLevel && e.crystal === false ? ' (own level)' : ''}${unset(e.gear) ? '' : ` · T${e.gear} gear`}`;
 }
 
 // Stars as the game shows them: gold 1–5, red 6–10, white 11–15.
+const STAR_TIER = { gold: 'Gold', red: 'Red', white: 'White' };
 function starOptions(cur, withKeep = false) {
   const opts = withKeep ? ['<option value="">No change</option>'] : [];
-  for (let i = 0; i <= LIMITS.stars; i++) opts.push(`<option value="${i}" ${cur === i ? 'selected' : ''}>${i ? starLabel(i) : 'None'}</option>`);
+  for (let i = 0; i <= LIMITS.stars; i++) {
+    const t = starTier(i);
+    opts.push(`<option value="${i}" ${cur === i ? 'selected' : ''}>${t ? `${'★'.repeat(t.count)} ${STAR_TIER[t.tier]} (${i})` : 'None'}</option>`);
+  }
   return opts.join('');
 }
 
@@ -296,27 +399,42 @@ function renderList() {
   } else if (ui.view === 'table') {
     host.innerHTML = tableView(list);
   } else {
-    host.innerHTML = `<div class="bank-grid">${list.map(card).join('')}</div>`;
+    host.innerHTML = `<div class="bank-grid size-${ui.size}">${list.map(card).join('')}</div>`;
   }
   renderBatch();
 }
+
+const PORTRAIT_SIZE = { 1: 54, 2: 44, 3: 56, 4: 72 };
 
 function card(h) {
   const e = bank.heroes[h.id];
   const owned = !!e?.owned;
   const sel = ui.selected.has(h.id);
-  return `<div class="bank-card" role="button" tabindex="0" data-card="${h.id}" aria-selected="${sel}" title="${esc(h.name)}">
-    ${ui.selectMode ? `<input class="sel" type="checkbox" data-sel="${h.id}" ${sel ? 'checked' : ''} aria-label="Select ${esc(h.name)}">` : ''}
-    ${portrait(h, { size: 56, showBank: true, unowned: !owned })}
-    <div style="min-width:0;display:flex;flex-direction:column;gap:2px">
-      <span class="nm">${esc(h.name)}</span>
-      ${
-        owned
-          ? `<span class="st">${statLine(e)}</span><span class="st">Lv ${effectiveLevel(h.id)}${bank.settings.sharedLevel && e.crystal === false ? ' (own level)' : ''}${e.gear !== null ? ` · T${e.gear} gear` : ''}</span>`
-          : `<span class="st muted cls-line">${classIcon(h.class)} ${esc(h.class)}</span>${ui.selectMode ? '' : `<button class="btn small own-btn" type="button" data-own-hero="${h.id}">+ I own this</button>`}`
-      }
-    </div>
-  </div>`;
+  const size = ui.size;
+  const box = ui.selectMode ? `<input class="sel" type="checkbox" data-sel="${h.id}" ${sel ? 'checked' : ''} aria-label="Select ${esc(h.name)}">` : '';
+  const head = `<div class="bank-card" role="button" tabindex="0" data-card="${h.id}" aria-selected="${sel}" title="${esc(h.name)}">${box}${portrait(h, { size: PORTRAIT_SIZE[size], showBank: true, unowned: !owned })}`;
+  if (size === 1) return `${head}<span class="nm">${esc(h.name)}</span></div>`;
+  let info;
+  if (!owned) {
+    info = `<span class="st muted cls-line">${classIcon(h.class)} ${esc(h.class)}</span>${ui.selectMode ? '' : `<button class="btn small own-btn" type="button" data-own-hero="${h.id}">${size === 2 ? '+ Own' : '+ I own this'}</button>`}`;
+  } else if (size === 2) {
+    info = `<span class="st">${ascLine(e, 11)}</span>`;
+  } else if (size === 3) {
+    info = `<span class="st">${ascLine(e)}</span><span class="st">${upgradeLine(e)}</span><span class="st">${levelLine(h, e)}</span>`;
+  } else {
+    const ups = [
+      ['SI', e.si],
+      ['Furn.', e.furniture],
+      ['Engr.', e.engrave],
+      ['Gear', unset(e.gear) ? null : 'T' + e.gear],
+    ];
+    info = `<span class="st cls-line">${factionIcon(h.faction)}${classIcon(h.class)} ${esc(h.faction)} ${esc(h.class)}</span>
+      <span class="st">${ascLine(e, 15)}</span>
+      <dl class="up-grid">${ups.map(([k, v]) => `<div${unset(v) ? ' class="unset"' : ''}><dt>${k}</dt><dd>${dash(v)}</dd></div>`).join('')}</dl>
+      <span class="st">${levelLine(h, e)}</span>
+      ${e.notes ? `<span class="st note">${esc(e.notes)}</span>` : ''}`;
+  }
+  return `${head}<div class="bank-info"><span class="nm">${esc(h.name)}</span>${info}</div></div>`;
 }
 
 function numCell(id, field, value, max, disabled) {
@@ -331,12 +449,13 @@ function tableView(list) {
       const owned = !!bank.heroes[h.id]?.owned;
       const sel = ui.selected.has(h.id);
       const dis = !owned;
+      const ascended = owned && e.asc === 'Ascended';
       return `<tr aria-selected="${sel}">
         <td><input type="checkbox" data-sel="${h.id}" ${sel ? 'checked' : ''} aria-label="Select ${esc(h.name)}"></td>
         <td><span class="hero-cell">${portrait(h, { size: 34, unowned: !owned })}<button class="btn ghost small" type="button" data-detail="${h.id}">${esc(h.name)}</button></span></td>
         <td><input type="checkbox" data-cell="${h.id}" data-field="owned" ${owned ? 'checked' : ''} aria-label="Owned"></td>
-        <td><select class="select" data-cell="${h.id}" data-field="asc" ${dis ? 'disabled' : ''} aria-label="Ascension">${ASCENSIONS.map((a) => `<option ${e.asc === a ? 'selected' : ''}>${a}</option>`).join('')}</select></td>
-        <td><select class="select" data-cell="${h.id}" data-field="stars" ${dis || e.asc !== 'Ascended' ? 'disabled' : ''} aria-label="Stars">${starOptions(e.stars)}</select></td>
+        <td><select class="select asc-select" data-asc="${owned ? esc(e.asc) : ''}" data-cell="${h.id}" data-field="asc" ${dis ? 'disabled' : ''} aria-label="Ascension">${ASCENSIONS.map((a) => `<option ${e.asc === a ? 'selected' : ''}>${a}</option>`).join('')}</select></td>
+        <td><span class="star-cell"><select class="select" data-cell="${h.id}" data-field="stars" ${ascended ? '' : 'disabled'} aria-label="Stars">${starOptions(e.stars)}</select>${ascended ? starRow(e.stars, { size: 12 }) : ''}</span></td>
         <td>${shared && e.crystal !== false ? `<span class="num muted" title="Shared level">${owned ? bank.settings.crystalLevel : '–'}</span>` : numCell(h.id, 'level', e.level, LIMITS.level, dis)}</td>
         <td>${numCell(h.id, 'si', e.si, LIMITS.si, dis)}</td>
         <td>${numCell(h.id, 'furniture', e.furniture, LIMITS.furniture, dis)}</td>
@@ -356,33 +475,63 @@ function opt(v, l = v) {
   return `<option value="${esc(v)}">${esc(l)}</option>`;
 }
 
+// The batch bar sits above the list and sticks to the top while scrolling.
 function renderBatch() {
   const host = $('#bank-batch', root);
   if (!host) return;
-  if (!ui.selected.size) {
-    host.innerHTML = ui.selectMode
-      ? `<div class="batch-bar"><span class="count">Select heroes to edit them together</span><span class="spacer"></span><button class="btn small" type="button" data-act="select-shown">Select all shown</button></div>`
-      : '';
+  const n = ui.selected.size;
+  if (!n && !ui.selectMode) {
+    host.innerHTML = '';
     return;
   }
-  const keep = opt('', 'No change');
-  const range = (n) => Array.from({ length: n + 1 }, (_, i) => opt(String(i))).join('');
   host.innerHTML = `<div class="batch-bar" role="region" aria-label="Batch edit">
-    <span class="count">${ui.selected.size} selected</span>
-    <label class="field"><span>Owned</span><select class="select" id="b-owned">${keep}${opt('yes', 'Owned')}${opt('no', 'Not owned')}</select></label>
-    <label class="field"><span>Ascension</span><select class="select" id="b-asc">${keep}${ASCENSIONS.map((a) => opt(a)).join('')}</select></label>
-    <label class="field"><span>Stars</span><select class="select" id="b-stars">${starOptions(null, true)}</select></label>
-    <label class="field"><span>Shared level</span><select class="select" id="b-crystal">${keep}${opt('yes', 'Uses it')}${opt('no', 'Own level')}</select></label>
-    <label class="field"><span>Own level</span><input class="input num-input" id="b-level" type="number" min="1" max="${LIMITS.level}" placeholder="–"></label>
-    <label class="field"><span>SI</span><input class="input num-input" id="b-si" type="number" min="0" max="${LIMITS.si}" placeholder="–"></label>
-    <label class="field"><span>Furniture</span><select class="select" id="b-furniture">${keep}${range(LIMITS.furniture)}</select></label>
-    <label class="field"><span>Engrave</span><input class="input num-input" id="b-engrave" type="number" min="0" max="${LIMITS.engrave}" placeholder="–"></label>
-    <label class="field"><span>Gear</span><select class="select" id="b-gear">${keep}${Array.from({ length: LIMITS.gear + 1 }, (_, i) => opt(String(i), 'T' + i)).join('')}</select></label>
-    <button class="btn primary" type="button" data-act="batch-apply">Apply to ${ui.selected.size}</button>
+    <span class="count">${n ? `${n} selected` : 'Tap heroes to select them'}</span>
+    ${n ? `<button class="btn primary" type="button" data-act="batch-edit">${ICON.edit} Edit ${plural(n, 'hero')}…</button>` : ''}
+    <span class="spacer"></span>
     <button class="btn small" type="button" data-act="select-shown">Select all shown</button>
-    <button class="btn small ghost" type="button" data-act="batch-clear">Clear selection</button>
-    <button class="btn small ghost" type="button" data-act="batch-remove" title="Forget everything recorded for these heroes">${ICON.trash} Remove data</button>
+    ${n ? '<button class="btn small ghost" type="button" data-act="batch-clear">Clear</button>' : ''}
+    <button class="btn small ghost" type="button" data-act="select-done">Done</button>
   </div>`;
+}
+
+function openBatchEditor() {
+  const n = ui.selected.size;
+  if (!n) return;
+  const keep = opt('', 'No change');
+  const range = (k) => Array.from({ length: k + 1 }, (_, i) => opt(String(i))).join('');
+  const picked = [...ui.selected].map(getHero).filter(Boolean);
+  const d = openDrawer({
+    title: `Edit ${plural(n, 'hero')}`,
+    body: `<div class="batch-heroes">${picked
+      .slice(0, 40)
+      .map((h) => portrait(h, { size: 36, showBank: true }))
+      .join('')}${n > 40 ? `<span class="small muted">+${n - 40} more</span>` : ''}</div>
+      <p class="small muted">Only the fields you set change. Fields left on "No change" or empty keep each hero's own value.</p>
+      <div class="edit-grid">
+        <label class="field"><span>Owned</span><select class="select" id="b-owned">${keep}${opt('yes', 'Owned')}${opt('no', 'Not owned')}</select></label>
+        <label class="field"><span>Ascension</span><select class="select" id="b-asc">${keep}${ASCENSIONS.map((a) => opt(a)).join('')}</select></label>
+        <label class="field"><span>Stars</span><select class="select" id="b-stars">${starOptions(null, true)}</select></label>
+        <label class="field"><span>Shared level</span><select class="select" id="b-crystal">${keep}${opt('yes', 'Uses it')}${opt('no', 'Own level')}</select></label>
+        <label class="field"><span>Own level</span><input class="input num-input" id="b-level" type="number" min="1" max="${LIMITS.level}" placeholder="–"></label>
+        <label class="field"><span>Signature item</span><input class="input num-input" id="b-si" type="number" min="0" max="${LIMITS.si}" placeholder="–"></label>
+        <label class="field"><span>Furniture</span><select class="select" id="b-furniture">${keep}${range(LIMITS.furniture)}</select></label>
+        <label class="field"><span>Engraving</span><input class="input num-input" id="b-engrave" type="number" min="0" max="${LIMITS.engrave}" placeholder="–"></label>
+        <label class="field"><span>Gear tier</span><select class="select" id="b-gear">${keep}${Array.from({ length: LIMITS.gear + 1 }, (_, i) => opt(String(i), 'T' + i)).join('')}</select></label>
+      </div>`,
+    foot: `<button class="btn ghost" type="button" data-remove title="Forget everything recorded for these heroes">${ICON.trash} Remove data</button><button class="btn" type="button" data-cancel>Cancel</button><button class="btn primary" type="button" data-apply>Apply to ${n}</button>`,
+  });
+  d.addEventListener('click', (ev) => {
+    if (ev.target.closest('[data-cancel]')) closeDrawer();
+    else if (ev.target.closest('[data-apply]')) {
+      if (applyBatch(d)) closeDrawer();
+    } else if (ev.target.closest('[data-remove]')) {
+      removeHeroes([...ui.selected]);
+      toast(`Removed recorded data for ${plural(ui.selected.size, 'hero')}.`);
+      ui.selected.clear();
+      closeDrawer();
+      refreshBank();
+    }
+  });
 }
 
 // ---- events ---------------------------------------------------------------------
@@ -394,6 +543,14 @@ function onClick(ev) {
     handleAct(act);
     return;
   }
+  const sub = t.closest('[data-sub]');
+  if (sub) {
+    if (ui.sub === sub.dataset.sub) return;
+    ui.sub = sub.dataset.sub;
+    local.set(SUB_KEY, ui.sub);
+    render();
+    return;
+  }
   const own = t.closest('[data-own]');
   if (own) {
     ui.own = own.dataset.own;
@@ -401,10 +558,25 @@ function onClick(ev) {
     refreshBank();
     return;
   }
+  const ascChip = t.closest('[data-asc-chip]');
+  if (ascChip) {
+    ui.asc = ui.asc === ascChip.dataset.ascChip ? 'any' : ascChip.dataset.ascChip;
+    $('#bank-asc', root).value = ui.asc;
+    refreshBank();
+    return;
+  }
+  const missChip = t.closest('[data-missing-chip]');
+  if (missChip) {
+    ui.missing = ui.missing === missChip.dataset.missingChip ? 'any' : missChip.dataset.missingChip;
+    $('#bank-missing', root).value = ui.missing;
+    refreshBank();
+    return;
+  }
   const view = t.closest('[data-view]');
   if (view) {
     ui.view = view.dataset.view;
     $$('[data-view]', root).forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.view === ui.view)));
+    $('#bank-size-ctl', root).hidden = ui.view === 'table';
     renderList();
     return;
   }
@@ -464,6 +636,14 @@ function toggleSelect(id) {
   renderCounts();
 }
 
+function setSelectMode(on) {
+  ui.selectMode = on;
+  if (!on) ui.selected.clear();
+  $('[data-act="select"]', root)?.setAttribute('aria-pressed', String(on));
+  renderList();
+  renderCounts();
+}
+
 function handleAct(act) {
   switch (act) {
     case 'elder-upload':
@@ -477,31 +657,27 @@ function handleAct(act) {
       break;
     case 'dir':
       ui.dir = -ui.dir;
-      render();
+      $('[data-act="dir"]', root).textContent = ui.dir === 1 ? '↓' : '↑';
+      renderList();
       break;
     case 'select':
-      ui.selectMode = !ui.selectMode;
-      if (!ui.selectMode) ui.selected.clear();
-      render();
+      setSelectMode(!ui.selectMode);
+      break;
+    case 'select-done':
+      setSelectMode(false);
       break;
     case 'select-shown':
     case 'select-all-table':
       for (const h of visibleHeroes()) ui.selected.add(h.id);
-      ui.selectMode = true;
-      render();
+      setSelectMode(true);
       break;
     case 'batch-clear':
       ui.selected.clear();
       renderList();
       renderCounts();
       break;
-    case 'batch-apply':
-      applyBatch();
-      break;
-    case 'batch-remove':
-      removeHeroes([...ui.selected]);
-      toast(`Removed recorded data for ${plural(ui.selected.size, 'hero')}.`);
-      ui.selected.clear();
+    case 'batch-edit':
+      openBatchEditor();
       break;
     case 'upload':
       openUpload();
@@ -515,8 +691,8 @@ function handleAct(act) {
   }
 }
 
-function applyBatch() {
-  const get = (id) => $('#' + id, root)?.value ?? '';
+function applyBatch(d) {
+  const get = (id) => $('#' + id, d)?.value ?? '';
   const patch = {};
   if (get('b-owned')) patch.owned = get('b-owned') === 'yes';
   if (get('b-asc')) patch.asc = get('b-asc');
@@ -529,7 +705,7 @@ function applyBatch() {
   if (get('b-gear') !== '') patch.gear = toInt(get('b-gear'));
   if (!Object.keys(patch).length) {
     toast('Pick at least one value to change.');
-    return;
+    return false;
   }
   // Editing upgrades on a hero implies owning it unless told otherwise.
   if (!('owned' in patch)) patch.owned = true;
@@ -537,6 +713,7 @@ function applyBatch() {
   for (const id of ui.selected) patches[id] = { ...(bank.heroes[id] || {}), ...patch };
   updateHeroes(patches);
   toast(`Updated ${plural(ui.selected.size, 'hero')}.`);
+  return true;
 }
 
 function onChange(ev) {
@@ -563,8 +740,8 @@ function onChange(ev) {
     renderList();
     return;
   }
-  if (t.id === 'bank-asc') {
-    ui.asc = t.value;
+  if (t.id === 'bank-asc' || t.id === 'bank-missing') {
+    ui[t.id === 'bank-asc' ? 'asc' : 'missing'] = t.value;
     refreshBank();
     return;
   }
@@ -587,6 +764,10 @@ function onInput(ev) {
   } else if (t.id === 'bank-crystal') {
     const v = toInt(t.value, 0);
     if (v >= 1) saveCrystal(v);
+  } else if (t.id === 'bank-size') {
+    ui.size = toInt(t.value, 3);
+    local.set(SIZE_KEY, ui.size);
+    renderList();
   }
 }
 
@@ -602,8 +783,8 @@ export function openEditor(id) {
       <div><p class="muted">${esc(h.faction)} ${esc(h.class)}</p><button class="btn small" type="button" data-detail-open>Hero details and ratings</button></div></div>
     <label class="check"><input type="checkbox" id="ed-owned" ${cur.owned ? 'checked' : ''}> I own this hero</label>
     <div class="edit-grid">
-      <label class="field"><span>Ascension</span><select class="select" id="ed-asc">${ASCENSIONS.map((a) => `<option ${cur.asc === a ? 'selected' : ''}>${a}</option>`).join('')}</select></label>
-      <label class="field"><span>Stars (Ascended)</span><select class="select" id="ed-stars" ${cur.asc === 'Ascended' ? '' : 'disabled'}>${starOptions(cur.stars)}</select></label>
+      <label class="field"><span>Ascension</span><select class="select asc-select" id="ed-asc" data-asc="${esc(cur.asc)}">${ASCENSIONS.map((a) => `<option ${cur.asc === a ? 'selected' : ''}>${a}</option>`).join('')}</select></label>
+      <label class="field"><span>Stars (Ascended)</span><select class="select" id="ed-stars" ${cur.asc === 'Ascended' ? '' : 'disabled'}>${starOptions(cur.stars)}</select><span class="star-prev" id="ed-star-row">${cur.asc === 'Ascended' ? starRow(cur.stars, { size: 16 }) : ''}</span></label>
       <label class="field"><span>Level</span><input class="input" id="ed-level" type="number" min="1" max="${LIMITS.level}" value="${shared && cur.crystal !== false ? bank.settings.crystalLevel : cur.level}" ${shared && cur.crystal !== false ? 'disabled' : ''}></label>
       <label class="field"><span>Signature item</span><input class="input" id="ed-si" type="number" min="0" max="${LIMITS.si}" value="${cur.si ?? ''}" placeholder="not recorded"></label>
       <label class="field"><span>Furniture (0–9)</span><input class="input" id="ed-furniture" type="number" min="0" max="${LIMITS.furniture}" value="${cur.furniture ?? ''}" placeholder="not recorded"></label>
@@ -619,9 +800,14 @@ export function openEditor(id) {
     body,
     foot: `${bank.heroes[id] ? '<button class="btn ghost" type="button" data-remove>Remove data</button>' : ''}<button class="btn" type="button" data-cancel>Cancel</button><button class="btn primary" type="button" data-save>Save</button>`,
   });
-  $('#ed-asc', d).addEventListener('change', (e) => {
-    $('#ed-stars', d).disabled = e.target.value !== 'Ascended';
-  });
+  const showStars = () => {
+    const asc = $('#ed-asc', d).value;
+    $('#ed-asc', d).dataset.asc = asc;
+    $('#ed-stars', d).disabled = asc !== 'Ascended';
+    $('#ed-star-row', d).innerHTML = asc === 'Ascended' ? starRow(toInt($('#ed-stars', d).value), { size: 16 }) : '';
+  };
+  $('#ed-asc', d).addEventListener('change', showStars);
+  $('#ed-stars', d).addEventListener('change', showStars);
   $('#ed-crystal', d)?.addEventListener('change', (e) => {
     $('#ed-level', d).disabled = e.target.checked;
     if (e.target.checked) $('#ed-level', d).value = bank.settings.crystalLevel;

@@ -44,9 +44,11 @@ function grid() {
   return list.length ? list.map(card).join('') : '<p class="small muted">No beasts marked as owned yet.</p>';
 }
 
-export function beastPanel() {
-  if (!data.beasts?.length) return '';
+// bare: the Beasts sub-tab of the bank, without the foldable panel around it.
+export function beastPanel({ bare = false } = {}) {
+  if (!data.beasts?.length) return '<div class="empty"><p>No beasts recorded yet.</p></div>';
   const body = `<div class="toolbar">
+      ${bare ? `<span class="small muted" id="beast-sub">${summary()}</span>` : ''}
       <div class="seg" role="group" aria-label="Beasts shown"><button type="button" data-beast-show="all" aria-pressed="${showAll}">All beasts</button><button type="button" data-beast-show="owned" aria-pressed="${!showAll}">Owned</button></div>
       <button class="btn" type="button" data-beast-upload hidden>${ICON.upload} Read screenshots</button>
       <input type="file" id="beast-file" accept="image/png,image/jpeg,image/webp" multiple hidden>
@@ -58,6 +60,7 @@ export function beastPanel() {
       data.beastSystem?.summary ||
         'A beast joins a formation in the modes that allow one. Its three buffs raise heroes of that type: Strength, Intelligence or Agility. Buffs go to 12, or 18 on legendary beasts.'
     )} The builder and counter pick the owned beast that fits each team best.</p>`;
+  if (bare) return `<div class="beast-pane">${body}</div>`;
   return panel({ id: 'bank-beasts', title: 'Beasts', sub: `<span id="beast-sub">${summary()}</span>`, body, folded: false });
 }
 
