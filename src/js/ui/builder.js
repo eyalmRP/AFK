@@ -21,7 +21,7 @@ const ui = {
   pool: 'mine',
   // How hero strength counts: tier only, the player's upgrade levels, or
   // their estimated combat rating (engine.js heroValue).
-  weigh: 'upgrades',
+  weigh: 'power',
   exclude: new Set(),
   result: null,
   claude: null,
@@ -31,9 +31,9 @@ const ui = {
 };
 
 const WEIGH = [
-  ['tier', 'Tier', 'Tier ratings, counters and synergies only'],
-  ['upgrades', 'My upgrades', 'Also weigh ascension, stars, signature item, furniture, engraving and the Elder Tree'],
-  ['power', 'Combat power', 'Weigh each hero by its estimated combat rating against your five strongest'],
+  ['power', 'Combat power', 'Your copies\' combat rating decides first (fitted to your in-game ratings); tiers, counters and synergies choose among heroes of similar strength'],
+  ['upgrades', 'My upgrades', 'Tier ratings first, adjusted for ascension, stars, signature item, furniture, engraving and the Elder Tree'],
+  ['tier', 'Tier only', 'Tier ratings, counters and synergies, as if every hero were fully built'],
 ];
 
 let root;

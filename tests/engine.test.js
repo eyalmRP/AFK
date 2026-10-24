@@ -211,3 +211,13 @@ test('a beast its source lineup uses wins when the player owns it', async () => 
   // Not owned: falls back to the rating.
   assert.equal(suggestBeast(ctx, [], { beasts, owned: { a: { owned: true } }, prefer: { id: 'b' } }).id, 'a');
 });
+
+test('with combat power on, a much stronger copy beats a higher tier', () => {
+  const tierOf = (id) => data.heroById.get(id).tiers?.pvp || data.heroById.get(id).tiers?.overall;
+  const ids = all.filter((id) => data.heroById.get(id).tiers?.overall);
+  const top = ids.find((id) => tierOf(id) === 'S+');
+  const low = ids.find((id) => tierOf(id) === 'A');
+  const power = new Map(ids.map((id) => [id, id === top ? 13e9 : id === low ? 20e9 : 19e9]));
+  const ctx = ctxFor('arena-of-heroes', { power });
+  assert.ok(heroValue(ctx, low).value > heroValue(ctx, top).value, `${low} (A, 20B) should outrank ${top} (S+, 13B)`);
+});

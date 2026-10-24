@@ -283,10 +283,12 @@ export function heroValue(ctx, id) {
   }
   // Weighing by power: the rating already counts ascension, stars, upgrades,
   // level, gear and the Elder Tree, so it replaces those factors; the hero's
-  // own requirements still apply.
+  // own requirements still apply. Cubed, because in a fight a copy a third
+  // weaker than the player's best adds little whatever its tier: power picks
+  // first, tiers and synergies choose among heroes of similar strength.
   if (ctx.power) {
     const r = (ctx.power.get(id) || 0) / ctx.powerRef;
-    inv.factor = Math.max(0.2, Math.min(1.2, r)) * (inv.need ?? 1);
+    inv.factor = Math.max(0.1, Math.min(1.2, r ** 3)) * (inv.need ?? 1);
     reasons.push(`${Math.round(r * 100)}% of your top five's power`);
   }
   const classBonus = ctx.mode?.classBonus?.[h.class] || 0;
