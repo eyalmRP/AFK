@@ -1,0 +1,229 @@
+// Claude features: reading hero-bank screenshots, and Claude's own take on
+// formations and counters. All of it runs through the artifact runtime's
+// `sample` capability on the viewer's Claude account, so it only lights up
+// when the page is opened inside Claude.
+
+import { data, ASCENSIONS, tierOf, POSITIONS } from './data.js';
+
+let samplePromise = null;
+export const aiState = { text: false, images: false, maxImages: 0, mediaTypes: [], disabled: false };
+
+export function initAi() {
+  if (samplePromise) return samplePromise;
+  samplePromise = (async () => {
+    const use = window.claude?.use;
+    if (!use) return null;
+    const sample = await window.claude.use('sample');
+    if (!sample) return null;
+    aiState.text = true;
+    try {
+      const lim = await sample.limits();
+      if (lim?.images) {
+        aiState.images = true;
+        aiState.maxImages = lim.images.maxCount || 1;
+        aiState.mediaTypes = lim.images.mediaTypes || [];
+      }
+    } catch {
+      /* text-only */
+    }
+    return sample;
+  })();
+  return samplePromise;
+}
+
+export function errorCopy(e) {
+  switch (e?.code) {
+    case 'not_granted':
+    case 'sampling_disabled':
+    case 'not_declared':
+    case 'capability_disabled':
+    case 'capability_removed':
+      aiState.disabled = true;
+      return 'Claude is not available for this page. You can still edit heroes by hand.';
+    case 'images_unavailable':
+      aiState.images = false;
+      return 'This view cannot send images to Claude.';
+    case 'rate_limited':
+      return 'Claude is busy or your usage limit was reached. Try again in a little while.';
+    case 'image_rejected':
+      return 'That image could not be read. Use a PNG or JPG screenshot under 20 MB.';
+    case 'invalid_json':
+      return 'Claude replied in an unexpected format. Try again, or with fewer screenshots at once.';
+    case 'session_expired':
+      return 'Your Claude session expired. Sign in again and retry.';
+    case 'refused':
+      return 'Claude declined this request. Try a different screenshot.';
+    case 'cancelled':
+      return 'Stopped.';
+    default:
+      return 'Claude could not finish this request. Try again.';
+  }
+}
+
+function rosterLines() {
+  return data.heroes.map((h) => `${h.id}|${h.name}|${h.faction}|${h.class}`).join('\n');
+}
+
+const SCREEN_GUIDE = () => {
+  const s = data.meta?.screenshotHints || {};
+  return [
+    'How AFK Arena shows progression:',
+    `- Ascension tiers, lowest to highest: ${ASCENSIONS.join(', ')}. The card frame colour shows it (purple = Elite, gold/yellow = Legendary, orange-red = Mythic, white/silver with stars = Ascended); a "+" tier shows a small plus/extra frame ornament.`,
+    '- Ascended heroes can show 1-5 small stars under or over the portrait. Report stars 0 when no stars are visible on an Ascended hero.',
+    '- The level is the number on the card (e.g. 240). Heroes in the Resonating Crystal share one level.',
+    '- Signature Item (SI) is shown as +N (0-40) on the hero detail screen next to the signature item icon.',
+    '- Furniture is shown as a count of 0-9 (often "3/9" or 9 small pieces) on the detail screen.',
+    '- Engraving level (E0-E100+) appears as a number on the engraving icon on the detail screen.',
+    s.heroList ? `- Hero list screen: ${s.heroList}` : '',
+    s.heroDetail ? `- Hero detail screen: ${s.heroDetail}` : '',
+  ]
+    .filter(Boolean)
+    .join('\n');
+};
+
+// Read one batch of screenshots. Returns {heroes:[...], notes}.
+export async function readScreenshots(files, { signal, onText } = {}) {
+  const sample = await initAi();
+  if (!sample) throw { code: 'not_granted' };
+  const prompt = `You are reading screenshots from the mobile game AFK Arena (not AFK Journey). The player wants to record which heroes they own and how far each is upgraded.
+
+${SCREEN_GUIDE()}
+
+Identify every hero visible in the ${files.length} attached screenshot(s). Match each to exactly one hero from this roster (format id|name|faction|class). Use the portrait art, the name text if shown, and the faction icon:
+${rosterLines()}
+
+For each hero report only what is actually visible. Use null for anything you cannot see (for example SI, furniture and engraving are usually only on the hero detail screen, not the hero list). Never guess a number.
+
+Reply with only JSON in this shape:
+{"screen":"hero-list|hero-detail|formation|other","heroes":[{"id":"roster id","level":240,"asc":"Ascended","stars":2,"si":30,"furniture":9,"engrave":60,"confidence":"high|medium|low","seen":"short note on what you read"}],"notes":"anything the player should check"}
+"asc" must be one of: ${ASCENSIONS.join(', ')} or null.`;
+  const out = await sample.json(prompt, { images: files, signal, onText, modelTier: 'default', cache: false });
+  const valid = new Set(data.heroes.map((h) => h.id));
+  const heroes = (Array.isArray(out?.heroes) ? out.heroes : [])
+    .filter((h) => h && valid.has(String(h.id)))
+    .map((h) => ({
+      id: String(h.id),
+      level: numOrNull(h.level),
+      asc: ASCENSIONS.includes(h.asc) ? h.asc : null,
+      stars: numOrNull(h.stars),
+      si: numOrNull(h.si),
+      furniture: numOrNull(h.furniture),
+      engrave: numOrNull(h.engrave),
+      confidence: ['high', 'medium', 'low'].includes(h.confidence) ? h.confidence : 'medium',
+      seen: String(h.seen || '').slice(0, 160),
+    }));
+  return { heroes, screen: out?.screen || 'other', notes: String(out?.notes || '').slice(0, 400) };
+}
+
+// Read an enemy formation screenshot. Returns {slots:{F1:id,...}, notes}.
+export async function readEnemyScreenshot(file, { signal } = {}) {
+  const sample = await initAi();
+  if (!sample) throw { code: 'not_granted' };
+  const prompt = `This is a screenshot from AFK Arena (not AFK Journey) showing an enemy formation (arena, legends championship, or a battle screen). AFK Arena formations have 2 front slots (F1 left, F2 right) and 3 back slots (B1 left, B2 middle, B3 right).
+Identify the enemy heroes from this roster (id|name|faction|class):
+${rosterLines()}
+
+Reply with only JSON: {"slots":{"F1":"id or null","F2":"id or null","B1":"id or null","B2":"id or null","B3":"id or null"},"notes":"what you were unsure about"}`;
+  const out = await sample.json(prompt, { images: [file], signal, modelTier: 'default', cache: false });
+  const valid = new Set(data.heroes.map((h) => h.id));
+  const slots = {};
+  for (const p of POSITIONS) {
+    const id = out?.slots?.[p];
+    if (id && valid.has(String(id))) slots[p] = String(id);
+  }
+  return { slots, notes: String(out?.notes || '').slice(0, 300) };
+}
+
+function numOrNull(v) {
+  if (v === null || v === undefined || v === '') return null;
+  const n = Number(v);
+  return Number.isFinite(n) ? Math.round(n) : null;
+}
+
+function heroLine(id, entries) {
+  const h = data.heroById.get(id);
+  const e = entries?.[id];
+  const inv = e ? `${e.asc}${e.stars ? ' ' + e.stars + '★' : ''} SI+${e.si ?? 0} ${e.furniture}F E${e.engrave}` : 'max';
+  return `${id} | ${h.name} | ${h.faction} ${h.class} | tiers pve:${tierOf(h, 'pve') || '-'} pvp:${tierOf(h, 'pvp') || '-'} boss:${tierOf(h, 'boss') || '-'} | ${inv} | roles: ${(h.roles || []).join(',')} | ${h.kit || ''}`;
+}
+
+function modeBrief(mode) {
+  if (!mode) return 'General use.';
+  const comm = (mode.community || [])
+    .slice(0, 4)
+    .map((t) => `- ${t.name}: ${t.heroes.map((x) => `${x.pos}:${x.id}`).join(' ')} (${t.consensus || 'common'})`)
+    .join('\n');
+  return `${mode.name} (${mode.category}). ${mode.whatMatters || ''} ${mode.restrictions ? 'Restrictions: ' + mode.restrictions : ''}
+Community teams for this mode:
+${comm || '- none recorded'}`;
+}
+
+function parseTeams(out, allowed, count, unique = true) {
+  const used = new Set();
+  const teams = [];
+  for (const t of Array.isArray(out?.teams) ? out.teams : []) {
+    const slots = {};
+    if (!unique) used.clear();
+    for (const p of POSITIONS) {
+      const id = t?.slots?.[p] ? String(t.slots[p]) : null;
+      if (id && allowed.has(id) && !used.has(id)) {
+        slots[p] = id;
+        used.add(id);
+      }
+    }
+    if (Object.keys(slots).length) {
+      teams.push({
+        name: String(t.name || `Team ${teams.length + 1}`).slice(0, 60),
+        slots,
+        artifacts: t.artifacts && typeof t.artifacts === 'object' ? t.artifacts : {},
+        why: String(t.why || '').slice(0, 700),
+        risks: String(t.risks || '').slice(0, 300),
+      });
+    }
+    if (teams.length >= count) break;
+  }
+  return { teams, notes: String(out?.notes || '').slice(0, 600) };
+}
+
+const ARTIFACT_IDS = () => data.artifacts.map((a) => `${a.id} (${a.name})`).join(', ');
+
+export async function claudeBuild({ mode, count, pool, entries, engineTeams, signal }) {
+  const sample = await initAi();
+  if (!sample) throw { code: 'not_granted' };
+  const prompt = `You are an expert AFK Arena (Lilith Games, not AFK Journey) team builder. Build ${count} formation(s) for the mode below using ONLY the player's owned heroes. Teams must not share heroes. Each formation has 2 front slots (F1, F2) and 3 back slots (B1, B2, B3).
+
+Mode: ${modeBrief(mode)}
+
+Owned heroes (id | name | faction class | tier ratings | player's investment | roles | kit):
+${pool.map((id) => heroLine(id, entries)).join('\n')}
+
+A rules engine proposed:
+${engineTeams.map((t, i) => `Team ${i + 1}: ${POSITIONS.map((p) => `${p}:${t.layout[p] || '-'}`).join(' ')}`).join('\n')}
+
+Improve on it where you can: consider synergies, energy and positioning, the mode's mechanics, and the player's investment (an under-built hero can be worse than a lower-tier maxed one). Artifact ids: ${ARTIFACT_IDS()}.
+Reply with only JSON: {"teams":[{"name":"short archetype name","slots":{"F1":"id","F2":"id","B1":"id","B2":"id","B3":"id"},"artifacts":{"heroId":"artifact id"},"why":"2-3 sentences","risks":"1 sentence"}],"notes":"upgrade advice in 1-2 sentences"}`;
+  const out = await sample.json(prompt, { signal, modelTier: 'default', cache: false });
+  return parseTeams(out, new Set(pool), count);
+}
+
+export async function claudeCounter({ enemySlots, mode, pool, entries, engineTeam, signal }) {
+  const sample = await initAi();
+  if (!sample) throw { code: 'not_granted' };
+  const enemy = POSITIONS.filter((p) => enemySlots[p]).map((p) => `${p}: ${heroLine(enemySlots[p], null)}`);
+  const prompt = `You are an expert AFK Arena (Lilith Games, not AFK Journey) PvP and PvE strategist. Recommend the best counter formation against the enemy below using ONLY the player's owned heroes. A formation has 2 front slots (F1, F2) and 3 back slots (B1, B2, B3); position matters (who the enemy targets, who gets hit by back-line divers, faction advantage Lightbearer>Mauler>Wilder>Graveborn>Lightbearer, Celestial<>Hypogean).
+
+Mode: ${modeBrief(mode)}
+
+Enemy formation:
+${enemy.join('\n')}
+
+Owned heroes (id | name | faction class | tier ratings | player's investment | roles | kit):
+${pool.map((id) => heroLine(id, entries)).join('\n')}
+
+A rules engine proposed: ${POSITIONS.map((p) => `${p}:${engineTeam?.layout?.[p] || '-'}`).join(' ')}
+
+Reply with only JSON: {"teams":[{"name":"short name","slots":{"F1":"id","F2":"id","B1":"id","B2":"id","B3":"id"},"artifacts":{"heroId":"artifact id"},"why":"how this beats the enemy, 2-4 sentences","risks":"what could still go wrong"}],"notes":"what to swap if this loses"}
+Give 1 primary team and optionally 1 alternative (max 2 teams). Artifact ids: ${ARTIFACT_IDS()}.`;
+  const out = await sample.json(prompt, { signal, modelTier: 'default', cache: false });
+  return parseTeams(out, new Set(pool), 2, false);
+}

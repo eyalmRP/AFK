@@ -1,0 +1,668 @@
+{
+ "asOf": "2026-10-24",
+ "nextUpdate": "2026-10-31",
+ "gameVersion": "v1.204 (Oct 6, 2026)",
+ "summary": "Late October 2026. Envydiel, Liberta and Palmer are rated S+ by every recent list, and Hybris, Sung Jinwoo, Daemia, Ivan and Rosaline are close behind. Patch v1.204 (Oct 6) added new Temporal Rift and Golden Frontier seasons and updated Nightmare Corridor, with no hero balance changes. 2026's new heroes (Valeri, Thalassa, Kyno, Athena, Medusa, and the Kaiju No. 8 pair Kafka Hibino and Kikoru Shinomiya) are still settling into their tiers.",
+ "mustBuild": [
+  "envydiel",
+  "liberta",
+  "palmer",
+  "daemia",
+  "hybris",
+  "awakened-athalia",
+  "ivan",
+  "rosaline",
+  "awakened-baden",
+  "sung-jinwoo"
+ ],
+ "metaShifts": [
+  {
+   "date": "2026-10",
+   "text": "v1.204 (Oct 6): new Temporal Rift and Golden Frontier seasons and a Nightmare Corridor update, with no hero balance changes. Pocket Gamer's list was refreshed Oct 2 for v1.203.01, AFK Global's on Oct 3 and Driffle's on Oct 16."
+  },
+  {
+   "date": "2026-08",
+   "text": "v1.200 (Aug 11): Thalassa – Abyssal Warden (S-tier support/healer). v1.201 (Aug 25): Valeri – Wilds Inventor (Mauler tank), rated A overall, strong in Campaign and Towers, weak in boss modes."
+  },
+  {
+   "date": "2026-07",
+   "text": "v1.198: Kyno – Scrapforge Prodigy (Draconis tank). AllClash rates Kyno S+ in Campaign, Dragonforge and Cursed Realm. One afk.guide snippet also lists Talimar – Hook of the Wastes as new. v1.199: Athena and Medusa (Dimensional). AllClash calls Athena's tank kit 'absolutely busted', and Medusa pairs with her."
+  },
+  {
+   "date": "2026-06",
+   "text": "v1.196 (Jun 16): Eluard – Catalyst of Fate (Awakened Lightbearer). v1.197 (Jun 30): Trix – Imp of Misrule (Hypogean). Eluard's skill text was reworded with no effect change, and Framton got a bug fix. These are the only 2026 'adjustments' found, so no real nerf or buff pass was identified."
+  },
+  {
+   "date": "2026-05",
+   "text": "v1.193: Misfortis – Fortune's Folly (Celestial INT tank). afk.guide calls Misfortis the strongest PvP Celestial, while ratings range from A to SS. v1.194: Severin – Scholar of Form (Draconis ranger). v1.195 (trial from May 28): Judy & Punch (Dimensional mage)."
+  },
+  {
+   "date": "2026-04",
+   "text": "v1.191 (Apr 7): Serennia – Tidebound Devotion (Draconis ranger), plus adjustments to Saitama, Orthros and Melion (mostly bug fixes). v1.192 (Apr 21): Hybris (Hypogean) released and went straight to S+ on every 2026 list."
+  },
+  {
+   "date": "2026-03",
+   "text": "v1.189 (Mar 10): Harvey (Hypogean, later B-tier at afk.guide). v1.190 (~late Mar): Dracula – Sanguine Queen (Dimensional continuous-damage mage), used in afk.guide's Guild Trials level-999 teams. No grade found."
+  },
+  {
+   "date": "2026-02",
+   "text": "v1.187 (Feb 10): Icariel added. v1.188 (Feb 24): Odysseus added. No tier grades found for either yet."
+  },
+  {
+   "date": "2026-01",
+   "text": "Awakened Pippa released. AllClash: S overall, S+ in Campaign and Towers. A mid-priority Awakened that PvP players take early."
+  },
+  {
+   "date": "2025-03",
+   "text": "Approximate date (v1.163, estimated from the patch cadence): Envydiel – Venomous Desire (Awakened Hypogean) released. By 2026 every source rates Envydiel S+ and afk.guide calls Envydiel the strongest DPS in the game. Now the #1 Awakened priority (AllClash)."
+  }
+ ],
+ "method": "Every week Claude reads the newest community tier lists and guides, maps each source's grades onto one S+ to D scale (SS counts as S+), and keeps each source's raw grade so you can check the merge. A rating with fewer than two agreeing sources is marked as mixed or single-source. The AI analysis column is calculated, not crowd-sourced: the rules engine scores every hero from this week's ratings, game-data roles, synergies and each mode's needs, builds the best lineups from the full roster, and Claude reviews them and explains where they differ from the community.",
+ "gaps": [
+  "Most community teams this week are cores of 1-3 named heroes, not full 5-hero lineups. Guide sites show lineups as images that could not be read. Partial lineups are labelled.",
+  "Formation positions were published only for the Twisted Realm teams. All other positions are inferred from hero class and role, and are labelled.",
+  "Kits were verified for 23 heroes. The rest use the game's own role tags (main and secondary role).",
+  "No current community team sets were found for Legends Championship, Cursed Realm, King's Tower or the faction towers.",
+  "PvP ratings are thin for many Lightbearer, Mauler and Wilder heroes. Where a category rating is missing, the overall rating is used.",
+  "Signature Item caps: patch 1.134 raised the cap to +50, but some 2025 guides still stop at +40. Check in game."
+ ],
+ "limits": {
+  "level": 800,
+  "si": 50,
+  "furniture": 9,
+  "engrave": 100,
+  "stars": 5,
+  "gear": 5
+ },
+ "systems": {
+  "ascension": {
+   "tiers": [
+    "Common",
+    "Rare",
+    "Rare+",
+    "Elite",
+    "Elite+",
+    "Legendary",
+    "Legendary+",
+    "Mythic",
+    "Mythic+",
+    "Ascended",
+    "Ascended 1★",
+    "Ascended 2★",
+    "Ascended 3★",
+    "Ascended 4★",
+    "Ascended 5★"
+   ],
+   "heroRarityStart": "Legendary-rarity and Ascended-rarity heroes (4F, Celestial, Hypogean, Dimensional, Draconis, Awakened) are summoned at Elite and can reach Ascended 5★. Lower-rarity heroes stop at lower tiers (exact caps not verified).",
+   "stars": {
+    "max": 5,
+    "notes": "Stars exist only on Ascended heroes, from 1★ to 5★. Stars do not raise the level cap, which stays 240 plus the crystal. Ascended 1★ is required to unlock Eternal Engravings. No tier above Ascended 5★ was found up to patch 1.204."
+   },
+   "visual": "The portrait frame colour shows the tier: Rare is blue, Elite purple, Legendary gold/yellow, Mythic red/orange, Ascended white/silver with an ornate frame. Each '+' tier uses the same colour with an extra ornament or gem on the frame. Ascended stars appear as up to 5 small star icons under the portrait. This comes from general game knowledge and was not verified this session, so calibrate against real screenshots."
+  },
+  "levels": {
+   "caps": {
+    "Elite": 100,
+    "Elite+": 120,
+    "Legendary": 140,
+    "Legendary+": 160,
+    "Mythic": 180,
+    "Mythic+": 200,
+    "Ascended": 240,
+    "Ascended (with Resonating Crystal)": "240 + crystal (see crystal)"
+   },
+   "lowerTierCaps": "Caps for Common/Rare/Rare+ were not verified. One guide says Common-rarity heroes cap at 100.",
+   "crystal": {
+    "max": 800,
+    "maxIsVerified": false,
+    "notes": "The Resonating Crystal sets the level of slotted heroes to the crystal's level, which is driven by your 5 highest-level heroes (the 'pentagram'). The 240 cap is lifted once 5 heroes reach 240, which needs 5 Ascended heroes. You then level the crystal directly. Its account cap is 240 + 5 for each Ascended hero you own. Dimensional heroes do not count, and stars do not matter. The Fandom wiki gives an absolute crystal maximum of 800, to be raised as new Ascended-tier heroes are added. Older guides give 455, 465 or 475, which probably reflect smaller rosters at the time. Only Ascended heroes can go above 240. Lower-tier heroes in crystal slots stay at their own tier cap. Past 240, levelling also costs Hero's Essence."
+   }
+  },
+  "signatureItem": {
+   "max": 50,
+   "byAscension": {
+    "Mythic": "SI unlocks (costs 20 Primordial Emblems)"
+   },
+   "emblemBands": {
+    "+0..+10": "Primordial Emblems (220 total including the unlock)",
+    "+11..+20": "Amplifying Emblems (240)",
+    "+21..+30": "Faction Emblems (300)",
+    "+31..+40": "Faction Emblems (820, or 1,050 in afk.guide's table) or 650 Epic Emblems",
+    "+41..+50": "Epic (Faction) Emblems (1,360 for C/H/Dimensional/Draconis/Awakened)"
+   },
+   "notes": "Patch 1.134 (about 2023) raised the SI cap for 4F heroes from 30 to 50, and for Celestial/Hypogean/Dimensional/Awakened heroes from 40 to 50. A new skill effect unlocks at +40. Skill upgrades also come at +0, +10, +20 and +30 (standard milestones, not re-verified). Some 2025 guides still treat +40 as the top level, so confirm +50 in-game. The game shows the SI level as '+N' on the SI icon on the hero detail screen."
+  },
+  "furniture": {
+   "pieces": 9,
+   "layout": "3 small, 3 medium and 3 large pieces per hero room in the Oak Inn",
+   "setBonuses": "Hero-specific bonuses unlock at 3 Mythic pieces ('3f', also written 3/9) and at 9 Mythic pieces ('9f' or 9/9). Only Mythic-quality pieces count toward these bonuses.",
+   "unlock": "A hero gets a room once it is Ascended. The Oak Inn furniture feature opens with your first Ascended hero.",
+   "notes": "Furniture comes from Oak Inn pulls with Poe Coins, and Mythic furniture has a 30-pull pity. Record a mythic piece count of 0 to 9 for each hero. Furniture '+' upgrade levels beyond Mythic were not verified."
+  },
+  "engraving": {
+   "max": 100,
+   "unlocks": "The system opens after clearing campaign Chapter 21 (one guide says Chapter 23 for Elemental Cores). Each hero must be Ascended 1★ first. Lightbearers were added in patch 1.72. No source says higher stars raise the 100 cap.",
+   "structure": "Each monolith has 3 Major Glyphs (20 levels each) and 5 Minor Glyphs (8 levels each), for 100 levels in total.",
+   "milestones": "Levels 30 and 60 give skill upgrades. Level 80 unlocks a PvP-only ability ('Endeavor', per the wiki).",
+   "costBands": "Levels 0-30 cost Elemental Shards. Levels 30-60, 60-80 and 80-100 cost Elemental Cores, at increasing rates.",
+   "notes": "afk.guide's 1.180 update (Nov 2025) still describes the same structure. The game shows the engraving level as a number (0-100) on the engraving or monolith element on the hero detail screen (display not verified). Common community goals are E30, E60 and E80."
+  },
+  "formation": {
+   "front": 2,
+   "back": 3,
+   "factionAdvantage": "Lightbearer > Mauler > Wilder > Graveborn > Lightbearer, with Celestial ⇄ Hypogean as mutual counters. The advantaged side gets +25% damage (some guides say 'up to 25%'). The wiki's Celestial and Hypogean pages contradict each other on direction, which fits a mutual advantage. No matchups were found for Dimensional or Draconis, which are probably neutral.",
+   "factionBonus": "Same-faction team bonus applied to all deployed heroes: 3 of one faction gives +10% ATK and +10% HP; 3+2 (two factions) gives +15% ATK and +15% HP; 4 of one faction gives +15% ATK and +20% HP; 5 of one faction gives +25% ATK and +25% HP. Draconis heroes add +2% ATK and +2% HP to all allies per Draconis hero deployed. Whether Celestial/Hypogean count as wildcards in AFK Arena is unverified; the wildcard rule found applies to AFK Journey.",
+   "teamPower": "Team Combat Rating (CR) is shown as the sum of the deployed heroes' individual CRs. Each hero's CR comes from its stats (level, gear, SI, furniture, engraving and so on). No exact formula was found."
+  }
+ },
+ "screenshotHints": {
+  "heroList": "Not verified this session; based on general knowledge, so calibrate with real screenshots. Each hero tile is a square portrait. The frame colour or ornament shows the ascension tier (blue Rare, purple Elite, gold Legendary, red Mythic, white/silver Ascended, with an extra ornament for '+' tiers). A small faction icon sits in a top corner. The level number is printed on the tile. Ascended heroes show 1-5 star icons along the bottom edge. SI, furniture and engraving are generally not shown on the list tile.",
+  "heroDetail": "Not verified this session. The detail screen shows the hero model, name, faction and class icons, level (shown as the crystal level if slotted), ascension tier and stars, and Combat Rating. It also shows the 4 gear slots (tier shown on each item, plus enhancement stars) and the artifact or Collection slot with its stars. The Signature Item icon shows '+N' (0-50). The furniture or Oak Inn indicator shows mythic count out of 9, and the engraving icon shows the level (0-100), unlocked at Ascended 1★. Oath Mark status (2026) appears for 4F heroes. Exact placement needs checking against screenshots."
+ },
+ "sources": [
+  {
+   "id": "pocketgamer",
+   "name": "Pocket Gamer - AFK Arena tier list (Misfortis update)",
+   "url": "https://www.pocketgamer.com/afk-arena/tier-list/",
+   "date": "2026-10-02",
+   "kind": "tiers"
+  },
+  {
+   "id": "allclash",
+   "name": "AllClash - The Best Heroes in AFK Arena Tier List 2026 (with Valeri)",
+   "url": "https://www.allclash.com/the-best-heroes-in-afk-arena-tier-list/",
+   "date": "2026-09",
+   "kind": "tiers"
+  },
+  {
+   "id": "afkglobal",
+   "name": "AFK Global - AFK Arena Tier List (Character Rankings)",
+   "url": "https://www.afk.global/afk-arena/tier-list",
+   "date": "2026-10-03",
+   "kind": "tiers"
+  },
+  {
+   "id": "driffle",
+   "name": "Driffle - AFK Arena Tier List 2026: Best Heroes, Teams, Ranks",
+   "url": "https://driffle.com/blog/afk-arena-tier-list/",
+   "date": "2026-10-16",
+   "kind": "tiers"
+  },
+  {
+   "id": "pockettactics",
+   "name": "Pocket Tactics - AFK Arena tier list April 2026",
+   "url": "https://www.pockettactics.com/afk-arena/tier-list",
+   "date": "2026-04",
+   "kind": "tiers"
+  },
+  {
+   "id": "afkguide",
+   "name": "afk.guide - Faction Investment Guides (Celestial v1.197 Jun 2026, Hypogean v1.194 May 2026, Draconis v1.191 Apr 2026, Dimensional v1.190 Mar 2026, Graveborn ~May 2026) + hero/PvP guide notes",
+   "url": "https://afk.guide/celestial-faction-investment-guide/",
+   "date": "2026-06",
+   "kind": "tiers"
+  },
+  {
+   "id": "rosenberry",
+   "name": "Rosenberry Rooms - AFK Arena Tier List (August 2026)",
+   "url": "https://www.rosenberryrooms.com/afk-arena-tier-list/",
+   "date": "2026-08",
+   "kind": "tiers"
+  },
+  {
+   "id": "mobigg",
+   "name": "Mobi.gg - AFK Arena tier list (October 2026)",
+   "url": "https://mobi.gg/en/tips/afk-arena-tier-list/",
+   "date": "2026-10",
+   "kind": "tiers"
+  },
+  {
+   "name": "afk.guide - PvP Guide: Build & Counter Meta Teams",
+   "url": "https://afk.guide/pvp/",
+   "date": "2026-06 (Patch v1.195)",
+   "kind": "formations"
+  },
+  {
+   "name": "afk.guide - Budget PvP Guide",
+   "url": "https://afk.guide/budget-pvp-guide/",
+   "date": "~2025-10 (index age; links v1.198/1.199 notes)",
+   "kind": "formations"
+  },
+  {
+   "name": "afk.guide - Campaign Formations for Late/End Game",
+   "url": "https://afk.guide/campaigns/",
+   "date": "~2026-03 ('2025 meta', patch 1.190 era)",
+   "kind": "formations"
+  },
+  {
+   "name": "afk.guide - AFK Arena Tier List",
+   "url": "https://afk.guide/afk-arena-tier-list/",
+   "date": "~2026-03 (Patch 1.190)",
+   "kind": "formations"
+  },
+  {
+   "name": "afk.guide - Temple of Time / Awakened Heroes Priority",
+   "url": "https://afk.guide/temple-of-time/",
+   "date": "2025-2026 (undated; covers Awakened Pippa)",
+   "kind": "formations"
+  },
+  {
+   "name": "afk.guide - Stargazing Priorities",
+   "url": "https://afk.guide/stargazing-room/",
+   "date": "undated (2025-2026)",
+   "kind": "formations"
+  },
+  {
+   "name": "afk.guide - PvE Team Formation (End Games)",
+   "url": "https://afk.guide/pve/",
+   "date": "~2021-12 (old)",
+   "kind": "formations"
+  },
+  {
+   "name": "afk.guide - Best Twisted Realm Teams & Strategies",
+   "url": "https://afk.guide/the-twisted-realm/",
+   "date": "~2022-01 (old)",
+   "kind": "formations"
+  },
+  {
+   "name": "afk.guide - Cursed Realm Guide & Teams",
+   "url": "https://afk.guide/cursed-realm/",
+   "date": "Kane setup 2025-02-01; Demonic Entity setup 2026-01-25",
+   "kind": "formations"
+  },
+  {
+   "name": "afk.guide - Nightmare Corridor Guide & Teams",
+   "url": "https://afk.guide/nightmare-corridor-guide-teams/",
+   "date": "~2026-07",
+   "kind": "formations"
+  },
+  {
+   "name": "afk.guide - v1.190 Patch Notes",
+   "url": "https://afk.guide/afk-arena-v1-190-patch-notes/",
+   "date": "2026-03",
+   "kind": "formations"
+  },
+  {
+   "name": "afk.guide - Guild Trials Team Guide for Hybris",
+   "url": "https://afk.guide/guild-trials/",
+   "date": "~2026-04",
+   "kind": "formations"
+  },
+  {
+   "name": "afk.guide - Bountiful Trials Team Walkthrough: Trix",
+   "url": "https://afk.guide/bountiful-trials-event/",
+   "date": "~2026-07",
+   "kind": "formations"
+  },
+  {
+   "name": "afk.guide - Best Soren & Wrizz Teams (Guild Hunting)",
+   "url": "https://afk.guide/soren-wrizz-guild-hunting/",
+   "date": "undated (old)",
+   "kind": "formations"
+  },
+  {
+   "name": "afk.guide - Treasure Scramble",
+   "url": "https://afk.guide/treasure-scramble/",
+   "date": "undated",
+   "kind": "formations"
+  },
+  {
+   "name": "afk.guide - Treasure Vanguard",
+   "url": "https://afk.guide/treasure-vanguard/",
+   "date": "~2023-08",
+   "kind": "formations"
+  },
+  {
+   "name": "afk.guide - Abyssal Expedition Guide (Vault of Time) & Formations",
+   "url": "https://afk.guide/the-abyssal-expedition/",
+   "date": "~2023-10 (old)",
+   "kind": "formations"
+  },
+  {
+   "name": "afk.guide - Counter Guide (All Heroes)",
+   "url": "https://afk.guide/counter-guide/",
+   "date": "~2020 (very old)",
+   "kind": "formations"
+  },
+  {
+   "name": "Pillar of Gaming - Twisted Realm Guide in AFK (July 2026)",
+   "url": "https://pillarofgaming.com/twisted-realm-guide-afk-arena/",
+   "date": "2026-07 (title; content looks older)",
+   "kind": "formations"
+  },
+  {
+   "name": "AFK Global - Cursed Realm Guide",
+   "url": "https://www.afk.global/cursed-realm",
+   "date": "labelled 2026-03; body describes the v1.75 launch",
+   "kind": "formations"
+  },
+  {
+   "name": "AFK Global - The Twisted Realm",
+   "url": "https://www.afk.global/the-twisted-realm",
+   "date": "undated",
+   "kind": "formations"
+  },
+  {
+   "name": "AllClash - Best Teams for Twisted Realm & Cursed Realm",
+   "url": "https://www.allclash.com/best-teams-for-twisted-realm-cursed-realm/",
+   "date": "2022-11 (old)",
+   "kind": "formations"
+  },
+  {
+   "name": "AllClash - Best Guild Hunt Teams (Wrizz & Soren) 2022",
+   "url": "https://www.allclash.com/best-guild-hunt-teams-wrizz-soren/",
+   "date": "2022",
+   "kind": "formations"
+  },
+  {
+   "name": "AllClash - The Best Teams in AFK Arena (Early to End Game)",
+   "url": "https://www.allclash.com/the-best-teams-in-afk-arena-early-to-end-game/",
+   "date": "undated",
+   "kind": "formations"
+  },
+  {
+   "name": "AllClash - Best Build for Sung Jinwoo",
+   "url": "https://www.allclash.com/best-build-for-sung-jinwoo-in-afk-arena-artifact-furniture-signature-item-engraving/",
+   "date": "2025-2026",
+   "kind": "formations"
+  },
+  {
+   "name": "Kosh Gaming - Cursed Realm Kane Guide",
+   "url": "https://thesovietgaming.com/afk-arena/cursed-realm-kane-guide/",
+   "date": "undated (older)",
+   "kind": "formations"
+  },
+  {
+   "name": "AFK Arena Fandom Wiki - Treasure Scramble",
+   "url": "https://afk-arena.fandom.com/wiki/Treasure_Scramble",
+   "date": "undated",
+   "kind": "formations"
+  },
+  {
+   "name": "AFK Arena Fandom Wiki - Cursed Realm",
+   "url": "https://afk-arena.fandom.com/wiki/Cursed_Realm",
+   "date": "undated",
+   "kind": "formations"
+  },
+  {
+   "name": "AFK Arena Fandom Wiki - Nightmare Corridor",
+   "url": "https://afk-arena.fandom.com/wiki/Nightmare_Corridor",
+   "date": "undated",
+   "kind": "formations"
+  },
+  {
+   "name": "AFK Arena Fandom Wiki - Guild Trials",
+   "url": "https://afk-arena.fandom.com/wiki/Guild_Trials",
+   "date": "undated (2026)",
+   "kind": "formations"
+  },
+  {
+   "name": "AFK Arena Fandom Wiki - Update 1.201 Patch Notes",
+   "url": "https://afk-arena.fandom.com/wiki/Update_1.201_Patch_Notes",
+   "date": "2026-08-25",
+   "kind": "formations"
+  },
+  {
+   "name": "AFK Arena (X) - Solo Leveling crossover announcement",
+   "url": "https://x.com/AFK_Arena/status/1948331164957360416",
+   "date": "2025-07-24",
+   "kind": "formations"
+  },
+  {
+   "name": "Pocket Tactics - Abyssal Expedition",
+   "url": "https://www.pockettactics.com/afk-arena/abyssal-expedition",
+   "date": "undated",
+   "kind": "formations"
+  },
+  {
+   "name": "mobi.gg - The best compositions on AFK Arena",
+   "url": "https://mobi.gg/en/tips/best-lineup-afk-arena/",
+   "date": "indexed ~2026-07; team content reads as an older meta",
+   "kind": "formations"
+  },
+  {
+   "name": "FindingDulcinea - AFK Arena Tier List October 2026",
+   "url": "https://findingdulcinea.com/afk-arena-tier-list-best-heroes/",
+   "date": "titled 2026-10, metadata ~2025-10 (low reliability)",
+   "kind": "formations"
+  },
+  {
+   "name": "Wikipedia - AFK Arena",
+   "url": "https://en.wikipedia.org/wiki/AFK_Arena",
+   "date": "current",
+   "kind": "formations"
+  },
+  {
+   "name": "AFK Arena Fandom Wiki - Artifacts",
+   "url": "https://afk-arena.fandom.com/wiki/Artifacts",
+   "date": "undated (search snippets)",
+   "kind": "systems"
+  },
+  {
+   "name": "afk.guide - Complete Artifacts List & Hero Recommendations",
+   "url": "https://afk.guide/artifacts/",
+   "date": "~2023 (about 1286 days old per search)",
+   "kind": "systems"
+  },
+  {
+   "name": "AllClash - Full Hero Artifact/Ghoulish Gallery Collection List (2026)",
+   "url": "https://www.allclash.com/full-hero-artifact-list-for-afk-arena/",
+   "date": "2026 (updated ~Aug 2026)",
+   "kind": "systems"
+  },
+  {
+   "name": "GamingonPhone - AFK Arena Artifacts Tier List",
+   "url": "https://gamingonphone.com/guides/afk-arena-artifacts-tier-list-guide-tips/",
+   "date": "2024-05",
+   "kind": "systems"
+  },
+  {
+   "name": "Charlie INTEL - AFK Arena Artifact tier list",
+   "url": "https://www.charlieintel.com/games/afk-arena-artifact-tier-list-best-artifacts-for-every-hero-202382/",
+   "date": "~2023",
+   "kind": "systems"
+  },
+  {
+   "name": "TheriaGames - AFK Arena Artifacts Guide",
+   "url": "https://theriagames.com/guide/afk-arena-artifacts/",
+   "date": "~2024",
+   "kind": "systems"
+  },
+  {
+   "name": "AppGamer - Dura's Artifacts Guide",
+   "url": "https://www.appgamer.com/afk-arena/strategy-guide/duras-artifacts-guide",
+   "date": "older (2019-2020)",
+   "kind": "systems"
+  },
+  {
+   "name": "afkgameinfo - Complete Artifacts List & Hero Recommendations",
+   "url": "https://afkgameinfo.com/complete-artifacts-list-hero-recommendations/",
+   "date": "2023-11-12",
+   "kind": "systems"
+  },
+  {
+   "name": "afk.guide - Ghoulish Gallery and Collections guide",
+   "url": "https://afk.guide/ghoulish-gallery-and-collections-guide/",
+   "date": "~2024-2025",
+   "kind": "systems"
+  },
+  {
+   "name": "AFK Arena Fandom Wiki - Update 1.167 Patch Notes (new Collections)",
+   "url": "https://afk-arena.fandom.com/wiki/Update_1.167_Patch_Notes",
+   "date": "2025-05-05/06",
+   "kind": "systems"
+  },
+  {
+   "name": "afk.global - Update 1.183 Patch Notes (new Collections)",
+   "url": "https://www.afk.global/afk-arena/patch-notes/1-183",
+   "date": "2025-12-16",
+   "kind": "systems"
+  },
+  {
+   "name": "afk.global - Update 1.187 Patch Notes (Oath Mark Codex)",
+   "url": "https://www.afk.global/afk-arena/patch-notes/1-187",
+   "date": "2026-02-09/10",
+   "kind": "systems"
+  },
+  {
+   "name": "afk.guide - Oath Mark Codex guide",
+   "url": "https://afk.guide/oath-mark-codex-guide/",
+   "date": "2026",
+   "kind": "systems"
+  },
+  {
+   "name": "AFK Arena Fandom Wiki - Oath Mark Codex",
+   "url": "https://afk-arena.fandom.com/wiki/Oath_Mark_Codex",
+   "date": "2026",
+   "kind": "systems"
+  },
+  {
+   "name": "afk.guide - AFK Arena v1.198 Patch Notes (Mythic T5, Rune Core)",
+   "url": "https://afk.guide/afk-arena-v1-198-patch-notes/",
+   "date": "~2026-07",
+   "kind": "systems"
+  },
+  {
+   "name": "AFK Arena Fandom Wiki - Update 1.204 Patch Notes",
+   "url": "https://afk-arena.fandom.com/wiki/Update_1.204_Patch_Notes",
+   "date": "2026-10-06",
+   "kind": "systems"
+  },
+  {
+   "name": "afk.guide - Hero Level Caps & Upgrade Costs",
+   "url": "https://afk.guide/level-caps/",
+   "date": "older",
+   "kind": "systems"
+  },
+  {
+   "name": "afk.global - Temple of Ascension / Leveling / Resonating Crystal",
+   "url": "https://www.afk.global/afk-arena/guides/resonating-crystal",
+   "date": "older (undated)",
+   "kind": "systems"
+  },
+  {
+   "name": "AFK Arena Fandom Wiki - Resonating Crystal",
+   "url": "https://afk-arena.fandom.com/wiki/Resonating_Crystal",
+   "date": "older (undated)",
+   "kind": "systems"
+  },
+  {
+   "name": "afk.guide / afk.global - AFK Arena v1.134 Patch Notes (SI cap to 50)",
+   "url": "https://afk.guide/afk-arena-v1-134-patch-notes/",
+   "date": "~2023",
+   "kind": "systems"
+  },
+  {
+   "name": "AFK Arena Fandom Wiki - Epic Faction Emblem",
+   "url": "https://afk-arena.fandom.com/wiki/Epic_Faction_Emblem",
+   "date": "undated",
+   "kind": "systems"
+  },
+  {
+   "name": "afk.guide - Signature Items Tier List, Priority & Upgrade Costs",
+   "url": "https://afk.guide/signature-items/",
+   "date": "2024-05-30",
+   "kind": "systems"
+  },
+  {
+   "name": "afk.guide - Furniture Tier List & Upgrade Priority",
+   "url": "https://afk.guide/furniture/",
+   "date": "undated",
+   "kind": "systems"
+  },
+  {
+   "name": "afk.global - Furniture Tier List & Priority 2026 (May)",
+   "url": "https://www.afk.global/furniture-tier-list",
+   "date": "2026-05",
+   "kind": "systems"
+  },
+  {
+   "name": "afk.guide - Eternal Engravings Tier List & Guide 1.180 Update",
+   "url": "https://afk.guide/eternal-engravings/",
+   "date": "2025-11",
+   "kind": "systems"
+  },
+  {
+   "name": "afk.global - Eternal Engravings Guide",
+   "url": "https://www.afk.global/eternal-engravings",
+   "date": "1.68 era",
+   "kind": "systems"
+  },
+  {
+   "name": "AFK Arena Fandom Wiki - Mythic Upgrade Stones / Gear",
+   "url": "https://afk-arena.fandom.com/wiki/Mythic_Upgrade_Stones",
+   "date": "undated",
+   "kind": "systems"
+  },
+  {
+   "name": "AFK Arena Fandom Wiki - Factions",
+   "url": "https://afk-arena.fandom.com/wiki/Factions",
+   "date": "older",
+   "kind": "systems"
+  },
+  {
+   "name": "AFK Arena Fandom Wiki - Draconis",
+   "url": "https://afk-arena.fandom.com/wiki/Draconis",
+   "date": "undated",
+   "kind": "systems"
+  },
+  {
+   "name": "floofpire/cdn unit.json (unit database auto-built from Lilith game CDN: id, codeName, EN name, faction, type-as-class, rarity, roles, awakened, skins)",
+   "url": "https://raw.githubusercontent.com/floofpire/cdn/main/unit.json",
+   "date": "2026-10-21",
+   "kind": "roster"
+  },
+  {
+   "name": "floofpire/cdn git history of unit.json (first-seen date per unit id, used as release month for ids >= 179)",
+   "url": "https://github.com/floofpire/cdn/commits/main/unit.json",
+   "date": "2024-01-07..2026-10-21",
+   "kind": "roster"
+  },
+  {
+   "name": "floofpire/glossary README (internal names, factions, hero category Tank=Strength/Magician=Intelligence/Archer=Agility, class list)",
+   "url": "https://raw.githubusercontent.com/floofpire/glossary/main/README.md",
+   "date": "2026-10-21",
+   "kind": "roster"
+  },
+  {
+   "name": "JustinDao/afk-arena-teams schema.sql heroes table (class Warrior/Tank/Ranger/Mage/Support, type, role, awakened; 227 heroes up to id 257)",
+   "url": "https://raw.githubusercontent.com/JustinDao/afk-arena-teams/main/schema.sql",
+   "date": "2026-10-14",
+   "kind": "roster"
+  },
+  {
+   "name": "brunosabot/afkalc data/heroes.json + git history (class/type/faction; first-seen dates for 2020-11..2023 heroes)",
+   "url": "https://github.com/brunosabot/afkalc/blob/main/data/heroes.json",
+   "date": "2026-06-03",
+   "kind": "roster"
+  },
+  {
+   "name": "STIMUSHKA/afk output.json (scrape of AFK Arena fandom Heroes list: name - title, type, class, role, fandom icon URL; 175 Ascended heroes up to Skylan)",
+   "url": "https://raw.githubusercontent.com/STIMUSHKA/afk/main/output.json",
+   "date": "2024-11-30",
+   "kind": "roster"
+  },
+  {
+   "name": "victor-soeiro/scrape-vault afk-arena data.csv (scrape of fandom hero pages: title, class, rarity, Added date, full-art image; 128 heroes)",
+   "url": "https://raw.githubusercontent.com/victor-soeiro/scrape-vault/main/06%20-%20afk-arena/data.csv",
+   "date": "2022-05",
+   "kind": "roster"
+  },
+  {
+   "name": "WebSearch snippet: APKMirror AFK Arena 1.172.01 release notes (new Hypogean hero Serenmira), and listings showing builds through 1.197.01 (Jul 2026)",
+   "url": "https://www.apkmirror.com/apk/lilith-games/afk-arena/",
+   "date": "2025-07 / 2026-07",
+   "kind": "roster"
+  }
+ ],
+ "changelog": [
+  {
+   "date": "2026-10-24",
+   "changes": [
+    "First edition: 229 heroes in 8 factions, ratings for 122 heroes from 7 sources dated Apr to Oct 2026",
+    "21 artifacts, 13 game modes plus 6 faction towers, 16 community combos",
+    "AI analysis for every mode, calculated from the full roster"
+   ]
+  }
+ ]
+}

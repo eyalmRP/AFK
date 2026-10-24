@@ -1,0 +1,359 @@
+{
+ "asOf": "2026-10-24",
+ "artifacts": [
+  {
+   "id": "duras-eye",
+   "name": "Dura's Eye",
+   "effect": "Landing a crit gives +15% attack speed for 3s, rising to +20% at 2 stars. At 5 stars it adds Haste +25 and Crit Damage +30%. The 5-star crit-damage bonus is what makes it top tier.",
+   "suits": [
+    "Ranger",
+    "Warrior",
+    "Mage",
+    "crit DPS"
+   ],
+   "tier": {
+    "pve": "S+",
+    "pvp": "S+"
+   },
+   "bis": [],
+   "restriction": null
+  },
+  {
+   "id": "duras-call",
+   "name": "Dura's Call",
+   "effect": "Restores energy over time: 10/s at base, 14/s at 2 stars, 16/s at the top tier. At 5 stars, if the wielder is slain, its remaining energy is shared among allied heroes.",
+   "suits": [
+    "Warrior",
+    "Tank",
+    "Ranger",
+    "Mage",
+    "Support",
+    "ultimate-reliant heroes"
+   ],
+   "tier": {
+    "pve": "S+",
+    "pvp": "S+"
+   },
+   "bis": [
+    "leofric"
+   ],
+   "restriction": null
+  },
+  {
+   "id": "duras-grace",
+   "name": "Dura's Grace",
+   "effect": "Gives a divine shield that offsets incoming damage. At 5 stars the shield offsets up to 220% damage and blocks mind-control effects for 3s.",
+   "suits": [
+    "Tank",
+    "Support",
+    "anti-CC carry"
+   ],
+   "tier": {
+    "pve": "C",
+    "pvp": "B"
+   },
+   "bis": [],
+   "restriction": null
+  },
+  {
+   "id": "duras-drape",
+   "name": "Dura's Drape",
+   "effect": "Increases health recovery rate: +10% at base, +15% at 2 stars, up to +30% at 5 stars. The bonus grows as the wearer's HP falls.",
+   "suits": [
+    "Tank",
+    "Warrior",
+    "sustain"
+   ],
+   "tier": {
+    "pve": "C",
+    "pvp": "C"
+   },
+   "bis": [],
+   "restriction": null
+  },
+  {
+   "id": "duras-blade",
+   "name": "Dura's Blade",
+   "effect": "Increases attack rating step by step during battle. At 5 stars it gives +1.5% attack rating and +2 ACC every 3s (one fansite says +3 ACC).",
+   "suits": [
+    "DPS",
+    "long fights (bosses, Guild Hunt)"
+   ],
+   "tier": {
+    "pve": "B",
+    "pvp": "C"
+   },
+   "bis": [],
+   "restriction": null
+  },
+  {
+   "id": "duras-chalice-of-vitality",
+   "name": "Dura's Chalice of Vitality",
+   "effect": "Restores a share of health every second at the start of battle. Sources disagree on the duration: about 1%/s for the first 30s in one guide, up to 45s in another. The exact 5-star text could not be confirmed.",
+   "suits": [
+    "Tank",
+    "frontline"
+   ],
+   "tier": {
+    "pve": "C",
+    "pvp": "C"
+   },
+   "bis": [],
+   "restriction": null
+  },
+  {
+   "id": "duras-conviction",
+   "name": "Dura's Conviction",
+   "effect": "Increases attack rating while no enemies are nearby. At 5 stars it releases a shockwave every 15s that knocks back nearby enemies.",
+   "suits": [
+    "backline DPS",
+    "Mage",
+    "Ranger"
+   ],
+   "tier": {
+    "pve": "B",
+    "pvp": "B"
+   },
+   "bis": [],
+   "restriction": null
+  },
+  {
+   "id": "chaos-bringer",
+   "name": "Chaos Bringer",
+   "effect": "Casting the ultimate deals AoE damage to enemies ahead and permanently stacks Haste and Life Leech. At the top tier (3 stars): 220% AoE, +15 Haste and +12 Life Leech per trigger. One source gives 180% for the lower tier.",
+   "suits": [
+    "Warrior"
+   ],
+   "tier": {
+    "pve": "A",
+    "pvp": "A"
+   },
+   "bis": [],
+   "restriction": "Warrior only"
+  },
+  {
+   "id": "pauldron-of-burning-fury",
+   "name": "Pauldron of Burning Fury",
+   "effect": "When an enemy damages the wielder, the wielder hits back for a percentage of its own lost HP: 8% with a 5s cooldown at base, 12% with a 3s cooldown at 3 stars. Base stats are HP +9.8% and ATK +5%.",
+   "suits": [
+    "Warrior",
+    "frontline bruiser"
+   ],
+   "tier": {
+    "pve": "B",
+    "pvp": "B"
+   },
+   "bis": [],
+   "restriction": "Warrior only"
+  },
+  {
+   "id": "carnage",
+   "name": "Carnage",
+   "effect": "Activates when the wearer's HP drops below 50% and gives temporary Haste and Life Leech: +15 Haste and +32 Leech for 8s at base, +20 Haste and +40 Leech at 3 stars, with an 18s cooldown.",
+   "suits": [
+    "Warrior"
+   ],
+   "tier": {
+    "pve": "C",
+    "pvp": "C"
+   },
+   "bis": [],
+   "restriction": "Warrior only"
+  },
+  {
+   "id": "lifes-limit",
+   "name": "Life's Limit",
+   "effect": "When the wielder takes damage from a distant enemy, enemies around that attacker take 150% AoE damage that ignores Defense, and their Haste drops by 12 for 5s (7s cooldown). At 3 stars: 180% AoE with a 5s cooldown.",
+   "suits": [
+    "Tank"
+   ],
+   "tier": {
+    "pve": "A",
+    "pvp": "A"
+   },
+   "bis": [],
+   "restriction": "Tank only"
+  },
+  {
+   "id": "the-barricade",
+   "name": "The Barricade",
+   "effect": "When the ally with the highest Combat Rating (not the wearer) would take fatal damage, the hit is negated. The wearer gives up 40% of its current HP, which becomes a 12s shield on that ally. The cooldown is 30s, and one source says it can trigger every 15s at 3 stars.",
+   "suits": [
+    "Tank",
+    "carry-protection"
+   ],
+   "tier": {
+    "pve": "B",
+    "pvp": "A"
+   },
+   "bis": [],
+   "restriction": "Tank only"
+  },
+  {
+   "id": "waistband-of-resilience",
+   "name": "Waistband of Resilience",
+   "effect": "Damages enemies that are already crowd-controlled and gives the wearer a shield worth 10-15% of max HP for about 9s (sources differ). The same enemy can trigger it once every 12s.",
+   "suits": [
+    "Tank",
+    "CC teams"
+   ],
+   "tier": {
+    "pve": "B",
+    "pvp": "B"
+   },
+   "bis": [],
+   "restriction": "Tank only"
+  },
+  {
+   "id": "dual-divinity",
+   "name": "Dual Divinity",
+   "effect": "Works only while the wielder is on the enemy side of the battlefield, during the first 35s of combat. It increases attack rating and reduces damage taken, by up to 50% each according to one source.",
+   "suits": [
+    "Ranger",
+    "diver/assassin"
+   ],
+   "tier": {
+    "pve": "A",
+    "pvp": "A"
+   },
+   "bis": [],
+   "restriction": "Ranger only"
+  },
+  {
+   "id": "verdant-longbow",
+   "name": "Verdant Longbow",
+   "effect": "Every 4 normal attacks deal 230% damage that ignores Defense. At 3 stars it triggers every 3 normal attacks. Base stats are ACC 22 and ATK +8%.",
+   "suits": [
+    "Ranger",
+    "normal-attack DPS"
+   ],
+   "tier": {
+    "pve": "A",
+    "pvp": "B"
+   },
+   "bis": [],
+   "restriction": "Ranger only"
+  },
+  {
+   "id": "shroud-of-verdure",
+   "name": "Shroud of Verdure",
+   "effect": "Creates a shield at the start of battle (8s per one source, 60% of max HP at 3 stars per an older guide) and gives about +25% attack while the shield lasts.",
+   "suits": [
+    "Ranger"
+   ],
+   "tier": {
+    "pve": "B",
+    "pvp": "B"
+   },
+   "bis": [],
+   "restriction": "Ranger only"
+  },
+  {
+   "id": "windbinder",
+   "name": "Windbinder",
+   "effect": "The wielder gains 250 energy at the start of battle (300 at 3 stars). Drawback: after its first ultimate, the wielder loses 40 energy per second for 5s.",
+   "suits": [
+    "Mage",
+    "opening-ultimate"
+   ],
+   "tier": {
+    "pve": "S",
+    "pvp": "S"
+   },
+   "bis": [
+    "zaphrael"
+   ],
+   "restriction": "Mage only"
+  },
+  {
+   "id": "warden-of-the-arcane",
+   "name": "Warden of the Arcane",
+   "effect": "Damaging an enemy also deals an extra 160% damage to it (190% at 3 stars). This can trigger once every 12s per enemy. Its stat line includes Haste.",
+   "suits": [
+    "Mage"
+   ],
+   "tier": {
+    "pve": "A",
+    "pvp": "B"
+   },
+   "bis": [
+    "oden",
+    "zaphrael"
+   ],
+   "restriction": "Mage only"
+  },
+  {
+   "id": "winged-warden",
+   "name": "Winged Warden",
+   "effect": "The first time an enemy damages the wearer, the wearer steals that enemy's health regeneration and energy recovery. Stats are Haste 2, ATK +3% and HP +7%.",
+   "suits": [
+    "Mage"
+   ],
+   "tier": {
+    "pve": "C",
+    "pvp": "C"
+   },
+   "bis": [],
+   "restriction": "Mage only"
+  },
+  {
+   "id": "oceanic-strings",
+   "name": "Oceanic Strings",
+   "effect": "Each normal attack or non-ultimate skill from the wearer heals the most injured ally. After 4 'plays', all allies heal for 140% of the wielder's Attack Rating (one guide says 200%). Stats are Haste 2 and HR 5.4.",
+   "suits": [
+    "Support",
+    "healer"
+   ],
+   "tier": {
+    "pve": "A",
+    "pvp": "A"
+   },
+   "bis": [],
+   "restriction": "Support only"
+  },
+  {
+   "id": "tidebearer",
+   "name": "Tidebearer",
+   "effect": "Every 15s the wearer gets a 5s shield worth 30% of max HP (40% at 3 stars). If the shield is not broken, part of its value turns into energy.",
+   "suits": [
+    "Support"
+   ],
+   "tier": {
+    "pve": "C",
+    "pvp": "C"
+   },
+   "bis": [
+    "leofric"
+   ],
+   "restriction": "Support only"
+  }
+ ],
+ "collections": [
+  {
+   "id": "collection-infused-mind-core",
+   "name": "Infused Mind Core",
+   "note": "Not verified. Added in patch 1.167 (May 2025) in the Ghoulish Gallery South Zone, which requires Stage 5-40."
+  },
+  {
+   "id": "collection-horn-of-dominion",
+   "name": "Horn of Dominion",
+   "note": "Not verified. Added in patch 1.167 (May 2025)."
+  },
+  {
+   "id": "collection-shadowflow-blade",
+   "name": "Shadowflow Blade",
+   "note": "Not verified. Added in patch 1.167 (May 2025)."
+  },
+  {
+   "id": "collection-reaper-s-talon",
+   "name": "Reaper's Talon",
+   "note": "Not verified. Added in patch 1.183 (Dec 2025)."
+  },
+  {
+   "id": "collection-sinner-s-rose",
+   "name": "Sinner's Rose",
+   "note": "Not verified. Added in patch 1.183 (Dec 2025). Patch 1.184 reworded its skill text without changing how it behaves in battle."
+  }
+ ],
+ "teamWide": null
+}

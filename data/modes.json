@@ -1,0 +1,2729 @@
+{
+ "asOf": "2026-10-24",
+ "modes": [
+  {
+   "id": "campaign",
+   "name": "Campaign",
+   "category": "pve",
+   "teams": 1,
+   "restrictions": "Any faction. Late and end-game stages are usually fought at a large level deficit.",
+   "whatMatters": "Beating stages while under-levelled. End-game comps lean on cheese and control (reflect damage, charm, banish, stat steal) rather than raw stats. afk.guide notes Thoran cheese only works at very high level deficits.",
+   "bosses": [],
+   "bossesUnknown": [],
+   "community": [
+    {
+     "name": "Thoran cheese",
+     "consensus": "strong",
+     "why": "Thoran reflects all damage he takes back to the enemy team and kills them while ulting. Pippa teleports Thoran at battle start and gives him 5 s of invincibility. Lorsan links two enemies so they share damage. Athalia and Nara stop an enemy Mehira dropping her bats early and pull enemies toward Thoran. Zaphrael gives an early stun, and a high-HP early tank such as Brutus is sometimes used. It needs very high level deficits. Reported requirements: +0, 0/9 furniture.",
+     "sources": [
+      "https://afk.guide/campaigns/",
+      "https://afk.guide/afk-arena-tier-list/",
+      "https://afk.guide/pve/",
+      "https://www.allclash.com/the-best-teams-in-afk-arena-early-to-end-game/"
+     ],
+     "date": "2026-03 (afk.guide campaigns, 2025 meta); also afk.guide PvE ~2021 and AllClash late game",
+     "dated": false,
+     "heroes": [
+      {
+       "id": "thoran",
+       "pos": "F1"
+      }
+     ],
+     "partial": true,
+     "positionsInferred": true,
+     "subs": {},
+     "options": [
+      {
+       "label": "Usual supports",
+       "ids": [
+        "pippa",
+        "lorsan",
+        "nara",
+        "athalia",
+        "kelthur",
+        "zaphrael",
+        "brutus",
+        "raine",
+        "ezio",
+        "mortas"
+       ]
+      }
+     ],
+     "artifacts": {},
+     "artifactNote": "Thoran: Dura's Call (if ulting is an issue) or Dura's Eye (crit, less RNG)"
+    },
+    {
+     "name": "Liberta charm",
+     "consensus": "common",
+     "why": "Built around Liberta plus Mehira's charm, with Lucilla and Zolrath as supports. Liberta is also rated a top support and carry across modes (afk.guide Stargazing).",
+     "sources": [
+      "https://afk.guide/campaigns/",
+      "https://afk.guide/stargazing-room/"
+     ],
+     "date": "2026-03",
+     "dated": false,
+     "heroes": [
+      {
+       "id": "mehira",
+       "pos": "F1"
+      },
+      {
+       "id": "liberta",
+       "pos": "B1"
+      }
+     ],
+     "partial": true,
+     "positionsInferred": true,
+     "subs": {},
+     "options": [
+      {
+       "label": "Usual supports",
+       "ids": [
+        "lucilla",
+        "zolrath"
+       ]
+      }
+     ],
+     "artifacts": {},
+     "artifactNote": null
+    },
+    {
+     "name": "Awakened Belinda comp",
+     "consensus": "common",
+     "why": "Core is Awakened Belinda plus Lavatune. The usual supporting heroes are Alna, Daemia, Jerome, Ivan and Melion.",
+     "sources": [
+      "https://afk.guide/campaigns/"
+     ],
+     "date": "2026-03",
+     "dated": false,
+     "heroes": [
+      {
+       "id": "awakened-belinda",
+       "pos": "B1"
+      },
+      {
+       "id": "lavatune",
+       "pos": "B2"
+      }
+     ],
+     "partial": true,
+     "positionsInferred": true,
+     "subs": {},
+     "options": [
+      {
+       "label": "Usual supports",
+       "ids": [
+        "alna",
+        "daemia",
+        "jerome",
+        "ivan",
+        "melion"
+       ]
+      }
+     ],
+     "artifacts": {},
+     "artifactNote": null
+    },
+    {
+     "name": "Tasi-Twins comp",
+     "consensus": "common",
+     "why": "Tasi banishes an enemy to take its ATK Rating, and the Twins' unity link passes it on to the carry (Awakened Athalia, Highborn Gwyneth, Awakened Eironn, Envydiel or Skylan).",
+     "sources": [
+      "https://afk.guide/campaigns/"
+     ],
+     "date": "2026-03",
+     "dated": false,
+     "heroes": [
+      {
+       "id": "tasi",
+       "pos": "B1"
+      },
+      {
+       "id": "elijah-lailah",
+       "pos": "B2"
+      }
+     ],
+     "partial": true,
+     "positionsInferred": true,
+     "subs": {},
+     "options": [
+      {
+       "label": "Carry options",
+       "ids": [
+        "awakened-athalia",
+        "highborn-gwyneth",
+        "awakened-eironn",
+        "envydiel",
+        "skylan"
+       ]
+      }
+     ],
+     "artifacts": {},
+     "artifactNote": null
+    },
+    {
+     "name": "Envydiel comp / AEironn comp / Maetria charm",
+     "consensus": "common",
+     "why": "afk.guide lists these as three separate comps among the seven campaign comps of the 2025 meta. Their supporting heroes were not readable in the extracts. They are grouped here only to record that they exist; they are not one team.",
+     "sources": [
+      "https://afk.guide/campaigns/"
+     ],
+     "date": "2026-03",
+     "dated": false,
+     "kind": "cores",
+     "cores": [
+      "envydiel",
+      "awakened-eironn",
+      "maetria"
+     ]
+    },
+    {
+     "name": "Nemora-Tasi-Lyca-Shemira-Brutus midfield (mid campaign)",
+     "consensus": "niche",
+     "why": "The author's main team up to chapter 24+. It reads as an older-meta progression team.",
+     "sources": [
+      "https://mobi.gg/en/tips/best-lineup-afk-arena/"
+     ],
+     "date": "indexed ~2026-07; content likely older",
+     "dated": true,
+     "heroes": [
+      {
+       "id": "brutus",
+       "pos": "F1"
+      },
+      {
+       "id": "nemora",
+       "pos": "F2"
+      },
+      {
+       "id": "tasi",
+       "pos": "B1"
+      },
+      {
+       "id": "lyca",
+       "pos": "B2"
+      },
+      {
+       "id": "shemira",
+       "pos": "B3"
+      }
+     ],
+     "partial": false,
+     "positionsInferred": true,
+     "subs": {},
+     "options": [],
+     "artifacts": {},
+     "artifactNote": null
+    },
+    {
+     "name": "Talene-Rowan-Ezizh-Mehira-Twins",
+     "consensus": "niche",
+     "why": "mobi.gg calls it the strongest team it uses on the campaign map. It reads as an older-meta team.",
+     "sources": [
+      "https://mobi.gg/en/tips/best-lineup-afk-arena/"
+     ],
+     "date": "indexed ~2026-07; content likely older",
+     "dated": true,
+     "heroes": [
+      {
+       "id": "mehira",
+       "pos": "F1"
+      },
+      {
+       "id": "talene",
+       "pos": "F2"
+      },
+      {
+       "id": "rowan",
+       "pos": "B1"
+      },
+      {
+       "id": "ezizh",
+       "pos": "B2"
+      },
+      {
+       "id": "elijah-lailah",
+       "pos": "B3"
+      }
+     ],
+     "partial": false,
+     "positionsInferred": true,
+     "subs": {},
+     "options": [],
+     "artifacts": {},
+     "artifactNote": null
+    }
+   ],
+   "ai": [
+    {
+     "name": "Best lineup",
+     "heroes": [
+      {
+       "id": "kyno",
+       "pos": "F1"
+      },
+      {
+       "id": "awakened-athalia",
+       "pos": "F2"
+      },
+      {
+       "id": "sion",
+       "pos": "B1"
+      },
+      {
+       "id": "elijah-lailah",
+       "pos": "B2"
+      },
+      {
+       "id": "rowan",
+       "pos": "B3"
+      }
+     ],
+     "artifacts": {
+      "kyno": "duras-call",
+      "awakened-athalia": "duras-eye",
+      "sion": "duras-eye",
+      "elijah-lailah": "duras-call",
+      "rowan": "duras-call"
+     },
+     "score": 64.5,
+     "why": "Built around Elijah & Lailah (S+ PVE) and Sion (S+ PVE). Covers frontline, sustain, damage, control.",
+     "differs": "Agrees on Elijah & Lailah, Rowan. Adds Kyno, Awakened Athalia, Sion, which the community teams don't name.",
+     "confidence": "medium",
+     "reviewed": true
+    }
+   ],
+   "group": "pve",
+   "aiNotes": "The community's end-game answer is Thoran cheese, which only works at very high level deficits (afk.guide). The calculated lineup is the strongest team for stages you can win on stats. Keep Thoran and Pippa ready for stages where you are far under-levelled."
+  },
+  {
+   "id": "kings-tower",
+   "name": "King's Tower",
+   "category": "pve",
+   "teams": 1,
+   "restrictions": "Any faction.",
+   "whatMatters": "Fixed enemy formations floor by floor, played much like campaign pushing. AllClash rates Sung Jinwoo S+ for towers.",
+   "bosses": [],
+   "bossesUnknown": [],
+   "community": [],
+   "ai": [
+    {
+     "name": "Best lineup",
+     "heroes": [
+      {
+       "id": "kyno",
+       "pos": "F1"
+      },
+      {
+       "id": "awakened-athalia",
+       "pos": "F2"
+      },
+      {
+       "id": "awakened-baden",
+       "pos": "B1"
+      },
+      {
+       "id": "awakened-lyca",
+       "pos": "B2"
+      },
+      {
+       "id": "awakened-pippa",
+       "pos": "B3"
+      }
+     ],
+     "artifacts": {
+      "kyno": "duras-call",
+      "awakened-athalia": "duras-eye",
+      "awakened-baden": "duras-eye",
+      "awakened-lyca": "duras-eye",
+      "awakened-pippa": "duras-eye"
+     },
+     "score": 62.5,
+     "why": "Built around Kyno (S+ PVE) and Awakened Athalia (S+ PVE). Covers frontline, sustain, damage, control.",
+     "differs": "No community lineup was found for this mode this week, so there is nothing to compare against.",
+     "confidence": "low",
+     "reviewed": true
+    }
+   ],
+   "group": "pve",
+   "aiNotes": "No current community tower lineup was found, so this is the calculation alone: the top-rated PvE heroes behind Kyno's front line. AllClash rates Sung Jinwoo S+ for towers, which makes him the first swap-in."
+  },
+  {
+   "id": "faction-towers",
+   "name": "Faction Towers",
+   "category": "pve",
+   "teams": 1,
+   "restrictions": "Each tower takes only its own faction: Tower of Light (Lightbearer), Brutal Citadel (Mauler), World Tree (Wilder), Forsaken Necropolis (Graveborn), Celestial Sanctum (Celestial), Infernal Fortress (Hypogean).",
+   "whatMatters": "Depth within a single faction: you need five strong heroes of the same faction for each tower.",
+   "bosses": [],
+   "bossesUnknown": [],
+   "community": [],
+   "ai": [
+    {
+     "name": "Tower of Light",
+     "heroes": [
+      {
+       "id": "alvida",
+       "pos": "F1"
+      },
+      {
+       "id": "jerome",
+       "pos": "F2"
+      },
+      {
+       "id": "rosaline",
+       "pos": "B1"
+      },
+      {
+       "id": "rowan",
+       "pos": "B2"
+      },
+      {
+       "id": "awakened-belinda",
+       "pos": "B3"
+      }
+     ],
+     "artifacts": {
+      "alvida": "duras-call",
+      "jerome": "duras-eye",
+      "rosaline": "duras-call",
+      "rowan": "duras-call",
+      "awakened-belinda": "duras-eye"
+     },
+     "score": 57,
+     "why": "Built around Rosaline (S+ PVE) and Rowan (S+ PVE). Covers frontline, sustain, damage. Light on control.",
+     "differs": "No community lineup was found for this mode this week, so there is nothing to compare against.",
+     "confidence": "medium",
+     "reviewed": true
+    },
+    {
+     "name": "Brutal Citadel",
+     "heroes": [
+      {
+       "id": "valeri",
+       "pos": "F1"
+      },
+      {
+       "id": "awakened-antandra",
+       "pos": "F2"
+      },
+      {
+       "id": "talimar",
+       "pos": "B1"
+      },
+      {
+       "id": "villanelle",
+       "pos": "B2"
+      },
+      {
+       "id": "thesku",
+       "pos": "B3"
+      }
+     ],
+     "artifacts": {
+      "valeri": "duras-call",
+      "awakened-antandra": "duras-eye",
+      "talimar": "duras-call",
+      "villanelle": "duras-call",
+      "thesku": "duras-eye"
+     },
+     "score": 52,
+     "why": "Built around Talimar (S+ PVE) and Valeri (S PVE). Covers frontline, sustain, damage, control.",
+     "differs": "No community lineup was found for this mode this week, so there is nothing to compare against.",
+     "confidence": "medium",
+     "reviewed": true
+    },
+    {
+     "name": "World Tree",
+     "heroes": [
+      {
+       "id": "atheus",
+       "pos": "F1"
+      },
+      {
+       "id": "awakened-lyca",
+       "pos": "F2"
+      },
+      {
+       "id": "awakened-pippa",
+       "pos": "B1"
+      },
+      {
+       "id": "awakened-solise",
+       "pos": "B2"
+      },
+      {
+       "id": "lyca",
+       "pos": "B3"
+      }
+     ],
+     "artifacts": {
+      "atheus": "duras-call",
+      "awakened-lyca": "duras-eye",
+      "awakened-pippa": "duras-eye",
+      "awakened-solise": "duras-call",
+      "lyca": "duras-eye"
+     },
+     "score": 58,
+     "why": "Built around Awakened Lyca (S+ PVE) and Awakened Pippa (S+ PVE). Covers frontline, sustain, damage, control.",
+     "differs": "No community lineup was found for this mode this week, so there is nothing to compare against.",
+     "confidence": "medium",
+     "reviewed": true
+    },
+    {
+     "name": "Forsaken Necropolis",
+     "heroes": [
+      {
+       "id": "daimon",
+       "pos": "F1"
+      },
+      {
+       "id": "thoran",
+       "pos": "F2"
+      },
+      {
+       "id": "awakened-baden",
+       "pos": "B1"
+      },
+      {
+       "id": "ivan",
+       "pos": "B2"
+      },
+      {
+       "id": "randle",
+       "pos": "B3"
+      }
+     ],
+     "artifacts": {
+      "daimon": "duras-call",
+      "thoran": "duras-call",
+      "awakened-baden": "duras-eye",
+      "ivan": "duras-call",
+      "randle": "duras-call"
+     },
+     "score": 58,
+     "why": "Built around Daimon (S+ PVE) and Awakened Baden (S+ PVE). Covers frontline, sustain, damage, control.",
+     "differs": "No community lineup was found for this mode this week, so there is nothing to compare against.",
+     "confidence": "medium",
+     "reviewed": true
+    },
+    {
+     "name": "Celestial Sanctum",
+     "heroes": [
+      {
+       "id": "misfortis",
+       "pos": "F1"
+      },
+      {
+       "id": "awakened-athalia",
+       "pos": "F2"
+      },
+      {
+       "id": "zohra",
+       "pos": "B1"
+      },
+      {
+       "id": "elijah-lailah",
+       "pos": "B2"
+      },
+      {
+       "id": "aurelia",
+       "pos": "B3"
+      }
+     ],
+     "artifacts": {
+      "misfortis": "duras-call",
+      "awakened-athalia": "duras-eye",
+      "zohra": "duras-eye",
+      "elijah-lailah": "duras-call",
+      "aurelia": "duras-eye"
+     },
+     "score": 59.5,
+     "why": "Built around Zohra (S+ PVE) and Awakened Athalia (S+ PVE). Covers frontline, sustain, damage, control.",
+     "differs": "No community lineup was found for this mode this week, so there is nothing to compare against.",
+     "confidence": "medium",
+     "reviewed": true
+    },
+    {
+     "name": "Infernal Fortress",
+     "heroes": [
+      {
+       "id": "mehira",
+       "pos": "F1"
+      },
+      {
+       "id": "hybris",
+       "pos": "F2"
+      },
+      {
+       "id": "envydiel",
+       "pos": "B1"
+      },
+      {
+       "id": "lavatune",
+       "pos": "B2"
+      },
+      {
+       "id": "knox",
+       "pos": "B3"
+      }
+     ],
+     "artifacts": {
+      "mehira": "duras-eye",
+      "hybris": "duras-eye",
+      "envydiel": "duras-eye",
+      "lavatune": "duras-call",
+      "knox": "duras-call"
+     },
+     "score": 52.5,
+     "why": "Built around Hybris (S+ PVE) and Mehira (S PVE). Covers frontline, damage, control. Light on sustain.",
+     "differs": "No community lineup was found for this mode this week, so there is nothing to compare against.",
+     "confidence": "medium",
+     "reviewed": true
+    }
+   ],
+   "group": "pve",
+   "aiNotes": "One calculated team per tower, each using only that tower's faction. Depth matters more than tier here, so these are the best five of each faction by this week's ratings."
+  },
+  {
+   "id": "arcane-labyrinth",
+   "name": "Arcane Labyrinth",
+   "category": "pve",
+   "teams": 1,
+   "restrictions": "One team per fight. HP and energy carry over between fights, and you collect relics along the way.",
+   "whatMatters": "Sustain and relic synergy over a long run.",
+   "bosses": [],
+   "bossesUnknown": [],
+   "community": [],
+   "ai": [
+    {
+     "name": "Best lineup",
+     "heroes": [
+      {
+       "id": "kyno",
+       "pos": "F1"
+      },
+      {
+       "id": "awakened-athalia",
+       "pos": "F2"
+      },
+      {
+       "id": "awakened-solise",
+       "pos": "B1"
+      },
+      {
+       "id": "awakened-baden",
+       "pos": "B2"
+      },
+      {
+       "id": "awakened-lyca",
+       "pos": "B3"
+      }
+     ],
+     "artifacts": {
+      "kyno": "duras-call",
+      "awakened-athalia": "duras-eye",
+      "awakened-solise": "duras-call",
+      "awakened-baden": "duras-eye",
+      "awakened-lyca": "duras-eye"
+     },
+     "score": 65,
+     "why": "Built around Kyno (S+ PVE) and Awakened Solise (S+ PVE). Covers frontline, sustain, damage, control.",
+     "differs": "No community lineup was found for this mode this week, so there is nothing to compare against.",
+     "confidence": "low",
+     "reviewed": true
+    }
+   ],
+   "group": "pve",
+   "needs": {
+    "sustain": 2
+   },
+   "aiNotes": "HP and energy carry over between fights, so the calculation asks for two sustain heroes instead of one."
+  },
+  {
+   "id": "abyssal-expedition",
+   "name": "Abyssal Expedition",
+   "category": "pve",
+   "teams": 2,
+   "restrictions": "Timed event on a shared map with about 70 players, unlocked after campaign 15-40. You register a pool of 10 heroes, and each fight costs stamina.",
+   "whatMatters": "Stamina rotation: start with your 4-5 strongest heroes and swap in the others as stamina runs out. Guides advise one main class (usually Ranger) with Sustenance heroes and the Celerity tree.",
+   "bosses": [],
+   "bossesUnknown": [],
+   "community": [],
+   "ai": [
+    {
+     "name": "Team 1",
+     "heroes": [
+      {
+       "id": "kyno",
+       "pos": "F1"
+      },
+      {
+       "id": "awakened-athalia",
+       "pos": "F2"
+      },
+      {
+       "id": "awakened-baden",
+       "pos": "B1"
+      },
+      {
+       "id": "awakened-lyca",
+       "pos": "B2"
+      },
+      {
+       "id": "sion",
+       "pos": "B3"
+      }
+     ],
+     "artifacts": {
+      "kyno": "duras-call",
+      "awakened-athalia": "duras-eye",
+      "awakened-baden": "duras-eye",
+      "awakened-lyca": "duras-eye",
+      "sion": "duras-eye"
+     },
+     "score": 65.5,
+     "why": "Built around Awakened Baden (S+ PVE) and Awakened Lyca (S+ PVE). Covers frontline, sustain, damage, control.",
+     "differs": "No community lineup was found for this mode this week, so there is nothing to compare against.",
+     "confidence": "medium",
+     "reviewed": true
+    },
+    {
+     "name": "Team 2",
+     "heroes": [
+      {
+       "id": "athena",
+       "pos": "F1"
+      },
+      {
+       "id": "daimon",
+       "pos": "F2"
+      },
+      {
+       "id": "medusa",
+       "pos": "B1"
+      },
+      {
+       "id": "awakened-pippa",
+       "pos": "B2"
+      },
+      {
+       "id": "awakened-solise",
+       "pos": "B3"
+      }
+     ],
+     "artifacts": {
+      "athena": "duras-call",
+      "daimon": "duras-call",
+      "medusa": "duras-eye",
+      "awakened-pippa": "duras-eye",
+      "awakened-solise": "duras-call"
+     },
+     "score": 62.3,
+     "why": "Built around Daimon (S+ PVE) and Awakened Pippa (S+ PVE). Covers frontline, sustain, damage, control. Synergy: Athena + Medusa.",
+     "differs": "No community lineup was found for this mode this week, so there is nothing to compare against.",
+     "confidence": "medium",
+     "reviewed": true
+    }
+   ],
+   "group": "pve",
+   "teamsNote": "You register a pool of 10 heroes, so the builder treats it as two 5-hero groups.",
+   "classBonus": {
+    "Ranger": 1
+   },
+   "aiNotes": "The two groups of five make up your 10-hero pool. Rangers get a bonus because guides advise picking one main class, usually Ranger."
+  },
+  {
+   "id": "twisted-realm",
+   "name": "Twisted Realm",
+   "category": "boss",
+   "teams": 1,
+   "restrictions": "One team against one rotating boss, ranked by damage.",
+   "whatMatters": "A pure damage race, but each boss has its own gimmick (summon targeting, ultimate caps, kill mechanics). Check the boss list before you pick.",
+   "bosses": [
+    {
+     "name": "Kane",
+     "mechanics": "A kill mechanic targets one of your heroes. Talene or Awakened Talene, who revives, is used to absorb it. Ultimate timing (for example Mortas) matters."
+    },
+    {
+     "name": "Demonic Entity",
+     "mechanics": "You damage the boss mainly by hitting her summons, so AoE heroes such as Shemira are key."
+    },
+    {
+     "name": "The Unhinged (Dark Arden)",
+     "mechanics": "Lightning strikes. Baden's shadow copies draw the strikes away from the team."
+    },
+    {
+     "name": "Grotesque Mage",
+     "mechanics": "His lightning strike ignores summons, so summoners can't distract him. If your side uses ultimates more than 5 times the fight ends, so only one hero (Saurus) should ult."
+    }
+   ],
+   "bossesUnknown": [
+    "Ice Shemira",
+    "Burning Brute"
+   ],
+   "community": [
+    {
+     "name": "Grotesque Mage: Saurus + Grezhul",
+     "consensus": "niche",
+     "why": "Saurus is the only ultimate user, staying under the 5-ult cap that ends the fight. Rosaline, Lyca and Daimon buff and deal damage from the back line. Back-line slots follow the source's listing order.",
+     "sources": [
+      "https://pillarofgaming.com/twisted-realm-guide-afk-arena/"
+     ],
+     "date": "2026-07 (title; heroes suggest older content)",
+     "dated": true,
+     "heroes": [
+      {
+       "id": "saurus",
+       "pos": "F1"
+      },
+      {
+       "id": "grezhul",
+       "pos": "F2"
+      },
+      {
+       "id": "rosaline",
+       "pos": "B1"
+      },
+      {
+       "id": "lyca",
+       "pos": "B2"
+      },
+      {
+       "id": "daimon",
+       "pos": "B3"
+      }
+     ],
+     "partial": false,
+     "positionsInferred": false,
+     "subs": {},
+     "options": [],
+     "artifacts": {},
+     "artifactNote": null
+    },
+    {
+     "name": "The Unhinged: Baden + Saurus",
+     "consensus": "niche",
+     "why": "Baden's shadow copies draw the lightning strikes. Talene is in the third slot. The other two slots were not retrieved.",
+     "sources": [
+      "https://pillarofgaming.com/twisted-realm-guide-afk-arena/"
+     ],
+     "date": "2026-07 (title)",
+     "dated": false,
+     "heroes": [
+      {
+       "id": "baden",
+       "pos": "F1"
+      },
+      {
+       "id": "saurus",
+       "pos": "F2"
+      },
+      {
+       "id": "talene",
+       "pos": "B1"
+      }
+     ],
+     "partial": true,
+     "positionsInferred": false,
+     "subs": {},
+     "options": [],
+     "artifacts": {},
+     "artifactNote": null
+    },
+    {
+     "name": "Kane: Talene + Silas/Daimon + Mortas",
+     "consensus": "common",
+     "why": "Talene (or ATalene) handles Kane's kill mechanic. Silas can be swapped for Daimon, and Mortas can take the Dura's Call slot. Daimon and Silas need 3/9 furniture, and Talene or Silas at +30 is a must-have. Turn Auto off to time Mortas's ultimate.",
+     "sources": [
+      "https://afk.guide/the-twisted-realm/",
+      "https://www.allclash.com/best-teams-for-twisted-realm-cursed-realm/"
+     ],
+     "date": "~2022 (afk.guide), 2022-11 (AllClash): dated",
+     "dated": true,
+     "heroes": [
+      {
+       "id": "talene",
+       "pos": "B1"
+      },
+      {
+       "id": "silas",
+       "pos": "B2"
+      },
+      {
+       "id": "mortas",
+       "pos": "B3"
+      }
+     ],
+     "partial": true,
+     "positionsInferred": true,
+     "subs": {
+      "silas": [
+       "daimon",
+       "mortas"
+      ],
+      "talene": [
+       "awakened-talene"
+      ]
+     },
+     "options": [],
+     "artifacts": {},
+     "artifactNote": null
+    },
+    {
+     "name": "Demonic Entity: Morael + AoE",
+     "consensus": "common",
+     "why": "afk.guide's best lineup is built on Morael. The extract mentions 'Dura's Blade, Chaos Bringer, Mortas, Dura's Call', but which item goes on which hero was unclear. Its budget version uses 'Warder of the Arcane' and 'Chaos Bringer'. Pillar of Gaming recommends Shemira with Rosaline, or Morael with a buffing team. AoE matters because the boss takes damage through her summons.",
+     "sources": [
+      "https://afk.guide/the-twisted-realm/",
+      "https://pillarofgaming.com/twisted-realm-guide-afk-arena/"
+     ],
+     "date": "afk.guide ~2022; Pillar of Gaming 2026-07 (title)",
+     "dated": true,
+     "heroes": [
+      {
+       "id": "morael",
+       "pos": "B1"
+      },
+      {
+       "id": "mortas",
+       "pos": "B2"
+      },
+      {
+       "id": "shemira",
+       "pos": "B3"
+      },
+      {
+       "id": "rosaline",
+       "pos": "F1"
+      }
+     ],
+     "partial": true,
+     "positionsInferred": true,
+     "subs": {},
+     "options": [],
+     "artifacts": {},
+     "artifactNote": null
+    }
+   ],
+   "ai": [
+    {
+     "name": "Best lineup",
+     "heroes": [
+      {
+       "id": "grezhul",
+       "pos": "F1"
+      },
+      {
+       "id": "saurus",
+       "pos": "F2"
+      },
+      {
+       "id": "awakened-solise",
+       "pos": "B1"
+      },
+      {
+       "id": "scarlet",
+       "pos": "B2"
+      },
+      {
+       "id": "rosaline",
+       "pos": "B3"
+      }
+     ],
+     "artifacts": {
+      "grezhul": "duras-call",
+      "saurus": "duras-eye",
+      "awakened-solise": "duras-call",
+      "scarlet": "duras-eye",
+      "rosaline": "duras-call"
+     },
+     "score": 68.9,
+     "why": "Built around Rosaline (S+ BOSS) and Saurus (S+ BOSS). Covers sustain, damage, buffs/debuffs.",
+     "differs": "Agrees on Grezhul, Saurus, Rosaline. Adds Awakened Solise, Scarlet, which the community teams don't name.",
+     "confidence": "low",
+     "reviewed": true
+    }
+   ],
+   "group": "boss",
+   "needs": {
+    "support": 2,
+    "sustain": 1
+   },
+   "aiNotes": "This is a general boss-damage team. Bosses rotate and each has a gimmick. Against Grotesque Mage the fight ends after 5 ultimates, so use the community Saurus + Grezhul lineup there, with Saurus as your only ultimate user."
+  },
+  {
+   "id": "cursed-realm",
+   "name": "Cursed Realm",
+   "category": "boss",
+   "teams": 6,
+   "restrictions": "Reached through the guild Hellscape and opens every 7 days. You need 6 teams: 5 against the Shadow Guard formations and 1 against the final boss. Heroes are set to level 360 with gear and tiers kept.",
+   "whatMatters": "Total damage across six fights. Your score is damage to the boss plus the five Shadow Guard fights, and only your best attempt counts. The boss and guards get stronger as they lose HP, so roster depth (about 30 heroes) matters. afk.guide rates Liberta and Awakened Pippa top tier here, and AllClash rates Sung Jinwoo S+.",
+   "bosses": [
+    {
+     "name": "Kane",
+     "mechanics": "The allied hero who deals the most damage in the first 10 seconds gets a heavy attack nerf, so protect or stagger your main carry. An older setup needs Mortas at SI +20 and Kren at SI +30."
+    },
+    {
+     "name": "Demonic Entity",
+     "mechanics": "All damage except ultimate damage is heavily reduced, so heroes with strong damaging ultimates are key."
+    }
+   ],
+   "bossesUnknown": [
+    "Ice Shemira",
+    "Grotesque Mage",
+    "Dune Destroyer",
+    "Burning Brute"
+   ],
+   "community": [],
+   "ai": [
+    {
+     "name": "Team 1",
+     "heroes": [
+      {
+       "id": "jerome",
+       "pos": "F1"
+      },
+      {
+       "id": "cha-hae-in",
+       "pos": "F2"
+      },
+      {
+       "id": "awakened-athalia",
+       "pos": "B1"
+      },
+      {
+       "id": "awakened-solise",
+       "pos": "B2"
+      },
+      {
+       "id": "sung-jinwoo",
+       "pos": "B3"
+      }
+     ],
+     "artifacts": {
+      "jerome": "duras-eye",
+      "cha-hae-in": "duras-eye",
+      "awakened-athalia": "duras-eye",
+      "awakened-solise": "duras-call",
+      "sung-jinwoo": "duras-eye"
+     },
+     "score": 64.8,
+     "why": "Built around Jerome (S+ BOSS) and Awakened Solise (S+ BOSS). Covers sustain, damage, buffs/debuffs. Synergy: Cha Hae-in + Sung Jinwoo.",
+     "differs": "No community lineup was found for this mode this week, so there is nothing to compare against.",
+     "confidence": "medium",
+     "reviewed": true
+    },
+    {
+     "name": "Team 2",
+     "heroes": [
+      {
+       "id": "kyno",
+       "pos": "F1"
+      },
+      {
+       "id": "daimon",
+       "pos": "F2"
+      },
+      {
+       "id": "hybris",
+       "pos": "B1"
+      },
+      {
+       "id": "awakened-baden",
+       "pos": "B2"
+      },
+      {
+       "id": "awakened-lyca",
+       "pos": "B3"
+      }
+     ],
+     "artifacts": {
+      "kyno": "duras-call",
+      "daimon": "duras-call",
+      "hybris": "duras-eye",
+      "awakened-baden": "duras-eye",
+      "awakened-lyca": "duras-eye"
+     },
+     "score": 62.5,
+     "why": "Built around Kyno (S+ BOSS) and Hybris (S+ BOSS). Covers sustain, damage, buffs/debuffs.",
+     "differs": "No community lineup was found for this mode this week, so there is nothing to compare against.",
+     "confidence": "medium",
+     "reviewed": true
+    },
+    {
+     "name": "Team 3",
+     "heroes": [
+      {
+       "id": "athena",
+       "pos": "F1"
+      },
+      {
+       "id": "grezhul",
+       "pos": "F2"
+      },
+      {
+       "id": "saurus",
+       "pos": "B1"
+      },
+      {
+       "id": "scarlet",
+       "pos": "B2"
+      },
+      {
+       "id": "medusa",
+       "pos": "B3"
+      }
+     ],
+     "artifacts": {
+      "athena": "duras-call",
+      "grezhul": "duras-call",
+      "saurus": "duras-eye",
+      "scarlet": "duras-eye",
+      "medusa": "duras-eye"
+     },
+     "score": 65.7,
+     "why": "Built around Saurus (S+ BOSS) and Grezhul (S+ BOSS). Covers sustain, damage, buffs/debuffs. Synergy: Athena + Medusa.",
+     "differs": "No community lineup was found for this mode this week, so there is nothing to compare against.",
+     "confidence": "medium",
+     "reviewed": true
+    },
+    {
+     "name": "Team 4",
+     "heroes": [
+      {
+       "id": "edwin",
+       "pos": "F1"
+      },
+      {
+       "id": "envydiel",
+       "pos": "F2"
+      },
+      {
+       "id": "liberta",
+       "pos": "B1"
+      },
+      {
+       "id": "lucilla",
+       "pos": "B2"
+      },
+      {
+       "id": "ivan",
+       "pos": "B3"
+      }
+     ],
+     "artifacts": {
+      "edwin": "duras-call",
+      "envydiel": "duras-eye",
+      "liberta": "duras-call",
+      "lucilla": "duras-call",
+      "ivan": "duras-call"
+     },
+     "score": 63.2,
+     "why": "Built around Envydiel (S+ BOSS) and Liberta (S+ BOSS). Covers sustain, damage, buffs/debuffs.",
+     "differs": "No community lineup was found for this mode this week, so there is nothing to compare against.",
+     "confidence": "medium",
+     "reviewed": true
+    },
+    {
+     "name": "Team 5",
+     "heroes": [
+      {
+       "id": "rowan",
+       "pos": "F1"
+      },
+      {
+       "id": "rosaline",
+       "pos": "F2"
+      },
+      {
+       "id": "lavatune",
+       "pos": "B1"
+      },
+      {
+       "id": "awakened-belinda",
+       "pos": "B2"
+      },
+      {
+       "id": "palmer",
+       "pos": "B3"
+      }
+     ],
+     "artifacts": {
+      "rowan": "duras-call",
+      "rosaline": "duras-call",
+      "lavatune": "duras-call",
+      "awakened-belinda": "duras-eye",
+      "palmer": "duras-call"
+     },
+     "score": 60.2,
+     "why": "Built around Rowan (S+ BOSS) and Rosaline (S+ BOSS). Covers sustain, damage, buffs/debuffs.",
+     "differs": "No community lineup was found for this mode this week, so there is nothing to compare against.",
+     "confidence": "medium",
+     "reviewed": true
+    },
+    {
+     "name": "Team 6",
+     "heroes": [
+      {
+       "id": "alvida",
+       "pos": "F1"
+      },
+      {
+       "id": "atheus",
+       "pos": "F2"
+      },
+      {
+       "id": "thalassa",
+       "pos": "B1"
+      },
+      {
+       "id": "sion",
+       "pos": "B2"
+      },
+      {
+       "id": "velufira",
+       "pos": "B3"
+      }
+     ],
+     "artifacts": {
+      "alvida": "duras-call",
+      "atheus": "duras-call",
+      "thalassa": "duras-call",
+      "sion": "duras-eye",
+      "velufira": "duras-call"
+     },
+     "score": 58,
+     "why": "Built around Sion (S+ BOSS) and Velufira (S+ BOSS). Covers sustain, damage, buffs/debuffs.",
+     "differs": "No community lineup was found for this mode this week, so there is nothing to compare against.",
+     "confidence": "medium",
+     "reviewed": true
+    }
+   ],
+   "group": "boss",
+   "aiNotes": "Six teams that never share a hero. Whether heroes can repeat was not confirmed this week, so the calculation plays it safe. Every guard fight still gets a carry."
+  },
+  {
+   "id": "nightmare-corridor",
+   "name": "Nightmare Corridor",
+   "category": "boss",
+   "teams": 1,
+   "restrictions": "Requires Resonating Crystal level 350 or at least 30 Ascended heroes. Six bosses, and the boss lineup changes every 28 days. Each comp also picks a beast.",
+   "whatMatters": "Boss damage and kill comps, each with the right beast. Awakened Pippa and Liberta are rated top tier here (afk.guide). The current cycle includes Dual-Mantle, Cursed Capricornus (Bloodreaper), Netherspinner and Molten Crystaline Worm.",
+   "bosses": [],
+   "bossesUnknown": [
+    "Dual-Mantle",
+    "Cursed Capricornus (Bloodreaper)",
+    "Netherspinner",
+    "Molten Crystaline Worm"
+   ],
+   "community": [
+    {
+     "name": "Dual-Mantle kill comps (Sion/Cha Hae-in, Envydiel/Kaelon, Elthara, Marcille)",
+     "consensus": "common",
+     "why": "afk.guide lists comps that can kill Dual-Mantle, each named after its core hero and each with its own beast (beast names were icons and not readable). These are four separate comps, not one team.",
+     "sources": [
+      "https://afk.guide/nightmare-corridor-guide-teams/"
+     ],
+     "date": "~2026-07",
+     "dated": false,
+     "kind": "cores",
+     "cores": [
+      "sion",
+      "cha-hae-in",
+      "envydiel",
+      "kaelon",
+      "elthara",
+      "marcille"
+     ]
+    },
+    {
+     "name": "Cursed Capricornus kill comps (Odysseus, Tornado, Marcille, Sion)",
+     "consensus": "common",
+     "why": "afk.guide lists Odysseus, Tornado, Marcille and Sion comps for Cursed Capricornus, each with a recommended beast. These are separate comps.",
+     "sources": [
+      "https://afk.guide/nightmare-corridor-guide-teams/"
+     ],
+     "date": "~2026-07",
+     "dated": false,
+     "kind": "cores",
+     "cores": [
+      "odysseus",
+      "terrible-tornado",
+      "marcille",
+      "sion"
+     ]
+    }
+   ],
+   "ai": [
+    {
+     "name": "Best lineup",
+     "heroes": [
+      {
+       "id": "kyno",
+       "pos": "F1"
+      },
+      {
+       "id": "cha-hae-in",
+       "pos": "F2"
+      },
+      {
+       "id": "sung-jinwoo",
+       "pos": "B1"
+      },
+      {
+       "id": "envydiel",
+       "pos": "B2"
+      },
+      {
+       "id": "sion",
+       "pos": "B3"
+      }
+     ],
+     "artifacts": {
+      "kyno": "duras-call",
+      "cha-hae-in": "duras-eye",
+      "sung-jinwoo": "duras-eye",
+      "envydiel": "duras-eye",
+      "sion": "duras-eye"
+     },
+     "score": 67.3,
+     "why": "Built around Cha Hae-in (S+ BOSS) and Envydiel (S+ BOSS). Covers sustain, damage, buffs/debuffs. Synergy: Cha Hae-in + Sung Jinwoo.",
+     "differs": "Agrees on Cha Hae-in, Envydiel, Sion. Adds Kyno, Sung Jinwoo, which the community teams don't name.",
+     "confidence": "low",
+     "reviewed": true
+    }
+   ],
+   "group": "boss",
+   "teamsNote": "Six bosses, each beaten with its own comp. Whether heroes can repeat across bosses was not confirmed this week.",
+   "aiNotes": "A single calculated kill team. The community builds a different comp for each boss (Sion or Cha Hae-in, Envydiel or Kaelon, Marcille, Odysseus) with a beast for each, and this lineup does not model the beasts."
+  },
+  {
+   "id": "guild-hunts",
+   "name": "Guild Hunts (Wrizz / Soren)",
+   "category": "boss",
+   "teams": 1,
+   "restrictions": "Soren unlocks once the guild reaches 9000 activity points.",
+   "whatMatters": "A damage race against a guild boss. Faction advantage adds 25% damage (Scarlet, Rosaline, Belinda and Raine against Wrizz). Against Soren you also need to survive his growing area damage, which is why Cecilia is used. The newest guides found for this mode are from 2022-2024.",
+   "bosses": [
+    {
+     "name": "Wrizz",
+     "mechanics": "Daily guild boss. The faction-advantage heroes named are Scarlet, Rosaline, Belinda and Raine."
+    },
+    {
+     "name": "Soren",
+     "mechanics": "Boss AoE gets stronger with rage. Elite/Elite+ Twins should only go on the front line because they take double damage from boss AoE."
+    }
+   ],
+   "bossesUnknown": [],
+   "community": [
+    {
+     "name": "Scarlet + Saurus burst (Wrizz/Soren)",
+     "consensus": "niche",
+     "why": "Scarlet and Saurus deal the damage, Rosaline is set to follow Scarlet, and Raine and the Twins buff. For Soren, Cecilia is a must-have unless your heroes can survive the high-rage attacks. Lucius and Rowan are earlier-game front-line options. Dated: 2022-2024.",
+     "sources": [
+      "https://www.allclash.com/best-guild-hunt-teams-wrizz-soren/",
+      "https://afk.guide/soren-wrizz-guild-hunting/"
+     ],
+     "date": "2022 (AllClash); 2024 (mobilegamesworld)",
+     "dated": true,
+     "heroes": [
+      {
+       "id": "saurus",
+       "pos": "F1"
+      },
+      {
+       "id": "scarlet",
+       "pos": "F2"
+      },
+      {
+       "id": "rosaline",
+       "pos": "B1"
+      },
+      {
+       "id": "raine",
+       "pos": "B2"
+      },
+      {
+       "id": "elijah-lailah",
+       "pos": "B3"
+      }
+     ],
+     "partial": false,
+     "positionsInferred": true,
+     "subs": {
+      "raine": [
+       "cecilia"
+      ]
+     },
+     "options": [
+      {
+       "label": "Front-line alternatives",
+       "ids": [
+        "lucius",
+        "rowan"
+       ]
+      }
+     ],
+     "artifacts": {},
+     "artifactNote": null
+    }
+   ],
+   "ai": [
+    {
+     "name": "Best lineup",
+     "heroes": [
+      {
+       "id": "grezhul",
+       "pos": "F1"
+      },
+      {
+       "id": "saurus",
+       "pos": "F2"
+      },
+      {
+       "id": "awakened-solise",
+       "pos": "B1"
+      },
+      {
+       "id": "scarlet",
+       "pos": "B2"
+      },
+      {
+       "id": "rosaline",
+       "pos": "B3"
+      }
+     ],
+     "artifacts": {
+      "grezhul": "duras-call",
+      "saurus": "duras-eye",
+      "awakened-solise": "duras-call",
+      "scarlet": "duras-eye",
+      "rosaline": "duras-call"
+     },
+     "score": 68.4,
+     "why": "Built around Saurus (S+ BOSS) and Scarlet (S+ BOSS). Covers sustain, damage, buffs/debuffs.",
+     "differs": "Agrees on Saurus, Scarlet, Rosaline. Adds Grezhul, Awakened Solise, which the community teams don't name.",
+     "confidence": "medium",
+     "reviewed": true
+    }
+   ],
+   "group": "boss",
+   "aiNotes": "Close to the long-standing Scarlet + Saurus + Rosaline burst core. Against Wrizz, faction advantage adds 25% damage."
+  },
+  {
+   "id": "arena-of-heroes",
+   "name": "Arena of Heroes",
+   "category": "pvp",
+   "teams": 1,
+   "restrictions": "One attack team against another player's defense team.",
+   "whatMatters": "Burst and opening control against sustain. You can see the defense, so counter-pick it with the Counter tab.",
+   "bosses": [],
+   "bossesUnknown": [],
+   "community": [
+    {
+     "name": "AShemira-Sung comp",
+     "consensus": "common",
+     "why": "Ranked first (10/10 stars) in afk.guide's current-meta PvP list, Patch v1.195 (June 2026). Albedo is listed as the best sub. afk.guide's Temple of Time page also calls Awakened Shemira the strongest awakened hero in PvP. The other three slots are icons on the page and could not be read.",
+     "sources": [
+      "https://afk.guide/pvp/",
+      "https://afk.guide/temple-of-time/"
+     ],
+     "date": "2026-06",
+     "dated": false,
+     "heroes": [
+      {
+       "id": "awakened-shemira",
+       "pos": "F1"
+      },
+      {
+       "id": "sung-jinwoo",
+       "pos": "B1"
+      }
+     ],
+     "partial": true,
+     "positionsInferred": true,
+     "subs": {},
+     "options": [
+      {
+       "label": "Best substitute",
+       "ids": [
+        "albedo"
+       ]
+      }
+     ],
+     "artifacts": {},
+     "artifactNote": null
+    },
+    {
+     "name": "Albedo comp (Dimensional buff)",
+     "consensus": "common",
+     "why": "Rated 6/10 in afk.guide's PvP list (v1.195). Albedo buffs your Dimensional heroes. afk.guide's budget guide gives Envydiel with Albedo as an example, and an older 2024 guide built an Ainz team where Albedo's shield prioritises Ainz.",
+     "sources": [
+      "https://afk.guide/pvp/",
+      "https://afk.guide/budget-pvp-guide/"
+     ],
+     "date": "2026-06",
+     "dated": false,
+     "heroes": [
+      {
+       "id": "albedo",
+       "pos": "F1"
+      }
+     ],
+     "partial": true,
+     "positionsInferred": true,
+     "subs": {},
+     "options": [
+      {
+       "label": "Paired with",
+       "ids": [
+        "envydiel",
+        "ainz-ooal-gown"
+       ]
+      }
+     ],
+     "artifacts": {},
+     "artifactNote": null
+    },
+    {
+     "name": "Safiya comp",
+     "consensus": "common",
+     "why": "Rated 5/10 in afk.guide's PvP list (v1.195). The rest of the lineup was not readable.",
+     "sources": [
+      "https://afk.guide/pvp/"
+     ],
+     "date": "2026-06",
+     "dated": false,
+     "heroes": [
+      {
+       "id": "safiya",
+       "pos": "B1"
+      }
+     ],
+     "partial": true,
+     "positionsInferred": true,
+     "subs": {},
+     "options": [],
+     "artifacts": {},
+     "artifactNote": null
+    },
+    {
+     "name": "Alna Graveborn comp",
+     "consensus": "common",
+     "why": "afk.guide's tier list (patch 1.190) calls the Alna + Mortas + Silas team another great PvP comp, and AllClash lists 'Alna Graveborn' as a late-game team.",
+     "sources": [
+      "https://afk.guide/afk-arena-tier-list/",
+      "https://www.allclash.com/the-best-teams-in-afk-arena-early-to-end-game/"
+     ],
+     "date": "2026-03",
+     "dated": false,
+     "heroes": [
+      {
+       "id": "alna",
+       "pos": "F1"
+      },
+      {
+       "id": "mortas",
+       "pos": "B1"
+      },
+      {
+       "id": "silas",
+       "pos": "B2"
+      }
+     ],
+     "partial": true,
+     "positionsInferred": true,
+     "subs": {},
+     "options": [],
+     "artifacts": {},
+     "artifactNote": null
+    },
+    {
+     "name": "AShemira + Liberta/Lucilla (Driffle S+ PvP team)",
+     "consensus": "niche",
+     "why": "Driffle lists it as its S+ PvP/Arena team. It also calls a Liberta + Lucilla core with Ivan, Awakened Shemira and Palmer the most versatile setup, for its energy cycling and sustain. Driffle is a retailer blog with low reliability, but the AShemira and Liberta picks match afk.guide's ratings.",
+     "sources": [
+      "https://driffle.com/blog/afk-arena-tier-list/"
+     ],
+     "date": "~2026-10",
+     "dated": false,
+     "heroes": [
+      {
+       "id": "awakened-shemira",
+       "pos": "F1"
+      },
+      {
+       "id": "awakened-athalia",
+       "pos": "F2"
+      },
+      {
+       "id": "lucilla",
+       "pos": "B1"
+      },
+      {
+       "id": "liberta",
+       "pos": "B2"
+      },
+      {
+       "id": "ivan",
+       "pos": "B3"
+      }
+     ],
+     "partial": false,
+     "positionsInferred": true,
+     "subs": {
+      "ivan": [
+       "palmer"
+      ]
+     },
+     "options": [],
+     "artifacts": {},
+     "artifactNote": null
+    },
+    {
+     "name": "Envydiel-Liberta-ABelinda-Aurelia-Palmer",
+     "consensus": "niche",
+     "why": "FindingDulcinea calls it the strongest PvP comp in the current meta, and a Rosenberry Rooms August 2026 list puts the same five heroes at S+ PvP. Both sites have low reliability.",
+     "sources": [
+      "https://findingdulcinea.com/afk-arena-tier-list-best-heroes/"
+     ],
+     "date": "titled 2026-10",
+     "dated": false,
+     "heroes": [
+      {
+       "id": "envydiel",
+       "pos": "F1"
+      },
+      {
+       "id": "liberta",
+       "pos": "F2"
+      },
+      {
+       "id": "awakened-belinda",
+       "pos": "B1"
+      },
+      {
+       "id": "aurelia",
+       "pos": "B2"
+      },
+      {
+       "id": "palmer",
+       "pos": "B3"
+      }
+     ],
+     "partial": false,
+     "positionsInferred": true,
+     "subs": {},
+     "options": [],
+     "artifacts": {},
+     "artifactNote": null
+    },
+    {
+     "name": "Albedo-Emilia-Merlin-Liberta-Lucilla (Dimensional)",
+     "consensus": "niche",
+     "why": "Driffle's S-tier PvP/Dimensional team (low reliability).",
+     "sources": [
+      "https://driffle.com/blog/afk-arena-tier-list/"
+     ],
+     "date": "~2026-10",
+     "dated": false,
+     "heroes": [
+      {
+       "id": "albedo",
+       "pos": "F1"
+      },
+      {
+       "id": "emilia",
+       "pos": "F2"
+      },
+      {
+       "id": "merlin",
+       "pos": "B1"
+      },
+      {
+       "id": "liberta",
+       "pos": "B2"
+      },
+      {
+       "id": "lucilla",
+       "pos": "B3"
+      }
+     ],
+     "partial": false,
+     "positionsInferred": true,
+     "subs": {},
+     "options": [],
+     "artifacts": {},
+     "artifactNote": null
+    },
+    {
+     "name": "Nemora-Eironn-Tasi-Lyca-Brutus / Lyca-Eironn-Safiya-Ulmus-Brutus",
+     "consensus": "niche",
+     "why": "mobi.gg's two PvP teams. The second team is Lyca, Eironn, Safiya, Ulmus and Brutus. Both read as an older meta.",
+     "sources": [
+      "https://mobi.gg/en/tips/best-lineup-afk-arena/"
+     ],
+     "date": "indexed ~2026-07; content likely older",
+     "dated": true,
+     "heroes": [
+      {
+       "id": "brutus",
+       "pos": "F1"
+      },
+      {
+       "id": "nemora",
+       "pos": "F2"
+      },
+      {
+       "id": "eironn",
+       "pos": "B1"
+      },
+      {
+       "id": "tasi",
+       "pos": "B2"
+      },
+      {
+       "id": "lyca",
+       "pos": "B3"
+      }
+     ],
+     "partial": false,
+     "positionsInferred": true,
+     "subs": {
+      "nemora": [
+       "safiya"
+      ],
+      "tasi": [
+       "ulmus"
+      ]
+     },
+     "options": [],
+     "artifacts": {},
+     "artifactNote": null
+    }
+   ],
+   "ai": [
+    {
+     "name": "Best lineup",
+     "heroes": [
+      {
+       "id": "daimon",
+       "pos": "F1"
+      },
+      {
+       "id": "cha-hae-in",
+       "pos": "F2"
+      },
+      {
+       "id": "aurelia",
+       "pos": "B1"
+      },
+      {
+       "id": "liberta",
+       "pos": "B2"
+      },
+      {
+       "id": "sung-jinwoo",
+       "pos": "B3"
+      }
+     ],
+     "artifacts": {
+      "daimon": "duras-call",
+      "cha-hae-in": "duras-eye",
+      "aurelia": "duras-eye",
+      "liberta": "duras-call",
+      "sung-jinwoo": "duras-eye"
+     },
+     "score": 66.3,
+     "why": "Built around Sung Jinwoo (S+ PVP) and Aurelia (S+ PVP). Covers frontline, sustain, damage, control. Synergy: Sung Jinwoo + Cha Hae-in.",
+     "differs": "Agrees on Aurelia, Liberta, Sung Jinwoo. Adds Daimon, Cha Hae-in, which the community teams don't name. Leaves out Awakened Shemira only because she has no rating this week.",
+     "confidence": "medium",
+     "reviewed": true
+    }
+   ],
+   "group": "pvp",
+   "aiNotes": "The engine scores Awakened Shemira low only because no source gave her a letter grade this week. afk.guide still ranks the Awakened Shemira + Sung Jinwoo core first in PvP (v1.195). If you own her, play that core. Without her, the calculated Sung Jinwoo + Cha Hae-in team is the strongest rated option."
+  },
+  {
+   "id": "legends-championship",
+   "name": "Legends Championship",
+   "category": "pvp",
+   "teams": 3,
+   "restrictions": "Three teams, and no hero can appear in more than one.",
+   "whatMatters": "Roster depth: three separate PvP teams, and you need to win two of the three fights.",
+   "bosses": [],
+   "bossesUnknown": [],
+   "community": [],
+   "ai": [
+    {
+     "name": "Team 1",
+     "heroes": [
+      {
+       "id": "athena",
+       "pos": "F1"
+      },
+      {
+       "id": "antandra",
+       "pos": "F2"
+      },
+      {
+       "id": "awakened-athalia",
+       "pos": "B1"
+      },
+      {
+       "id": "awakened-baden",
+       "pos": "B2"
+      },
+      {
+       "id": "aurelia",
+       "pos": "B3"
+      }
+     ],
+     "artifacts": {
+      "athena": "duras-call",
+      "antandra": "duras-eye",
+      "awakened-athalia": "duras-eye",
+      "awakened-baden": "duras-eye",
+      "aurelia": "duras-eye"
+     },
+     "score": 61,
+     "why": "Built around Awakened Baden (S+ PVP) and Antandra (S+ PVP). Covers frontline, sustain, damage, control.",
+     "differs": "No community lineup was found for this mode this week, so there is nothing to compare against.",
+     "confidence": "medium",
+     "reviewed": true
+    },
+    {
+     "name": "Team 2",
+     "heroes": [
+      {
+       "id": "daimon",
+       "pos": "F1"
+      },
+      {
+       "id": "cha-hae-in",
+       "pos": "F2"
+      },
+      {
+       "id": "liberta",
+       "pos": "B1"
+      },
+      {
+       "id": "ivan",
+       "pos": "B2"
+      },
+      {
+       "id": "sung-jinwoo",
+       "pos": "B3"
+      }
+     ],
+     "artifacts": {
+      "daimon": "duras-call",
+      "cha-hae-in": "duras-eye",
+      "liberta": "duras-call",
+      "ivan": "duras-call",
+      "sung-jinwoo": "duras-eye"
+     },
+     "score": 64.3,
+     "why": "Built around Daimon (S+ PVP) and Liberta (S+ PVP). Covers frontline, sustain, damage, control. Synergy: Cha Hae-in + Sung Jinwoo.",
+     "differs": "No community lineup was found for this mode this week, so there is nothing to compare against.",
+     "confidence": "medium",
+     "reviewed": true
+    },
+    {
+     "name": "Team 3",
+     "heroes": [
+      {
+       "id": "jerome",
+       "pos": "F1"
+      },
+      {
+       "id": "laios",
+       "pos": "F2"
+      },
+      {
+       "id": "marcille",
+       "pos": "B1"
+      },
+      {
+       "id": "awakened-belinda",
+       "pos": "B2"
+      },
+      {
+       "id": "lavatune",
+       "pos": "B3"
+      }
+     ],
+     "artifacts": {
+      "jerome": "duras-eye",
+      "laios": "duras-eye",
+      "marcille": "duras-eye",
+      "awakened-belinda": "duras-eye",
+      "lavatune": "duras-call"
+     },
+     "score": 63.5,
+     "why": "Built around Jerome (S+ PVP) and Awakened Belinda (S+ PVP). Covers frontline, sustain, damage, control. Synergy: Laios + Marcille.",
+     "differs": "No community lineup was found for this mode this week, so there is nothing to compare against.",
+     "confidence": "medium",
+     "reviewed": true
+    }
+   ],
+   "group": "pvp",
+   "aiNotes": "Balanced so your weakest team is as strong as possible, because you need two wins out of three."
+  },
+  {
+   "id": "treasure-scramble",
+   "name": "Treasure Scramble",
+   "category": "pvp",
+   "teams": 3,
+   "restrictions": "Cross-server, with 6 divisions by Prestige. Heroes are set to level 360 (gear and tiers kept), with no trial heroes or mercenaries. Formations lock 1 day before the season starts.",
+   "whatMatters": "Several teams explore and fight on their own, so the mode needs many heroes. Each team can meet enemies up to 100 times a day (50 in Elite Clash). Teams start treasure hunting daily at 02:00 and 14:00 UTC.",
+   "bosses": [],
+   "bossesUnknown": [],
+   "community": [],
+   "ai": [
+    {
+     "name": "Team 1",
+     "heroes": [
+      {
+       "id": "athena",
+       "pos": "F1"
+      },
+      {
+       "id": "antandra",
+       "pos": "F2"
+      },
+      {
+       "id": "awakened-athalia",
+       "pos": "B1"
+      },
+      {
+       "id": "awakened-baden",
+       "pos": "B2"
+      },
+      {
+       "id": "aurelia",
+       "pos": "B3"
+      }
+     ],
+     "artifacts": {
+      "athena": "duras-call",
+      "antandra": "duras-eye",
+      "awakened-athalia": "duras-eye",
+      "awakened-baden": "duras-eye",
+      "aurelia": "duras-eye"
+     },
+     "score": 61,
+     "why": "Built around Awakened Baden (S+ PVP) and Antandra (S+ PVP). Covers frontline, sustain, damage, control.",
+     "differs": "No community lineup was found for this mode this week, so there is nothing to compare against.",
+     "confidence": "low",
+     "reviewed": true
+    },
+    {
+     "name": "Team 2",
+     "heroes": [
+      {
+       "id": "daimon",
+       "pos": "F1"
+      },
+      {
+       "id": "cha-hae-in",
+       "pos": "F2"
+      },
+      {
+       "id": "liberta",
+       "pos": "B1"
+      },
+      {
+       "id": "ivan",
+       "pos": "B2"
+      },
+      {
+       "id": "sung-jinwoo",
+       "pos": "B3"
+      }
+     ],
+     "artifacts": {
+      "daimon": "duras-call",
+      "cha-hae-in": "duras-eye",
+      "liberta": "duras-call",
+      "ivan": "duras-call",
+      "sung-jinwoo": "duras-eye"
+     },
+     "score": 64.3,
+     "why": "Built around Daimon (S+ PVP) and Liberta (S+ PVP). Covers frontline, sustain, damage, control. Synergy: Cha Hae-in + Sung Jinwoo.",
+     "differs": "No community lineup was found for this mode this week, so there is nothing to compare against.",
+     "confidence": "low",
+     "reviewed": true
+    },
+    {
+     "name": "Team 3",
+     "heroes": [
+      {
+       "id": "jerome",
+       "pos": "F1"
+      },
+      {
+       "id": "laios",
+       "pos": "F2"
+      },
+      {
+       "id": "marcille",
+       "pos": "B1"
+      },
+      {
+       "id": "awakened-belinda",
+       "pos": "B2"
+      },
+      {
+       "id": "lavatune",
+       "pos": "B3"
+      }
+     ],
+     "artifacts": {
+      "jerome": "duras-eye",
+      "laios": "duras-eye",
+      "marcille": "duras-eye",
+      "awakened-belinda": "duras-eye",
+      "lavatune": "duras-call"
+     },
+     "score": 63.5,
+     "why": "Built around Jerome (S+ PVP) and Awakened Belinda (S+ PVP). Covers frontline, sustain, damage, control. Synergy: Laios + Marcille.",
+     "differs": "No community lineup was found for this mode this week, so there is nothing to compare against.",
+     "confidence": "low",
+     "reviewed": true
+    }
+   ],
+   "group": "pvp",
+   "teamsNote": "The exact number of teams was not confirmed this week. 3 is a starting point; change it in the builder.",
+   "aiNotes": "Balanced the same way as Legends Championship. The real team count was not confirmed, so set it in the builder."
+  },
+  {
+   "id": "guild-trials",
+   "name": "Guild Trials",
+   "category": "pve",
+   "teams": 5,
+   "restrictions": "Uses heroes from the guild's shared hero bag. You fight 5 preset enemy formations, at an enemy level you choose from 300 to 999. Higher levels give more points.",
+   "whatMatters": "Clearing all 5 formations at the highest level the shared bag allows. afk.guide's April 2026 guide is built around Hybris at level 999.",
+   "bosses": [],
+   "bossesUnknown": [],
+   "community": [
+    {
+     "name": "Hybris-led trial team",
+     "consensus": "common",
+     "why": "afk.guide lists Hybris – Mirror of Kings at level 999 as its first team for the current challenge. Hybris is a burst warrior whose signature skill Intimidates all enemies and cleaves 4 times. The rest of the lineup was not readable.",
+     "sources": [
+      "https://afk.guide/guild-trials/"
+     ],
+     "date": "~2026-04",
+     "dated": false,
+     "heroes": [
+      {
+       "id": "hybris",
+       "pos": "F1"
+      }
+     ],
+     "partial": true,
+     "positionsInferred": true,
+     "subs": {},
+     "options": [],
+     "artifacts": {},
+     "artifactNote": null
+    }
+   ],
+   "ai": [
+    {
+     "name": "Team 1",
+     "heroes": [
+      {
+       "id": "kyno",
+       "pos": "F1"
+      },
+      {
+       "id": "hybris",
+       "pos": "F2"
+      },
+      {
+       "id": "awakened-athalia",
+       "pos": "B1"
+      },
+      {
+       "id": "awakened-baden",
+       "pos": "B2"
+      },
+      {
+       "id": "awakened-lyca",
+       "pos": "B3"
+      }
+     ],
+     "artifacts": {
+      "kyno": "duras-call",
+      "hybris": "duras-eye",
+      "awakened-athalia": "duras-eye",
+      "awakened-baden": "duras-eye",
+      "awakened-lyca": "duras-eye"
+     },
+     "score": 63.5,
+     "why": "Built around Hybris (S+ PVE) and Kyno (S+ PVE). Covers frontline, sustain, damage, control.",
+     "differs": "Agrees on Hybris. Adds Kyno, Awakened Athalia, Awakened Baden, Awakened Lyca, which the community teams don't name.",
+     "confidence": "medium",
+     "reviewed": true
+    },
+    {
+     "name": "Team 2",
+     "heroes": [
+      {
+       "id": "daimon",
+       "pos": "F1"
+      },
+      {
+       "id": "jerome",
+       "pos": "F2"
+      },
+      {
+       "id": "awakened-pippa",
+       "pos": "B1"
+      },
+      {
+       "id": "awakened-solise",
+       "pos": "B2"
+      },
+      {
+       "id": "elijah-lailah",
+       "pos": "B3"
+      }
+     ],
+     "artifacts": {
+      "daimon": "duras-call",
+      "jerome": "duras-eye",
+      "awakened-pippa": "duras-eye",
+      "awakened-solise": "duras-call",
+      "elijah-lailah": "duras-call"
+     },
+     "score": 62.5,
+     "why": "Built around Jerome (S+ PVE) and Awakened Pippa (S+ PVE). Covers frontline, sustain, damage, control.",
+     "differs": "Adds Daimon, Jerome, Awakened Pippa, Awakened Solise, Elijah & Lailah, which the community teams don't name.",
+     "confidence": "medium",
+     "reviewed": true
+    },
+    {
+     "name": "Team 3",
+     "heroes": [
+      {
+       "id": "athena",
+       "pos": "F1"
+      },
+      {
+       "id": "medusa",
+       "pos": "F2"
+      },
+      {
+       "id": "ivan",
+       "pos": "B1"
+      },
+      {
+       "id": "leonardo",
+       "pos": "B2"
+      },
+      {
+       "id": "merlin",
+       "pos": "B3"
+      }
+     ],
+     "artifacts": {
+      "athena": "duras-call",
+      "medusa": "duras-eye",
+      "ivan": "duras-call",
+      "leonardo": "duras-eye",
+      "merlin": "duras-call"
+     },
+     "score": 59.8,
+     "why": "Built around Ivan (S+ PVE) and Leonardo (S+ PVE). Covers frontline, sustain, damage, control. Synergy: Athena + Medusa.",
+     "differs": "Adds Athena, Medusa, Ivan, Leonardo, Merlin, which the community teams don't name.",
+     "confidence": "medium",
+     "reviewed": true
+    },
+    {
+     "name": "Team 4",
+     "heroes": [
+      {
+       "id": "alvida",
+       "pos": "F1"
+      },
+      {
+       "id": "zohra",
+       "pos": "F2"
+      },
+      {
+       "id": "rowan",
+       "pos": "B1"
+      },
+      {
+       "id": "rosaline",
+       "pos": "B2"
+      },
+      {
+       "id": "sion",
+       "pos": "B3"
+      }
+     ],
+     "artifacts": {
+      "alvida": "duras-call",
+      "zohra": "duras-eye",
+      "rowan": "duras-call",
+      "rosaline": "duras-call",
+      "sion": "duras-eye"
+     },
+     "score": 59.5,
+     "why": "Built around Zohra (S+ PVE) and Rowan (S+ PVE). Covers frontline, sustain, damage, control.",
+     "differs": "Adds Alvida, Zohra, Rowan, Rosaline, Sion, which the community teams don't name.",
+     "confidence": "medium",
+     "reviewed": true
+    },
+    {
+     "name": "Team 5",
+     "heroes": [
+      {
+       "id": "awakened-thoran",
+       "pos": "F1"
+      },
+      {
+       "id": "atheus",
+       "pos": "F2"
+      },
+      {
+       "id": "thalassa",
+       "pos": "B1"
+      },
+      {
+       "id": "talimar",
+       "pos": "B2"
+      },
+      {
+       "id": "velufira",
+       "pos": "B3"
+      }
+     ],
+     "artifacts": {
+      "awakened-thoran": "duras-call",
+      "atheus": "duras-call",
+      "thalassa": "duras-call",
+      "talimar": "duras-call",
+      "velufira": "duras-call"
+     },
+     "score": 58,
+     "why": "Built around Talimar (S+ PVE) and Velufira (S+ PVE). Covers frontline, sustain, damage, control.",
+     "differs": "Adds Awakened Thoran, Atheus, Thalassa, Talimar, Velufira, which the community teams don't name.",
+     "confidence": "medium",
+     "reviewed": true
+    }
+   ],
+   "group": "event",
+   "aiNotes": "The guild's shared hero bag means any hero is available. Built around Hybris, like afk.guide's April 2026 guide."
+  },
+  {
+   "id": "tower-of-light",
+   "name": "Tower of Light",
+   "category": "pve",
+   "group": "pve",
+   "teams": 1,
+   "builderOnly": true,
+   "allowedFactions": [
+    "Lightbearer"
+   ],
+   "restrictions": "Lightbearer heroes only.",
+   "whatMatters": "Depth within one faction.",
+   "bosses": [],
+   "community": [],
+   "ai": []
+  },
+  {
+   "id": "brutal-citadel",
+   "name": "Brutal Citadel",
+   "category": "pve",
+   "group": "pve",
+   "teams": 1,
+   "builderOnly": true,
+   "allowedFactions": [
+    "Mauler"
+   ],
+   "restrictions": "Mauler heroes only.",
+   "whatMatters": "Depth within one faction.",
+   "bosses": [],
+   "community": [],
+   "ai": []
+  },
+  {
+   "id": "world-tree",
+   "name": "World Tree",
+   "category": "pve",
+   "group": "pve",
+   "teams": 1,
+   "builderOnly": true,
+   "allowedFactions": [
+    "Wilder"
+   ],
+   "restrictions": "Wilder heroes only.",
+   "whatMatters": "Depth within one faction.",
+   "bosses": [],
+   "community": [],
+   "ai": []
+  },
+  {
+   "id": "forsaken-necropolis",
+   "name": "Forsaken Necropolis",
+   "category": "pve",
+   "group": "pve",
+   "teams": 1,
+   "builderOnly": true,
+   "allowedFactions": [
+    "Graveborn"
+   ],
+   "restrictions": "Graveborn heroes only.",
+   "whatMatters": "Depth within one faction.",
+   "bosses": [],
+   "community": [],
+   "ai": []
+  },
+  {
+   "id": "celestial-sanctum",
+   "name": "Celestial Sanctum",
+   "category": "pve",
+   "group": "pve",
+   "teams": 1,
+   "builderOnly": true,
+   "allowedFactions": [
+    "Celestial"
+   ],
+   "restrictions": "Celestial heroes only.",
+   "whatMatters": "Depth within one faction.",
+   "bosses": [],
+   "community": [],
+   "ai": []
+  },
+  {
+   "id": "infernal-fortress",
+   "name": "Infernal Fortress",
+   "category": "pve",
+   "group": "pve",
+   "teams": 1,
+   "builderOnly": true,
+   "allowedFactions": [
+    "Hypogean"
+   ],
+   "restrictions": "Hypogean heroes only.",
+   "whatMatters": "Depth within one faction.",
+   "bosses": [],
+   "community": [],
+   "ai": []
+  }
+ ],
+ "combos": {
+  "community": [
+   {
+    "heroes": [
+     "awakened-shemira",
+     "sung-jinwoo"
+    ],
+    "name": "AShemira + Sung Jinwoo",
+    "why": "Top-ranked PvP core in afk.guide's v1.195 (June 2026) list, with Albedo as the best sub.",
+    "modes": [
+     "arena-of-heroes",
+     "legends-championship"
+    ]
+   },
+   {
+    "heroes": [
+     "tasi",
+     "elijah-lailah"
+    ],
+    "name": "Tasi + Twins (stat steal)",
+    "why": "Tasi banishes an enemy and takes its ATK Rating, and the Twins' unity link passes it to the carry (AAthalia, HGwyneth, AEironn, Envydiel, Skylan).",
+    "modes": [
+     "campaign"
+    ]
+   },
+   {
+    "heroes": [
+     "thoran",
+     "pippa"
+    ],
+    "name": "Thoran + Pippa (cheese)",
+    "why": "Pippa teleports Thoran at battle start and gives him 5 s of invincibility, and Thoran reflects the damage he takes back at the enemy.",
+    "modes": [
+     "campaign"
+    ]
+   },
+   {
+    "heroes": [
+     "thoran",
+     "lorsan"
+    ],
+    "name": "Thoran + Lorsan",
+    "why": "Lorsan links two enemies so they share the damage Thoran reflects.",
+    "modes": [
+     "campaign"
+    ]
+   },
+   {
+    "heroes": [
+     "thoran",
+     "nara",
+     "athalia"
+    ],
+    "name": "Thoran + Nara/Athalia",
+    "why": "They stop an enemy Mehira dropping bats early and pull enemies into Thoran.",
+    "modes": [
+     "campaign"
+    ]
+   },
+   {
+    "heroes": [
+     "liberta",
+     "mehira"
+    ],
+    "name": "Liberta + Mehira (charm)",
+    "why": "Core of the Liberta charm comp, supported by Lucilla and Zolrath.",
+    "modes": [
+     "campaign"
+    ]
+   },
+   {
+    "heroes": [
+     "awakened-belinda",
+     "lavatune"
+    ],
+    "name": "ABelinda + Lavatune",
+    "why": "Core of the ABelinda comp, with Alna, Daemia, Jerome, Ivan or Melion.",
+    "modes": [
+     "campaign"
+    ]
+   },
+   {
+    "heroes": [
+     "albedo",
+     "envydiel"
+    ],
+    "name": "Albedo + Dimensional carry",
+    "why": "Albedo buffs Dimensional heroes. afk.guide's budget guide uses Envydiel with Albedo, and older Ainz + Albedo builds have her shield prioritise Ainz.",
+    "modes": [
+     "arena-of-heroes"
+    ]
+   },
+   {
+    "heroes": [
+     "alna",
+     "mortas",
+     "silas"
+    ],
+    "name": "Alna + Mortas + Silas",
+    "why": "Graveborn PvP comp named in afk.guide's tier list (1.190).",
+    "modes": [
+     "arena-of-heroes"
+    ]
+   },
+   {
+    "heroes": [
+     "liberta",
+     "lucilla"
+    ],
+    "name": "Liberta + Lucilla",
+    "why": "Energy-cycle and sustain core, often with Ivan, AShemira and Palmer (Driffle, low reliability).",
+    "modes": [
+     "arena-of-heroes"
+    ]
+   },
+   {
+    "heroes": [
+     "saurus",
+     "grezhul"
+    ],
+    "name": "Saurus + Grezhul",
+    "why": "Grotesque Mage front line. Saurus is the only ultimate user, keeping under the 5-ult cap.",
+    "modes": [
+     "twisted-realm"
+    ]
+   },
+   {
+    "heroes": [
+     "baden",
+     "saurus"
+    ],
+    "name": "Baden + Saurus",
+    "why": "Against The Unhinged, Baden's shadow copies soak the lightning strikes.",
+    "modes": [
+     "twisted-realm"
+    ]
+   },
+   {
+    "heroes": [
+     "talene",
+     "silas"
+    ],
+    "name": "Talene + Silas",
+    "why": "Against Kane, Talene's revive soaks his kill mechanic while Silas deals damage. Daimon or Mortas are alternatives.",
+    "modes": [
+     "twisted-realm"
+    ]
+   },
+   {
+    "heroes": [
+     "morael",
+     "shemira"
+    ],
+    "name": "Morael / Shemira AoE",
+    "why": "Demonic Entity takes damage through her summons, so AoE wins.",
+    "modes": [
+     "twisted-realm"
+    ]
+   },
+   {
+    "heroes": [
+     "scarlet",
+     "saurus"
+    ],
+    "name": "Scarlet + Saurus",
+    "why": "Guild-hunt burst, with Rosaline following Scarlet and Raine and the Twins buffing. Dated 2022.",
+    "modes": [
+     "guild-hunts"
+    ]
+   },
+   {
+    "heroes": [
+     "lucius",
+     "rowan"
+    ],
+    "name": "Lucius + Rowan",
+    "why": "Steady early-game front line for Soren. Old advice.",
+    "modes": [
+     "guild-hunts"
+    ]
+   }
+  ],
+  "ai": [
+   {
+    "heroes": [
+     "awakened-athalia",
+     "awakened-baden"
+    ],
+    "name": "Awakened Athalia + Awakened Baden",
+    "why": "Paired in 6 calculated lineups (King's Tower, Arcane Labyrinth, Abyssal Expedition, Legends Championship…). Awakened Athalia brings burst, Awakened Baden brings sustained-dps.",
+    "modes": [
+     "King's Tower",
+     "Arcane Labyrinth",
+     "Abyssal Expedition",
+     "Legends Championship",
+     "Treasure Scramble",
+     "Guild Trials"
+    ],
+    "reviewed": true
+   },
+   {
+    "heroes": [
+     "awakened-athalia",
+     "kyno"
+    ],
+    "name": "Awakened Athalia + Kyno",
+    "why": "Paired in 5 calculated lineups (Campaign, King's Tower, Arcane Labyrinth, Abyssal Expedition…). Awakened Athalia brings burst, Kyno brings tank.",
+    "modes": [
+     "Campaign",
+     "King's Tower",
+     "Arcane Labyrinth",
+     "Abyssal Expedition",
+     "Guild Trials"
+    ],
+    "reviewed": true
+   },
+   {
+    "heroes": [
+     "awakened-baden",
+     "awakened-lyca"
+    ],
+    "name": "Awakened Baden + Awakened Lyca",
+    "why": "Paired in 5 calculated lineups (King's Tower, Arcane Labyrinth, Abyssal Expedition, Cursed Realm…). Awakened Baden brings sustained-dps, Awakened Lyca brings sustained-dps.",
+    "modes": [
+     "King's Tower",
+     "Arcane Labyrinth",
+     "Abyssal Expedition",
+     "Cursed Realm",
+     "Guild Trials"
+    ],
+    "reviewed": true
+   },
+   {
+    "heroes": [
+     "awakened-baden",
+     "kyno"
+    ],
+    "name": "Awakened Baden + Kyno",
+    "why": "Paired in 5 calculated lineups (King's Tower, Arcane Labyrinth, Abyssal Expedition, Cursed Realm…). Awakened Baden brings sustained-dps, Kyno brings tank.",
+    "modes": [
+     "King's Tower",
+     "Arcane Labyrinth",
+     "Abyssal Expedition",
+     "Cursed Realm",
+     "Guild Trials"
+    ],
+    "reviewed": true
+   },
+   {
+    "heroes": [
+     "awakened-lyca",
+     "kyno"
+    ],
+    "name": "Awakened Lyca + Kyno",
+    "why": "Paired in 5 calculated lineups (King's Tower, Arcane Labyrinth, Abyssal Expedition, Cursed Realm…). Awakened Lyca brings sustained-dps, Kyno brings tank.",
+    "modes": [
+     "King's Tower",
+     "Arcane Labyrinth",
+     "Abyssal Expedition",
+     "Cursed Realm",
+     "Guild Trials"
+    ],
+    "reviewed": true
+   },
+   {
+    "heroes": [
+     "cha-hae-in",
+     "sung-jinwoo"
+    ],
+    "name": "Cha Hae-in + Sung Jinwoo",
+    "why": "Paired in 5 calculated lineups (Cursed Realm, Nightmare Corridor, Arena of Heroes, Legends Championship…). Cha Hae-in brings sustained-dps, Sung Jinwoo brings sustained-dps.",
+    "modes": [
+     "Cursed Realm",
+     "Nightmare Corridor",
+     "Arena of Heroes",
+     "Legends Championship",
+     "Treasure Scramble"
+    ],
+    "reviewed": true
+   },
+   {
+    "heroes": [
+     "awakened-athalia",
+     "awakened-lyca"
+    ],
+    "name": "Awakened Athalia + Awakened Lyca",
+    "why": "Paired in 4 calculated lineups (King's Tower, Arcane Labyrinth, Abyssal Expedition, Guild Trials). Awakened Athalia brings burst, Awakened Lyca brings sustained-dps.",
+    "modes": [
+     "King's Tower",
+     "Arcane Labyrinth",
+     "Abyssal Expedition",
+     "Guild Trials"
+    ],
+    "reviewed": true
+   },
+   {
+    "heroes": [
+     "kyno",
+     "sion"
+    ],
+    "name": "Kyno + Sion",
+    "why": "Paired in 3 calculated lineups (Campaign, Abyssal Expedition, Nightmare Corridor). Kyno brings tank, Sion brings sustained-dps.",
+    "modes": [
+     "Campaign",
+     "Abyssal Expedition",
+     "Nightmare Corridor"
+    ],
+    "reviewed": true
+   },
+   {
+    "heroes": [
+     "awakened-belinda",
+     "jerome"
+    ],
+    "name": "Awakened Belinda + Jerome",
+    "why": "Paired in 3 calculated lineups (Faction Towers, Legends Championship, Treasure Scramble). Awakened Belinda brings burst, Jerome brings buffer.",
+    "modes": [
+     "Faction Towers",
+     "Legends Championship",
+     "Treasure Scramble"
+    ],
+    "reviewed": true
+   },
+   {
+    "heroes": [
+     "rosaline",
+     "rowan"
+    ],
+    "name": "Rosaline + Rowan",
+    "why": "Paired in 3 calculated lineups (Faction Towers, Cursed Realm, Guild Trials). Rosaline brings buffer, Rowan brings energy-gain.",
+    "modes": [
+     "Faction Towers",
+     "Cursed Realm",
+     "Guild Trials"
+    ],
+    "reviewed": true
+   }
+  ]
+ },
+ "pvpArchetypes": [
+  {
+   "name": "AShemira-Sung",
+   "core": [
+    "awakened-shemira",
+    "sung-jinwoo"
+   ],
+   "counteredBy": [],
+   "why": "Current number-one PvP comp (afk.guide v1.195). No 2026 counter source was retrieved. afk.guide's 2020 counter guide said plain Shemira is countered by Fawkes ('use Fawkes to end her') or by a faster Shemira silencing first. That predates the awakened version, so it is not carried into counteredBy."
+  },
+  {
+   "name": "Safiya comp",
+   "core": [
+    "safiya"
+   ],
+   "counteredBy": [
+    "athalia",
+    "nara"
+   ],
+   "why": "Athalia or Nara can disable Safiya's opening shield (afk.guide Counter Guide, ~2020, dated). Safiya comp is still listed at 5/10 in the June 2026 afk.guide PvP list."
+  },
+  {
+   "name": "Albedo / Dimensional",
+   "core": [
+    "albedo"
+   ],
+   "counteredBy": [],
+   "why": "Albedo buffs Dimensional heroes (6/10 in afk.guide v1.195). No sourced counter."
+  },
+  {
+   "name": "Alna Graveborn",
+   "core": [
+    "alna",
+    "mortas",
+    "silas"
+   ],
+   "counteredBy": [],
+   "why": "Named a strong PvP comp in afk.guide's tier list (1.190). No sourced counter."
+  },
+  {
+   "name": "Thoran cheese",
+   "core": [
+    "thoran"
+   ],
+   "counteredBy": [],
+   "why": "afk.guide's tier list also calls Thoran comps a strong PvP option. No sourced counter was retrieved."
+  }
+ ],
+ "skipped": [
+  "Peaks of Time (preset heroes)",
+  "Legend/Heroic/Bountiful Trials (event stages)",
+  "Shadow Invasions (unclear format)",
+  "Treasure Vanguard (possibly retired)"
+ ],
+ "gaps": [
+  "Research was incomplete. WebFetch failed with DNS errors for every host, reddit.com was blocked for search, and the shared WebSearch budget (200 per turn) ran out. Nothing was read from Reddit, Discord spreadsheets or full guide pages. Most 'heroes' lists are partial because afk.guide shows hero slots as images.",
+  "Positions (F1/F2/B1-B3) were only available for Pillar of Gaming's Twisted Realm teams. Every other team has pos: null.",
+  "Treasure Scramble team count was not confirmed. Sources only say teams explore and fight on their own.",
+  "Nightmare Corridor: it was not confirmed whether each of the 6 bosses uses a separate team or whether heroes can be reused. Beast names were not readable, and 2 of the 6 current bosses were not retrieved.",
+  "Cursed Realm: whether heroes may repeat across the 6 teams was not confirmed. No current six-team set was retrieved (afk.guide has Kane 2025-02-01 and Demonic Entity 2026-01-25 setups, but they were unreadable).",
+  "Twisted Realm: the afk.guide page dates from about 2022. Pillar of Gaming is titled July 2026 but uses 2021-22 heroes (Saurus, Grezhul, Daimon), so it may be stale content with a new date. PropelRC's 'Scarlet or Sion for Kane' was left out as low reliability.",
+  "'Battle Drills' and 'Fabled Road' appear to be AFK Journey features (Battle Drills is an AFK Journey guild mode; Fabled Road is an AFK Journey battle pass), so they are left out as AFK Arena modes.",
+  "Other modes seen but not researched: War of Wits (a 1v1 card-game event, so no formations), Gold Rush War (a guild-vs-guild PvP mode mentioned during the July 2025 Solo Leveling collab), and Shadow Invasions (a roguelike, unclear whether it uses formations).",
+  "Heroes added in 2026 (Fandom patch notes): Icariel (1.187, Feb 10), Odysseus (1.188, Feb 24), Harvey (1.189, Mar 10), Serennia (1.191, Apr 7), Hybris (1.192, Apr 21), Eluard (1.196, Jun 16), Trix (1.197, Jun 30), Thalassa (1.200, Aug 11), Valeri (1.201, Aug 25). Patches 1.202-1.205 exist, and a new Lightbearer hero arrived around 2026-10-08, but their contents were not retrieved. The meta may have moved since afk.guide's June 2026 PvP update.",
+  "Sung Jinwoo and Cha Hae-in are Dimensional collab heroes from the Solo Leveling crossover (launched 2025-07-30). AllClash rates Sung Jinwoo S+ for Campaign, Tower, Nightmare Corridor and Cursed Realm and says he needs SI+40 and 9/9 furniture.",
+  "Low-reliability sources (Driffle, FindingDulcinea, Rosenberry Rooms, PropelRC, Vintage Vinyl News) carry 'October 2026' titles with older metadata, and some list non-AFK-Arena content. Their teams are marked niche.",
+  "Faction tower restrictions and the Legends Championship 3-team rule come from general game knowledge and were not re-verified this session.",
+  "Ids for the new heroes 'kaelon', 'elthara', 'marcille', 'tornado' and 'odysseus' are taken from afk.guide comp names. Their full names and factions were not confirmed."
+ ]
+}
