@@ -68,7 +68,8 @@
   "Seraphic Tide (Support artifact) has no effect text or rating yet.",
   "Beast ratings come from one overall tier list (AFK Global, Oct 22 2026). PvE, PvP and boss grades only differ where a guide says a beast stands out in that mode, and beast picks per Nightmare Corridor comp could not be read.",
   "113 heroes were missing from the tier lists as first read. 109 now have ratings from AFK Global's list and Pocket Tactics (Apr 30, 2026). AFK Global's list (page dated Oct 3) is AllClash's Aug 20, 2026 list with the bottom two tiers relabelled (AllClash C+ and C shown as C and D), so it counts as one source with AllClash. AllClash's A+ counts as A. Kafka Hibino is A from the r/afkarena usage tier list's notes (its full list is an image not read yet). Awakened Theowyn, Kikoru Shinomiya and Oren are not rated by any list yet and count as B in team building.",
-  "Counter data (which heroes beat which) exists for almost no hero this week, so the counter builds your strongest team for the mode, adjusted for faction advantage, and says so on the result. AllClash's C+ and C tiers both count as C."
+  "Counter data (which heroes beat which) exists for almost no hero this week, so the counter builds your strongest team for the mode, adjusted for faction advantage, and says so on the result. AllClash's C+ and C tiers both count as C.",
+  "afk.guide's 2026 PvP and Legends Championship pages list teams but say nothing about which team beats which; its counter guides date from 2020 and 2023 and are not used. Its January 2026 Legends Championship guide (22 teams) is left out in favour of Groody's October 2026 one. Arena of Heroes now has afk.guide's eight full PvP lineups (June 2026) in place of the partial cores; positions are inferred."
  ],
  "limits": {
   "level": 800,
@@ -832,7 +833,8 @@
     "Game icons for factions, classes and types, and artifact art (from AFK Calc)",
     "Ratings for 109 more heroes from the full AFK Global and Pocket Tactics lists, including Awakened Shemira, Fawkes, Estrilda, Lucius and Eluard. Unrated heroes now count as B in team building, not below C.",
     "AFK Global's tier list turned out to be a copy of AllClash's; heroes rated only by the two now show as single-source. Gwyneth (Draconis) rated B from AllClash.",
-    "Overall tiers recalculated for every hero with one rule: the median of the lists from the last two months (AllClash's live list counted once), and older lists only when nothing recent rates the hero. 75 heroes moved, e.g. Daimon and Rowan from S+ to A (their S+ came only from Pocket Tactics' April list). The AI lineups were recalculated with the new tiers."
+    "Overall tiers recalculated for every hero with one rule: the median of the lists from the last two months (AllClash's live list counted once), and older lists only when nothing recent rates the hero. 75 heroes moved, e.g. Daimon and Rowan from S+ to A (their S+ came only from Pocket Tactics' April list). The AI lineups were recalculated with the new tiers.",
+    "Legends Championship: the 14 teams of Groody's Oct 24 guide, and its author's answer that Teams 10, 11 and 12 beat the MVP Team 13, which the counter now uses. Arena of Heroes: afk.guide's eight full PvP lineups. Formations show in one row with a slot map over each hero."
    ]
   }
  ]

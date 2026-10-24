@@ -1403,12 +1403,11 @@
    "bossesUnknown": [],
    "community": [
     {
-     "name": "AShemira-Sung comp",
+     "name": "AShemira-Sung comp (afk.guide 10/10)",
      "consensus": "common",
-     "why": "Ranked first (10/10 stars) in afk.guide's current-meta PvP list, Patch v1.195 (June 2026). Albedo is listed as the best sub. afk.guide's Temple of Time page also calls Awakened Shemira the strongest awakened hero in PvP. The other three slots are icons on the page and could not be read.",
+     "why": "afk.guide's current-meta PvP list rates this 10/10 (Patch v1.195, June 2026). The page shows the five heroes and its best substitutes, without slots.",
      "sources": [
-      "https://afk.guide/pvp/",
-      "https://afk.guide/temple-of-time/"
+      "https://afk.guide/pvp/"
      ],
      "date": "2026-06",
      "dated": false,
@@ -1418,59 +1417,54 @@
        "pos": "F1"
       },
       {
+       "id": "misfortis",
+       "pos": "F2"
+      },
+      {
        "id": "sung-jinwoo",
        "pos": "B1"
-      }
-     ],
-     "partial": true,
-     "positionsInferred": true,
-     "subs": {},
-     "options": [
+      },
       {
-       "label": "Best substitute",
-       "ids": [
-        "albedo"
-       ]
+       "id": "dracula",
+       "pos": "B2"
+      },
+      {
+       "id": "shuna",
+       "pos": "B3"
       }
      ],
-     "artifacts": {},
-     "artifactNote": null
+     "partial": false,
+     "positionsInferred": true,
+     "subs": {
+      "misfortis": [
+       "saitama",
+       "albedo",
+       "kregor",
+       "awakened-estrilda"
+      ],
+      "sung-jinwoo": [
+       "hybris"
+      ],
+      "dracula": [
+       "hybris",
+       "daemia",
+       "harvey",
+       "rem",
+       "velufira"
+      ],
+      "shuna": [
+       "gavus",
+       "awakened-estrilda",
+       "rem",
+       "lan"
+      ]
+     },
+     "options": []
     },
     {
-     "name": "Albedo comp (Dimensional buff)",
+     "name": "Leviathan comp (afk.guide 9/10)",
      "consensus": "common",
-     "why": "Rated 6/10 in afk.guide's PvP list (v1.195). Albedo buffs your Dimensional heroes. afk.guide's budget guide gives Envydiel with Albedo as an example, and an older 2024 guide built an Ainz team where Albedo's shield prioritises Ainz.",
-     "sources": [
-      "https://afk.guide/pvp/",
-      "https://afk.guide/budget-pvp-guide/"
-     ],
-     "date": "2026-06",
-     "dated": false,
-     "heroes": [
-      {
-       "id": "albedo",
-       "pos": "F1"
-      }
-     ],
-     "partial": true,
-     "positionsInferred": true,
-     "subs": {},
-     "options": [
-      {
-       "label": "Paired with",
-       "ids": [
-        "envydiel",
-        "ainz-ooal-gown"
-       ]
-      }
-     ],
-     "artifacts": {},
-     "artifactNote": null
-    },
-    {
-     "name": "Safiya comp",
-     "consensus": "common",
-     "why": "Rated 5/10 in afk.guide's PvP list (v1.195). The rest of the lineup was not readable.",
+     "why": "afk.guide's current-meta PvP list rates this 9/10 (Patch v1.195, June 2026). The page shows the five heroes and its best substitutes, without slots.",
      "sources": [
       "https://afk.guide/pvp/"
      ],
@@ -1478,16 +1472,409 @@
      "dated": false,
      "heroes": [
       {
-       "id": "safiya",
+       "id": "odysseus",
+       "pos": "F1"
+      },
+      {
+       "id": "leviathan",
+       "pos": "F2"
+      },
+      {
+       "id": "hybris",
        "pos": "B1"
+      },
+      {
+       "id": "velufira",
+       "pos": "B2"
+      },
+      {
+       "id": "lan",
+       "pos": "B3"
       }
      ],
-     "partial": true,
+     "partial": false,
      "positionsInferred": true,
-     "subs": {},
-     "options": [],
-     "artifacts": {},
-     "artifactNote": null
+     "subs": {
+      "odysseus": [
+       "awakened-lucius",
+       "misfortis"
+      ],
+      "hybris": [
+       "elthara",
+       "aurelia",
+       "envydiel",
+       "gavus",
+       "haelia"
+      ],
+      "velufira": [
+       "aurelia",
+       "gorren",
+       "gavus"
+      ],
+      "lan": [
+       "awakened-skriath",
+       "gavus",
+       "dracula",
+       "misfortis"
+      ]
+     },
+     "options": []
+    },
+    {
+     "name": "Albedo comp (afk.guide 6/10)",
+     "consensus": "niche",
+     "why": "afk.guide's current-meta PvP list rates this 6/10 (Patch v1.195, June 2026). The page shows the five heroes and its best substitutes, without slots.",
+     "sources": [
+      "https://afk.guide/pvp/"
+     ],
+     "date": "2026-06",
+     "dated": false,
+     "heroes": [
+      {
+       "id": "albedo",
+       "pos": "F1"
+      },
+      {
+       "id": "rem",
+       "pos": "F2"
+      },
+      {
+       "id": "shuna",
+       "pos": "B1"
+      },
+      {
+       "id": "dracula",
+       "pos": "B2"
+      },
+      {
+       "id": "envydiel",
+       "pos": "B3"
+      }
+     ],
+     "partial": false,
+     "positionsInferred": true,
+     "subs": {
+      "albedo": [
+       "awakened-estrilda"
+      ],
+      "rem": [
+       "saitama",
+       "awakened-estrilda",
+       "kregor"
+      ],
+      "shuna": [
+       "velufira",
+       "sung-jinwoo"
+      ],
+      "dracula": [
+       "misha",
+       "velufira"
+      ],
+      "envydiel": [
+       "sung-jinwoo"
+      ]
+     },
+     "options": []
+    },
+    {
+     "name": "Skylan comp (afk.guide 9/10)",
+     "consensus": "common",
+     "why": "afk.guide's current-meta PvP list rates this 9/10 (Patch v1.195, June 2026). The page shows the five heroes and its best substitutes, without slots.",
+     "sources": [
+      "https://afk.guide/pvp/"
+     ],
+     "date": "2026-06",
+     "dated": false,
+     "heroes": [
+      {
+       "id": "saitama",
+       "pos": "F1"
+      },
+      {
+       "id": "gorok",
+       "pos": "F2"
+      },
+      {
+       "id": "elthara",
+       "pos": "B1"
+      },
+      {
+       "id": "skylan",
+       "pos": "B2"
+      },
+      {
+       "id": "awakened-pippa",
+       "pos": "B3"
+      }
+     ],
+     "partial": false,
+     "positionsInferred": true,
+     "subs": {
+      "saitama": [
+       "alna"
+      ],
+      "skylan": [
+       "icariel",
+       "odysseus",
+       "sion",
+       "envydiel"
+      ],
+      "elthara": [
+       "kaelon",
+       "icariel",
+       "hybris",
+       "serennia",
+       "awakened-safiya",
+       "awakened-estrilda",
+       "dracula",
+       "severin"
+      ],
+      "gorok": [
+       "gorren",
+       "hybris",
+       "daemia",
+       "kaelon",
+       "dracula"
+      ],
+      "awakened-pippa": [
+       "lan",
+       "hybris",
+       "gorren",
+       "awakened-estrilda",
+       "kaelon",
+       "dracula"
+      ]
+     },
+     "options": []
+    },
+    {
+     "name": "Maetria burst (afk.guide 7/10)",
+     "consensus": "common",
+     "why": "afk.guide's current-meta PvP list rates this 7/10 (Patch v1.195, June 2026). The page shows the five heroes and its best substitutes, without slots.",
+     "sources": [
+      "https://afk.guide/pvp/"
+     ],
+     "date": "2026-06",
+     "dated": false,
+     "heroes": [
+      {
+       "id": "maetria",
+       "pos": "F1"
+      },
+      {
+       "id": "kaelon",
+       "pos": "F2"
+      },
+      {
+       "id": "hildwin",
+       "pos": "B1"
+      },
+      {
+       "id": "serenmira",
+       "pos": "B2"
+      },
+      {
+       "id": "zohra",
+       "pos": "B3"
+      }
+     ],
+     "partial": false,
+     "positionsInferred": true,
+     "subs": {
+      "kaelon": [
+       "shalltear-bloodfallen",
+       "melion",
+       "icariel"
+      ],
+      "serenmira": [
+       "melion",
+       "lysander",
+       "elthara"
+      ],
+      "zohra": [
+       "elthara"
+      ]
+     },
+     "options": []
+    },
+    {
+     "name": "Lysander burst (afk.guide 8/10)",
+     "consensus": "common",
+     "why": "afk.guide's current-meta PvP list rates this 8/10 (Patch v1.195, June 2026). The page shows the five heroes and its best substitutes, without slots.",
+     "sources": [
+      "https://afk.guide/pvp/"
+     ],
+     "date": "2026-06",
+     "dated": false,
+     "heroes": [
+      {
+       "id": "alvida",
+       "pos": "F1"
+      },
+      {
+       "id": "haelia",
+       "pos": "F2"
+      },
+      {
+       "id": "awakened-fawkes",
+       "pos": "B1"
+      },
+      {
+       "id": "awakened-lyca",
+       "pos": "B2"
+      },
+      {
+       "id": "lysander",
+       "pos": "B3"
+      }
+     ],
+     "partial": false,
+     "positionsInferred": true,
+     "subs": {
+      "awakened-fawkes": [
+       "awakened-athalia"
+      ],
+      "alvida": [
+       "kaelon"
+      ],
+      "awakened-lyca": [
+       "aurelia",
+       "liberta",
+       "kaelon",
+       "gorren"
+      ],
+      "haelia": [
+       "awakened-estrilda",
+       "skylan",
+       "kaelon",
+       "aurelia",
+       "serennia",
+       "gorren"
+      ]
+     },
+     "options": []
+    },
+    {
+     "name": "AThoran stall (afk.guide 7/10)",
+     "consensus": "common",
+     "why": "afk.guide's current-meta PvP list rates this 7/10 (Patch v1.195, June 2026). The page shows the five heroes and its best substitutes, without slots.",
+     "sources": [
+      "https://afk.guide/pvp/"
+     ],
+     "date": "2026-06",
+     "dated": false,
+     "heroes": [
+      {
+       "id": "awakened-thoran",
+       "pos": "F1"
+      },
+      {
+       "id": "awakened-fawkes",
+       "pos": "F2"
+      },
+      {
+       "id": "talene",
+       "pos": "B1"
+      },
+      {
+       "id": "knox",
+       "pos": "B2"
+      },
+      {
+       "id": "mira",
+       "pos": "B3"
+      }
+     ],
+     "partial": false,
+     "positionsInferred": true,
+     "subs": {
+      "talene": [
+       "alvida",
+       "maetria"
+      ],
+      "awakened-fawkes": [
+       "alvida",
+       "hildwin",
+       "shalltear-bloodfallen"
+      ],
+      "awakened-thoran": [
+       "alvida",
+       "hildwin",
+       "shalltear-bloodfallen",
+       "gorren",
+       "icariel"
+      ],
+      "knox": [
+       "alvida",
+       "flora",
+       "gorren",
+       "icariel"
+      ],
+      "mira": [
+       "alvida",
+       "flora",
+       "hildwin",
+       "gorren",
+       "elthara",
+       "icariel"
+      ]
+     },
+     "options": []
+    },
+    {
+     "name": "ASafiya comp (afk.guide 5/10)",
+     "consensus": "niche",
+     "why": "afk.guide's current-meta PvP list rates this 5/10 (Patch v1.195, June 2026). The page shows the five heroes and its best substitutes, without slots.",
+     "sources": [
+      "https://afk.guide/pvp/"
+     ],
+     "date": "2026-06",
+     "dated": false,
+     "heroes": [
+      {
+       "id": "kregor",
+       "pos": "F1"
+      },
+      {
+       "id": "tarnos",
+       "pos": "F2"
+      },
+      {
+       "id": "awakened-safiya",
+       "pos": "B1"
+      },
+      {
+       "id": "lan",
+       "pos": "B2"
+      },
+      {
+       "id": "daemia",
+       "pos": "B3"
+      }
+     ],
+     "partial": false,
+     "positionsInferred": true,
+     "subs": {
+      "tarnos": [
+       "leviathan",
+       "skylan",
+       "gorren"
+      ],
+      "kregor": [
+       "leviathan",
+       "skylan",
+       "gorren"
+      ],
+      "lan": [
+       "sion",
+       "shuna",
+       "gorren"
+      ],
+      "daemia": [
+       "gorren"
+      ]
+     },
+     "options": []
     },
     {
      "name": "Alna Graveborn comp",
