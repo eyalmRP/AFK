@@ -17,13 +17,22 @@ Only record what a source actually says, and keep the URL and date of every sour
 - **Tier lists** from the last 2 months: Pocket Gamer, AllClash, AFK Global, Driffle, Pocket Tactics, afk.guide and others. Map grades onto S+ S A B C D, with SS → S+ and F → D.
 - **Mode guides** for each mode in `data/modes.json`, with priority on modes that have no community team yet: Legends Championship, Cursed Realm, King's Tower, faction towers and Treasure Scramble. Also check the current Twisted Realm boss and the Nightmare Corridor cycle.
 - **Kits** for heroes whose `kitConfidence` is `low`. Fill in about 20 a week, newest and highest-rated first.
+- **Beasts**: new beasts, beast tier lists, and the beast the community pairs with each comp (Nightmare Corridor guides name one per comp).
 
 ## 2. Roster and portraits
 ```sh
 python3 scripts/sync_roster.py          # dry run
 python3 scripts/sync_roster.py --write  # adds new heroes + portraits
 ```
-For each new hero (`needsReview: true`), set `class`, `release` (YYYY-MM), `title`, `kit`, `kitConfidence`, `roles` and `position` from research. Then remove `needsReview`.
+The script also adds new beasts to `data/beasts.json`.
+
+For each new hero (`needsReview: true`), set `class`, `release` (YYYY-MM), `title`, `kit`, `kitConfidence`, `roles` and `position` from research. Then remove `needsReview`. For each new beast, set its `skill`, `roles`, `suits` and `tiers`.
+
+Then update `data/beasts.json`:
+- `tiers` (pve / pvp / boss), with `raw` per source.
+- `bestFor`: hero ids or mode ids.
+- `modeRecommendations`: `{mode, beast, heroes, why, source}`.
+- `system`: which modes take a beast, and what upgrades do.
 
 ## 3. Update `data/heroes.json`
 For each rated hero, update:

@@ -554,3 +554,48 @@ export function nextUpgrade(ctx, ids) {
   }
   return best && best.gain > 0.05 ? best : null;
 }
+
+// Best owned beast for a team: its rating for the mode, how well its buffs
+// match the team's hero types, and community picks for the mode or heroes.
+export function suggestBeast(ctx, ids, { beasts, owned, recommendations = [], exclude = null }) {
+  if (!beasts?.length) return null;
+  const pool = (owned ? beasts.filter((b) => owned[b.id]?.owned) : beasts).filter((b) => !exclude?.has(b.id));
+  if (!pool.length) return null;
+  const types = { Strength: 0, Intelligence: 0, Agility: 0 };
+  for (const id of ids) {
+    const t = ctx.heroes.get(id)?.type;
+    if (t in types) types[t]++;
+  }
+  const keyOf = { Strength: 'str', Intelligence: 'int', Agility: 'agi' };
+  const cat = ctx.tierCategory;
+  let best = null;
+  for (const b of pool) {
+    const reasons = [];
+    const tier = b.tiers?.[cat] || b.tiers?.overall || null;
+    let score = tierScore(tier);
+    if (tier) reasons.push(`${tier} in ${cat.toUpperCase()}`);
+    const e = owned?.[b.id];
+    if (e) {
+      let buff = 0;
+      // Absolute buff level: a legendary beast at 18 gives more than an elite at 12.
+      for (const [t, n] of Object.entries(types)) buff += n * ((e[keyOf[t]] ?? 0) / 18);
+      score += buff * 0.8;
+      const main = Object.entries(types).sort((a, c) => c[1] - a[1])[0];
+      if (main[1] && (e[keyOf[main[0]]] ?? 0) > 0) reasons.push(`${main[0]} buff ${e[keyOf[main[0]]]} for your ${main[1]} ${main[0]} hero${main[1] > 1 ? 'es' : ''}`);
+    }
+    for (const r of recommendations) {
+      if (r.beast !== b.id) continue;
+      if (r.mode && r.mode === ctx.mode?.id) {
+        score += 2;
+        reasons.push(`community pick for ${ctx.mode.name}`);
+      }
+      const shared = (r.heroes || []).filter((h) => ids.includes(h));
+      if (shared.length) {
+        score += 1.5;
+        reasons.push(`recommended with ${shared.map((h) => ctx.heroes.get(h)?.name || h).join(', ')}`);
+      }
+    }
+    if (!best || score > best.score) best = { id: b.id, score, reasons };
+  }
+  return best;
+}

@@ -155,6 +155,40 @@ Reply with only JSON: {"core": 257, "Warrior": 195, "Tank": 196, "Ranger": 195, 
   return res;
 }
 
+// Read Beasts screenshots. Returns {beasts:[{id, str, int, agi, confidence, seen}], notes}.
+export async function readBeasts(files, { signal } = {}) {
+  const sample = await initAi();
+  if (!sample) throw { code: 'not_granted' };
+  const list = (data.beasts || []).map((b) => `${b.id}|${b.name}|${b.rarity}|max buff ${b.maxBuff}`).join('\n');
+  const hints = data.beastSystem?.screenHints ? `Screen notes: ${JSON.stringify(data.beastSystem.screenHints)}` : '';
+  const prompt = `These are screenshots of the Beasts screens in the mobile game AFK Arena (not AFK Journey). Each beast has three buff levels: Strength (red fist icon), Intelligence (blue head icon) and Agility (green boot icon). ${hints}
+Identify every beast the player owns that is visible, matching each to this list (id|name|rarity|max buff):
+${list}
+Report each buff level only if you can read it; use null otherwise. Never guess.
+Reply with only JSON: {"beasts":[{"id":"beast id","str":12,"int":10,"agi":null,"confidence":"high|medium|low","seen":"short note"}],"notes":"anything to check"}`;
+  const out = await sample.json(prompt, { images: files, signal, modelTier: 'default', cache: false });
+  const valid = new Map((data.beasts || []).map((b) => [b.id, b]));
+  const beasts = (Array.isArray(out?.beasts) ? out.beasts : [])
+    .filter((b) => b && valid.has(String(b.id)))
+    .map((b) => {
+      const max = valid.get(String(b.id)).maxBuff || 18;
+      const lv = (v) => {
+        const n = numOrNull(v);
+        return n === null ? null : Math.max(0, Math.min(max, n));
+      };
+      return { id: String(b.id), str: lv(b.str), int: lv(b.int), agi: lv(b.agi), confidence: ['high', 'medium', 'low'].includes(b.confidence) ? b.confidence : 'medium', seen: String(b.seen || '').slice(0, 160) };
+    });
+  return { beasts, notes: String(out?.notes || '').slice(0, 300) };
+}
+
+export function beastsLine(owned) {
+  if (!owned) return '';
+  const rows = Object.entries(owned)
+    .filter(([, e]) => e?.owned)
+    .map(([id, e]) => `${id} (${data.beastById?.get(id)?.name || id}; buffs Str ${e.str ?? '?'} / Int ${e.int ?? '?'} / Agi ${e.agi ?? '?'})`);
+  return rows.length ? `Player's beasts (one per formation where the mode allows; buffs boost heroes of that attribute type): ${rows.join(', ')}.` : '';
+}
+
 export function elderTreeLine(tree) {
   if (!tree) return '';
   const parts = CLASSES.filter((c) => tree[c]).map((c) => `${c} ${tree[c]}`);
@@ -205,6 +239,7 @@ function parseTeams(out, allowed, count, unique = true) {
         name: String(t.name || `Team ${teams.length + 1}`).slice(0, 60),
         slots,
         artifacts: t.artifacts && typeof t.artifacts === 'object' ? t.artifacts : {},
+        beast: t.beast && data.beastById?.has(String(t.beast)) ? String(t.beast) : null,
         why: String(t.why || '').slice(0, 700),
         risks: String(t.risks || '').slice(0, 300),
       });
@@ -216,7 +251,7 @@ function parseTeams(out, allowed, count, unique = true) {
 
 const ARTIFACT_IDS = () => data.artifacts.map((a) => `${a.id} (${a.name})`).join(', ');
 
-export async function claudeBuild({ mode, count, pool, entries, engineTeams, signal, elderTree = null }) {
+export async function claudeBuild({ mode, count, pool, entries, engineTeams, signal, elderTree = null, beasts = null }) {
   const sample = await initAi();
   if (!sample) throw { code: 'not_granted' };
   const prompt = `You are an expert AFK Arena (Lilith Games, not AFK Journey) team builder. Build ${count} formation(s) for the mode below using ONLY the player's owned heroes. Teams must not share heroes. Each formation has 2 front slots (F1, F2) and 3 back slots (B1, B2, B3).
@@ -226,17 +261,18 @@ Mode: ${modeBrief(mode)}
 Owned heroes (id | name | faction class | tier ratings | player's investment | roles | kit):
 ${pool.map((id) => heroLine(id, entries)).join('\n')}
 ${elderTreeLine(elderTree)}
+${beastsLine(beasts)}
 
 A rules engine proposed:
 ${engineTeams.map((t, i) => `Team ${i + 1}: ${POSITIONS.map((p) => `${p}:${t.layout[p] || '-'}`).join(' ')}`).join('\n')}
 
 Improve on it where you can: consider synergies, energy and positioning, the mode's mechanics, and the player's investment (an under-built hero can be worse than a lower-tier maxed one). Artifact ids: ${ARTIFACT_IDS()}.
-Reply with only JSON: {"teams":[{"name":"short archetype name","slots":{"F1":"id","F2":"id","B1":"id","B2":"id","B3":"id"},"artifacts":{"heroId":"artifact id"},"why":"2-3 sentences","risks":"1 sentence"}],"notes":"upgrade advice in 1-2 sentences"}`;
+Reply with only JSON: {"teams":[{"name":"short archetype name","slots":{"F1":"id","F2":"id","B1":"id","B2":"id","B3":"id"},"artifacts":{"heroId":"artifact id"},"beast":"beast id or null","why":"2-3 sentences","risks":"1 sentence"}],"notes":"upgrade advice in 1-2 sentences"}`;
   const out = await sample.json(prompt, { signal, modelTier: 'default', cache: false });
   return parseTeams(out, new Set(pool), count);
 }
 
-export async function claudeCounter({ enemySlots, mode, pool, entries, engineTeam, signal, elderTree = null }) {
+export async function claudeCounter({ enemySlots, mode, pool, entries, engineTeam, signal, elderTree = null, beasts = null }) {
   const sample = await initAi();
   if (!sample) throw { code: 'not_granted' };
   const enemy = POSITIONS.filter((p) => enemySlots[p]).map((p) => `${p}: ${heroLine(enemySlots[p], null)}`);
@@ -250,10 +286,11 @@ ${enemy.join('\n')}
 Owned heroes (id | name | faction class | tier ratings | player's investment | roles | kit):
 ${pool.map((id) => heroLine(id, entries)).join('\n')}
 ${elderTreeLine(elderTree)}
+${beastsLine(beasts)}
 
 A rules engine proposed: ${POSITIONS.map((p) => `${p}:${engineTeam?.layout?.[p] || '-'}`).join(' ')}
 
-Reply with only JSON: {"teams":[{"name":"short name","slots":{"F1":"id","F2":"id","B1":"id","B2":"id","B3":"id"},"artifacts":{"heroId":"artifact id"},"why":"how this beats the enemy, 2-4 sentences","risks":"what could still go wrong"}],"notes":"what to swap if this loses"}
+Reply with only JSON: {"teams":[{"name":"short name","slots":{"F1":"id","F2":"id","B1":"id","B2":"id","B3":"id"},"artifacts":{"heroId":"artifact id"},"beast":"beast id or null","why":"how this beats the enemy, 2-4 sentences","risks":"what could still go wrong"}],"notes":"what to swap if this loses"}
 Give 1 primary team and optionally 1 alternative (max 2 teams). Artifact ids: ${ARTIFACT_IDS()}.`;
   const out = await sample.json(prompt, { signal, modelTier: 'default', cache: false });
   return parseTeams(out, new Set(pool), 2, false);

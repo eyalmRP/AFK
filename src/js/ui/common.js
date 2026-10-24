@@ -156,6 +156,29 @@ export function artifactChip(id) {
   return `<span class="art-chip" title="${esc(name)}">${artifactArt(id, name)}<span>${esc(name.replace(/^Dura's\s+/i, ''))}</span></span>`;
 }
 
+// ---- beasts -------------------------------------------------------------------
+
+export function beastArt(id, size = 40) {
+  const b = data.beastById?.get(id);
+  if (!b) return '';
+  return `<img class="beast-img" src="${esc(b.img)}" alt="" loading="lazy" style="width:${size}px;height:${size}px">`;
+}
+
+// Modes that take a beast, when the weekly research says which ones do.
+export function beastAllowed(mode) {
+  const modes = data.beastSystem?.modes;
+  return !modes?.length || !mode || modes.includes(mode.id);
+}
+
+export function beastLine(pick, { owned = true } = {}) {
+  if (!pick) return '';
+  const b = data.beastById.get(pick.id);
+  if (!b) return '';
+  return `<div class="beast-pick">${beastArt(b.id, 36)}<div><span class="eyebrow">Beast${owned ? '' : ' (suggested)'}</span><br><strong>${esc(b.name)}</strong>${
+    pick.reasons?.length ? ` <span class="small muted">${esc(pick.reasons.slice(0, 2).join(' · '))}</span>` : ''
+  }</div></div>`;
+}
+
 // ---- formation board (2 front / 3 back) -------------------------------------
 
 export function board({ slots = {}, artifacts = {}, showBank = false, size = 56, editable = false, cls = '', emptyLabel = '+' } = {}) {

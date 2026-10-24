@@ -15,7 +15,31 @@ export const bank = {
   updatedAt: 0,
   settings: { sharedLevel: true, crystalLevel: 240, elderTree: emptyElderTree() },
   heroes: {},
+  beasts: {},
 };
+
+// A beast the player owns, with its Strength / Intelligence / Agility buff levels.
+export function sanitizeBeast(e, max = 18) {
+  const lvl = (v) => (v === null || v === undefined || v === '' ? null : clamp(toInt(v, 0), 0, max));
+  return { owned: !!e?.owned, str: lvl(e?.str), int: lvl(e?.int), agi: lvl(e?.agi), updated: e?.updated || Date.now(), source: e?.source || 'manual' };
+}
+
+function loadBeasts(src) {
+  const out = {};
+  for (const [id, e] of Object.entries(src || {})) out[id] = sanitizeBeast(e);
+  return out;
+}
+
+export function updateBeasts(patches, source = 'manual') {
+  for (const [id, patch] of Object.entries(patches)) {
+    bank.beasts[id] = sanitizeBeast({ ...(bank.beasts[id] || {}), ...patch, source, updated: Date.now() }, patch.max ?? 18);
+  }
+  touch();
+}
+
+export function ownedBeasts() {
+  return Object.keys(bank.beasts).filter((id) => bank.beasts[id]?.owned);
+}
 
 export function emptyElderTree() {
   return { core: null, Warrior: null, Tank: null, Ranger: null, Mage: null, Support: null, updated: null, source: null };
@@ -129,6 +153,7 @@ export function replaceBank(next) {
   bank.settings.elderTree = sanitizeElderTree(bank.settings.elderTree);
   bank.heroes = {};
   for (const [id, e] of Object.entries(next.heroes || {})) bank.heroes[id] = sanitizeEntry(e);
+  if (next.beasts) bank.beasts = loadBeasts(next.beasts);
   touch();
 }
 
@@ -210,6 +235,7 @@ export function loadLocal() {
     bank.settings = { ...bank.settings, ...(saved.settings || {}) };
     bank.settings.elderTree = sanitizeElderTree(bank.settings.elderTree);
     for (const [id, e] of Object.entries(saved.heroes)) bank.heroes[id] = sanitizeEntry(e);
+    bank.beasts = loadBeasts(saved.beasts);
   }
   const f = local.get(LOCAL_FORMATIONS);
   if (f && Array.isArray(f.items)) Object.assign(formations, f);
@@ -235,6 +261,7 @@ export async function connectRemote() {
       bank.settings.elderTree = sanitizeElderTree(bank.settings.elderTree);
       bank.heroes = {};
       for (const [id, e] of Object.entries(cloud.heroes || {})) bank.heroes[id] = sanitizeEntry(e);
+      bank.beasts = loadBeasts(cloud.beasts);
       local.set(LOCAL_KEY, bank);
       emit();
     } else if (Object.keys(bank.heroes).length) {
@@ -260,6 +287,7 @@ export async function connectRemote() {
           bank.settings.elderTree = sanitizeElderTree(bank.settings.elderTree);
           bank.heroes = {};
           for (const [id, e] of Object.entries(d.heroes || {})) bank.heroes[id] = sanitizeEntry(e);
+          bank.beasts = loadBeasts(d.beasts);
           local.set(LOCAL_KEY, bank);
           emit();
         }

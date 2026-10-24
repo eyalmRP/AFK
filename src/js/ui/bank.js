@@ -8,6 +8,7 @@ import { aiState, initAi, readScreenshots, readElderTree, errorCopy } from '../a
 import { ICON, classIcon } from './icons.js';
 import { portrait, openDrawer, closeDrawer, tierPill, gameFilterBar, handleGameFilter, syncGameFilter, panel, bindFolding } from './common.js';
 import { openHeroDetail } from './heroDetail.js';
+import { beastPanel, bindBeastPanel, refreshBeastPanel } from './beastPanel.js';
 
 const ui = {
   q: '',
@@ -41,6 +42,7 @@ let root;
 export function mountBank(el) {
   root = el;
   bindFolding(root);
+  bindBeastPanel(root);
   root.addEventListener('click', onClick);
   root.addEventListener('change', onChange);
   root.addEventListener('input', onInput);
@@ -53,6 +55,7 @@ export function refreshBank() {
   renderList();
   renderCounts();
   syncElderInputs();
+  refreshBeastPanel();
 }
 
 // ---- Elder Tree -------------------------------------------------------------
@@ -218,6 +221,7 @@ function render() {
       <span class="small muted" id="bank-shared-note">${sharedNote()}</span>
     </div>
     ${elderPanel()}
+    ${beastPanel()}
     <div class="bank-controls">
       <div class="toolbar">
         <label class="search">${ICON.search}<input class="input" id="bank-q" type="search" placeholder="Find hero, faction or title" autocomplete="off"></label>

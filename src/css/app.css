@@ -657,6 +657,23 @@ main {
 .tier-grid .cell .eyebrow { font-size: 0.68rem; }
 .edit-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
 
+/* ---------- beasts ---------- */
+.beast-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px; }
+.beast-card { display: flex; flex-direction: column; gap: 8px; padding: 10px; border-radius: var(--r-sm); border: 1px solid var(--line); background: var(--surface); min-width: 0; }
+.beast-card[data-owned='false'] .beast-img { filter: grayscale(0.85); opacity: 0.6; }
+.beast-card[data-owned='true'] { border-color: color-mix(in srgb, var(--accent) 45%, var(--line)); }
+.beast-top { display: flex; gap: 10px; align-items: center; min-width: 0; }
+.beast-top strong { font-size: 0.92rem; overflow-wrap: anywhere; }
+.beast-img { border-radius: 10px; object-fit: cover; flex: none; display: block; background: var(--surface-2); }
+.buffs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.buff { display: flex; align-items: center; gap: 4px; min-width: 0; }
+.buff .gi { width: 20px; height: 20px; }
+.buff .input { width: 100%; min-width: 0; padding: 4px 5px; text-align: center; }
+.rarity-legendary { color: var(--asc-legendary); border-color: color-mix(in srgb, var(--asc-legendary) 45%, transparent); }
+.rarity-elite { color: var(--asc-elite); border-color: color-mix(in srgb, var(--asc-elite) 45%, transparent); }
+.beast-pick { display: flex; gap: 10px; align-items: center; padding: 6px 8px; border-radius: var(--r-sm); background: var(--surface-2); border: 1px solid var(--line); font-size: 0.9rem; }
+.beast-pick .eyebrow { font-size: 0.66rem; }
+
 /* ---------- hero bank ---------- */
 .elder { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; }
 .elder-node { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 10px 6px; border-radius: var(--r-md); background: var(--surface-2); border: 1px solid var(--line); text-align: center; min-width: 0; }

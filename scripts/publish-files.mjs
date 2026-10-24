@@ -16,7 +16,7 @@ if (since) {
     .filter(Boolean);
   for (const p of changed) list.push({ path: p });
 } else {
-  for (const dir of ['img/heroes', 'img/icons/factions', 'img/icons/classes', 'img/icons/types', 'img/artifacts']) {
+  for (const dir of ['img/heroes', 'img/icons/factions', 'img/icons/classes', 'img/icons/types', 'img/artifacts', 'img/beasts']) {
     for (const f of (await readdir(dist + dir)).sort()) list.push({ path: `${dir}/${f}` });
   }
 }

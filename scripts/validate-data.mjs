@@ -81,6 +81,32 @@ if (!/^\d{4}-\d{2}-\d{2}$/.test(meta.asOf || '')) err('meta.asOf must be YYYY-MM
 if (meta.nextUpdate && meta.nextUpdate <= meta.asOf) err('meta.nextUpdate must be after asOf');
 for (const s of meta.sources || []) if (!/^https?:\/\//.test(s.url || '')) err(`source "${s.name}" has no URL`);
 
+// Beasts
+let beastCount = 0;
+try {
+  const beastsFile = await read('beasts.json');
+  const beastIds = new Set();
+  for (const b of beastsFile.beasts || []) {
+    beastCount++;
+    if (beastIds.has(b.id)) err(`duplicate beast ${b.id}`);
+    beastIds.add(b.id);
+    if (!['rare', 'elite', 'legendary'].includes(b.rarity)) err(`beast ${b.id}: bad rarity ${b.rarity}`);
+    for (const [k, v] of Object.entries(b.tiers || {})) if (!TIERS.has(v)) err(`beast ${b.id}: bad ${k} tier ${v}`);
+    try {
+      await access(root + b.img);
+    } catch {
+      err(`beast ${b.id}: image ${b.img} is missing`);
+    }
+  }
+  for (const r of beastsFile.modeRecommendations || []) {
+    if (!beastIds.has(r.beast)) err(`beast recommendation: unknown beast "${r.beast}"`);
+    if (r.mode && !modeIds.has(r.mode)) err(`beast recommendation: unknown mode "${r.mode}"`);
+    for (const id of r.heroes || []) known(id, `beast recommendation ${r.beast}`);
+  }
+} catch (e) {
+  err(`beasts.json: ${e.message}`);
+}
+
 for (const w of warn.slice(0, 15)) console.log('warn:', w);
 if (warn.length > 15) console.log(`warn: …and ${warn.length - 15} more`);
 if (errors.length) {
@@ -88,4 +114,4 @@ if (errors.length) {
   console.error(`\n${errors.length} error(s)`);
   process.exit(1);
 }
-console.log(`data ok: ${ids.size} heroes, ${artIds.size} artifacts, ${modeIds.size} modes, ${meta.sources.length} sources`);
+console.log(`data ok: ${ids.size} heroes, ${artIds.size} artifacts, ${beastCount} beasts, ${modeIds.size} modes, ${meta.sources.length} sources`);

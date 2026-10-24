@@ -58,6 +58,13 @@ export const POSITIONS = ['F1', 'F2', 'B1', 'B2', 'B3'];
 export const ELDER_BRANCHES = ['Support', 'Mage', 'Warrior', 'Tank', 'Ranger'];
 export const ELDER_MAX = 1000;
 
+// Beast buffs: one level per hero attribute type.
+export const BEAST_BUFFS = [
+  { key: 'str', type: 'Strength' },
+  { key: 'int', type: 'Intelligence' },
+  { key: 'agi', type: 'Agility' },
+];
+
 const state = {
   meta: null,
   heroes: [],
@@ -77,16 +84,17 @@ async function loadJson(path) {
 }
 
 export async function loadData() {
-  const [meta, heroes, artifacts, modes] = await Promise.all([
+  const [meta, heroes, artifacts, modes, beasts] = await Promise.all([
     loadJson('data/meta.json'),
     loadJson('data/heroes.json'),
     loadJson('data/artifacts.json'),
     loadJson('data/modes.json'),
+    loadJson('data/beasts.json').catch(() => ({ beasts: [] })),
   ]);
-  return setData({ meta, heroes, artifacts, modes });
+  return setData({ meta, heroes, artifacts, modes, beasts });
 }
 
-export function setData({ meta, heroes, artifacts, modes }) {
+export function setData({ meta, heroes, artifacts, modes, beasts = { beasts: [] } }) {
   state.meta = meta;
   state.heroes = (heroes.heroes || []).map(normalizeHero);
   state.heroById = new Map(state.heroes.map((h) => [h.id, h]));
@@ -98,6 +106,10 @@ export function setData({ meta, heroes, artifacts, modes }) {
   state.modeById = new Map(state.modes.map((m) => [m.id, m]));
   state.combos = modes.combos || { community: [], ai: [] };
   state.archetypes = modes.pvpArchetypes || [];
+  state.beasts = beasts.beasts || [];
+  state.beastById = new Map(state.beasts.map((b) => [b.id, b]));
+  state.beastSystem = beasts.system || null;
+  state.beastModes = beasts.modeRecommendations || [];
   state.limits = { ...LIMITS, ...(meta.limits || {}) };
   return state;
 }

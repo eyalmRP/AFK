@@ -1,4 +1,4 @@
-"""Adds heroes that are new in the game to data/heroes.json, with portraits.
+"""Adds heroes and beasts that are new in the game to data/, with portraits.
 
 Reads the public unit database mirrored at github.com/floofpire/cdn (pulled from
 Lilith's CDN), finds ascended-tier heroes that data/heroes.json does not have
@@ -86,5 +86,36 @@ def main():
     print(f'added {len(new)} heroes. Set their class, release month, kit and ratings, then remove needsReview.')
 
 
+def sync_beasts(units, write):
+    path = ROOT / 'data' / 'beasts.json'
+    doc = json.loads(path.read_text())
+    have = {b['gameId'] for b in doc['beasts']}
+    new = []
+    for u in sorted(units.values(), key=lambda v: v['id']):
+        if not (6000 <= u['id'] < 7000) or u['id'] in have:
+            continue
+        name = u['names']['en']
+        bid = slug(name.replace('é', 'e'))
+        rarity = u.get('rarity') if u.get('rarity') in ('rare', 'elite', 'legendary') else 'elite'
+        new.append({'id': bid, 'gameId': u['id'], 'name': name, 'rarity': rarity, 'img': f'img/beasts/{bid}.webp',
+                    'maxBuff': 18 if rarity == 'legendary' else 12, 'skill': None, 'roles': [], 'suits': None,
+                    'tiers': {}, 'raw': {}, 'bestFor': [], 'needsReview': True})
+    for b in new:
+        print(f"new beast: {b['name']} ({b['rarity']}, game id {b['gameId']})")
+    if not new or not write:
+        return
+    from PIL import Image
+    for b in new:
+        try:
+            raw = get(f"{CDN}unit_icon_by_id/{b['gameId']}_2x.webp")
+            Image.open(io.BytesIO(raw)).convert('RGBA').resize((128, 128), Image.LANCZOS).save(ROOT / b['img'], 'WEBP', quality=84, method=6)
+        except Exception as e:
+            print(f"  no portrait for {b['name']}: {e}")
+    doc['beasts'] += new
+    path.write_text(json.dumps(doc, indent=1, ensure_ascii=False) + '\n')
+    print(f'added {len(new)} beasts. Research their skill and ratings, then remove needsReview.')
+
+
 if __name__ == '__main__':
     main()
+    sync_beasts(json.loads(get(CDN + 'unit.json')), '--write' in sys.argv)

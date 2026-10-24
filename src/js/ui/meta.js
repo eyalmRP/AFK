@@ -3,9 +3,9 @@
 
 import { esc, fmtDate, $, local } from '../util.js';
 import { data, TIERS, CATEGORIES, tierOf, tierScore, hero as getHero } from '../data.js';
-import { entry as bankEntry } from '../store.js';
+import { entry as bankEntry, bank } from '../store.js';
 import { ICON } from './icons.js';
-import { panel, heroTile, portrait, board, slotsFromList, artifactChip, artifactGlyph, tierPill, bindFolding, foldAll, isFolded, trendBadge, ownedBadge, gameFilterBar, handleGameFilter, artifactArt } from './common.js';
+import { panel, heroTile, portrait, board, slotsFromList, artifactChip, artifactGlyph, tierPill, bindFolding, foldAll, isFolded, trendBadge, ownedBadge, gameFilterBar, handleGameFilter, artifactArt, openDrawer, beastArt } from './common.js';
 import { openHeroDetail } from './heroDetail.js';
 
 // Short descriptions shown under each tier letter, in the style of the
@@ -62,6 +62,11 @@ export function refreshMeta() {
 
 function onClick(ev) {
   const t = ev.target;
+  const beastBtn = t.closest('[data-beast-detail]');
+  if (beastBtn) {
+    openBeastDetail(beastBtn.dataset.beastDetail);
+    return;
+  }
   const heroBtn = t.closest('[data-hero]');
   if (heroBtn && root.contains(heroBtn)) {
     openHeroDetail(heroBtn.dataset.hero);
@@ -101,6 +106,7 @@ function render() {
     ${summaryPanel()}
     ${panel({ id: 'meta-tiers', title: 'Hero tiers', sub: `${data.heroes.length} heroes`, body: '<div id="tiers-host"></div>' })}
     ${artifactsPanel()}
+    ${beastsPanel()}
     ${modesPanel()}
     ${combosPanel()}
     ${archetypesPanel()}
@@ -268,6 +274,78 @@ function artifactCard(a) {
       ${bis.length ? `<div class="row">${bis.slice(0, 6).map((h) => `<button type="button" class="hero-tile" style="width:auto;padding:2px" data-hero="${h.id}" title="${esc(h.name)}">${portrait(h, { size: 30 })}</button>`).join('')}</div>` : ''}
     </div>
   </div>`;
+}
+
+// ---- beasts ------------------------------------------------------------------------
+
+const BEAST_DESC = { 'S+': 'Best beasts', S: 'Strong', A: 'Good', B: 'Situational', C: 'Niche', D: 'Skip', '?': 'Not rated yet' };
+
+function beastTile(b) {
+  const owned = bank.beasts?.[b.id]?.owned;
+  return `<button class="tm-tile" type="button" data-beast-detail="${esc(b.id)}" title="${esc(b.name)} · ${esc(b.rarity)}" aria-label="${esc(b.name)}">
+    <img src="${esc(b.img)}" alt="" loading="lazy">${owned ? `<span class="owned-mark" title="You own this beast">${ICON.check}</span>` : ''}<span class="tm-name">${esc(b.name)}</span></button>`;
+}
+
+function beastsPanel() {
+  const list = data.beasts || [];
+  if (!list.length) return '';
+  const rank = (t) => TIERS.indexOf(t);
+  const groups = new Map();
+  for (const b of list) {
+    const best = [b.tiers?.pve, b.tiers?.pvp, b.tiers?.boss, b.tiers?.overall].filter(Boolean).sort((x, y) => rank(x) - rank(y))[0] || '?';
+    if (!groups.has(best)) groups.set(best, []);
+    groups.get(best).push(b);
+  }
+  const rows = [...TIERS, '?']
+    .filter((t) => groups.has(t))
+    .map((t) => {
+      const id = `beast-tier-${t}`;
+      const folded = isFolded(id, false);
+      const items = groups.get(t);
+      return `<div class="tier-row" data-tier="${t}" data-fold-id="${id}" data-folded="${folded}">
+        <button class="tier-label" type="button" data-fold-toggle aria-expanded="${!folded}"><span class="letter">${t === '?' ? '–' : t}</span><span class="desc">${BEAST_DESC[t]}</span><span class="cnt">${items.length}${ICON.chevron}</span></button>
+        <div class="tier-heroes">${items.map(beastTile).join('')}</div>
+        <div class="tier-folded" data-fold-toggle><span class="more">${items.map((b) => esc(b.name)).join(' · ')}</span></div>
+      </div>`;
+    })
+    .join('');
+  const sys = data.beastSystem;
+  const recs = (data.beastModes || [])
+    .map((r) => {
+      const b = data.beastById.get(r.beast);
+      if (!b) return '';
+      const m = data.modeById.get(r.mode);
+      return `<li>${beastArt(b.id, 22)} <strong>${esc(b.name)}</strong>${m ? ` in ${esc(m.name)}` : ''}${r.heroes?.length ? ` with ${r.heroes.map((h) => esc(getHero(h)?.name || h)).join(', ')}` : ''}${r.why ? ` <span class="muted">${esc(r.why)}</span>` : ''}</li>`;
+    })
+    .join('');
+  return panel({
+    id: 'meta-beasts',
+    title: 'Beasts',
+    sub: `${list.length} beasts`,
+    body: `${sys?.summary ? `<p class="prose">${esc(sys.summary)}</p>` : ''}
+      <div class="tier-table">${rows}</div>
+      ${recs ? `<div class="side"><div class="side-title">Community beast picks</div><ul class="list small">${recs}</ul></div>` : ''}
+      <p class="small muted">Each beast sits in the row of its best rating across PvE, PvP and bosses. Select a beast for its skill and buffs. ✓ marks beasts in your bank.</p>`,
+  });
+}
+
+function openBeastDetail(id) {
+  const b = data.beastById.get(id);
+  if (!b) return;
+  const e = bank.beasts?.[id];
+  const tiers = ['pve', 'pvp', 'boss'].map((c) => `<div class="cell"><span class="eyebrow">${c === 'boss' ? 'Bosses' : c.toUpperCase()}</span>${tierPill(b.tiers?.[c])}</div>`).join('');
+  const best = (b.bestFor || []).map((x) => esc(getHero(x)?.name || data.modeById.get(x)?.name || x)).join(', ');
+  openDrawer({
+    title: esc(b.name),
+    body: `<div style="display:flex;gap:14px;align-items:center">${beastArt(b.id, 88)}<div><span class="tag rarity-${esc(b.rarity)}">${esc(b.rarity)}</span><p class="small muted" style="margin-top:6px">Buffs go up to ${b.maxBuff}.</p></div></div>
+      <div class="tier-grid" style="grid-template-columns:repeat(3,minmax(0,1fr))">${tiers}</div>
+      ${b.skill ? `<div class="side"><div class="side-title">Skill</div><p class="prose">${esc(b.skill)}</p>${(b.roles || []).length ? `<div class="chips">${b.roles.map((r) => `<span class="tag">${esc(r)}</span>`).join('')}</div>` : ''}</div>` : '<p class="small muted">Skill not researched yet. The weekly update fills this in.</p>'}
+      ${b.suits ? `<div class="side"><div class="side-title">Suits</div><p class="prose">${esc(b.suits)}</p></div>` : ''}
+      ${best ? `<div class="side"><div class="side-title">Best for</div><p class="small">${best}</p></div>` : ''}
+      <div class="side"><div class="side-title">Your beast</div>${
+        e?.owned ? `<p class="num">Strength ${e.str ?? '–'} · Intelligence ${e.int ?? '–'} · Agility ${e.agi ?? '–'}</p>` : '<p class="small muted">Not in your bank. Add it in the Hero Bank tab.</p>'
+      }</div>`,
+  });
 }
 
 // ---- formations per mode --------------------------------------------------------

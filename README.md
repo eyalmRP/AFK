@@ -9,7 +9,7 @@ A weekly-updated meta tracker and team planner for **AFK Arena** (Lilith Games).
 | Tab | What it does |
 | --- | --- |
 | **Meta** | This week's summary, hero tier table (Overall / PvE / PvP / Bosses, filter by faction and class), artifacts by tier, formations for every game mode with **community consensus and AI analysis side by side**, best combinations (community vs AI), PvP archetypes, sources and known gaps. Every section and every tier row folds. |
-| **Hero Bank** | Your roster: find, sort, filter, select and batch edit, per-hero editor, card or table view (edit values inline), import/export JSON, and **upload screenshots** that Claude reads to fill in ascension, stars, level, signature item, furniture and engraving. "All heroes share the same level" is on by default, with one level box (the Resonating Crystal level). |
+| **Hero Bank** | Your Elder Tree levels, your beasts with their buff levels, and your roster: find, sort, filter, select and batch edit, per-hero editor, card or table view (edit values inline), import/export JSON, and **upload screenshots** that Claude reads to fill in ascension, stars, level, signature item, furniture and engraving. "All heroes share the same level" is on by default, with one level box (the Resonating Crystal level). |
 | **Formation Builder** | Pick a game mode and 1–7 formations. The rules engine builds teams from your heroes that never share a hero, with artifacts, coverage checks, reasons and the best next upgrade. "Ask Claude" gives Claude's own lineups next to the engine's. |
 | **Counter** | Enter the enemy formation by hand, from a screenshot, or from a common comp. You get a counter team from your heroes, plus a ranking of your best individual counter picks and Claude's take. |
 
@@ -29,6 +29,7 @@ Every Saturday a Claude routine follows [`WEEKLY_UPDATE.md`](WEEKLY_UPDATE.md):
 - `data/heroes.json`: 229 ascended-tier heroes in 8 factions, with faction, class, type, roles, release month, tiers per category with each source's raw grade, kit, synergies and counters.
 - `data/artifacts.json`: artifacts with PvE/PvP tiers, classes they suit, best-in-slot heroes and class restrictions.
 - `data/modes.json`: game modes with rules, mechanics and bosses; community teams (partial lineups and inferred positions are labelled); the AI teams with explanations; combos and PvP archetypes.
+- `data/beasts.json`: the 30 beasts, with rarity, buff caps, skill, ratings and community picks per mode.
 - `data/meta.json`: the weekly summary, meta shifts, must-build list, sources, known gaps, system limits and changelog.
 - `img/heroes/`: 128px portraits, taken from the [floofpire/cdn](https://github.com/floofpire/cdn) mirror of the game's CDN.
 

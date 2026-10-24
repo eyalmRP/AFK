@@ -4,11 +4,11 @@
 
 import { esc, $, toast } from '../util.js';
 import { data, hero as getHero, POSITIONS } from '../data.js';
-import { bank, ownedIds, saveFormation, deleteFormation, formations } from '../store.js';
-import { makeContext, buildTeams, scoreTeam, suggestArtifact, nextUpgrade } from '../engine.js';
+import { bank, ownedIds, ownedBeasts, saveFormation, deleteFormation, formations } from '../store.js';
+import { makeContext, buildTeams, scoreTeam, suggestArtifact, nextUpgrade, suggestBeast } from '../engine.js';
 import { aiState, initAi, claudeBuild, errorCopy } from '../ai.js';
 import { ICON } from './icons.js';
-import { board, panel, pickHero, artifactChip, bindFolding, portrait } from './common.js';
+import { board, panel, pickHero, artifactChip, bindFolding, portrait, beastLine, beastAllowed, beastArt } from './common.js';
 import { openHeroDetail } from './heroDetail.js';
 
 const GROUP_LABEL = { pve: 'Campaign & towers', boss: 'Bosses & realms', pvp: 'PvP', event: 'Events & other' };
@@ -155,18 +155,34 @@ function teamCard(t, i, ctx, { label = 'Team', saveable = true } = {}) {
     .join('');
   const syn = score.synergies.slice(0, 4).map((s) => `<li><b>${esc(getHero(s.a).name)} + ${esc(getHero(s.b).name)}</b><span>${esc(s.why || 'known synergy')}</span></li>`).join('');
   const up = ctx.entries ? nextUpgrade(ctx, Object.values(slots)) : null;
+  let beastHtml = '';
+  let beastId = null;
+  if (data.beasts?.length && beastAllowed(ctx.mode)) {
+    const mine = ui.pool === 'mine';
+    if (t.beast) {
+      beastId = t.beast;
+      beastHtml = beastLine({ id: t.beast, reasons: ["Claude's pick"] });
+    } else if (mine && !ownedBeasts().length) {
+      beastHtml = '<p class="small muted">Mark your beasts in the Hero Bank to get a beast pick for this team.</p>';
+    } else {
+      const pick = t.beastPick !== undefined ? t.beastPick : suggestBeast(ctx, Object.values(slots), { beasts: data.beasts, owned: mine ? bank.beasts : null, recommendations: data.beastModes });
+      beastId = pick?.id || null;
+      beastHtml = pick ? beastLine(pick, { owned: mine }) : '<p class="small muted">No spare beast for this team.</p>';
+    }
+  }
   const swaps = t.seed?.swaps?.length ? t.seed.swaps.map((s) => `${esc(getHero(s.from)?.name || s.from)} → ${esc(getHero(s.to)?.name || s.to)}`).join(', ') : '';
   const title = t.name || score.template?.name || '';
   return `<article class="result-card">
     <header><h4>${esc(label)} ${i + 1}${title ? `: ${esc(title)}` : ''}</h4><span class="score" title="Rules-engine score">${score.total.toFixed(1)} pts</span></header>
     ${board({ slots, artifacts: arts, showBank: ui.pool === 'mine' })}
+    ${beastHtml}
     <div class="chips">${coverageTags(score)}</div>
     ${score.template ? `<p class="small"><span class="tag accent">Community template</span> matches "${esc(score.template.name)}" (${score.template.overlap}/${score.template.size} heroes)${swaps ? `, swapping ${swaps}` : ''}</p>` : ''}
     ${t.why ? `<p class="small prose">${esc(t.why)}</p>` : ''}
     ${t.risks ? `<p class="small muted">Risk: ${esc(t.risks)}</p>` : ''}
     <details><summary class="small">Why these heroes</summary><ul class="reasons" style="margin-top:6px">${members}${syn}</ul></details>
     ${up ? `<p class="small"><strong>Best next upgrade:</strong> ${esc(getHero(up.id).name)} ${esc(up.label)}</p>` : ''}
-    ${saveable ? `<div class="toolbar"><button class="btn small" type="button" data-save='${esc(JSON.stringify({ slots, artifacts: arts, name: title || `${mode()?.name || 'Team'} ${i + 1}` }))}'>${ICON.save} Save formation</button></div>` : ''}
+    ${saveable ? `<div class="toolbar"><button class="btn small" type="button" data-save='${esc(JSON.stringify({ slots, artifacts: arts, beast: beastId, name: title || `${mode()?.name || 'Team'} ${i + 1}` }))}'>${ICON.save} Save formation</button></div>` : ''}
   </article>`;
 }
 
@@ -181,8 +197,20 @@ function renderEngine() {
   const short = r.teams.length < ui.count ? `<p class="callout small">Only ${r.teams.length} formation${r.teams.length > 1 ? 's' : ''} could be filled from ${poolIds().length} heroes.</p>` : '';
   const partial = r.teams.filter((t) => t.ids.length < 5).length;
   host.innerHTML = `${short}${partial ? '<p class="callout small">Some formations have fewer than 5 heroes. Add more heroes to your bank to fill them.</p>' : ''}
-    <div class="results" style="grid-template-columns:minmax(0,1fr)">${r.teams.map((t, i) => teamCard(t, i, r.ctx)).join('')}</div>
+    <div class="results" style="grid-template-columns:minmax(0,1fr)">${withBeasts(r.teams, r.ctx).map((t, i) => teamCard(t, i, r.ctx)).join('')}</div>
     ${r.leftover?.length && ui.pool === 'mine' ? `<p class="small muted">On the bench: ${r.leftover.slice(0, 24).map((id) => esc(getHero(id)?.name)).join(', ')}${r.leftover.length > 24 ? '…' : ''}</p>` : ''}`;
+}
+
+// Give each team its own beast in multi-team modes, strongest team first.
+function withBeasts(teams, ctx) {
+  if (!data.beasts?.length || !beastAllowed(ctx.mode)) return teams;
+  const used = new Set();
+  const mine = ui.pool === 'mine';
+  return teams.map((t) => {
+    const pick = suggestBeast(ctx, t.ids, { beasts: data.beasts, owned: mine ? bank.beasts : null, recommendations: data.beastModes, exclude: teams.length > 1 ? used : null });
+    if (pick) used.add(pick.id);
+    return { ...t, beastPick: pick };
+  });
 }
 
 function renderClaude() {
@@ -226,6 +254,7 @@ function renderSaved() {
           .map(
             (f) => `<article class="result-card"><header><h4>${esc(f.name)}</h4><span class="score">${esc(data.modeById.get(f.mode)?.name || f.mode || '')}</span></header>
           ${board({ slots: f.slots, artifacts: f.artifacts || {}, showBank: true, size: 48 })}
+          ${f.beast && data.beastById.get(f.beast) ? `<p class="small">${beastArt(f.beast, 22)} ${esc(data.beastById.get(f.beast).name)}</p>` : ''}
           <div class="toolbar"><span class="small muted">${new Date(f.saved).toLocaleDateString()}</span><span class="spacer"></span><button class="btn small ghost" type="button" data-del="${esc(f.id)}">${ICON.trash} Delete</button></div></article>`
           )
           .join('')}</div>`
@@ -248,6 +277,7 @@ async function askClaude() {
       engineTeams: (ui.result?.teams || []).map((t) => ({ layout: t.score.layout })),
       signal: ui.ctl.signal,
       elderTree: ui.pool === 'mine' ? bank.settings.elderTree : null,
+      beasts: ui.pool === 'mine' ? bank.beasts : null,
     });
     ui.claude = out.teams;
     ui.claudeNotes = out.notes;

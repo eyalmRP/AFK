@@ -3,11 +3,11 @@
 
 import { esc, $, toast } from '../util.js';
 import { data, hero as getHero, POSITIONS, FACTIONS, factionAdvantage } from '../data.js';
-import { bank, ownedIds } from '../store.js';
-import { makeContext, buildTeam, heroValue, suggestArtifact, scoreTeam } from '../engine.js';
+import { bank, ownedIds, ownedBeasts } from '../store.js';
+import { makeContext, buildTeam, heroValue, suggestArtifact, scoreTeam, suggestBeast } from '../engine.js';
 import { aiState, initAi, claudeCounter, readEnemyScreenshot, errorCopy } from '../ai.js';
 import { ICON } from './icons.js';
-import { board, pickHero, portrait, slotsFromList } from './common.js';
+import { board, pickHero, portrait, slotsFromList, beastLine, beastAllowed } from './common.js';
 import { openHeroDetail } from './heroDetail.js';
 
 const ui = {
@@ -170,6 +170,7 @@ function renderResult(ctx) {
     <article class="result-card">
       <header><h4>${esc(s.template?.name || 'Counter formation')}</h4><span class="score">${s.total.toFixed(1)} pts</span></header>
       ${board({ slots: s.layout, artifacts: arts, showBank: ui.pool === 'mine' })}
+      ${beastFor(ctx, Object.values(s.layout))}
       <ul class="reasons">${reasons}</ul>
       ${s.synergies.length ? `<p class="small"><span class="muted">Synergy:</span> ${s.synergies.map((x) => `${esc(getHero(x.a).name)} + ${esc(getHero(x.b).name)}`).join(', ')}</p>` : ''}
     </article>`;
@@ -187,6 +188,13 @@ function renderResult(ctx) {
       <p class="small">${esc(v.reasons.slice(0, 4).join(' · '))}</p></span></button>`
       )
       .join('')}</div>`;
+}
+
+function beastFor(ctx, ids) {
+  if (!data.beasts?.length || !beastAllowed(ctx.mode)) return '';
+  const mine = ui.pool === 'mine';
+  if (mine && !ownedBeasts().length) return '<p class="small muted">Mark your beasts in the Hero Bank to get a beast pick.</p>';
+  return beastLine(suggestBeast(ctx, ids, { beasts: data.beasts, owned: mine ? bank.beasts : null, recommendations: data.beastModes }), { owned: mine });
 }
 
 function renderClaude() {
@@ -209,6 +217,7 @@ function renderClaude() {
           const s = scoreTeam(ctx, Object.values(t.slots));
           return `<article class="result-card"><header><h4>${i ? 'Alternative' : 'Primary'}: ${esc(t.name)}</h4><span class="score">${s.total.toFixed(1)} pts</span></header>
             ${board({ slots: t.slots, artifacts: t.artifacts || {}, showBank: ui.pool === 'mine' })}
+            ${t.beast ? beastLine({ id: t.beast, reasons: ["Claude's pick"] }) : ''}
             ${t.why ? `<p class="small prose">${esc(t.why)}</p>` : ''}${t.risks ? `<p class="small muted">Risk: ${esc(t.risks)}</p>` : ''}</article>`;
         })
         .join('')}${ui.claudeNotes ? `<p class="callout small">${esc(ui.claudeNotes)}</p>` : ''}
@@ -236,6 +245,7 @@ async function askClaude() {
       engineTeam: ui.engineTeam ? { layout: ui.engineTeam.score.layout } : null,
       signal: ui.ctl.signal,
       elderTree: ui.pool === 'mine' ? bank.settings.elderTree : null,
+      beasts: ui.pool === 'mine' ? bank.beasts : null,
     });
     ui.claude = out.teams;
     ui.claudeNotes = out.notes;
