@@ -247,13 +247,14 @@
    "tiers": {
     "pve": "A",
     "pvp": "A",
-    "boss": "A"
+    "boss": "C"
    },
    "raw": {
     "afkglobal-2026-10-22": "A",
     "allclash": "S+ ('probably the beast that has the highest impact right now')",
     "theria-1.154": "S",
-    "afkguide-1.194": "prose: useful in all modes, shines at Lv12"
+    "afkguide-1.194": "prose: useful in all modes, shines at Lv12",
+    "redditusage": "C (usage 32/100; Sept 2026)"
    },
    "bestFor": [
     "saurus"
@@ -355,13 +356,14 @@
    "tiers": {
     "pve": "S+",
     "pvp": "S+",
-    "boss": "S+"
+    "boss": "A"
    },
    "raw": {
     "afkglobal-2026-10-22": "S+",
     "allclash": "S+",
     "theria-1.154": "S",
-    "afkguide-1.194": "prose: very strong and flexible"
+    "afkguide-1.194": "prose: very strong and flexible",
+    "redditusage": "A (usage 88/100; Sept 2026)"
    },
    "bestFor": [
     "campaign",
@@ -478,13 +480,14 @@
    "tiers": {
     "pve": "S+",
     "pvp": "S+",
-    "boss": "S+"
+    "boss": "C"
    },
    "raw": {
     "afkglobal-2026-10-22": "S+",
     "allclash": "S+",
     "theria-1.154": "S",
-    "afkguide-1.194": "prose: strongest beast in the game"
+    "afkguide-1.194": "prose: strongest beast in the game",
+    "redditusage": "C (usage 32/100; Sept 2026)"
    },
    "bestFor": [
     "campaign",
@@ -544,13 +547,14 @@
    "tiers": {
     "pve": "A",
     "pvp": "A",
-    "boss": "A"
+    "boss": "D"
    },
    "raw": {
     "afkglobal-2026-10-22": "A+",
     "allclash": "S+",
     "theria-1.154": "S",
-    "afkguide-1.194": "prose: very useful, strong at debuffing"
+    "afkguide-1.194": "prose: very useful, strong at debuffing",
+    "redditusage": "F (usage 4/100; Sept 2026)"
    },
    "bestFor": [
     "campaign",
@@ -600,12 +604,13 @@
    "tiers": {
     "pve": "A",
     "pvp": "A",
-    "boss": "A"
+    "boss": "S"
    },
    "raw": {
     "afkglobal-2026-10-22": "A",
     "theria-1.154": "A",
-    "afkguide-1.194": "prose: very strong (crit buffs)"
+    "afkguide-1.194": "prose: very strong (crit buffs)",
+    "redditusage": "S (usage 92/100; Sept 2026)"
    },
    "bestFor": [
     "campaign",
@@ -631,12 +636,13 @@
    "tiers": {
     "pve": "S",
     "pvp": "S",
-    "boss": "S"
+    "boss": "D"
    },
    "raw": {
     "afkglobal-2026-10-22": "S",
     "allclash": "S+",
-    "afkguide-1.194": "prose: one of the strongest for PvP and PvE (needs Lv12)"
+    "afkguide-1.194": "prose: one of the strongest for PvP and PvE (needs Lv12)",
+    "redditusage": "D (usage 28/100; Sept 2026)"
    },
    "bestFor": [
     "campaign",
@@ -665,12 +671,13 @@
    "tiers": {
     "pve": "S",
     "pvp": "S",
-    "boss": "S"
+    "boss": "D"
    },
    "raw": {
     "afkglobal-2026-10-22": "S",
     "allclash": "S+",
-    "afkguide-1.194": "prose: great carry buffer and debuffer"
+    "afkguide-1.194": "prose: great carry buffer and debuffer",
+    "redditusage": "F (usage 8/100; Sept 2026)"
    },
    "bestFor": [
     "campaign",
@@ -695,11 +702,12 @@
    "tiers": {
     "pve": "A",
     "pvp": "A",
-    "boss": "A"
+    "boss": "D"
    },
    "raw": {
     "afkglobal-2026-10-22": "A",
-    "afkguide-1.194": "prose: flexible defensive beast, Lv18 fatal-damage survival"
+    "afkguide-1.194": "prose: flexible defensive beast, Lv18 fatal-damage survival",
+    "redditusage": "F (usage 4/100; Sept 2026)"
    },
    "bestFor": []
   },
@@ -726,7 +734,8 @@
    "raw": {
     "afkglobal-2026-10-22": "A+",
     "allclash": "B+",
-    "afkguide-1.194": "prose: best fatal-damage prevention"
+    "afkguide-1.194": "prose: best fatal-damage prevention",
+    "redditusage": "A (usage 80/100; Sept 2026)"
    },
    "bestFor": [
     "campaign",
@@ -782,11 +791,12 @@
    "tiers": {
     "pve": "S",
     "pvp": "S",
-    "boss": "S"
+    "boss": "A"
    },
    "raw": {
     "afkglobal-2026-10-22": "S",
-    "afkguide-1.194": "prose: energy to allies, drains enemies, Lv18 fatal-damage survival"
+    "afkguide-1.194": "prose: energy to allies, drains enemies, Lv18 fatal-damage survival",
+    "redditusage": "A (usage 80/100; Sept 2026)"
    },
    "bestFor": [
     "campaign",
@@ -837,7 +847,8 @@
    },
    "raw": {
     "afkglobal-2026-10-22": "S",
-    "afkguide-1.194": "prose: best fabled beast so far (spelled 'Nightmare Pegasus' in one place)"
+    "afkguide-1.194": "prose: best fabled beast so far (spelled 'Nightmare Pegasus' in one place)",
+    "redditusage": "S (usage 92/100, at Lv27; Sept 2026)"
    },
    "bestFor": []
   },
@@ -862,7 +873,8 @@
    },
    "raw": {
     "afkglobal-2026-10-22": "A",
-    "afkguide-1.194": "prose: strong but investment-heavy, niche for F2P"
+    "afkguide-1.194": "prose: strong but investment-heavy, niche for F2P",
+    "redditusage": "A (usage 80/100, at Lv27; Sept 2026)"
    },
    "bestFor": []
   },
@@ -885,11 +897,12 @@
    "tiers": {
     "pve": "A",
     "pvp": "A",
-    "boss": "A"
+    "boss": "S"
    },
    "raw": {
     "afkglobal-2026-10-22": "A",
-    "afkguide-1.194": "prose: very strong, many buffs and debuffs"
+    "afkguide-1.194": "prose: very strong, many buffs and debuffs",
+    "redditusage": "S (usage 92/100, at Lv21; Sept 2026)"
    },
    "bestFor": []
   },
@@ -906,9 +919,12 @@
     "buff"
    ],
    "suits": "Unknown. It is the newest fabled beast (1.201, 2026-08-25) and has no guide text yet. It is not in AFK Calc's pets.json, which ends at 6029.",
-   "tiers": {},
+   "tiers": {
+    "boss": "S"
+   },
    "raw": {
-    "afkglobal-2026-10-22": "unranked ('NEW' group)"
+    "afkglobal-2026-10-22": "unranked ('NEW' group)",
+    "redditusage": "S (usage 92/100, at Lv27; Sept 2026)"
    },
    "bestFor": []
   }
@@ -1184,6 +1200,12 @@
    "name": "Theria Games - Saurus guide (beast note)",
    "url": "https://theriagames.com/guide/",
    "date": "undated; only a search extract was seen: 'Slumber Seal, Winged Lion, or Flutterplume Owl synergize best with his sustain-focused kit'"
+  },
+  {
+   "id": "redditusage",
+   "name": "r/afkarena - Usage Tierlist & Hero Investments September 2026 (ManuelAlcayaga), pets column",
+   "url": "https://www.reddit.com/r/afkarena/comments/1wuuqbq/usage_tierlist_hero_investments_september_2026/",
+   "date": "2026-10-01 (2,000 players over 2 months; usage, not strength)"
   }
  ],
  "bestOverall": {
@@ -1224,6 +1246,7 @@
   "Trickery Chest energy: the skill text says Doomed Treasure gives the enemy 200 Energy before haunting it, while the patch notes and afk.guide say it drains enemy energy. The likely reading is that the haunt later drains it or disables the Ultimate, but this was not confirmed.",
   "Theria D-tier placements (Dreary Ball, Tufty Ears, Polar Beast) and AllClash grades for Pandy Dumpty, Pearlcrest Ibis and Trickery Chest were not seen, so they are left out of 'raw'.",
   "Ranked order inside afk.guide's campaign beast lists comes from '>' separators in jumbled extracts.",
-  "Unlock stages differ between sources: beasts unlock at 10-40 or Chapter 11, and capture at 14-40 or Chapter 15."
+  "Unlock stages differ between sources: beasts unlock at 10-40 or Chapter 11, and capture at 14-40 or Chapter 15.",
+  "The r/afkarena usage tier list (Sept 2026, 2,000 players) grades the beasts people actually field, weighted by mode: Nightmare Corridor +9, Cursed Realm +7, Treasure Scramble +7, Twisted Realm and Temporal Rift +1. Its grades set the Bosses rating: Pandy Dumpty, Blazefang, Nightfall Pegasus and Twinlum Spirit at S; Flutterplume Owl, Treatspector, Trickery Chest and Count Snickerfang at A; Winged Lion and Slumber Seal C; Ice Crown D; Aureus, Pearlcrest Ibis and Shroom Spooder at the bottom. Its author notes usage is not strength (Slumber Seal is 'arguably the best non-awakened pet' but is not used in Nightmare Corridor) and that Fox Fatale was dropped from the list. Beasts it does not list keep their other ratings."
  ]
 }

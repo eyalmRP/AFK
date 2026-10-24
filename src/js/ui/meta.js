@@ -24,6 +24,7 @@ const TIER_DESC = {
 
 const ui = {
   category: 'overall',
+  beastCat: 'pvp',
   showNames: !!local.get('afk-codex-show-names', false),
   factions: new Set(),
   classes: new Set(),
@@ -71,6 +72,13 @@ function onClick(ev) {
   const heroBtn = t.closest('[data-hero]');
   if (heroBtn && root.contains(heroBtn)) {
     openHeroDetail(heroBtn.dataset.hero);
+    return;
+  }
+  const bc = t.closest('[data-beast-cat]');
+  if (bc) {
+    ui.beastCat = bc.dataset.beastCat;
+    for (const b of root.querySelectorAll('[data-beast-cat]')) b.setAttribute('aria-pressed', String(b.dataset.beastCat === ui.beastCat));
+    $('#beast-table', root).innerHTML = beastRows(ui.beastCat);
     return;
   }
   const cat = t.closest('[data-cat]');
@@ -223,17 +231,21 @@ function beastTile(b) {
     <img src="${esc(b.img)}" alt="" loading="lazy">${owned ? `<span class="owned-mark" title="You own this beast">${ICON.check}</span>` : ''}<span class="tm-name">${esc(b.name)}</span></button>`;
 }
 
-function beastsPanel() {
-  const list = data.beasts || [];
-  if (!list.length) return '';
-  const rank = (t) => TIERS.indexOf(t);
+const BEAST_CATS = [
+  { id: 'pvp', label: 'PvP' },
+  { id: 'pve', label: 'PvE' },
+  { id: 'boss', label: 'Bosses' },
+];
+
+// Beast tier rows for one category; beasts without a rating there show as not rated.
+function beastRows(cat) {
   const groups = new Map();
-  for (const b of list) {
-    const best = [b.tiers?.pve, b.tiers?.pvp, b.tiers?.boss, b.tiers?.overall].filter(Boolean).sort((x, y) => rank(x) - rank(y))[0] || '?';
-    if (!groups.has(best)) groups.set(best, []);
-    groups.get(best).push(b);
+  for (const b of data.beasts || []) {
+    const t = b.tiers?.[cat] || b.tiers?.overall || '?';
+    if (!groups.has(t)) groups.set(t, []);
+    groups.get(t).push(b);
   }
-  const rows = [...TIERS, '?']
+  return [...TIERS, '?']
     .filter((t) => groups.has(t))
     .map((t) => {
       const id = `beast-tier-${t}`;
@@ -242,10 +254,17 @@ function beastsPanel() {
       return `<div class="tier-row" data-tier="${t}" data-fold-id="${id}" data-folded="${folded}">
         <button class="tier-label" type="button" data-fold-toggle aria-expanded="${!folded}"><span class="letter">${t === '?' ? '–' : t}</span><span class="desc">${BEAST_DESC[t]}</span><span class="cnt">${items.length}${ICON.chevron}</span></button>
         <div class="tier-heroes">${items.map(beastTile).join('')}</div>
-        <div class="tier-folded" data-fold-toggle>${items.map((b) => `<span class="tm-tile" aria-hidden="true" title="${esc(b.name)}"><img src="${esc(b.img)}" alt=""></span>`).join('')}<span class="more">${items.length} beast${items.length === 1 ? '' : 's'} folded</span></div>
+        <div class="tier-folded" data-fold-toggle>${items.map((b) => `<span class="tm-tile" aria-hidden="true" title="${esc(b.name)}"><img src="${esc(b.img)}" alt=""></span>`).join('')}<span class="more">${items.length} beast${items.length === 1 ? '' : 's'}</span></div>
       </div>`;
     })
     .join('');
+}
+
+function beastsPanel() {
+  const list = data.beasts || [];
+  if (!list.length) return '';
+  const seg = BEAST_CATS.map((c) => `<button type="button" data-beast-cat="${c.id}" aria-pressed="${ui.beastCat === c.id}">${c.label}</button>`).join('');
+  const rows = `<div class="toolbar"><div class="seg" role="group" aria-label="Beast rating category">${seg}</div></div><div class="tier-table" id="beast-table">${beastRows(ui.beastCat)}</div>`;
   const sys = data.beastSystem;
   const recs = (data.beastModes || [])
     .map((r) => {
@@ -260,9 +279,9 @@ function beastsPanel() {
     title: 'Beasts',
     sub: `${list.length} beasts`,
     body: `${sys?.summary ? `<p class="prose">${esc(sys.summary)}</p>` : ''}
-      <div class="tier-table">${rows}</div>
+      ${rows}
       ${recs ? `<div class="side"><div class="side-title">Community beast picks</div><ul class="list small">${recs}</ul></div>` : ''}
-      <p class="small muted">Each beast sits in the row of its best rating across PvE, PvP and bosses. Select a beast for its skill and buffs. ✓ marks beasts in your bank.</p>`,
+      <p class="small muted">PvE and PvP follow the beast tier lists; Bosses follow what players field in Nightmare Corridor and Cursed Realm (r/afkarena usage list, Sept 2026). Select a beast for its skill and buffs. ✓ marks beasts in your bank.</p>`,
   });
 }
 
