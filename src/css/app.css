@@ -848,7 +848,6 @@ input.switch.small:checked::before { transform: translateX(14px); }
 .row-lvl .cr { font-size: 0.72rem; margin-top: 2px; }
 .bank-big .cr { font-size: 0.82rem; color: var(--ink-2); }
 /* zoom steps */
-.z1 .fr-lvl .lv-l { display: none; }
 .z1 .bank-tile { gap: 9px; }
 .z1 .bank-tile .nm { font-size: 0.66rem; }
 .z1 .own-add .ow-l { display: none; }
