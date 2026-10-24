@@ -417,12 +417,12 @@ function heroArt(h) {
   return h.img ? `<img src="${esc(h.img)}" alt="" loading="lazy" draggable="false" data-fallback="${ini}">` : `<span class="initials">${ini}</span>`;
 }
 
-// Top-right corner: the selection mark while batch selecting, otherwise
-// a check on owned heroes or a + button that adds the hero.
-function cornerBadge(h, owned, { ownedMark = false } = {}) {
+// The selection mark while batch selecting; otherwise an "Own" button on
+// heroes not in the bank yet. Owned heroes need no mark: they show a level.
+function cornerBadge(h, owned) {
   if (ui.selectMode) return `<span class="pick" aria-hidden="true">${ui.selected.has(h.id) ? ICON.check : ''}</span>`;
-  if (!owned) return `<button class="own-plus" type="button" data-own-hero="${h.id}" aria-label="I own ${esc(h.name)}" title="I own this hero">+</button>`;
-  return ownedMark ? `<span class="own-mark" aria-hidden="true">${ICON.check}</span>` : '';
+  if (!owned) return `<button class="own-add" type="button" data-own-hero="${h.id}" aria-label="Add ${esc(h.name)} to my bank" title="I own this hero">+<span class="ow-l"> Own</span></button>`;
+  return '';
 }
 
 function lvlBadge(h, e, cls, { prefix = false } = {}) {
@@ -440,31 +440,40 @@ function cardAttrs(h, e, cls) {
   return `class="${cls}" role="button" tabindex="0" data-card="${h.id}" aria-selected="${ui.selected.has(h.id)}" data-owned="${!!e?.owned}" title="${esc(cardTitle(h, e))}"`;
 }
 
-function tile(h) {
-  const e = bank.heroes[h.id];
+// The hero as the game draws it: ascension frame, the faction emblem with its
+// signature item and furniture ornaments top-left, "Lvl" top-right, stars on
+// the bottom edge. Used by every card zoom.
+function heroFrame(h, e) {
   const owned = !!e?.owned;
   const st = owned && e.asc === 'Ascended' ? starTier(e.stars, e.engrave) : null;
   const stars = st ? starRow(e.stars, { title: false, engrave: e.engrave }) : '';
-  // Laid out like the in-game hero icon: the faction emblem with its signature
-  // item and furniture ornaments top-left, "Lvl" top-right, stars on the bottom edge.
-  return `<div ${cardAttrs(h, e, 'bank-tile')}>
-    <span class="fr" data-asc="${owned ? esc(e.asc) : ''}"><span class="fr-art">${heroArt(h)}</span>${owned ? plusCorners(e.asc) : ''}
+  return `<span class="fr" data-asc="${owned ? esc(e.asc) : ''}"><span class="fr-art">${heroArt(h)}</span>${owned ? plusCorners(e.asc) : ''}
       ${emblem(h, e, { cls: 'fr-fac' })}
       ${stars ? `<span class="fr-band">${stars}</span>` : ''}${owned ? lvlBadge(h, e, 'fr-lvl', { prefix: true }) : ''}
-      ${cornerBadge(h, owned)}</span>
-    <span class="nm">${esc(h.name)}</span>
-  </div>`;
+      ${cornerBadge(h, owned)}</span>`;
+}
+
+function tile(h) {
+  const e = bank.heroes[h.id];
+  return `<div ${cardAttrs(h, e, 'bank-tile')}>${heroFrame(h, e)}<span class="nm">${esc(h.name)}</span></div>`;
+}
+
+function upChips(e) {
+  const chip = (label, f) => {
+    const t = f === 'gear' ? (unset(e.gear) ? '–' : 'T' + e.gear) : upgradeText(e, f);
+    return `<span class="up${t === '–' ? ' unset' : t === 'n/a' ? ' na' : ''}"${t === 'n/a' ? ' title="Not unlocked at this ascension"' : e.est?.includes(f) ? ' title="Read from the card icon: a minimum"' : ''}>${label}<b>${t}</b></span>`;
+  };
+  return `<span class="row-ups">${chip('SI', 'si')}${chip('F', 'furniture')}${chip('E', 'engrave')}${chip('Gear', 'gear')}</span>`;
 }
 
 function bigCard(h) {
   const e = bank.heroes[h.id];
   const owned = !!e?.owned;
-  return `<div ${cardAttrs(h, e, 'bank-big')} data-asc="${owned ? esc(e.asc) : ''}">
-    <span class="big-art">${heroArt(h)}${cornerBadge(h, owned, { ownedMark: true })}</span>
+  return `<div ${cardAttrs(h, e, 'bank-big')}>${heroFrame(h, e)}
     <span class="big-body">
       <span class="nm">${esc(h.name)}</span>
-      <span class="big-icons">${factionIcon(h.faction)}${classIcon(h.class)}</span>
-      <span class="big-line">${owned ? `Lv ${lvlBadge(h, e, 'big-lvl')} · ${ascLine(e, 13)}` : '<span class="muted">Not owned</span>'}</span>
+      <span class="big-meta">${factionIcon(h.faction)}${classIcon(h.class)}${owned ? ascText(e.asc) : '<span class="muted">Not owned</span>'}</span>
+      ${owned ? upChips(e) : ''}
     </span>
   </div>`;
 }
@@ -472,10 +481,6 @@ function bigCard(h) {
 function row(h) {
   const e = bank.heroes[h.id];
   const owned = !!e?.owned;
-  const chip = (label, f) => {
-    const t = f === 'gear' ? (unset(e.gear) ? '–' : 'T' + e.gear) : upgradeText(e, f);
-    return `<span class="up${t === '–' ? ' unset' : t === 'n/a' ? ' na' : ''}"${t === 'n/a' ? ' title="Not unlocked at this ascension"' : e.est?.includes(f) ? ' title="Read from the card icon: a minimum"' : ''}>${label}<b>${t}</b></span>`;
-  };
   const right = owned
     ? `<span class="row-lvl"><small>Lv</small>${lvlBadge(h, e, '')}</span>`
     : ui.selectMode
@@ -488,7 +493,7 @@ function row(h) {
       ${
         owned
           ? `<span class="row-line">${ascLine(e, 14)}</span>
-      <span class="row-ups">${chip('SI', 'si')}${chip('F', 'furniture')}${chip('E', 'engrave')}${chip('Gear', 'gear')}</span>`
+      ${upChips(e)}`
           : '<span class="row-line muted">Not owned</span>'
       }
     </span>
@@ -512,7 +517,7 @@ function tableView(list) {
       return `<tr aria-selected="${sel}">
         <td><input type="checkbox" data-sel="${h.id}" ${sel ? 'checked' : ''} aria-label="Select ${esc(h.name)}"></td>
         <td><span class="hero-cell">${portrait(h, { size: 34, unowned: !owned })}<button class="btn ghost small" type="button" data-detail="${h.id}">${esc(h.name)}</button></span></td>
-        <td><input type="checkbox" data-cell="${h.id}" data-field="owned" ${owned ? 'checked' : ''} aria-label="Owned"></td>
+        <td><input type="checkbox" class="switch small" role="switch" data-cell="${h.id}" data-field="owned" ${owned ? 'checked' : ''} aria-label="I own ${esc(h.name)}"></td>
         <td><select class="select asc-select" data-asc="${owned ? esc(e.asc) : ''}" data-cell="${h.id}" data-field="asc" ${dis ? 'disabled' : ''} aria-label="Ascension">${ASCENSIONS.map((a) => `<option ${e.asc === a ? 'selected' : ''}>${a}</option>`).join('')}</select></td>
         <td><span class="star-cell"><select class="select" data-cell="${h.id}" data-field="stars" ${ascended ? '' : 'disabled'} aria-label="Stars">${starOptions(e.stars)}</select>${ascended ? starRow(e.stars, { size: 12, engrave: e.engrave }) : ''}</span></td>
         <td>${shared && e.crystal !== false ? `<span class="num muted" title="Shared level">${owned ? bank.settings.crystalLevel : '–'}</span>` : numCell(h.id, 'level', e.level, LIMITS.level, dis)}</td>
@@ -856,7 +861,7 @@ export function openEditor(id) {
   const body = `
     <div style="display:flex;gap:14px;align-items:center">${portrait(h, { size: 72, showBank: true })}
       <div><p class="muted">${esc(h.faction)} ${esc(h.class)}</p><button class="btn small" type="button" data-detail-open>Hero details and ratings</button></div></div>
-    <label class="check"><input type="checkbox" id="ed-owned" ${cur.owned ? 'checked' : ''}> I own this hero</label>
+    <label class="own-toggle"><input type="checkbox" class="switch" role="switch" id="ed-owned" ${cur.owned ? 'checked' : ''}><strong>In my hero bank</strong><span class="small muted" id="ed-owned-note">${cur.owned ? 'Owned' : 'Not owned'}</span></label>
     <div class="edit-grid">
       <label class="field"><span>Ascension</span><select class="select asc-select" id="ed-asc" data-asc="${esc(cur.asc)}">${ASCENSIONS.map((a) => `<option ${cur.asc === a ? 'selected' : ''}>${a}</option>`).join('')}</select></label>
       <label class="field"><span>Stars (Ascended)</span><select class="select" id="ed-stars" ${cur.asc === 'Ascended' ? '' : 'disabled'}>${starOptions(cur.stars)}</select><span class="star-prev" id="ed-star-row">${cur.asc === 'Ascended' ? starRow(cur.stars, { size: 16, engrave: cur.engrave }) : ''}</span></label>
@@ -892,6 +897,7 @@ export function openEditor(id) {
       $(`[data-lock="${f}"]`, d).hidden = open;
     }
   };
+  $('#ed-owned', d).addEventListener('change', (ev) => ($('#ed-owned-note', d).textContent = ev.target.checked ? 'Owned' : 'Not owned'));
   $('#ed-asc', d).addEventListener('change', showStars);
   $('#ed-stars', d).addEventListener('change', showStars);
   for (const f of ['si', 'furniture', 'engrave']) {
