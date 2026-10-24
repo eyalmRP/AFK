@@ -122,7 +122,7 @@ Reply with only JSON in this shape:
 export async function readEnemyScreenshot(file, { signal } = {}) {
   const sample = await initAi();
   if (!sample) throw { code: 'not_granted' };
-  const prompt = `This is a screenshot from AFK Arena (not AFK Journey) showing an enemy formation (arena, legends championship, or a battle screen). AFK Arena formations have 2 front slots (F1 left, F2 right) and 3 back slots (B1 left, B2 middle, B3 right).
+  const prompt = `This is a screenshot from AFK Arena (not AFK Journey) showing an enemy formation (arena, legends championship, or a battle screen). AFK Arena formations have 2 front slots and 3 back slots. On a battle screen the enemy stands on the right: its front line (2 heroes) is the column nearer the middle and its back line (3) the far column; number each line top to bottom (F1 top, F2 bottom; B1 top, B2 middle, B3 bottom). On a lineup panel with a row of 2 above a row of 3, the 2 are the front line (F1, F2 left to right) and the 3 the back line (B1, B2, B3 left to right).
 Identify the enemy heroes from this roster (id|name|faction|class):
 ${rosterLines()}
 

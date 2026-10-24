@@ -241,11 +241,14 @@ export function beastLine(pick, { owned = true } = {}) {
 
 // ---- formation board (2 front / 3 back) -------------------------------------
 
-// A formation: front row of two, back row of three, with the beast in the
-// corner. `build` draws every hero as an assumed copy at `level` (enemy
-// formations); `beastEdit` turns the beast corner into a button
-// (data-act="beast") showing `beastLevel`.
-export function board({ slots = {}, artifacts = {}, showBank = false, size = 60, editable = false, cls = '', emptyLabel = '+', beast = null, build = null, level = null, beastEdit = false, beastLevel = null } = {}) {
+// A formation as the game lays it out: the back line of three and the front
+// line of two side by side, front toward the enemy. The player's teams face
+// right (back left, front right); `mirror` faces left, for the enemy, with the
+// beast in the outer top corner. Each line runs top to bottom (F1, F2; B1-B3).
+// `build` draws every hero as an assumed copy at `level` (enemy formations);
+// `beastEdit` turns the beast corner into a button (data-act="beast") showing
+// `beastLevel`.
+export function board({ slots = {}, artifacts = {}, showBank = false, size = 60, editable = false, cls = '', emptyLabel = '+', beast = null, build = null, level = null, beastEdit = false, beastLevel = null, mirror = false } = {}) {
   const cell = (pos) => {
     const id = slots[pos];
     const h = id ? getHero(id) : null;
@@ -266,12 +269,11 @@ export function board({ slots = {}, artifacts = {}, showBank = false, size = 60,
       b ? beastArt(b.id, 42) : '<span class="beast-add">+</span>'
     }<span>${b ? esc(b.name) : 'Beast'}</span>${b && beastLevel ? `<span class="beast-lvl">Lvl ${esc(beastLevel)}</span>` : ''}</button>`;
   else if (b) beastSlot = `<button type="button" class="board-beast" data-beast-detail="${esc(b.id)}" title="Beast: ${esc(b.name)}">${beastArt(b.id, 42)}<span>${esc(b.name)}</span></button>`;
-  return `<div class="board ${cls}${beastSlot ? ' has-beast' : ''}">
+  return `<div class="board ${cls}${mirror ? ' mirror' : ''}${beastSlot ? ' has-beast' : ''}">
     ${beastSlot}
-    <span class="row-label">Front</span>
-    <div class="row">${cell('F1')}${cell('F2')}</div>
-    <span class="row-label">Back</span>
-    <div class="row">${cell('B1')}${cell('B2')}${cell('B3')}</div>
+    <span class="row-label lb">Back</span><span class="row-label lf">${mirror ? '‹ Front' : 'Front ›'}</span>
+    <div class="line back">${cell('B1')}${cell('B2')}${cell('B3')}</div>
+    <div class="line front">${cell('F1')}${cell('F2')}</div>
   </div>`;
 }
 
@@ -324,29 +326,43 @@ export function closeDrawer() {
 
 // Searchable hero picker. Resolves with a hero id, '' to clear, or null.
 // showBank draws the player's copies; enemy pickers show the heroes plain.
+// The in-game style bar (class, type, faction) narrows the grid like the search.
 export function pickHero({ title = 'Choose a hero', pool = null, allowClear = false, showBank = true } = {}) {
   return new Promise((resolve) => {
     let done = false;
     const list = (pool ? pool.map(getHero).filter(Boolean) : data.heroes).slice().sort((a, b) => a.name.localeCompare(b.name));
+    const filt = { classes: new Set(), types: new Set(), factions: new Set() };
     const d = openDrawer({
       title: esc(title),
       body: `<div class="toolbar"><label class="search">${ICON.search}<input class="input" id="pick-q" type="search" placeholder="Find hero" autocomplete="off"></label>
-        ${allowClear ? '<button class="btn small" type="button" data-clear>Clear slot</button>' : ''}</div>
+        ${allowClear ? '<button class="btn" type="button" data-clear>Clear slot</button>' : ''}</div>
+        ${gameFilterBar(filt)}
         <div class="picker-grid" id="pick-grid"></div>`,
       onClose: () => !done && resolve(null),
     });
     const grid = $('#pick-grid', d);
-    const render = (q = '') => {
-      const s = q.trim().toLowerCase();
-      grid.innerHTML = list
-        .filter((h) => !s || h.name.toLowerCase().includes(s) || h.faction.toLowerCase().includes(s) || h.class.toLowerCase().includes(s))
-        .map((h) => heroTile(h, { size: 54, showBank }))
-        .join('');
+    const q = $('#pick-q', d);
+    const render = () => {
+      const s = q.value.trim().toLowerCase();
+      const shown = list.filter(
+        (h) =>
+          (!s || h.name.toLowerCase().includes(s) || h.faction.toLowerCase().includes(s) || h.class.toLowerCase().includes(s)) &&
+          (!filt.classes.size || filt.classes.has(h.class)) &&
+          (!filt.types.size || filt.types.has(h.type)) &&
+          (!filt.factions.size || filt.factions.has(h.faction))
+      );
+      grid.innerHTML = shown.length ? shown.map((h) => heroTile(h, { size: 54, showBank })).join('') : '<p class="small muted">No hero matches.</p>';
     };
     render();
-    $('#pick-q', d).addEventListener('input', (e) => render(e.target.value));
-    $('#pick-q', d).focus();
+    q.addEventListener('input', render);
+    // On touch screens the keyboard would cover the filter bar.
+    if (!matchMedia('(pointer: coarse)').matches) q.focus();
     d.addEventListener('click', (ev) => {
+      if (handleGameFilter(ev, filt)) {
+        syncGameFilter(d, filt);
+        render();
+        return;
+      }
       const t = ev.target.closest('[data-hero]');
       if (t) {
         done = true;

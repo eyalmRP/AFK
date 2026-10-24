@@ -602,9 +602,16 @@ input.switch.small:checked::before { transform: translateX(14px); }
 .team-card .meta-row { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
 .team-card .sources { font-size: 0.78rem; color: var(--ink-3); overflow-wrap: anywhere; }
 
-.board { display: grid; gap: 6px; justify-items: center; padding: 10px 6px 6px; border-radius: var(--r-sm); background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 7%, var(--surface)), var(--surface)); border: 1px dashed var(--line-2); }
-.board .row { display: flex; gap: 6px; justify-content: center; width: 100%; }
-.board { position: relative; }
+/* Formation boards: back line and front line side by side, front toward the
+   enemy (common.js board). The front line sits centred against the back line. */
+.board { position: relative; display: grid; grid-template-columns: auto auto; grid-template-areas: 'lb lf' 'back front'; justify-content: center; align-items: center; column-gap: clamp(18px, 7%, 56px); row-gap: 4px; padding: 10px 8px 8px; border-radius: var(--r-sm); background: linear-gradient(90deg, var(--surface), color-mix(in srgb, var(--accent) 7%, var(--surface))); border: 1px dashed var(--line-2); }
+.board.mirror { grid-template-areas: 'lf lb' 'front back'; background: linear-gradient(270deg, var(--surface), color-mix(in srgb, var(--bad) 6%, var(--surface))); }
+.board .line { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.board .line.back { grid-area: back; }
+.board .line.front { grid-area: front; }
+.board .row-label.lb { grid-area: lb; justify-self: center; }
+.board .row-label.lf { grid-area: lf; justify-self: center; }
+.board.mirror .board-beast { left: auto; right: 6px; }
 .board-beast { position: absolute; top: 6px; left: 6px; z-index: 1; appearance: none; border: 0; background: none; padding: 0; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 2px; width: max-content; min-width: 48px; max-width: 76px; color: var(--ink-2); }
 .board-beast .beast-img { border: 2px solid color-mix(in srgb, var(--accent) 55%, var(--line-2)); box-shadow: var(--shadow); }
 .board-beast span { font-size: 0.64rem; line-height: 1.1; text-align: center; overflow-wrap: break-word; }
@@ -615,8 +622,7 @@ input.switch.small:checked::before { transform: translateX(14px); }
 .list li > .beast-img { display: inline-block; vertical-align: middle; margin-right: 2px; }
 .board .row-label { font-family: var(--font-data); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--ink-3); }
 .slot { display: flex; flex-direction: column; align-items: center; gap: 3px; width: 74px; min-width: 0; position: relative; }
-/* Names always take two lines, so portraits and artifact chips line up across a row. */
-.slot .name { font-size: 0.76rem; text-align: center; line-height: 1.15; min-height: 2.3em; max-width: 100%; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; overflow-wrap: anywhere; }
+.slot .name { font-size: 0.76rem; text-align: center; line-height: 1.15; max-width: 100%; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; overflow-wrap: anywhere; }
 .slot .pos { font-family: var(--font-data); font-size: 0.62rem; line-height: 1; letter-spacing: 0.04em; color: var(--ink-3); }
 .slot.empty .initials { font-family: var(--font-data); font-size: 1.3rem; color: var(--ink-3); }
 .slot button { appearance: none; border: 0; background: none; padding: 0; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 4px; color: var(--ink); max-width: 100%; }
@@ -897,6 +903,8 @@ table.bank .input, table.bank .select { padding: 3px 6px; min-height: 30px; font
 .compare { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; align-items: start; }
 .compare > section { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
 .compare > section > div:empty { display: none; }
+/* Counter on wide screens: your team on the left, the enemy on the right, fronts facing in the middle, as in battle. */
+@media (min-width: 761px) { .ct-compare > section:first-child { order: 2; } }
 /* Enemy formation: level, assumed upgrades and beast level in one row. */
 .enemy-opts { display: grid; grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.6fr) minmax(0, 0.8fr); gap: 10px; }
 .enemy-opts .select { width: 100%; }

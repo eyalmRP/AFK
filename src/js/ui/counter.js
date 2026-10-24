@@ -146,10 +146,10 @@ function render() {
       <label class="field"><span>Load a common enemy</span><select class="select" id="ct-load"><option value="">Choose…</option>${archetypeOpts}</select></label>
     </div>
     ${ui.pool === 'all' ? `<p class="callout small">${owned ? 'Countering with the full roster at full investment.' : 'Your hero bank is empty, so counters use the full roster. Add your heroes in the Hero Bank tab for counters you can field.'}</p>` : ''}
-    <div class="compare">
+    <div class="compare ct-compare">
       <section>
         <div class="side-title">${ICON.swords} Enemy formation</div>
-        ${board({ slots: ui.enemy, editable: true, cls: 'enemy-board', size: 60, build: enemyBuild(), level: enemyLevel(), beastEdit: beasts, beast: beasts ? ui.enemyBeast : null, beastLevel: ui.enemyBeastLevel })}
+        ${board({ slots: ui.enemy, editable: true, cls: 'enemy-board', mirror: true, size: 60, build: enemyBuild(), level: enemyLevel(), beastEdit: beasts, beast: beasts ? ui.enemyBeast : null, beastLevel: ui.enemyBeastLevel })}
         <div class="enemy-opts">
           <label class="field"><span>Hero level</span><input class="input" id="ct-elevel" type="number" inputmode="numeric" min="1" max="${LIMITS.level}" value="${enemyLevel()}" placeholder="${myLevel()}" title="Yours: ${myLevel()}"></label>
           <label class="field"><span>Upgrades (assumed)</span><select class="select" id="ct-ebuild">${Object.entries(ENEMY_BUILDS)
