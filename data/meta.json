@@ -67,7 +67,7 @@
   "Signature Item caps: patch 1.134 raised the cap to +50, but some 2025 guides still stop at +40. Check in game.",
   "Seraphic Tide (Support artifact) has no effect text or rating yet.",
   "Beast ratings come from one overall tier list (AFK Global, Oct 22 2026). PvE, PvP and boss grades only differ where a guide says a beast stands out in that mode, and beast picks per Nightmare Corridor comp could not be read.",
-  "113 heroes were missing from the tier lists as first read. 109 now have ratings from the full AFK Global (Oct 3, 2026) and Pocket Tactics (Apr 30, 2026) lists; the October list sets the tier and the April one only shows in the source notes. AFK Global's A+ counts as A. Kafka Hibino is A from the r/afkarena usage tier list's notes (its full list is an image not read yet). Awakened Theowyn, Kikoru Shinomiya and Oren are not rated by any list yet and count as B in team building."
+  "113 heroes were missing from the tier lists as first read. 109 now have ratings from AFK Global's list and Pocket Tactics (Apr 30, 2026). AFK Global's list (page dated Oct 3) is AllClash's Aug 20, 2026 list with the bottom two tiers relabelled (AllClash C+ and C shown as C and D), so it counts as one source with AllClash. AllClash's A+ counts as A. Kafka Hibino is A from the r/afkarena usage tier list's notes (its full list is an image not read yet). Awakened Theowyn, Kikoru Shinomiya and Oren are not rated by any list yet and count as B in team building."
  ],
  "limits": {
   "level": 800,
@@ -174,12 +174,12 @@
    "id": "allclash",
    "name": "AllClash - The Best Heroes in AFK Arena Tier List 2026 (with Valeri)",
    "url": "https://www.allclash.com/the-best-heroes-in-afk-arena-tier-list/",
-   "date": "2026-09",
+   "date": "2026-08-20",
    "kind": "tiers"
   },
   {
    "id": "afkglobal",
-   "name": "AFK Global - AFK Arena Tier List (Character Rankings)",
+   "name": "AFK Global - AFK Arena Tier List (the same list as AllClash's, relabelled; not counted as a separate source)",
    "url": "https://www.afk.global/afk-arena/tier-list",
    "date": "2026-10-03",
    "kind": "tiers"
@@ -829,7 +829,8 @@
     "21 artifacts, 13 game modes plus 6 faction towers, 16 community combos",
     "AI analysis for every mode, calculated from the full roster",
     "Game icons for factions, classes and types, and artifact art (from AFK Calc)",
-    "Ratings for 109 more heroes from the full AFK Global and Pocket Tactics lists, including Awakened Shemira, Fawkes, Estrilda, Lucius and Eluard. Unrated heroes now count as B in team building, not below C."
+    "Ratings for 109 more heroes from the full AFK Global and Pocket Tactics lists, including Awakened Shemira, Fawkes, Estrilda, Lucius and Eluard. Unrated heroes now count as B in team building, not below C.",
+    "AFK Global's tier list turned out to be a copy of AllClash's; heroes rated only by the two now show as single-source. Gwyneth (Draconis) rated B from AllClash."
    ]
   }
  ]

@@ -15,6 +15,7 @@ Read `data/meta.json`. Its `asOf` is last week's date, and `gaps` lists what las
 Only record what a source actually says, and keep the URL and date of every source.
 - **Patch notes and new heroes** since `asOf`. Use the AFK Arena fandom wiki "Update x.xxx" pages, afk.guide patch notes and afk.global.
 - **Tier lists** from the last 2 months: Pocket Gamer, AllClash, AFK Global, Driffle, Pocket Tactics, afk.guide and others. Map grades onto S+ S A B C D, with SS → S+ and F → D.
+  AFK Global's hero tier list is AllClash's list with the bottom two tiers relabelled (AllClash C+ and C shown as C and D), so treat the two as one source: record AllClash's grade and don't count AFK Global as agreement. AllClash blocks scripts; ask the user for a PDF or text of its page if search results are thin. AFK Global calls Gwyneth (Draconis) "Awakened Gwyneth".
 - **Mode guides** for each mode in `data/modes.json`, with priority on modes that have no community team yet: Legends Championship, Cursed Realm, King's Tower, faction towers and Treasure Scramble. Also check the current Twisted Realm boss and the Nightmare Corridor cycle.
 - **Kits** for heroes whose `kitConfidence` is `low`. Fill in about 20 a week, newest and highest-rated first.
 - **Redeem codes**: a daily routine already checks them (see "Daily code check" below), but confirm `data/codes.json` is current.
