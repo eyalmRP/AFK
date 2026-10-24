@@ -174,7 +174,7 @@ function render() {
               : ''
           }
         </div>
-        <p class="small muted">The game doesn't show enemy upgrades, so enemy heroes count as Ascended 5 stars with the upgrades above.${beasts ? ' Tap the beast corner to set their beast.' : ''}</p>
+        <p class="small muted">The game doesn't show enemy upgrades, so enemy heroes count as Ascended 5 stars with the upgrades above.${beasts ? ' Tap Beast in the row to set theirs.' : ''}</p>
         <div class="toolbar">
           <button class="btn primary" type="button" data-act="find" ${enemyIds().length ? '' : 'disabled'}>${ICON.spark} Find best counter</button>
           <button class="btn" type="button" data-act="shot" id="ct-shot" hidden>${ICON.upload} Read a screenshot</button>

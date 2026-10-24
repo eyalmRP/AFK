@@ -211,40 +211,50 @@ export function beastLine(pick, { owned = true } = {}) {
 
 // ---- formation board (2 front / 3 back) -------------------------------------
 
-// A formation as the game lays it out: the back line of three and the front
-// line of two side by side, front toward the enemy. The player's teams face
-// right (back left, front right); `mirror` faces left, for the enemy, with the
-// beast in the outer top corner. Each line runs top to bottom (F1, F2; B1-B3).
-// `build` draws every hero as an assumed copy at `level` (enemy formations);
-// `beastEdit` turns the beast corner into a button (data-act="beast") showing
-// `beastLevel`.
+// Slot names, and the small map over each hero that shows its slot: the back
+// line of three and the front line of two, this hero's cell in gold. Each line
+// runs top to bottom (B1-B3, F1-F2).
+const SLOT_NAME = { B1: 'back line, top', B2: 'back line, middle', B3: 'back line, bottom', F1: 'front line, top', F2: 'front line, bottom' };
+const SLOT_CELL = { B1: [1, 1], B2: [1, 6.5], B3: [1, 12], F1: [10, 3.75], F2: [10, 9.25] };
+function slotIcon(pos, mirror) {
+  const cells = Object.entries(SLOT_CELL)
+    .map(([k, [x, y]]) => `<rect class="${k === pos ? 'on' : ''}" x="${mirror ? 11 - x : x}" y="${y}" width="6" height="4.2" rx="1.2"/>`)
+    .join('');
+  return `<svg class="pos-ico" viewBox="0 0 17 17.4" aria-hidden="true">${cells}</svg>`;
+}
+
+// A formation in one row, in the order the game lists it: the beast, the back
+// line bottom to top, then the front line bottom to top, front toward the
+// enemy. `mirror` reverses it for the enemy, facing left. `build` draws every
+// hero as an assumed copy at `level` (enemy formations); `beastEdit` turns the
+// beast into a button (data-act="beast") showing `beastLevel`.
 export function board({ slots = {}, showBank = false, size = 50, editable = false, cls = '', emptyLabel = '+', beast = null, build = null, level = null, beastEdit = false, beastLevel = null, mirror = false } = {}) {
   const cell = (pos) => {
     const id = slots[pos];
     const h = id ? getHero(id) : null;
+    const ico = slotIcon(pos, mirror);
     if (!h) {
-      const inner = `${emptyPortrait(size, editable ? emptyLabel : '')}<span class="name muted">${editable ? 'Add' : 'Open'}</span>`;
-      return `<div class="slot empty">${editable ? `<button type="button" data-slot="${pos}" aria-label="Choose hero for ${pos}">${inner}</button>` : inner}</div>`;
+      const inner = `<span class="pos-wrap">${emptyPortrait(size, editable ? emptyLabel : '')}${ico}</span><span class="name muted">${editable ? 'Add' : 'Open'}</span>`;
+      return `<div class="slot empty" title="${SLOT_NAME[pos]}">${editable ? `<button type="button" data-slot="${pos}" aria-label="Choose hero for the ${SLOT_NAME[pos]}">${inner}</button>` : inner}</div>`;
     }
-    const inner = `${portrait(h, { size, showBank, build, level, badge: showBank || build ? '' : trendBadge(h) })}<span class="name">${esc(h.name)}</span>`;
-    return `<div class="slot">${
-      editable ? `<button type="button" data-slot="${pos}" aria-label="Change ${esc(h.name)} at ${pos}">${inner}</button>` : `<button type="button" data-hero="${esc(h.id)}">${inner}</button>`
+    // Non-breaking hyphens keep "Cha Hae-in" on one line.
+    const full = h.name.replace(/-/g, '\u2011');
+    const short = full.replace(/^Awakened /, 'A. ');
+    const name = short === full ? esc(full) : `<span class="nm-full">${esc(full)}</span><span class="nm-short">${esc(short)}</span>`;
+    const inner = `<span class="pos-wrap">${portrait(h, { size, showBank, build, level, badge: showBank || build ? '' : trendBadge(h) })}${ico}</span><span class="name">${name}</span>`;
+    return `<div class="slot" title="${esc(h.name)} · ${SLOT_NAME[pos]}">${
+      editable ? `<button type="button" data-slot="${pos}" aria-label="Change ${esc(h.name)}, ${SLOT_NAME[pos]}">${inner}</button>` : `<button type="button" data-hero="${esc(h.id)}">${inner}</button>`
     }</div>`;
   };
   const b = beast ? data.beastById?.get(beast) : null;
-  // The beast sits in the corner, like the beast button on the battle screen.
   let beastSlot = '';
   if (beastEdit)
     beastSlot = `<button type="button" class="board-beast${b ? '' : ' no-beast'}" data-act="beast" title="${b ? `Beast: ${esc(b.name)}` : 'Choose the beast'}">${
       b ? beastArt(b.id, 42) : '<span class="beast-add">+</span>'
     }<span>${b ? esc(b.name) : 'Beast'}</span>${b && beastLevel ? `<span class="beast-lvl">Lvl ${esc(beastLevel)}</span>` : ''}</button>`;
   else if (b) beastSlot = `<button type="button" class="board-beast" data-beast-detail="${esc(b.id)}" title="Beast: ${esc(b.name)}">${beastArt(b.id, 42)}<span>${esc(b.name)}</span></button>`;
-  return `<div class="board ${cls}${mirror ? ' mirror' : ''}${beastSlot ? ' has-beast' : ''}">
-    ${beastSlot}
-    <span class="row-label lb">Back</span><span class="row-label lf">${mirror ? '‹ Front' : 'Front ›'}</span>
-    <div class="line back">${cell('B1')}${cell('B2')}${cell('B3')}</div>
-    <div class="line front">${cell('F1')}${cell('F2')}</div>
-  </div>`;
+  const parts = [...(beastSlot ? [beastSlot, '<span class="gap"></span>'] : []), cell('B3'), cell('B2'), cell('B1'), '<span class="gap"></span>', cell('F2'), cell('F1')];
+  return `<div class="board ${cls}${mirror ? ' mirror' : ''}">${(mirror ? parts.reverse() : parts).join('')}</div>`;
 }
 
 export function slotsFromList(list) {

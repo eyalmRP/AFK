@@ -591,15 +591,31 @@ input.switch.small:checked::before { transform: translateX(14px); }
 
 /* Formation boards: back line and front line side by side, front toward the
    enemy (common.js board). The front line sits centred against the back line. */
-.board { position: relative; display: grid; grid-template-columns: auto auto; grid-template-areas: 'lb lf' 'back front'; justify-content: center; align-items: center; column-gap: clamp(18px, 7%, 56px); row-gap: 4px; padding: 10px 8px 8px; border-radius: var(--r-sm); background: linear-gradient(90deg, var(--surface), color-mix(in srgb, var(--accent) 7%, var(--surface))); border: 1px dashed var(--line-2); }
-.board.mirror { grid-template-areas: 'lf lb' 'front back'; background: linear-gradient(270deg, var(--surface), color-mix(in srgb, var(--bad) 6%, var(--surface))); }
-.board .line { display: flex; flex-direction: column; align-items: center; gap: 6px; }
-.board .line.back { grid-area: back; }
-.board .line.front { grid-area: front; }
-.board .row-label.lb { grid-area: lb; justify-self: center; }
-.board .row-label.lf { grid-area: lf; justify-self: center; }
-.board.mirror .board-beast { left: auto; right: 6px; }
-.board-beast { position: absolute; top: 6px; left: 6px; z-index: 1; appearance: none; border: 0; background: none; padding: 0; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 2px; width: max-content; min-width: 48px; max-width: 76px; color: var(--ink-2); }
+/* Formation boards: one row, beast · back line · front line, front toward the
+   enemy (common.js board). A small slot map sits over each hero. */
+.board { position: relative; display: flex; align-items: flex-start; justify-content: center; gap: 3px; padding: 20px 6px 8px; border-radius: var(--r-sm); background: linear-gradient(90deg, var(--surface), color-mix(in srgb, var(--accent) 7%, var(--surface))); border: 1px dashed var(--line-2); }
+.board.mirror { background: linear-gradient(270deg, var(--surface), color-mix(in srgb, var(--bad) 6%, var(--surface))); }
+.board > .gap { flex: 0 1 12px; min-width: 4px; }
+.board .slot { flex: 0 1 56px; width: auto; }
+/* Wide screens: bigger heroes when the board has room. */
+@media (min-width: 761px) {
+  .board .slot { flex-basis: 72px; }
+  .board .pos-wrap .portrait { --ps: 64px !important; }
+  .board .slot .name { font-size: 0.76rem; }
+  .board-beast { width: 64px; }
+  .board-beast .beast-img, .board-beast .beast-add { width: 50px !important; height: 50px !important; }
+}
+.board .slot > button, .board .slot.empty { width: 100%; }
+.pos-wrap { position: relative; display: flex; justify-content: center; width: 100%; line-height: 0; }
+.board .pos-wrap .portrait { width: min(var(--ps), 100%); }
+.slot .nm-short { display: none; }
+/* Narrow boards (phones, cards inside panels) use "A. Shemira" so names don't break mid-word. */
+.board { container-type: inline-size; }
+@container (max-width: 420px) { .slot .nm-full { display: none; } .slot .nm-short { display: inline; } }
+.pos-ico { position: absolute; left: 50%; top: -15px; transform: translateX(-50%); width: 17px; height: 17px; z-index: 5; padding: 1px; border-radius: 4px; background: rgb(10 12 18 / 72%); filter: drop-shadow(0 1px 1px rgb(0 0 0 / 60%)); pointer-events: none; }
+.pos-ico rect { fill: rgb(20 24 34 / 85%); stroke: rgb(255 255 255 / 55%); stroke-width: 0.6; }
+.pos-ico rect.on { fill: #f5d47c; stroke: #3a2608; stroke-width: 0.8; }
+.board-beast { flex: 0 0 auto; align-self: center; appearance: none; border: 0; background: none; padding: 0; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 2px; width: 52px; color: var(--ink-2); }
 .board-beast .beast-img { border: 2px solid color-mix(in srgb, var(--accent) 55%, var(--line-2)); box-shadow: var(--shadow); }
 .board-beast span { font-size: 0.64rem; line-height: 1.1; text-align: center; overflow-wrap: break-word; }
 .board-beast .beast-add { display: grid; place-items: center; width: 42px; height: 42px; border-radius: 10px; border: 1.5px dashed var(--line-2); font-family: var(--font-data); font-size: 1.3rem; line-height: 1; color: var(--ink-3); }
@@ -607,9 +623,8 @@ input.switch.small:checked::before { transform: translateX(14px); }
 .board-beast:hover .beast-add { border-color: var(--accent); color: var(--accent); }
 .beast-why { font-size: 0.84rem; color: var(--ink-2); }
 .list li > .beast-img { display: inline-block; vertical-align: middle; margin-right: 2px; }
-.board .row-label { font-family: var(--font-data); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--ink-3); }
 .slot { display: flex; flex-direction: column; align-items: center; gap: 3px; width: 62px; min-width: 0; position: relative; }
-.slot .name { font-size: 0.72rem; text-align: center; line-height: 1.15; max-width: 100%; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; overflow-wrap: anywhere; }
+.slot .name { font-size: 0.72rem; text-align: center; line-height: 1.15; max-width: 100%; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; overflow-wrap: break-word; }
 .slot.empty .initials { font-family: var(--font-data); font-size: 1.3rem; color: var(--ink-3); }
 .slot button { appearance: none; border: 0; background: none; padding: 0; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 4px; color: var(--ink); max-width: 100%; }
 
@@ -1123,7 +1138,7 @@ table.bank .input, table.bank .select { padding: 3px 6px; min-height: 30px; font
   .buff { flex-direction: column; gap: 2px; }
   .buff .input { min-height: 34px; padding: 2px; }
   /* Small labels on formation boards stay readable. */
-  .board-beast { min-width: 44px; }
+  .board-beast { width: 46px; }
   .board-beast .beast-img, .board-beast .beast-add { width: 36px !important; height: 36px !important; }
   .board-beast span { font-size: 0.68rem; }
   .tier-label .desc { font-size: 0.72rem; }
