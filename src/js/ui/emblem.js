@@ -2,8 +2,9 @@
 // guide describes: the ring around the emblem shows the signature item tier
 // (plain ring 0, four studs +10, eight points +20, wings +30), the pendant
 // under it shows furniture (one diamond 3F, two 9F, a banner and crown 36F).
-// Cards with a crown over golden wings show a signature tier above +30 that
-// the guide does not cover.
+// Past +30 the game adds a crown: golden wings and a crown from +40, white
+// wings and a crown at +50 (confirmed on the player's heroes; the guide stops
+// at +30).
 
 import { esc } from '../util.js';
 import { upgradeUnlocked } from '../data.js';
@@ -11,8 +12,7 @@ import { factionIcon } from './icons.js';
 
 export function siTier(e) {
   if (!e?.owned || !upgradeUnlocked(e, 'si') || e.si === null || e.si === undefined) return null;
-  if (e.siCrown) return 'crown';
-  return e.si >= 30 ? 30 : e.si >= 20 ? 20 : e.si >= 10 ? 10 : 0;
+  return [50, 40, 30, 20, 10].find((t) => e.si >= t) ?? 0;
 }
 
 export function furnitureTier(e) {
@@ -66,8 +66,7 @@ function ring(si) {
   return plate + seams + gem([50, 16.5], 7.5, 10) + gem([16, 53], 9, 9.5) + gem([84, 53], 9, 9.5) + gem([50, 86], 10.5, 12, 21.5);
 }
 
-// The guide's crown on top of the ring (furniture 36); cards also show it on
-// heroes with golden wings.
+// The crown on top of the ring: signature item +40 and up, or furniture 36 (guide).
 const CROWN = `<path d="M32 23C30 16 34 10 40 11.5C42 6.5 46 4 50 4C54 4 58 6.5 60 11.5C66 10 70 16 68 23C65 19 61.5 18 58.5 20.5H41.5C38.5 18 35 19 32 23Z" fill="url(#orn-gold)" ${ln()}/>
   <path d="M40 11.5C41.5 14.5 41.5 17.5 41.5 20.5M60 11.5C58.5 14.5 58.5 17.5 58.5 20.5" fill="none" ${ln(0.8)}/><circle cx="50" cy="13.5" r="3.2" fill="#e84a4a" ${ln()}/>`;
 
@@ -95,16 +94,16 @@ function pendant(f) {
 
 export function emblemSvg(si, f) {
   if (si === null && !f) return '';
-  const winged = si === 30 || si === 'crown';
-  const crowned = si === 'crown' || f === 36;
-  return `<svg class="emb-orn" viewBox="${VB.x} ${VB.y} ${VB.w} ${VB.h}" aria-hidden="true" focusable="false">${winged ? wings(si === 'crown') : ''}${pendant(f)}${si === null ? '' : ring(si)}${crowned ? CROWN : ''}</svg>`;
+  const winged = si >= 30;
+  const crowned = si >= 40 || f === 36;
+  return `<svg class="emb-orn" viewBox="${VB.x} ${VB.y} ${VB.w} ${VB.h}" aria-hidden="true" focusable="false">${winged ? wings(si >= 40 && si < 50) : ''}${pendant(f)}${si === null ? '' : ring(si)}${crowned ? CROWN : ''}</svg>`;
 }
 
 // The emblem as a positioned box the size of the faction icon; the ornament overflows it.
 export function emblem(h, e, { cls = '' } = {}) {
   const si = siTier(e);
   const f = furnitureTier(e);
-  const label = [si === 'crown' ? 'signature item above +30' : si !== null ? `signature item +${si}` : '', f ? `${f} furniture` : ''].filter(Boolean).join(', ');
+  const label = [si !== null ? `signature item +${si}` : '', f ? `${f} furniture` : ''].filter(Boolean).join(', ');
   return `<span class="emb ${cls}" title="${esc(h.faction)}${label ? ` · ${esc(label)}` : ''}">${emblemSvg(si, f)}${factionIcon(h.faction)}</span>`;
 }
 
@@ -130,7 +129,7 @@ export function plusCorners(asc) {
 // An upgrade as text for cards and lists: "n/a" before it unlocks, "–" when
 // not recorded, "30+" or "<30" when the value is a minimum read from the card
 // icon rather than an exact number.
-const NEXT = { si: [10, 20, 30], furniture: [3, 9, 36], engrave: [30, 60, 80] };
+const NEXT = { si: [10, 20, 30, 40, 50], furniture: [3, 9, 36], engrave: [30, 60, 80] };
 export function upgradeText(e, f) {
   if (!e) return '–';
   if (NEXT[f] && !upgradeUnlocked(e, f)) return 'n/a';

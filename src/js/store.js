@@ -137,7 +137,12 @@ export function sanitizeEntry(e) {
   // est: fields holding a minimum read from the card icon (SI ring, furniture
   // pendant, star colour) rather than an exact number.
   out.est = Array.isArray(out.est) ? [...new Set(out.est.filter((f) => EST_FIELDS.includes(f)))] : [];
-  out.siCrown = !!out.siCrown;
+  // Earlier readings flagged a crown as "above +30"; a crown means +40 or more.
+  if (out.siCrown && (out.si === null || out.si === undefined || toInt(out.si, 0) < 40)) {
+    out.si = 40;
+    if (!out.est.includes('si')) out.est.push('si');
+  }
+  delete out.siCrown;
   const raw = toInt(out.stars, 0);
   let stars = raw;
   // Banks saved before this used 0-15 stars, with 6-10 (red) and 11-15 (white)

@@ -316,7 +316,7 @@ function heroesPane() {
         <label class="check">Ascension <select class="select" id="bank-asc"><option value="any">Any</option>${ASCENSIONS.map((a) => `<option ${ui.asc === a ? 'selected' : ''}>${a}</option>`).join('')}</select></label>
         <label class="check" title="Owned heroes with an upgrade not recorded yet">Missing <select class="select" id="bank-missing">${MISSING.map(([v, l]) => `<option value="${v}" ${ui.missing === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
         <span class="spacer"></span>
-        <label class="check size-ctl" id="bank-size-ctl" title="Zoom: more heroes or bigger cards" ${ui.view === 'cards' ? '' : 'hidden'}><span class="size-ico small" aria-hidden="true">▦</span><input type="range" id="bank-size" min="1" max="4" step="1" value="${ui.size}" aria-label="Zoom"><span class="size-ico" aria-hidden="true">▦</span></label>
+        <label class="check size-ctl" id="bank-size-ctl" title="Zoom: more heroes or bigger cards" data-off="${ui.view !== 'cards'}"><span class="size-ico small" aria-hidden="true">▦</span><input type="range" id="bank-size" min="1" max="4" step="1" value="${ui.size}" aria-label="Zoom" ${ui.view === 'cards' ? '' : 'disabled'}><span class="size-ico" aria-hidden="true">▦</span></label>
         <div class="seg" role="group" aria-label="Layout">${[
           ['cards', 'Cards'],
           ['list', 'List'],
@@ -640,7 +640,10 @@ function onClick(ev) {
     ui.view = view.dataset.view;
     local.set(VIEW_KEY, ui.view);
     $$('[data-view]', root).forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.view === ui.view)));
-    $('#bank-size-ctl', root).hidden = ui.view !== 'cards';
+    // Hidden but still taking its space, so the Cards / List / Table buttons stay put.
+    const zoom = $('#bank-size-ctl', root);
+    zoom.dataset.off = String(ui.view !== 'cards');
+    $('#bank-size', root).disabled = ui.view !== 'cards';
     renderList();
     return;
   }
@@ -1163,7 +1166,6 @@ function mergeReadings(list) {
         prev[k] = r[k];
         prev.est = minNow ? [...new Set([...(prev.est || []), k])] : (prev.est || []).filter((x) => x !== k);
       }
-      if (r.siCrown) prev.siCrown = true;
     }
   }
   return [...byId.values()];
@@ -1233,7 +1235,6 @@ function applyResults(d, results) {
       else est.delete(k);
     }
     patch.est = [...est];
-    if (r.siCrown) patch.siCrown = true;
     // A level that differs from the shared level means the hero sits outside the crystal.
     if (bank.settings.sharedLevel && r.level) patch.crystal = r.level === bank.settings.crystalLevel;
     patches[r.id] = patch;

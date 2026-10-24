@@ -108,3 +108,16 @@ test('a higher Elder Tree branch lifts heroes of that class', async () => {
   entries[warrior.id] = entries.lucius;
   assert.ok(heroValue(ctx, warrior.id).value < heroValue(base, warrior.id).value);
 });
+
+test('signature item ornaments follow the in-game tiers', async () => {
+  const { siTier, emblemSvg } = await import('../src/js/ui/emblem.js');
+  const e = (si, asc = 'Ascended') => ({ owned: true, asc, stars: 1, si });
+  assert.equal(siTier(e(9)), 0);
+  assert.equal(siTier(e(30)), 30);
+  assert.equal(siTier(e(44)), 40);
+  assert.equal(siTier(e(50)), 50);
+  assert.equal(siTier(e(20, 'Legendary+')), null);
+  assert.ok(!emblemSvg(30, 0).includes('orn-wing-gold') && !emblemSvg(30, 0).includes('#e84a4a'));
+  assert.ok(emblemSvg(40, 9).includes('orn-wing-gold') && emblemSvg(40, 9).includes('#e84a4a'));
+  assert.ok(!emblemSvg(50, 9).includes('orn-wing-gold') && emblemSvg(50, 9).includes('url(#orn-wing)') && emblemSvg(50, 9).includes('#e84a4a'));
+});

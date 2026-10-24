@@ -880,6 +880,7 @@ input.switch.small:checked::before { transform: translateX(14px); }
 .row-lvl .own-level { box-shadow: none; color: var(--accent); }
 .row-chev svg { width: 18px; height: 18px; color: var(--ink-3); display: block; }
 .size-ctl input[type='range'] { width: 90px; accent-color: var(--accent); }
+.size-ctl[data-off='true'] { visibility: hidden; }
 .size-ico { color: var(--ink-3); line-height: 1; font-size: 1.05rem; }
 .size-ico.small { font-size: 0.8rem; }
 .star-cell { display: inline-flex; align-items: center; gap: 2px; }

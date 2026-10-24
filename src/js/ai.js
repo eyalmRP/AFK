@@ -70,8 +70,8 @@ const SCREEN_GUIDE = () => {
     'How AFK Arena shows progression:',
     `- Ascension tiers, lowest to highest: ${ASCENSIONS.join(', ')}. The card frame colour shows it: purple = Elite, gold = Legendary, red = Mythic, pale lilac/white = Ascended. A "+" tier (Elite+, Legendary+, Mythic+) has small gems in the top-right and bottom-left corners of the frame; the plain tier has none.`,
     '- Only Ascended heroes have stars: 0-5 of them in a row along the bottom. Report "stars" as that count (0-5). The star colour shows engraving: gold = below E30, orange = E30+, red = E60+, white/lilac = E80+. When the engraving number is not visible, report "engrave" as that minimum (0, 30, 60 or 80) and add "engrave" to "est". Engraving needs Ascended 1 star.',
-    '- The ornament around the faction emblem (top-left) shows the signature item tier: a plain ring = SI 0-9, a ring with 4 studs = SI 10+, an 8-point ring = SI 20+, white wings = SI 30+, a crown over golden wings = above SI 30 (report 30 and set "siCrown": true). No ring at all means SI is not unlocked (below Mythic): report 0. When reading SI from the ornament, add "si" to "est".',
-    '- The pendant under the emblem shows furniture: nothing = 0-2, one red diamond = 3+, two red diamonds = 9+, a red banner with a small crown on top = 36. Furniture needs Ascended (below that report 0). When reading furniture from the pendant, add "furniture" to "est".',
+    '- The ornament around the faction emblem (top-left) shows the signature item tier: a plain ring = SI 0-9, a ring with 4 studs = SI 10+, a square plate with diamonds = SI 20+, white wings = SI 30+, a crown with golden wings = SI 40+, a crown with white wings = SI 50. No ring at all means SI is not unlocked (below Mythic): report 0. When reading SI from the ornament, add "si" to "est".',
+    '- The pendant under the emblem shows furniture: nothing = 0-2, one red diamond = 3+, two red diamonds = 9+, red banners on both sides = 36. Furniture needs Ascended (below that report 0). When reading furniture from the pendant, add "furniture" to "est".',
     '- The level is "Lvl N" at the top of the card. Heroes in the Resonating Crystal share one level; a hero showing a different level (often Lvl 1) is outside the crystal.',
     '- Signature Item (SI) is shown as +N (0-40) on the hero detail screen next to the signature item icon.',
     '- Furniture is shown as a count of 0-9 (often "3/9" or 9 small pieces) on the detail screen.',
@@ -97,7 +97,7 @@ ${rosterLines()}
 For each hero report only what is actually visible. The hero list shows SI, furniture and engraving only as the emblem ornaments and star colour above, so report those as minimums with "est"; exact numbers come from the hero detail screen. Use null for anything you cannot see. Never guess a number.
 
 Reply with only JSON in this shape:
-{"screen":"hero-list|hero-detail|formation|other","heroes":[{"id":"roster id","level":922,"asc":"Ascended","stars":5,"si":30,"siCrown":false,"furniture":9,"engrave":60,"est":["si","furniture","engrave"],"confidence":"high|medium|low","seen":"short note on what you read"}],"notes":"anything the player should check"}
+{"screen":"hero-list|hero-detail|formation|other","heroes":[{"id":"roster id","level":922,"asc":"Ascended","stars":5,"si":30,"furniture":9,"engrave":60,"est":["si","furniture","engrave"],"confidence":"high|medium|low","seen":"short note on what you read"}],"notes":"anything the player should check"}
 "asc" must be one of: ${ASCENSIONS.join(', ')} or null.`;
   const out = await sample.json(prompt, { images: files, signal, onText, modelTier: 'default', cache: false });
   const valid = new Set(data.heroes.map((h) => h.id));
@@ -111,7 +111,6 @@ Reply with only JSON in this shape:
       si: numOrNull(h.si),
       furniture: numOrNull(h.furniture),
       engrave: numOrNull(h.engrave),
-      siCrown: h.siCrown === true,
       est: Array.isArray(h.est) ? h.est.filter((f) => ['si', 'furniture', 'engrave'].includes(f)) : [],
       confidence: ['high', 'medium', 'low'].includes(h.confidence) ? h.confidence : 'medium',
       seen: String(h.seen || '').slice(0, 160),
