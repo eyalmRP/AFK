@@ -330,7 +330,7 @@ function matchup(ctx, h) {
   for (const m of ctx.enemyMatchups) {
     const t = (m.beatenBy || []).find((x) => (x.heroes || []).includes(h.id));
     if (t) {
-      score += 1.0;
+      score += (m.evidence === 'suggested' ? 0.5 : 1.0) * (m.overlap / (m.vs || []).length);
       reasons.push(`in ${t.name}, which beats ${m.vsName}`);
     }
   }
@@ -423,14 +423,19 @@ export function scoreTeam(ctx, ids) {
   if (template) total += template.bonus;
 
   // A lineup the sources say beats this enemy: the strongest signal there is.
+  // Results someone tested count fully, a commenter's suggestion half.
   let beats = null;
   for (const m of ctx.enemyMatchups || []) {
+    // How sure: tested or only suggested, and how closely this enemy matches the beaten lineup.
+    const w = (m.evidence === 'suggested' ? 0.5 : 1) * (m.overlap / (m.vs || []).length);
     for (const t of m.beatenBy || []) {
       const overlap = (t.heroes || []).filter((id) => idSet.has(id)).length;
-      if (overlap >= Math.min(4, (t.heroes || []).length) && (!beats || overlap > beats.overlap)) beats = { name: t.name, vsName: m.vsName, heroes: t.heroes, beast: t.beast || null, overlap, size: t.heroes.length, claim: m.claim, url: m.url, date: m.date };
+      const bonus = w * (2 + overlap);
+      if (overlap >= Math.min(4, (t.heroes || []).length) && (!beats || bonus > beats.bonus))
+        beats = { name: t.name, vsName: m.vsName, vsMatch: m.overlap, vsSize: (m.vs || []).length, heroes: t.heroes, beast: t.beast || null, overlap, size: t.heroes.length, claim: m.claim, url: m.url, date: m.date, evidence: m.evidence, bonus };
     }
   }
-  if (beats) total += 2 + beats.overlap;
+  if (beats) total += beats.bonus;
 
   return { total, members, synergies, combos, coverage, layout: layout.slots, template, beats };
 }

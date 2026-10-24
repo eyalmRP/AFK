@@ -3661,7 +3661,478 @@
    "who": "u/GroodyLeVrai",
    "source": "r/afkarena - Groody's Legends Championship guide, Oct 24 2026",
    "url": "https://www.reddit.com/r/afkarena/comments/1xe45yp/legends_championship_kraken_meta_teams_14_teams/",
-   "date": "2026-10-24"
+   "date": "2026-10-24",
+   "evidence": "tested"
+  },
+  {
+   "mode": "legends-championship",
+   "vsName": "Groody LC Oct 2026 Team 9 (MVP Team)",
+   "vs": [
+    "awakened-shemira",
+    "medusa",
+    "awakened-eluard",
+    "athena",
+    "kafka-hibino"
+   ],
+   "beatenBy": [
+    {
+     "name": "Groody LC Oct 2026 Team 11 (MVP Team)",
+     "heroes": [
+      "awakened-estrilda",
+      "kyno",
+      "thalassa",
+      "odysseus",
+      "elthara"
+     ],
+     "beast": "treatspector"
+    }
+   ],
+   "claim": "The Team 9 MVP win like 35% of the time on my tests, it's harder for the mvp 14 xD",
+   "who": "u/GroodyLeVrai",
+   "evidence": "tested",
+   "winRate": 0.65,
+   "source": "r/afkarena",
+   "url": "https://www.reddit.com/r/afkarena/comments/1wy4xma/legends_championship_kraken_meta_teams_14_teams/pe2h2e9/",
+   "date": "2026-10-05"
+  },
+  {
+   "mode": "legends-championship",
+   "vsName": "Groody LC Oct 2026 Team 14 (MVP Team)",
+   "vs": [
+    "leviathan",
+    "misfortis",
+    "dracula",
+    "valeri",
+    "gavus"
+   ],
+   "beatenBy": [
+    {
+     "name": "Groody LC Oct 2026 Team 11 (MVP Team)",
+     "heroes": [
+      "awakened-estrilda",
+      "kyno",
+      "thalassa",
+      "odysseus",
+      "elthara"
+     ],
+     "beast": "treatspector"
+    }
+   ],
+   "claim": "it's harder for the mvp 14 xD",
+   "who": "u/GroodyLeVrai",
+   "evidence": "tested",
+   "source": "r/afkarena",
+   "url": "https://www.reddit.com/r/afkarena/comments/1wy4xma/legends_championship_kraken_meta_teams_14_teams/pe2h2e9/",
+   "date": "2026-10-05"
+  },
+  {
+   "mode": "legends-championship",
+   "vsName": "Groody LC Sep 2026 2nd update Team 13 (MVP Team)",
+   "vs": [
+    "odysseus",
+    "kyno",
+    "elthara",
+    "awakened-eluard",
+    "thalassa"
+   ],
+   "beatenBy": [
+    {
+     "name": "Groody LC Sep 2026 2nd update Team 8 (MVP Team)",
+     "heroes": [
+      "leviathan",
+      "awakened-estrilda",
+      "gavus",
+      "athena",
+      "medusa"
+     ],
+     "beast": "twinlum-spirit"
+    }
+   ],
+   "claim": "the arrival of a truly powerful new team capable of occasionally countering the other MVP team",
+   "who": "u/GroodyLeVrai",
+   "evidence": "tested",
+   "source": "r/afkarena",
+   "url": "https://www.reddit.com/r/afkarena/comments/1wmpw9x/legends_championship_kraken_meta_teams_14_teams/pb8ugof/",
+   "date": "2026-09-21"
+  },
+  {
+   "mode": "legends-championship",
+   "vsName": "Groody LC Aug 2026 2nd update Team 3 (MVP Team)",
+   "vs": [
+    "albedo",
+    "rem",
+    "dracula",
+    "hybris",
+    "shuna"
+   ],
+   "beatenBy": [
+    {
+     "name": "Groody LC Aug 2026 2nd update Team 4 (MVP Team)",
+     "heroes": [
+      "kyno",
+      "odysseus",
+      "awakened-eluard",
+      "awakened-estrilda",
+      "thalassa"
+     ],
+     "beast": "treatspector"
+    }
+   ],
+   "claim": "This new team is becoming a cornerstone of the meta, indeed, and allows you to defeat all teams except the MVP and sometimes Sung, in pure 1v1, making it indispensable.",
+   "who": "u/GroodyLeVrai",
+   "evidence": "tested",
+   "source": "r/afkarena",
+   "url": "https://www.reddit.com/r/afkarena/comments/1vnlpd7/",
+   "date": "2026-08-13"
+  },
+  {
+   "mode": "legends-championship",
+   "vsName": "Groody LC Aug 2026 2nd update Team 3 (MVP Team)",
+   "vs": [
+    "albedo",
+    "rem",
+    "dracula",
+    "hybris",
+    "shuna"
+   ],
+   "beatenBy": [
+    {
+     "name": "Groody LC Aug 2026 2nd update Team 2 (Carry)",
+     "heroes": [
+      "cha-hae-in",
+      "alna",
+      "awakened-pippa",
+      "sung-jinwoo",
+      "daemia"
+     ],
+     "beast": "aureus"
+    }
+   ],
+   "claim": "This new team is becoming a cornerstone of the meta, indeed, and allows you to defeat all teams except the MVP and sometimes Sung, in pure 1v1, making it indispensable.",
+   "who": "u/GroodyLeVrai",
+   "evidence": "tested",
+   "source": "r/afkarena",
+   "url": "https://www.reddit.com/r/afkarena/comments/1vnlpd7/",
+   "date": "2026-08-13"
+  },
+  {
+   "mode": "legends-championship",
+   "vsName": "Groody LC Aug 2026 Team 3 (MVP Team)",
+   "vs": [
+    "albedo",
+    "rem",
+    "dracula",
+    "hybris",
+    "shuna"
+   ],
+   "beatenBy": [
+    {
+     "name": "Groody LC Aug 2026 Team 4 (MVP Team)",
+     "heroes": [
+      "kyno",
+      "misfortis",
+      "awakened-eluard",
+      "awakened-estrilda",
+      "lan"
+     ],
+     "beast": "twinlum-spirit"
+    }
+   ],
+   "claim": "This new team is becoming a cornerstone of the meta, indeed, and allows you to defeat all teams except the MVP in pure 1v1, making it indispensable.",
+   "who": "u/GroodyLeVrai",
+   "evidence": "tested",
+   "source": "r/afkarena",
+   "url": "https://www.reddit.com/r/afkarena/comments/1vderge/",
+   "date": "2026-08-02"
+  },
+  {
+   "mode": "legends-championship",
+   "vsName": "Groody LC Jul 2026 Team 3 (MVP Team)",
+   "vs": [
+    "albedo",
+    "rem",
+    "dracula",
+    "hybris",
+    "shuna"
+   ],
+   "beatenBy": [
+    {
+     "name": "Groody LC Jul 2026 Team 4 (MVP Team)",
+     "heroes": [
+      "odysseus",
+      "leviathan",
+      "elthara",
+      "awakened-eluard",
+      "lan"
+     ],
+     "beast": "treatspector"
+    }
+   ],
+   "claim": "This new team is becoming a cornerstone of the meta, indeed, and allows you to defeat all teams except the MVP in pure 1v1, making it indispensable.",
+   "who": "u/GroodyLeVrai",
+   "evidence": "tested",
+   "source": "r/afkarena",
+   "url": "https://www.reddit.com/r/afkarena/comments/1uupaut/",
+   "date": "2026-07-12"
+  },
+  {
+   "mode": "legends-championship",
+   "vsName": "Groody LC Jun 2026 Team 3 (MVP Team)",
+   "vs": [
+    "misfortis",
+    "harvey",
+    "dracula",
+    "hybris",
+    "shuna"
+   ],
+   "beatenBy": [
+    {
+     "name": "Groody LC Jun 2026 Team 4 (MVP Team)",
+     "heroes": [
+      "odysseus",
+      "leviathan",
+      "elthara",
+      "velufira",
+      "lan"
+     ],
+     "beast": "treatspector"
+    }
+   ],
+   "claim": "This new team is becoming a cornerstone of the meta, indeed, and allows you to defeat all teams except the MVP in pure 1v1, making it indispensable.",
+   "who": "u/GroodyLeVrai",
+   "evidence": "tested",
+   "source": "r/afkarena",
+   "url": "https://www.reddit.com/r/afkarena/comments/1u79kbu/",
+   "date": "2026-06-16"
+  },
+  {
+   "mode": "legends-championship",
+   "vsName": "Groody LC May 2026 2nd update Team 3 (MVP Team)",
+   "vs": [
+    "misfortis",
+    "harvey",
+    "dracula",
+    "hybris",
+    "shuna"
+   ],
+   "beatenBy": [
+    {
+     "name": "Groody LC May 2026 2nd update Team 4 (MVP Team)",
+     "heroes": [
+      "odysseus",
+      "leviathan",
+      "elthara",
+      "velufira",
+      "lan"
+     ],
+     "beast": "treatspector"
+    }
+   ],
+   "claim": "This new team is becoming a cornerstone of the meta, indeed, and allows you to defeat all teams except the MVP in pure 1v1, making it indispensable.",
+   "who": "u/GroodyLeVrai",
+   "evidence": "tested",
+   "source": "r/afkarena",
+   "url": "https://www.reddit.com/r/afkarena/comments/1tew6cr/",
+   "date": "2026-05-16"
+  },
+  {
+   "mode": "arena-of-heroes",
+   "vsName": "the Odysseus / Kyno / Elthara / Thalassa / A. Eluard team",
+   "vs": [
+    "odysseus",
+    "kyno",
+    "elthara",
+    "thalassa",
+    "awakened-eluard"
+   ],
+   "beatenBy": [
+    {
+     "name": "Misfortis / Kyno / Elthara / Thalassa / A. Eluard (a player's tested team, r/afkarena)",
+     "heroes": [
+      "misfortis",
+      "kyno",
+      "elthara",
+      "thalassa",
+      "awakened-eluard"
+     ]
+    }
+   ],
+   "claim": "Thank you for your MVP idea, this worked! ... overall I achieved a 80+% winrate! (FYI: I have somewhat more levels)",
+   "who": "u/jgxpro",
+   "evidence": "tested",
+   "source": "r/afkarena",
+   "url": "https://www.reddit.com/r/afkarena/comments/1wtxhlk/counter_a_team/pd0vggk/",
+   "date": "2026-09-30"
+  },
+  {
+   "mode": "arena-of-heroes",
+   "vsName": "the Odysseus / Kyno / Elthara / Thalassa / A. Eluard team",
+   "vs": [
+    "odysseus",
+    "kyno",
+    "elthara",
+    "thalassa",
+    "awakened-eluard"
+   ],
+   "beatenBy": [
+    {
+     "name": "Misfortis / Leviathan / A. Eluard / Kyno / Thalassa (a player's suggestion, r/afkarena)",
+     "heroes": [
+      "misfortis",
+      "leviathan",
+      "awakened-eluard",
+      "kyno",
+      "thalassa"
+     ]
+    }
+   ],
+   "claim": "Misfortis, Kyno, Eluard, Thalassa, Elthara, or Misfortis, Levi, Eluard, Kyno, Thalassa. One is more defense oriented which is better sometimes.",
+   "who": "u/TheFireAngel",
+   "evidence": "suggested",
+   "source": "r/afkarena",
+   "url": "https://www.reddit.com/r/afkarena/comments/1wtxhlk/counter_a_team/pd107p2/",
+   "date": "2026-09-30"
+  },
+  {
+   "mode": "arena-of-heroes",
+   "vsName": "the Odysseus / Kyno / Elthara / Thalassa / A. Eluard team",
+   "vs": [
+    "odysseus",
+    "kyno",
+    "elthara",
+    "thalassa",
+    "awakened-eluard"
+   ],
+   "beatenBy": [
+    {
+     "name": "Kyno / Misfortis / Thalassa / A. Eluard / Lan (a player's suggestion, r/afkarena)",
+     "heroes": [
+      "kyno",
+      "misfortis",
+      "thalassa",
+      "awakened-eluard",
+      "lan"
+     ]
+    }
+   ],
+   "claim": "Kyno, Misfortus, Thalassa, aEluard, Lan pet Sheep the most strong solo team",
+   "who": "u/Accomplished-Neat272",
+   "evidence": "suggested",
+   "source": "r/afkarena",
+   "url": "https://www.reddit.com/r/afkarena/comments/1wtxhlk/counter_a_team/pcz03jp/",
+   "date": "2026-09-30"
+  },
+  {
+   "mode": "arena-of-heroes",
+   "vsName": "the Kyno / A. Estrilda / Thalassa / A. Eluard / Lan team",
+   "vs": [
+    "kyno",
+    "awakened-estrilda",
+    "thalassa",
+    "awakened-eluard",
+    "lan"
+   ],
+   "beatenBy": [
+    {
+     "name": "Odysseus / Kyno / Elthara / Thalassa / A. Eluard (a player's tested team, r/afkarena)",
+     "heroes": [
+      "odysseus",
+      "kyno",
+      "elthara",
+      "thalassa",
+      "awakened-eluard"
+     ]
+    }
+   ],
+   "claim": "When I tried my TS best team (Kyno, AEstrilda, Thalassa, AEulard, Lan) with Sheep 21, it failed",
+   "who": "u/jgxpro",
+   "evidence": "tested",
+   "source": "r/afkarena",
+   "url": "https://www.reddit.com/r/afkarena/comments/1wtxhlk/counter_a_team/pd0xo8k/",
+   "date": "2026-09-30"
+  },
+  {
+   "mode": "arena-of-heroes",
+   "vsName": "the Odysseus / Kyno / Elthara / Thalassa / A. Eluard team",
+   "vs": [
+    "odysseus",
+    "kyno",
+    "elthara",
+    "thalassa",
+    "awakened-eluard"
+   ],
+   "beatenBy": [
+    {
+     "name": "Valeri / Kafka Hibino / Athena / Medusa / A. Fawkes (a player's suggestion, r/afkarena)",
+     "heroes": [
+      "valeri",
+      "kafka-hibino",
+      "athena",
+      "medusa",
+      "awakened-fawkes"
+     ]
+    }
+   ],
+   "claim": "That team can lose to stall / burn team. Try Valerie, Kafka, Athena, Medusa and aFawkes with pegaus at least lvl 27",
+   "who": "u/Mobius_Ace_1",
+   "evidence": "suggested",
+   "source": "r/afkarena",
+   "url": "https://www.reddit.com/r/afkarena/comments/1wtxhlk/counter_a_team/pd0d2wa/",
+   "date": "2026-09-30"
+  },
+  {
+   "mode": "arena-of-heroes",
+   "vsName": "the Odysseus / Kyno / Elthara / Thalassa / A. Eluard team",
+   "vs": [
+    "odysseus",
+    "kyno",
+    "elthara",
+    "thalassa",
+    "awakened-eluard"
+   ],
+   "beatenBy": [
+    {
+     "name": "Shalltear Bloodfallen / A. Thoran / Alvida (a player's suggestion, r/afkarena)",
+     "heroes": [
+      "shalltear-bloodfallen",
+      "awakened-thoran",
+      "alvida"
+     ]
+    }
+   ],
+   "claim": "heroes that can stall / cheat death can win as long as you have a high level pegasus. There's many alternatives to that team, like for example Shalltear, aThoran, Alvida (just keep her away from Kyno), etc.",
+   "who": "u/Mobius_Ace_1",
+   "evidence": "suggested",
+   "source": "r/afkarena",
+   "url": "https://www.reddit.com/r/afkarena/comments/1wtxhlk/counter_a_team/pd0y0xf/",
+   "date": "2026-09-30"
+  },
+  {
+   "mode": "arena-of-heroes",
+   "vsName": "the Odysseus / Kyno / Elthara / Thalassa / A. Eluard team",
+   "vs": [
+    "odysseus",
+    "kyno",
+    "elthara",
+    "thalassa",
+    "awakened-eluard"
+   ],
+   "beatenBy": [
+    {
+     "name": "Misfortis / Hybris / Sung Jinwoo (a player's suggestion, r/afkarena)",
+     "heroes": [
+      "misfortis",
+      "hybris",
+      "sung-jinwoo"
+     ]
+    }
+   ],
+   "claim": "You can just try the other BIS team with Misfortis, Hybris and SJW as sometimes SJW just goes nuts and wins.",
+   "who": "u/FrostedCereal",
+   "evidence": "suggested",
+   "source": "r/afkarena",
+   "url": "https://www.reddit.com/r/afkarena/comments/1wtxhlk/counter_a_team/pcyfrpr/",
+   "date": "2026-09-30"
   }
  ]
 }

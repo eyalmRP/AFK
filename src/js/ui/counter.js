@@ -232,7 +232,7 @@ function renderResult(ctx) {
       ${verdict(Object.values(s.layout))}
       ${
         s.beats
-          ? `<p class="callout good small"><strong>Built on ${esc(s.beats.name)}</strong>${s.beats.overlap < s.beats.size ? ` (${s.beats.overlap} of its ${s.beats.size} heroes: ${swapText(s.beats.heroes, Object.values(s.layout))})` : ''}, which beats ${esc(s.beats.vsName)}: ${esc(s.beats.claim || '')} <a href="${esc(s.beats.url)}" target="_blank" rel="noopener">Source</a>, ${esc(s.beats.date || '')}.</p>`
+          ? `<p class="callout ${s.beats.evidence === 'suggested' ? 'info' : 'good'} small"><strong>${s.beats.evidence === 'suggested' ? 'Based on a suggestion:' : 'Built on'} ${esc(s.beats.name)}</strong>${s.beats.overlap < s.beats.size ? ` (${s.beats.overlap} of its ${s.beats.size} heroes: ${swapText(s.beats.heroes, Object.values(s.layout))})` : ''}, which beats ${esc(s.beats.vsName)}${s.beats.vsMatch < s.beats.vsSize ? ` (your enemy has ${s.beats.vsMatch} of its ${s.beats.vsSize} heroes)` : ''}: ${esc(s.beats.claim || '')} <a href="${esc(s.beats.url)}" target="_blank" rel="noopener">Source</a>, ${esc(s.beats.date || '')}.</p>`
           : ''
       }
       <header><h4>${esc(s.beats?.name || s.template?.name || 'Counter formation')}</h4><span class="score">${s.total.toFixed(1)} pts</span></header>

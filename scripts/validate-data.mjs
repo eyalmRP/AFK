@@ -84,6 +84,7 @@ for (const [i, mu] of (modesFile.pvpMatchups || []).entries()) {
   if (!(mu.beatenBy || []).length) err(`${where}: no winning lineup`);
   for (const t of mu.beatenBy || []) (t.heroes || []).forEach((id) => known(id, `${where} ${t.name}`));
   if (!/^https?:\/\//.test(mu.url || '')) err(`${where}: no source URL`);
+  if (!['tested', 'suggested'].includes(mu.evidence)) err(`${where}: evidence must be tested or suggested`);
   if (!/^\d{4}-\d{2}(-\d{2})?$/.test(mu.date || '')) err(`${where}: date must be YYYY-MM or YYYY-MM-DD`);
 }
 for (const id of meta.mustBuild || []) known(id, 'mustBuild');
