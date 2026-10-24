@@ -19,13 +19,17 @@
   --bad: #c2413a;
   --shadow: 0 1px 2px rgb(24 32 47 / 6%), 0 4px 16px rgb(24 32 47 / 6%);
 
-  --t-splus: #ff6b6b;
-  --t-s: #ffa24c;
-  --t-a: #ffd25e;
-  --t-b: #98d67d;
-  --t-c: #79c3e6;
-  --t-d: #b2b4d0;
-  --t-ink: #1b1d26;
+  /* Tier colours follow the TierMaker palette of the reference design. */
+  --t-splus: #f7f7f7;
+  --t-s: #ff7f7f;
+  --t-a: #ffbf7f;
+  --t-b: #ffdf7f;
+  --t-c: #ffff7f;
+  --t-d: #bfff7f;
+  --t-none: #cfcfcf;
+  --t-ink: #111111;
+  --tm-bg: #1a1a17;
+  --tm-gap: #000000;
 
   --f-lightbearer: #d9a521;
   --f-mauler: #cf4b35;
@@ -403,19 +407,39 @@ main {
 .owned-mark { width: 16px; height: 16px; border-radius: 50%; background: var(--good); color: #fff; display: grid; place-items: center; border: 2px solid var(--surface); }
 .owned-mark svg { width: 10px; height: 10px; }
 
-/* ---------- tier table ---------- */
-.tier-table { display: flex; flex-direction: column; gap: 6px; }
+/* ---------- tier table ----------
+   TierMaker layout: a coloured label cell, then a near-black strip of square
+   portraits packed edge to edge. The table is dark in both page themes, so it
+   redefines the surface and ink tokens for everything inside it. */
+.tier-table {
+  --surface: #262622;
+  --surface-2: #1f1f1c;
+  --ink: #ecebe4;
+  --ink-2: #c8c7bf;
+  --ink-3: #94938b;
+  --line: #3a3a35;
+  --line-2: #4a4a44;
+  --tm-size: 72px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  background: var(--tm-gap);
+  border: 2px solid var(--tm-gap);
+  border-radius: 3px;
+  overflow: hidden;
+  color: var(--ink);
+  color-scheme: dark;
+}
 .tier-row {
   display: grid;
-  grid-template-columns: 84px minmax(0, 1fr);
-  border: 1px solid var(--line);
-  border-radius: var(--r-md);
-  overflow: hidden;
-  background: var(--surface-2);
+  grid-template-columns: 104px minmax(0, 1fr);
+  min-height: calc(var(--tm-size) + 4px);
+  background: var(--tm-bg);
 }
 .tier-label {
   appearance: none;
   border: 0;
+  border-radius: 0;
   background: var(--tc);
   color: var(--t-ink);
   display: flex;
@@ -424,26 +448,68 @@ main {
   justify-content: center;
   gap: 2px;
   cursor: pointer;
-  padding: 8px 4px;
-  min-height: 64px;
+  padding: 8px 6px;
+  text-align: center;
+  font-family: var(--font-body);
 }
-.tier-label .letter { font-family: var(--font-display); font-size: 1.9rem; line-height: 1; }
-.tier-label .cnt { font-family: var(--font-data); font-size: 0.75rem; font-weight: 600; opacity: 0.8; }
-.tier-label .fold-icon { color: var(--t-ink); opacity: 0.6; width: 14px; height: 14px; }
-.tier-heroes { display: flex; flex-wrap: wrap; gap: 4px 2px; padding: 8px; align-content: flex-start; min-width: 0; }
+.tier-label:hover { filter: brightness(0.96); }
+.tier-label .letter { font-weight: 700; font-size: 1.35rem; line-height: 1.05; }
+.tier-label .desc { font-size: 0.8rem; line-height: 1.2; text-wrap: balance; }
+.tier-label .cnt { display: inline-flex; align-items: center; gap: 2px; font-family: var(--font-data); font-size: 0.72rem; font-weight: 600; opacity: 0.7; }
+.tier-label .fold-icon { color: var(--t-ink); width: 13px; height: 13px; }
+.tier-heroes { display: flex; flex-wrap: wrap; gap: 2px; padding: 2px; align-content: flex-start; min-width: 0; }
 .tier-row[data-folded='true'] .tier-heroes { display: none; }
-.tier-row .tier-folded { display: none; align-items: center; gap: 6px; padding: 8px 12px; color: var(--ink-3); font-size: 0.88rem; min-width: 0; flex-wrap: wrap; }
+.tier-row .tier-folded { display: none; align-items: center; gap: 2px; padding: 2px 10px 2px 2px; color: var(--ink-3); font-size: 0.85rem; min-width: 0; flex-wrap: wrap; cursor: pointer; }
 .tier-row[data-folded='true'] .tier-folded { display: flex; }
-.tier-folded .mini { --ps: 26px; }
-.tier-folded .mini .fac, .tier-folded .mini .lvl { display: none; }
+.tier-folded .tm-tile { --tm-size: 30px; pointer-events: none; }
+.tier-folded .more { padding: 0 6px; }
 .tier-row[data-tier='S+'] { --tc: var(--t-splus); }
 .tier-row[data-tier='S'] { --tc: var(--t-s); }
 .tier-row[data-tier='A'] { --tc: var(--t-a); }
 .tier-row[data-tier='B'] { --tc: var(--t-b); }
 .tier-row[data-tier='C'] { --tc: var(--t-c); }
 .tier-row[data-tier='D'] { --tc: var(--t-d); }
-.tier-row[data-tier='?'] { --tc: var(--line-2); }
-.tierpill { display: inline-grid; place-items: center; min-width: 28px; padding: 0 6px; height: 22px; border-radius: 5px; font-family: var(--font-display); font-size: 0.9rem; color: var(--t-ink); background: var(--tc, var(--line-2)); }
+.tier-row[data-tier='?'] { --tc: var(--t-none); }
+.tier-empty { color: var(--ink-3); font-size: 0.85rem; padding: 8px 10px; align-self: center; }
+
+.tm-tile {
+  appearance: none;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  position: relative;
+  display: block;
+  flex: none;
+  width: var(--tm-size);
+  height: var(--tm-size);
+  overflow: hidden;
+  background: #2a2a26;
+  cursor: pointer;
+}
+.tm-tile img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.tm-tile .initials { display: grid; place-items: center; width: 100%; height: 100%; font-family: var(--font-display); color: #ecebe4; font-size: calc(var(--tm-size) * 0.34); }
+.tm-tile:hover img { filter: brightness(1.12); }
+.tm-tile:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.tm-name {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: none;
+  padding: 1px 2px 2px;
+  background: rgb(0 0 0 / 72%);
+  color: #fff;
+  font-size: 10px;
+  line-height: 1.15;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+.tm-tile:hover .tm-name, .tm-tile:focus-visible .tm-name, .tier-table.show-names .tm-name { display: block; }
+.tm-tile .trend { position: absolute; top: 2px; right: 2px; font-size: 0.58rem; padding: 0 3px; }
+.tm-tile .owned-mark { position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; border-width: 1px; }
+.tm-tile .owned-mark svg { width: 8px; height: 8px; }
+
+.tierpill { display: inline-grid; place-items: center; min-width: 28px; padding: 0 6px; height: 22px; border-radius: 5px; font-family: var(--font-body); font-weight: 700; font-size: 0.85rem; color: var(--t-ink); background: var(--tc, var(--t-none)); box-shadow: inset 0 0 0 1px rgb(0 0 0 / 18%); }
 .tierpill[data-tier='S+'] { --tc: var(--t-splus); }
 .tierpill[data-tier='S'] { --tc: var(--t-s); }
 .tierpill[data-tier='A'] { --tc: var(--t-a); }
@@ -643,8 +709,11 @@ table.bank .input, table.bank .select { padding: 3px 6px; font-size: 0.85rem; }
 @media (max-width: 760px) {
   .side-by-side, .compare, .grid-2 { grid-template-columns: minmax(0, 1fr); }
   .brand-meta { margin-left: 0; }
-  .tier-row { grid-template-columns: 56px minmax(0, 1fr); }
-  .tier-label .letter { font-size: 1.4rem; }
+  .tier-table { --tm-size: 54px; }
+  .tier-row { grid-template-columns: 72px minmax(0, 1fr); }
+  .tier-label { padding: 6px 4px; }
+  .tier-label .letter { font-size: 1.15rem; }
+  .tier-label .desc { font-size: 0.68rem; }
   .hero-tile { width: 70px; }
   .hero-tile .portrait { --ps: 54px; }
   .tier-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }

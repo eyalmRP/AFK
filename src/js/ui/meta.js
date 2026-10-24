@@ -1,15 +1,29 @@
 // Meta tab: weekly summary, hero tiers, artifacts, formations per mode
 // (community vs AI side by side), combinations and PvP archetypes.
 
-import { esc, fmtDate, $ } from '../util.js';
+import { esc, fmtDate, $, local } from '../util.js';
 import { data, TIERS, CATEGORIES, FACTION_IDS, CLASSES, tierOf, tierScore, hero as getHero } from '../data.js';
 import { entry as bankEntry } from '../store.js';
 import { ICON, factionIcon, classIcon } from './icons.js';
-import { panel, heroTile, portrait, board, slotsFromList, artifactChip, artifactGlyph, tierPill, bindFolding, foldAll, isFolded, facClass } from './common.js';
+import { panel, heroTile, portrait, board, slotsFromList, artifactChip, artifactGlyph, tierPill, bindFolding, foldAll, isFolded, facClass, trendBadge, ownedBadge } from './common.js';
 import { openHeroDetail } from './heroDetail.js';
+
+// Short descriptions shown under each tier letter, in the style of the
+// reference tier list. data/meta.json can override them with `tierLabels`.
+const TIER_DESC = {
+  'S+': 'Must have: team cores, very broken',
+  S: 'Broken',
+  A: 'Good',
+  B: 'Mid',
+  C: 'Weak',
+  D: 'Skip',
+  '?': 'Not rated this week',
+};
+const ARTIFACT_DESC = { 'S+': 'Best in slot for most', S: 'Strong', A: 'Good', B: 'Situational', C: 'Niche', D: 'Skip' };
 
 const ui = {
   category: 'overall',
+  showNames: !!local.get('afk-codex-show-names', false),
   factions: new Set(),
   classes: new Set(),
   q: '',
@@ -32,6 +46,10 @@ export function mountMeta(el) {
     if (ev.target.id === 'tier-owned') {
       ui.ownedOnly = ev.target.checked;
       renderTiers();
+    } else if (ev.target.id === 'tier-names') {
+      ui.showNames = ev.target.checked;
+      local.set('afk-codex-show-names', ui.showNames);
+      $('#tier-table', root)?.classList.toggle('show-names', ui.showNames);
     }
   });
   render();
@@ -140,6 +158,7 @@ function tierControls() {
       <div class="seg" role="group" aria-label="Rating category">${seg}</div>
       <label class="search">${ICON.search}<input class="input" id="tier-q" type="search" placeholder="Find hero" value="${esc(ui.q)}" autocomplete="off"></label>
       <label class="check"><input type="checkbox" id="tier-owned" ${ui.ownedOnly ? 'checked' : ''}> Only heroes I own</label>
+      <label class="check"><input type="checkbox" id="tier-names" ${ui.showNames ? 'checked' : ''}> Show names</label>
       <span class="spacer"></span>
       <button class="btn small ghost" type="button" data-fold-all="open" data-scope="#tier-table">Expand tiers</button>
       <button class="btn small ghost" type="button" data-fold-all="fold" data-scope="#tier-table">Fold tiers</button>
@@ -174,26 +193,34 @@ function renderTiers() {
     groups.get(t && groups.has(t) ? t : '?').push(h);
   }
   for (const list of groups.values()) list.sort((a, b) => overallScore(b) - overallScore(a) || a.name.localeCompare(b.name));
+  const labels = { ...TIER_DESC, ...(data.meta.tierLabels || {}) };
   const rows = [...groups.entries()]
     .filter(([t, list]) => list.length || t !== '?')
     .map(([t, list]) => {
       const id = `tier-${cat}-${t}`;
       const folded = isFolded(id, t === '?' || t === 'D');
-      const label = t === '?' ? 'Not rated' : t;
+      const name = t === '?' ? 'Not rated' : t;
       return `<div class="tier-row" data-tier="${esc(t)}" data-fold-id="${esc(id)}" data-folded="${folded}">
-        <button class="tier-label" type="button" data-fold-toggle aria-expanded="${!folded}" title="${folded ? 'Expand' : 'Fold'} ${esc(label)}">
-          <span class="letter">${t === '?' ? '?' : esc(t)}</span><span class="cnt">${list.length}</span>${ICON.chevron}
+        <button class="tier-label" type="button" data-fold-toggle aria-expanded="${!folded}" title="${folded ? 'Expand' : 'Fold'} ${esc(name)}">
+          <span class="letter">${esc(t === '?' ? '–' : t)}</span><span class="desc">${esc(labels[t] || '')}</span><span class="cnt">${list.length}${ICON.chevron}</span>
         </button>
-        <div class="tier-heroes">${list.length ? list.map((h) => heroTile(h)).join('') : '<span class="muted small" style="padding:8px">No heroes match the filters.</span>'}</div>
+        <div class="tier-heroes">${list.length ? list.map(tmTile).join('') : '<span class="tier-empty">No heroes match the filters.</span>'}</div>
         <div class="tier-folded" data-fold-toggle>${list
-          .slice(0, 12)
-          .map((h) => `<span class="mini">${portrait(h, { size: 26 })}</span>`)
-          .join('')}${list.length > 12 ? `<span>+${list.length - 12}</span>` : ''}<span>${list.length} hero${list.length === 1 ? '' : 'es'} folded</span></div>
+          .slice(0, 14)
+          .map((h) => tmTile(h, { mini: true }))
+          .join('')}<span class="more">${list.length > 14 ? `+${list.length - 14} · ` : ''}${list.length} hero${list.length === 1 ? '' : 'es'} folded</span></div>
       </div>`;
     })
     .join('');
-  host.innerHTML = `${tierControls()}<div class="tier-table" id="tier-table">${rows}</div>
-    <p class="small muted">Ratings: S+ best to D weakest, merged from the community sources listed at the bottom. ▲ rising, ▼ falling, NEW released in the past year. Select a hero for kit, synergies and per-source ratings.</p>`;
+  host.innerHTML = `${tierControls()}<div class="tier-table${ui.showNames ? ' show-names' : ''}" id="tier-table">${rows}</div>
+    <p class="small muted">S+ is best and D weakest, merged from the community sources listed at the bottom. A hero's name shows on hover; select it for kit, synergies and each source's rating. Corner marks: ▲ rising, ▼ falling, NEW released in the past year, ✓ in your hero bank.</p>`;
+}
+
+// One square portrait in the TierMaker style: no frame, name on hover.
+function tmTile(h, { mini = false } = {}) {
+  const img = h.img ? `<img src="${esc(h.img)}" alt="" loading="lazy" data-fallback="${esc(h.name.slice(0, 2))}">` : `<span class="initials">${esc(h.name.slice(0, 2))}</span>`;
+  if (mini) return `<span class="tm-tile" aria-hidden="true">${img}</span>`;
+  return `<button class="tm-tile" type="button" data-hero="${esc(h.id)}" title="${esc(h.name)} · ${esc(h.faction)} ${esc(h.class)}" aria-label="${esc(h.name)}">${img}${trendBadge(h)}${ownedBadge(h.id)}<span class="tm-name">${esc(h.name)}</span></button>`;
 }
 
 // ---- artifacts ---------------------------------------------------------------
@@ -215,9 +242,9 @@ function artifactsPanel() {
       const folded = isFolded(id, false);
       const items = groups.get(t);
       return `<div class="tier-row" data-tier="${t}" data-fold-id="${id}" data-folded="${folded}">
-        <button class="tier-label" type="button" data-fold-toggle aria-expanded="${!folded}"><span class="letter">${t}</span><span class="cnt">${items.length}</span>${ICON.chevron}</button>
+        <button class="tier-label" type="button" data-fold-toggle aria-expanded="${!folded}"><span class="letter">${t}</span><span class="desc">${ARTIFACT_DESC[t] || ''}</span><span class="cnt">${items.length}${ICON.chevron}</span></button>
         <div class="tier-heroes artifact-list">${items.map(artifactCard).join('')}</div>
-        <div class="tier-folded" data-fold-toggle>${items.map((a) => esc(a.name)).join(' · ')}</div>
+        <div class="tier-folded" data-fold-toggle><span class="more">${items.map((a) => esc(a.name)).join(' · ')}</span></div>
       </div>`;
     })
     .join('');
