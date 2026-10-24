@@ -2,7 +2,8 @@
 
 import { esc, local, $ } from '../util.js';
 import { data, hero as getHero, POSITIONS, CLASSES, TYPES, FACTION_IDS, starTier } from '../data.js';
-import { entry as bankEntry, effectiveLevel } from '../store.js';
+import { entry as bankEntry, effectiveLevel, bank } from '../store.js';
+import { estimateCR } from '../engine.js';
 import { ICON, factionIcon, classIcon, typeIcon, gemStar } from './icons.js';
 
 // ---- fold state ------------------------------------------------------------
@@ -167,6 +168,18 @@ export function starRow(stars, { size = 14, title = true, engrave = null } = {})
   if (!t) return '';
   return `<span class="star-row ${t.tier}" style="--ss:${size}px"${title ? ` title="${t.count} star${t.count === 1 ? '' : 's'}, ${t.tier} (engraving ${ENGRAVE_NAME[t.tier]})"` : ''} aria-label="${t.count} stars, ${t.tier}">${gemStar(t.tier).repeat(t.count)}</span>`;
 }
+
+// Estimated combat rating of the player's copy (see estimateCR in engine.js).
+export function heroCR(h) {
+  return estimateCR(bankEntry(h.id), h, { level: effectiveLevel(h.id), elderTree: bank.settings.elderTree });
+}
+
+export function fmtCR(n) {
+  if (!n) return '–';
+  return n >= 1000 ? `${(n / 1000).toFixed(n >= 100000 ? 0 : 1)}k` : String(n);
+}
+
+export const CR_NOTE = 'Estimated combat rating: worked out from level, ascension, stars, signature item, furniture, engraving, gear and the Elder Tree. The game does not publish its formula, so this is not the in-game number.';
 
 // Ascension name coloured like its card frame.
 export function ascText(asc) {

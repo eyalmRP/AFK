@@ -43,6 +43,41 @@ function lerpTable(table, x) {
   return table[table.length - 1][1];
 }
 
+// Estimated combat rating. The game does not publish its power formula, so
+// this multiplies the stat gains each upgrade is known to give, using the
+// weights below; it ranks heroes sensibly but is not the in-game number.
+// Upgrades not unlocked or not recorded add nothing.
+export const CR_WEIGHTS = {
+  perLevel: 10,
+  ascension: { Elite: 1, 'Elite+': 1.12, Legendary: 1.27, 'Legendary+': 1.42, Mythic: 1.6, 'Mythic+': 1.8, Ascended: 2.05 },
+  perStar: 0.04,
+  si: [[0, 1], [10, 1.05], [20, 1.1], [30, 1.16], [40, 1.22], [50, 1.28]],
+  furniture: [[0, 1], [3, 1.06], [9, 1.15], [36, 1.25]],
+  engrave: [[0, 1], [30, 1.06], [60, 1.11], [80, 1.15], [100, 1.18]],
+  perGearTier: 0.03,
+  // Elder Tree: each level of the hero's class branch, and each level of the tree itself.
+  perBranchLevel: 0.0006,
+  perTreeLevel: 0.0003,
+};
+
+export function estimateCR(entry, hero, { level, elderTree } = {}) {
+  if (!entry?.owned) return 0;
+  const W = CR_WEIGHTS;
+  const num = (v) => (v === null || v === undefined ? 0 : Number(v) || 0);
+  const ascended = entry.asc === 'Ascended';
+  const ascRank = Object.keys(W.ascension).indexOf(entry.asc);
+  let cr = Math.max(1, num(level ?? entry.level)) * W.perLevel;
+  cr *= W.ascension[entry.asc] ?? 1;
+  if (ascended) cr *= 1 + Math.min(5, num(entry.stars)) * W.perStar;
+  if (ascRank >= 4) cr *= lerpTable(W.si, num(entry.si));
+  if (ascended) cr *= lerpTable(W.furniture, num(entry.furniture));
+  if (ascended && num(entry.stars) >= 1) cr *= lerpTable(W.engrave, num(entry.engrave));
+  cr *= 1 + Math.min(5, num(entry.gear)) * W.perGearTier;
+  const t = elderTree || {};
+  cr *= 1 + num(t[hero?.class]) * W.perBranchLevel + num(t.core) * W.perTreeLevel;
+  return Math.round(cr);
+}
+
 // How much of a hero's potential the player's copy delivers (about 0.4–1.1).
 export function investmentFactor(entry, hero) {
   const notes = [];

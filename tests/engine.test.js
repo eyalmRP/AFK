@@ -121,3 +121,18 @@ test('signature item ornaments follow the in-game tiers', async () => {
   assert.ok(emblemSvg(40, 9).includes('orn-wing-gold') && emblemSvg(40, 9).includes('#e84a4a'));
   assert.ok(!emblemSvg(50, 9).includes('orn-wing-gold') && emblemSvg(50, 9).includes('url(#orn-wing)') && emblemSvg(50, 9).includes('#e84a4a'));
 });
+
+test('estimated combat rating rises with every upgrade and the Elder Tree', async () => {
+  const { estimateCR } = await import('../src/js/engine.js');
+  const h = { class: 'Mage' };
+  const base = { owned: true, asc: 'Ascended', stars: 3, si: 30, furniture: 9, engrave: 60, gear: 4 };
+  const cr = (e, opts = {}) => estimateCR(e, h, { level: 922, ...opts });
+  const b = cr(base);
+  for (const patch of [{ stars: 5 }, { si: 40 }, { furniture: 36 }, { engrave: 80 }, { gear: 5 }]) assert.ok(cr({ ...base, ...patch }) > b, JSON.stringify(patch));
+  assert.ok(cr(base, { level: 1000 }) > b);
+  assert.ok(cr(base, { elderTree: { Mage: 200 } }) > cr(base, { elderTree: { Warrior: 200 } }));
+  assert.ok(cr({ ...base, asc: 'Mythic+', stars: 0 }) < b);
+  // Locked upgrades and heroes not owned add nothing.
+  assert.equal(cr({ ...base, asc: 'Legendary', si: 30 }), cr({ ...base, asc: 'Legendary', si: 0 }));
+  assert.equal(cr({ ...base, owned: false }), 0);
+});

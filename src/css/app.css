@@ -844,6 +844,9 @@ input.switch.small:checked::before { transform: translateX(14px); }
 
 .bank-tile { display: flex; flex-direction: column; gap: 14px; min-width: 0; text-align: center; }
 .bank-tile .nm { font-size: 0.84rem; font-weight: 600; line-height: 1.15; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bank-tile .nm .cr, .bank-big .cr, .row-lvl .cr { display: block; font-family: var(--font-data); font-weight: 600; font-variant-numeric: tabular-nums; color: var(--ink-3); font-size: 0.76rem; letter-spacing: 0.01em; }
+.row-lvl .cr { font-size: 0.72rem; margin-top: 2px; }
+.bank-big .cr { font-size: 0.82rem; color: var(--ink-2); }
 /* zoom steps */
 .z1 .fr-lvl .lv-l { display: none; }
 .z1 .bank-tile { gap: 9px; }

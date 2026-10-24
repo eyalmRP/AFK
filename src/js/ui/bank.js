@@ -7,7 +7,7 @@ import { data, FACTION_IDS, CLASSES, ASCENSIONS, LIMITS, TIERS, tierOf, hero as 
 import { bank, updateHeroes, updateSettings, updateElderTree, replaceBank, removeHeroes, effectiveLevel, exportBank, sanitizeEntry, defaultEntry, ownedIds, ownedBeasts } from '../store.js';
 import { aiState, initAi, readScreenshots, readElderTree, errorCopy } from '../ai.js';
 import { ICON, classIcon, factionIcon } from './icons.js';
-import { portrait, openDrawer, closeDrawer, tierPill, gameFilterBar, handleGameFilter, syncGameFilter, bindFolding, starRow, ascText } from './common.js';
+import { portrait, openDrawer, closeDrawer, tierPill, gameFilterBar, handleGameFilter, syncGameFilter, bindFolding, starRow, ascText, heroCR, fmtCR, CR_NOTE } from './common.js';
 import { openHeroDetail } from './heroDetail.js';
 import { beastPanel, bindBeastPanel, refreshBeastPanel } from './beastPanel.js';
 import { emblem, upgradeText, plusCorners } from './emblem.js';
@@ -68,6 +68,7 @@ function missingMatch(e, what = ui.missing) {
 
 const SORTS = [
   ['tier', 'Tier'],
+  ['cr', 'Combat rating (est.)'],
   ['name', 'Name'],
   ['faction', 'Faction'],
   ['class', 'Class'],
@@ -220,10 +221,13 @@ function visibleHeroes() {
     if (s && !h.name.toLowerCase().includes(s) && !h.faction.toLowerCase().includes(s) && !(h.title || '').toLowerCase().includes(s)) return false;
     return true;
   });
+  const cr = ui.sort === 'cr' ? new Map(list.map((h) => [h.id, heroCR(h)])) : null;
   const val = (h) => {
     const e = bank.heroes[h.id];
     const owned = e?.owned;
     switch (ui.sort) {
+      case 'cr':
+        return owned ? -cr.get(h.id) : 1;
       case 'name':
         return h.name;
       case 'faction':
@@ -455,7 +459,9 @@ function heroFrame(h, e) {
 
 function tile(h) {
   const e = bank.heroes[h.id];
-  return `<div ${cardAttrs(h, e, 'bank-tile')}>${heroFrame(h, e)}<span class="nm">${esc(h.name)}</span></div>`;
+  // Sorting by combat rating shows the estimate under each name.
+  const cr = ui.sort === 'cr' && e?.owned ? `<span class="cr" title="${esc(CR_NOTE)}">≈ ${fmtCR(heroCR(h))}</span>` : '';
+  return `<div ${cardAttrs(h, e, 'bank-tile')}>${heroFrame(h, e)}<span class="nm">${esc(h.name)}${cr}</span></div>`;
 }
 
 function upChips(e) {
@@ -474,6 +480,7 @@ function bigCard(h) {
       <span class="nm">${esc(h.name)}</span>
       <span class="big-meta">${factionIcon(h.faction)}${classIcon(h.class)}${owned ? ascText(e.asc) : '<span class="muted">Not owned</span>'}</span>
       ${owned ? upChips(e) : ''}
+      ${owned ? `<span class="cr" title="${esc(CR_NOTE)}">Combat rating ≈ ${fmtCR(heroCR(h))} <span class="muted">(est.)</span></span>` : ''}
     </span>
   </div>`;
 }
@@ -482,7 +489,7 @@ function row(h) {
   const e = bank.heroes[h.id];
   const owned = !!e?.owned;
   const right = owned
-    ? `<span class="row-lvl"><small>Lv</small>${lvlBadge(h, e, '')}</span>`
+    ? `<span class="row-lvl"><small>Lv</small>${lvlBadge(h, e, '')}<span class="cr" title="${esc(CR_NOTE)}">≈ ${fmtCR(heroCR(h))}</span></span>`
     : ui.selectMode
       ? ''
       : `<button class="btn small" type="button" data-own-hero="${h.id}">+ Own</button>`;
@@ -525,13 +532,14 @@ function tableView(list) {
         <td>${numCell(h.id, 'furniture', e.furniture, LIMITS.furniture, dis)}</td>
         <td>${numCell(h.id, 'engrave', e.engrave, LIMITS.engrave, dis)}</td>
         <td>${numCell(h.id, 'gear', e.gear, LIMITS.gear, dis)}</td>
+        <td class="num" title="${esc(CR_NOTE)}">${owned ? fmtCR(heroCR(h)) : '–'}</td>
         <td>${tierPill(tierOf(h, 'overall'))}</td>
         <td><button class="btn ghost small" type="button" data-edit-hero="${h.id}" aria-label="Edit ${esc(h.name)}">${ICON.edit}</button></td>
       </tr>`;
     })
     .join('');
   return `<div class="table-wrap"><table class="bank">
-    <thead><tr><th><input type="checkbox" data-act="select-all-table" aria-label="Select all shown"></th><th>Hero</th><th>Owned</th><th>Ascension</th><th>Stars</th><th>Level</th><th>SI</th><th>Furn.</th><th>Engrave</th><th>Gear T</th><th>Tier</th><th></th></tr></thead>
+    <thead><tr><th><input type="checkbox" data-act="select-all-table" aria-label="Select all shown"></th><th>Hero</th><th>Owned</th><th>Ascension</th><th>Stars</th><th>Level</th><th>SI</th><th>Furn.</th><th>Engrave</th><th>Gear T</th><th title="${esc(CR_NOTE)}">Est. CR</th><th>Tier</th><th></th></tr></thead>
     <tbody>${rows}</tbody></table></div>`;
 }
 
