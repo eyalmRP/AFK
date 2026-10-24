@@ -88,7 +88,7 @@ Before publishing, take one look at the built page (`npm run serve` and a Playwr
 ## Daily code check
 A separate daily routine only updates `data/codes.json`:
 1. Search for AFK Arena redemption codes posted or confirmed since `lastChecked`, and for codes that have expired.
-2. Add new codes with the exact code string, `rewards`, `firstSeen`, `expires`, `status` (active / expired / unverified) and `sources`. Never invent a code. A code seen on only one low-reliability site is `unverified`.
+2. Add new codes with the exact code string, `server` (`classic` or `companions`; codes come in pairs, one per server), `rewards` (null if not published), `firstSeen`, `expires`, `status` (active / expired / unverified) and `sources`. Never invent a code. A code seen on only one low-reliability site is `unverified`. Mark codes past their expiry as `expired`.
 3. Set `lastChecked` and `asOf` to today.
 4. Run `npm run validate && npm run build`, then commit and push.
 5. Republish the artifact with only `data/codes.json` in `files`.
