@@ -250,7 +250,7 @@ export function heroValue(ctx, id) {
   const reasons = [];
   const tier = tierOf(h, ctx.tierCategory);
   let base = tierScore(tier);
-  reasons.push(tier ? `${tier} in ${ctx.tierCategory.toUpperCase()}` : 'unrated');
+  reasons.push(tier ? `${tier} in ${ctx.tierCategory.toUpperCase()}` : 'not rated yet, counted as B');
   const p = modePresence(ctx.mode, id);
   if (p.bonus) {
     base += p.bonus;

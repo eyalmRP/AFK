@@ -2,7 +2,9 @@
 
 export const TIERS = ['S+', 'S', 'A', 'B', 'C', 'D'];
 export const TIER_SCORE = { 'S+': 10, S: 8.5, A: 7, B: 5.5, C: 4, D: 2.5 };
-export const UNRATED_SCORE = 3;
+// Heroes no current source rates count as average (B), not as weak: many of
+// them are strong older heroes that this week's lists simply leave out.
+export const UNRATED_SCORE = TIER_SCORE.B;
 
 export const CATEGORIES = [
   { id: 'overall', label: 'Overall' },
