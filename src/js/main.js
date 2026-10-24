@@ -1,7 +1,7 @@
 // App entry: load the weekly data, mount the four tabs, wire persistence.
 
 import { loadData, data } from './data.js';
-import { esc, fmtDate, $, $$ } from './util.js';
+import { esc, fmtDate, $, $$, local } from './util.js';
 import { loadLocal, connectRemote, onBankChange, onSyncChange, sync, ownedIds } from './store.js';
 import { mountMeta, refreshMeta } from './ui/meta.js';
 import { mountBank, refreshBank } from './ui/bank.js';
@@ -20,6 +20,34 @@ const TABS = [
   { id: 'codes', label: 'Codes', short: 'Codes', icon: 'tabCodes', mount: mountCodes, refresh: refreshCodes },
 ];
 
+// Theme: Auto follows Claude's appearance setting (or the device's when Claude
+// is on System); Dark and Light override it. Remembered in this browser.
+const THEME_KEY = 'afk-codex-theme';
+const THEMES = [
+  ['auto', 'Auto', 'themeAuto'],
+  ['dark', 'Dark', 'themeDark'],
+  ['light', 'Light', 'themeLight'],
+];
+let theme = THEMES.some(([v]) => v === local.get(THEME_KEY, 'auto')) ? local.get(THEME_KEY, 'auto') : 'auto';
+
+function applyTheme() {
+  if (theme === 'auto') document.documentElement.removeAttribute('data-codex-theme');
+  else document.documentElement.setAttribute('data-codex-theme', theme);
+  const b = document.getElementById('theme-btn');
+  if (!b) return;
+  const [, label, icon] = THEMES.find(([v]) => v === theme);
+  b.innerHTML = `${ICON[icon]}<span>${label}</span>`;
+  b.setAttribute('aria-label', `Theme: ${label}. Tap to change.`);
+}
+
+function cycleTheme() {
+  const i = THEMES.findIndex(([v]) => v === theme);
+  theme = THEMES[(i + 1) % THEMES.length][0];
+  local.set(THEME_KEY, theme);
+  applyTheme();
+}
+applyTheme();
+
 const mounted = new Set();
 const dirty = new Set();
 let current = 'meta';
@@ -33,6 +61,7 @@ function header() {
         <span class="pill" title="The meta data is refreshed weekly">Meta of ${esc(fmtDate(m.asOf))}</span>
         ${m.nextUpdate ? `<span class="pill">Next update ${esc(fmtDate(m.nextUpdate))}</span>` : ''}
         <span class="pill" id="sync-pill" data-state="local"><span class="dot"></span><span id="sync-text">Saved in this browser</span></span>
+        <button class="theme-btn" type="button" id="theme-btn" title="Auto follows Claude's appearance setting"></button>
       </div>
     </div>
     <nav class="tabs" role="tablist" aria-label="Sections">${TABS.map(
@@ -41,9 +70,10 @@ function header() {
   </div>`;
 }
 
-// Phone navigation: a bar fixed to the bottom of the screen.
-function bottomNav() {
-  return `<nav class="bottom-nav" aria-label="Sections">${TABS.map(
+// Phone navigation: a tab bar that sticks to the top of the screen. (A bar
+// fixed to the bottom can sit under Safari's toolbar or the app's controls.)
+function phoneNav() {
+  return `<nav class="phone-nav" aria-label="Sections">${TABS.map(
     (t) => `<button type="button" data-tab="${t.id}" aria-selected="${t.id === current}">${ICON[t.icon]}<span>${t.short}</span><span class="count"></span></button>`
   ).join('')}</nav>`;
 }
@@ -107,11 +137,13 @@ async function start() {
   }
   loadLocal();
   app.innerHTML = `<header class="app-header">${header()}</header>
+    ${phoneNav()}
     <main>${TABS.map((t) => `<section class="view" id="view-${t.id}" role="tabpanel" aria-labelledby="tab-${t.id}" hidden></section>`).join('')}
       <footer class="small muted app-foot">Fan-made tool, not affiliated with Lilith Games. Hero portraits are game assets via the floofpire/cdn mirror. Meta data ${esc(data.meta.gameVersion || '')} · updated weekly.</footer></main>
-    ${bottomNav()}
     <div id="toast" role="status" aria-live="polite" hidden></div>`;
   bindImageFallback(document.body);
+  applyTheme();
+  $('#theme-btn').addEventListener('click', cycleTheme);
   // Sticky bars inside the views sit just below the sticky header (on phones the header scrolls away).
   const head = app.querySelector('.app-header');
   const setHeaderH = () => document.documentElement.style.setProperty('--header-h', getComputedStyle(head).position === 'sticky' ? `${head.offsetHeight}px` : '0px');

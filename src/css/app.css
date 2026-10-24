@@ -60,8 +60,10 @@
   --gutter: max(16px, env(safe-area-inset-left, 0px));
 }
 
+/* Dark: the device or Claude asks for it, unless the app's theme button says Light;
+   or the button says Dark. data-theme is set by Claude, data-codex-theme by the button. */
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme='light']) {
+  :root:not([data-theme='light']):not([data-codex-theme='light']) {
     --bg: #0e131d;
     --surface: #161d2b;
     --surface-2: #1c2435;
@@ -86,7 +88,8 @@
     color-scheme: dark;
   }
 }
-:root[data-theme='dark'] {
+:root[data-theme='dark']:not([data-codex-theme='light']),
+:root[data-codex-theme='dark'] {
   --bg: #0e131d;
   --surface: #161d2b;
   --surface-2: #1c2435;
@@ -181,6 +184,9 @@ button, input, select, textarea { font: inherit; color: inherit; }
   font-size: 0.82rem;
   white-space: nowrap;
 }
+.theme-btn { appearance: none; display: inline-flex; align-items: center; gap: 5px; padding: 2px 10px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface-2); color: var(--ink-2); font-family: var(--font-data); font-size: 0.82rem; cursor: pointer; }
+.theme-btn:hover { color: var(--ink); border-color: var(--line-2); }
+.theme-btn svg { width: 14px; height: 14px; }
 .pill .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ink-3); }
 .pill[data-state='cloud'] .dot { background: var(--good); }
 .pill[data-state='saving'] .dot { background: var(--warn); }
@@ -967,36 +973,34 @@ table.bank .input, table.bank .select { padding: 3px 6px; font-size: 0.85rem; }
 .code-add { display: flex; flex-direction: column; gap: 6px; padding: 12px 14px; border-radius: var(--r-md); border: 1px dashed var(--line-2); }
 .code-add-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr) auto; gap: 8px; }
 .code-add-row .input { min-height: 40px; }
-.tab .count.alert, .bottom-nav .count.alert { color: var(--accent-ink); background: var(--accent); border-radius: 999px; padding: 0 6px; }
+.tab .count.alert, .phone-nav .count.alert { color: var(--accent-ink); background: var(--accent); border-radius: 999px; padding: 0 6px; }
 
 /* ---------- phone navigation ---------- */
-.bottom-nav { display: none; }
+.phone-nav { display: none; }
 
 .loading { padding: 60px 16px; text-align: center; color: var(--ink-3); font-family: var(--font-display); font-size: 1.2rem; }
 
-/* Phones (and phones held sideways): tabs move to a bar at the bottom and the header scrolls away. */
+/* Phones (and phones held sideways): the header scrolls away and the tabs become a bar that sticks to the top. */
 @media (max-width: 760px), (pointer: coarse) and (max-height: 500px) {
   .app-header { position: static; }
   .app-header .tabs { display: none; }
   .app-header .inner { padding-block: 10px; }
   .brand h1 { font-size: 1.15rem; }
   .brand-meta .pill:nth-child(2) { display: none; }
-  .bottom-nav {
+  :root { --nav-h: 54px; }
+  .phone-nav {
     display: grid;
     grid-template-columns: repeat(5, minmax(0, 1fr));
-    position: fixed;
-    left: 0;
-    right: 0;
-    bottom: 0;
+    position: sticky;
+    top: env(safe-area-inset-top, 0px);
     z-index: 30;
     background: var(--surface);
-    border-top: 1px solid var(--line);
-    box-shadow: 0 -4px 16px rgb(0 0 0 / 8%);
-    padding-bottom: env(safe-area-inset-bottom, 0px);
+    border-bottom: 1px solid var(--line);
+    box-shadow: 0 4px 14px rgb(0 0 0 / 10%);
     padding-left: env(safe-area-inset-left, 0px);
     padding-right: env(safe-area-inset-right, 0px);
   }
-  .bottom-nav button {
+  .phone-nav button {
     appearance: none;
     border: 0;
     background: none;
@@ -1006,7 +1010,7 @@ table.bank .input, table.bank .select { padding: 3px 6px; font-size: 0.85rem; }
     align-items: center;
     justify-content: center;
     gap: 2px;
-    min-height: 56px;
+    min-height: var(--nav-h);
     padding: 6px 2px;
     color: var(--ink-3);
     font-family: var(--font-data);
@@ -1015,25 +1019,24 @@ table.bank .input, table.bank .select { padding: 3px 6px; font-size: 0.85rem; }
     letter-spacing: 0.02em;
     cursor: pointer;
   }
-  .bottom-nav button svg { width: 22px; height: 22px; }
-  .bottom-nav button[aria-selected='true'] { color: var(--accent); }
-  .bottom-nav button[aria-selected='true']::before { content: ''; position: absolute; top: 0; left: 25%; right: 25%; height: 3px; border-radius: 0 0 3px 3px; background: var(--accent); }
-  .bottom-nav .count { position: absolute; top: 4px; left: calc(50% + 8px); font-size: 0.62rem; line-height: 1.4; }
-  .bottom-nav .count:empty { display: none; }
-  .bottom-nav .count:not(.alert) { display: none; }
-  main { padding-block: 14px calc(84px + env(safe-area-inset-bottom, 0px)); }
-  #toast { bottom: calc(76px + env(safe-area-inset-bottom, 0px)); }
-  #bank-batch { top: calc(env(safe-area-inset-top, 0px) + 6px); }
+  .phone-nav button svg { width: 22px; height: 22px; }
+  .phone-nav button[aria-selected='true'] { color: var(--accent); }
+  .phone-nav button[aria-selected='true']::before { content: ''; position: absolute; bottom: 0; left: 25%; right: 25%; height: 3px; border-radius: 3px 3px 0 0; background: var(--accent); }
+  .phone-nav .count { position: absolute; top: 4px; left: calc(50% + 8px); font-size: 0.62rem; line-height: 1.4; }
+  .phone-nav .count:empty { display: none; }
+  .phone-nav .count:not(.alert) { display: none; }
+  main { padding-block: 14px calc(24px + env(safe-area-inset-bottom, 0px)); }
+  #bank-batch { top: calc(env(safe-area-inset-top, 0px) + var(--nav-h) + 6px); }
 }
 /* Sideways phones: a lower tab bar with the label beside the icon. */
 @media (pointer: coarse) and (max-height: 500px) {
-  .bottom-nav button { min-height: 44px; flex-direction: row; gap: 6px; font-size: 0.8rem; }
-  .bottom-nav .count { position: static; }
-  main { padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px)); }
-  #toast { bottom: calc(60px + env(safe-area-inset-bottom, 0px)); }
+  :root { --nav-h: 42px; }
+  .phone-nav button { flex-direction: row; gap: 6px; font-size: 0.8rem; }
+  .phone-nav .count { position: static; }
 }
 /* Touch screens of any size: 16px text in fields stops iOS zooming the page on focus, and controls are at least ~36px tall. */
 @media (pointer: coarse) {
+  .theme-btn { min-height: 34px; padding-inline: 12px; }
   .team-card .sources a, .code-meta a, .list li > a { display: inline-block; padding-block: 5px; }
   details > summary { padding-block: 6px; }
   p.small a { display: inline-block; padding-block: 5px; }
