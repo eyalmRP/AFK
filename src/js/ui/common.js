@@ -174,12 +174,16 @@ export function heroCR(h) {
   return estimateCR(bankEntry(h.id), h, { level: effectiveLevel(h.id), elderTree: bank.settings.elderTree });
 }
 
+// Written the way the game writes power: 19B, 9509M, 512K.
 export function fmtCR(n) {
   if (!n) return '–';
-  return n >= 1000 ? `${(n / 1000).toFixed(n >= 100000 ? 0 : 1)}k` : String(n);
+  if (n >= 1e10) return `${Math.round(n / 1e9)}B`;
+  if (n >= 1e6) return `${Math.round(n / 1e6)}M`;
+  if (n >= 1e3) return `${Math.round(n / 1e3)}K`;
+  return String(n);
 }
 
-export const CR_NOTE = 'Estimated combat rating: worked out from level, ascension, stars, signature item, furniture, engraving, gear and the Elder Tree. The game does not publish its formula, so this is not the in-game number.';
+export const CR_NOTE = 'Estimated combat rating, from level, ascension, stars, signature item, furniture, engraving, gear and the Elder Tree. Fitted to in-game ratings (within about 3% on the heroes checked); heroes with the same build can still differ by a few percent in game.';
 
 // Ascension name coloured like its card frame.
 export function ascText(asc) {

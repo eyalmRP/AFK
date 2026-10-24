@@ -136,3 +136,21 @@ test('estimated combat rating rises with every upgrade and the Elder Tree', asyn
   assert.equal(cr({ ...base, asc: 'Legendary', si: 30 }), cr({ ...base, asc: 'Legendary', si: 0 }));
   assert.equal(cr({ ...base, owned: false }), 0);
 });
+
+test('estimated combat rating matches in-game ratings within 4%', async () => {
+  const { estimateCR } = await import('../src/js/engine.js');
+  const tree = { Mage: 200, Ranger: 195, Support: 200, Tank: 196, Warrior: 195, core: 257 };
+  const at = (cls, asc, stars, si, furniture, engrave) => estimateCR({ owned: true, asc, stars, si, furniture, engrave, gear: 4 }, { class: cls }, { level: 922, elderTree: tree });
+  // In-game ratings (level 922, mythic gear T4), as the game shows them.
+  const cases = [
+    [at('Mage', 'Ascended', 4, 50, 9, 80), 19e9],
+    [at('Warrior', 'Ascended', 5, 40, 9, 60), 15e9],
+    [at('Support', 'Ascended', 1, 40, 9, 60), 15e9],
+    [at('Warrior', 'Ascended', 5, 30, 9, 30), 13e9],
+    [at('Warrior', 'Ascended', 0, 35, 7, 0), 11e9],
+    [at('Mage', 'Mythic', 0, 40, 0, 0), 9509e6],
+    [at('Support', 'Mythic', 0, 40, 0, 0), 9159e6],
+    [at('Ranger', 'Legendary+', 0, 0, 0, 0), 5839e6],
+  ];
+  for (const [est, game] of cases) assert.ok(Math.abs(est / game - 1) < 0.04, `${est} vs ${game}`);
+});

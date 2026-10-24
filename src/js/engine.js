@@ -43,17 +43,26 @@ function lerpTable(table, x) {
   return table[table.length - 1][1];
 }
 
-// Estimated combat rating. The game does not publish its power formula, so
-// this multiplies the stat gains each upgrade is known to give, using the
-// weights below; it ranks heroes sensibly but is not the in-game number.
+// Estimated combat rating, in the game's own units. The game does not publish
+// its formula, so this multiplies one factor per upgrade, fitted to eight
+// in-game ratings at level 922 (Legendary+ to Ascended, SI 0-50, 0-5 stars,
+// furniture 0-9, red to white stars); each estimate came within 3% of the
+// game's number. Furniture, signature item and engraving are percentages of
+// the hero's base, so their absolute bonus grows with level and tier, as the
+// game describes for furniture. Hero-specific base stats are not modelled
+// (heroes with the same build differ by a few percent in game).
 // Upgrades not unlocked or not recorded add nothing.
 export const CR_WEIGHTS = {
-  perLevel: 10,
-  ascension: { Elite: 1, 'Elite+': 1.12, Legendary: 1.27, 'Legendary+': 1.42, Mythic: 1.6, 'Mythic+': 1.8, Ascended: 2.05 },
-  perStar: 0.04,
-  si: [[0, 1], [10, 1.05], [20, 1.1], [30, 1.16], [40, 1.22], [50, 1.28]],
-  furniture: [[0, 1], [3, 1.06], [9, 1.15], [36, 1.25]],
-  engrave: [[0, 1], [30, 1.06], [60, 1.11], [80, 1.15], [100, 1.18]],
+  // Legendary+, level 922, no upgrades, mythic gear T4, Elder Tree class
+  // branch 195 and tree 257: 5839M in game.
+  reference: { cr: 5839e6, level: 922, gear: 4, branch: 195, tree: 257 },
+  ascension: { Elite: 0.72, 'Elite+': 0.8, Legendary: 0.9, 'Legendary+': 1, Mythic: 1.27, 'Mythic+': 1.37, Ascended: 1.478 },
+  si: [[0, 1], [10, 1.05], [20, 1.1], [30, 1.15], [35, 1.2], [40, 1.26], [50, 1.5]],
+  furniture: [[0, 1], [3, 1.03], [7, 1.06], [9, 1.08], [36, 1.2]],
+  engrave: [[0, 1], [30, 1.1], [60, 1.155], [80, 1.21], [100, 1.25]],
+  // The first star gives most of the gain; each further star a little.
+  firstStar: 0.06,
+  perStar: 0.01,
   perGearTier: 0.03,
   // Elder Tree: each level of the hero's class branch, and each level of the tree itself.
   perBranchLevel: 0.0006,
@@ -63,18 +72,22 @@ export const CR_WEIGHTS = {
 export function estimateCR(entry, hero, { level, elderTree } = {}) {
   if (!entry?.owned) return 0;
   const W = CR_WEIGHTS;
+  const R = W.reference;
   const num = (v) => (v === null || v === undefined ? 0 : Number(v) || 0);
+  const gearF = (g) => 1 + Math.min(5, g) * W.perGearTier;
+  const treeF = (branch, tree) => 1 + branch * W.perBranchLevel + tree * W.perTreeLevel;
+  const perLevel = R.cr / (R.level * gearF(R.gear) * treeF(R.branch, R.tree));
   const ascended = entry.asc === 'Ascended';
+  const stars = Math.min(5, num(entry.stars));
   const ascRank = Object.keys(W.ascension).indexOf(entry.asc);
-  let cr = Math.max(1, num(level ?? entry.level)) * W.perLevel;
+  let cr = Math.max(1, num(level ?? entry.level)) * perLevel;
   cr *= W.ascension[entry.asc] ?? 1;
-  if (ascended) cr *= 1 + Math.min(5, num(entry.stars)) * W.perStar;
   if (ascRank >= 4) cr *= lerpTable(W.si, num(entry.si));
   if (ascended) cr *= lerpTable(W.furniture, num(entry.furniture));
-  if (ascended && num(entry.stars) >= 1) cr *= lerpTable(W.engrave, num(entry.engrave));
-  cr *= 1 + Math.min(5, num(entry.gear)) * W.perGearTier;
+  if (ascended && stars >= 1) cr *= (1 + W.firstStar + stars * W.perStar) * lerpTable(W.engrave, num(entry.engrave));
+  cr *= gearF(num(entry.gear));
   const t = elderTree || {};
-  cr *= 1 + num(t[hero?.class]) * W.perBranchLevel + num(t.core) * W.perTreeLevel;
+  cr *= treeF(num(t[hero?.class]), num(t.core));
   return Math.round(cr);
 }
 

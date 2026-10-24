@@ -92,7 +92,7 @@ export function openHeroDetail(id) {
     ${(h.modes || []).length ? `<div class="side"><div class="side-title">Shines in</div><div class="chips">${h.modes.map((m) => `<span class="tag">${esc(MODE_LABEL[m] || data.modeById.get(m)?.name || m)}</span>`).join('')}</div></div>` : ''}
     <div class="side"><div class="side-title">Your copy</div>${
       e?.owned
-        ? `<p class="num">${ascText(e.asc)}${e.asc === 'Ascended' ? starRow(e.stars, { engrave: e.engrave }) : ''} · Lv ${effectiveLevel(id)} · SI ${esc(upgradeText(e, 'si'))} · ${esc(upgradeText(e, 'furniture'))}F · E${esc(upgradeText(e, 'engrave'))} · T${e.gear ?? '–'} gear</p><p class="small" title="${esc(CR_NOTE)}">Combat rating ≈ <strong class="num">${fmtCR(heroCR(h))}</strong> <span class="muted">(estimate, not the in-game number)</span></p>${e.est?.length ? '<p class="small muted">Values with + or &lt; are minimums read from the card icon.</p>' : ''}`
+        ? `<p class="num">${ascText(e.asc)}${e.asc === 'Ascended' ? starRow(e.stars, { engrave: e.engrave }) : ''} · Lv ${effectiveLevel(id)} · SI ${esc(upgradeText(e, 'si'))} · ${esc(upgradeText(e, 'furniture'))}F · E${esc(upgradeText(e, 'engrave'))} · T${e.gear ?? '–'} gear</p><p class="small" title="${esc(CR_NOTE)}">Combat rating ≈ <strong class="num">${fmtCR(heroCR(h))}</strong> <span class="muted">(estimate)</span></p>${e.est?.length ? '<p class="small muted">Values with + or &lt; are minimums read from the card icon.</p>' : ''}`
         : '<p class="muted small">Not in your hero bank.</p>'
     }</div>`;
   const d = openDrawer({
