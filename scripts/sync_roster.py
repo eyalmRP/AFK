@@ -2,12 +2,14 @@
 
 Reads the public unit database mirrored at github.com/floofpire/cdn (pulled from
 Lilith's CDN), finds ascended-tier heroes that data/heroes.json does not have
-yet, downloads their 200px icons and stores 128px WebP copies in img/heroes/.
+yet, and stores their portraits in img/heroes/: the 400px icon scaled to 256px
+WebP where the CDN has one, otherwise the 200px icon.
 New entries get name, faction, type and game-data roles; their class, kit and
 ratings still need research, so they are marked "needsReview": true.
 
-Run with:  python3 scripts/sync_roster.py          (dry run, lists new heroes)
-           python3 scripts/sync_roster.py --write  (adds them)
+Run with:  python3 scripts/sync_roster.py              (dry run, lists new heroes)
+           python3 scripts/sync_roster.py --write      (adds them)
+           python3 scripts/sync_roster.py --portraits  (re-downloads every hero portrait)
 Needs Pillow for --write.
 """
 import io
@@ -24,6 +26,28 @@ ROLE = {
     'Continuous Damage': 'sustained-dps', 'Tank': 'tank', 'Buff': 'buffer', 'Burst Damage': 'burst',
     'Control': 'cc', 'Heal': 'healer', 'Assassin': 'assassin', 'Debuff': 'debuffer', 'AoE': 'aoe',
 }
+
+
+def save_portrait(game_id, dest):
+    """Hero portrait: the 400px icon scaled to 256px, or the 200px icon when there is no 400px one."""
+    from PIL import Image
+    try:
+        im = Image.open(io.BytesIO(get(f"{CDN}unit_icon_by_id/{game_id}_4x.webp"))).convert('RGBA').resize((256, 256), Image.LANCZOS)
+    except Exception:
+        im = Image.open(io.BytesIO(get(f"{CDN}unit_icon_by_id/{game_id}_2x.webp"))).convert('RGBA')
+    im.save(dest, 'WEBP', quality=80, method=6)
+
+
+def refresh_portraits():
+    doc = json.loads((ROOT / 'data' / 'heroes.json').read_text())
+    for h in doc['heroes']:
+        if not h.get('img') or not h.get('gameId'):
+            continue
+        try:
+            save_portrait(h['gameId'], ROOT / h['img'])
+        except Exception as e:
+            print(f"  kept the old portrait for {h['name']}: {e}")
+    print(f"refreshed {len(doc['heroes'])} portraits")
 
 
 def get(url):
@@ -71,12 +95,9 @@ def main():
     if not write:
         print('dry run: pass --write to add them')
         return
-    from PIL import Image
     for h in new:
         try:
-            raw = get(f"{CDN}unit_icon_by_id/{h['gameId']}_2x.webp")
-            im = Image.open(io.BytesIO(raw)).convert('RGBA').resize((128, 128), Image.LANCZOS)
-            im.save(ROOT / h['img'], 'WEBP', quality=82, method=6)
+            save_portrait(h['gameId'], ROOT / h['img'])
         except Exception as e:  # keep the hero; the page falls back to initials
             print(f"  no portrait for {h['name']}: {e}")
             h['img'] = None
@@ -117,5 +138,8 @@ def sync_beasts(units, write):
 
 
 if __name__ == '__main__':
-    main()
-    sync_beasts(json.loads(get(CDN + 'unit.json')), '--write' in sys.argv)
+    if '--portraits' in sys.argv:
+        refresh_portraits()
+    else:
+        main()
+        sync_beasts(json.loads(get(CDN + 'unit.json')), '--write' in sys.argv)

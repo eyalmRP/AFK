@@ -13,6 +13,8 @@ import { beastPanel, bindBeastPanel, refreshBeastPanel } from './beastPanel.js';
 
 const SUB_KEY = 'afk-codex-bank-sub';
 const SIZE_KEY = 'afk-codex-bank-size';
+const VIEW_KEY = 'afk-codex-bank-view';
+const VIEWS = ['cards', 'list', 'table'];
 
 const ui = {
   q: '',
@@ -24,11 +26,11 @@ const ui = {
   factions: new Set(),
   classes: new Set(),
   types: new Set(),
-  view: 'cards',
+  view: VIEWS.includes(local.get(VIEW_KEY, 'cards')) ? local.get(VIEW_KEY, 'cards') : 'cards',
   selectMode: false,
   selected: new Set(),
   sub: local.get(SUB_KEY, 'heroes') === 'beasts' ? 'beasts' : 'heroes',
-  // Card size: 1 portraits only, 2 small, 3 standard, 4 large.
+  // Zoom: 1–3 framed tiles at 5, 4 and 3 per row (phone), 4 portrait cards.
   size: Math.min(4, Math.max(1, toInt(local.get(SIZE_KEY, 3), 3))),
 };
 
@@ -77,11 +79,19 @@ let root;
 
 export function mountBank(el) {
   root = el;
+  // Phones have no Table button: a table chosen on a computer opens as the List view.
+  if (ui.view === 'table' && window.matchMedia?.('(max-width: 760px)').matches) ui.view = 'list';
   bindFolding(root);
   bindBeastPanel(root);
   root.addEventListener('click', onClick);
   root.addEventListener('change', onChange);
   root.addEventListener('input', onInput);
+  root.addEventListener('keydown', (ev) => {
+    if ((ev.key === 'Enter' || ev.key === ' ') && ev.target.matches('[data-card]')) {
+      ev.preventDefault();
+      ev.target.click();
+    }
+  });
   document.addEventListener('codex:edit-hero', (ev) => openEditor(ev.detail.id));
   render();
 }
@@ -302,9 +312,10 @@ function heroesPane() {
         <label class="check">Ascension <select class="select" id="bank-asc"><option value="any">Any</option>${ASCENSIONS.map((a) => `<option ${ui.asc === a ? 'selected' : ''}>${a}</option>`).join('')}</select></label>
         <label class="check" title="Owned heroes with an upgrade not recorded yet">Missing <select class="select" id="bank-missing">${MISSING.map(([v, l]) => `<option value="${v}" ${ui.missing === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
         <span class="spacer"></span>
-        <label class="check size-ctl" id="bank-size-ctl" title="Card size" ${ui.view === 'table' ? 'hidden' : ''}><span class="size-ico small" aria-hidden="true">▦</span><input type="range" id="bank-size" min="1" max="4" step="1" value="${ui.size}" aria-label="Card size"><span class="size-ico" aria-hidden="true">▦</span></label>
+        <label class="check size-ctl" id="bank-size-ctl" title="Zoom: more heroes or bigger cards" ${ui.view === 'cards' ? '' : 'hidden'}><span class="size-ico small" aria-hidden="true">▦</span><input type="range" id="bank-size" min="1" max="4" step="1" value="${ui.size}" aria-label="Zoom"><span class="size-ico" aria-hidden="true">▦</span></label>
         <div class="seg" role="group" aria-label="Layout">${[
           ['cards', 'Cards'],
+          ['list', 'List'],
           ['table', 'Table'],
         ]
           .map(([v, l]) => `<button type="button" data-view="${v}" aria-pressed="${ui.view === v}">${l}</button>`)
@@ -370,15 +381,6 @@ function ascLine(e, size = 12) {
   return `${ascText(e.asc)}${e.asc === 'Ascended' && e.stars ? starRow(e.stars, { size }) : ''}`;
 }
 
-function upgradeLine(e) {
-  if (unset(e.si) && unset(e.furniture) && unset(e.engrave)) return '<span class="muted" title="Signature item, furniture and engraving not recorded">SI – · –F · E–</span>';
-  return `SI ${dash(e.si)} · ${dash(e.furniture)}F · E${dash(e.engrave)}`;
-}
-
-function levelLine(h, e) {
-  return `Lv ${effectiveLevel(h.id)}${bank.settings.sharedLevel && e.crystal === false ? ' (own level)' : ''}${unset(e.gear) ? '' : ` · T${e.gear} gear`}`;
-}
-
 // Stars as the game shows them: gold 1–5, red 6–10, white 11–15.
 const STAR_TIER = { gold: 'Gold', red: 'Red', white: 'White' };
 function starOptions(cur, withKeep = false) {
@@ -398,43 +400,94 @@ function renderList() {
     host.innerHTML = `<div class="empty"><h4>No heroes match</h4><p>Clear the search or filters to see the full roster.</p></div>`;
   } else if (ui.view === 'table') {
     host.innerHTML = tableView(list);
+  } else if (ui.view === 'list') {
+    host.innerHTML = `<div class="bank-rows">${list.map(row).join('')}</div>`;
   } else {
-    host.innerHTML = `<div class="bank-grid size-${ui.size}">${list.map(card).join('')}</div>`;
+    host.innerHTML = `<div class="bank-grid z${ui.size}">${list.map(ui.size === 4 ? bigCard : tile).join('')}</div>`;
   }
   renderBatch();
 }
 
-const PORTRAIT_SIZE = { 1: 54, 2: 44, 3: 56, 4: 72 };
+// Card views. Zoom 1–3 are game-style framed tiles (5, 4 and 3 per row on a
+// phone); zoom 4 is a portrait card (2 per row). The List view is one hero
+// per line with the upgrades showing, for filling in missing data.
 
-function card(h) {
+function heroArt(h) {
+  const ini = esc(String(h.name).replace(/^Awakened\s+/i, 'A ').split(/\s+/).map((w) => w[0]).slice(0, 2).join(''));
+  return h.img ? `<img src="${esc(h.img)}" alt="" loading="lazy" draggable="false" data-fallback="${ini}">` : `<span class="initials">${ini}</span>`;
+}
+
+// Top-right corner: the selection mark while batch selecting, otherwise
+// a check on owned heroes or a + button that adds the hero.
+function cornerBadge(h, owned, { ownedMark = false } = {}) {
+  if (ui.selectMode) return `<span class="pick" aria-hidden="true">${ui.selected.has(h.id) ? ICON.check : ''}</span>`;
+  if (!owned) return `<button class="own-plus" type="button" data-own-hero="${h.id}" aria-label="I own ${esc(h.name)}" title="I own this hero">+</button>`;
+  return ownedMark ? `<span class="own-mark" aria-hidden="true">${ICON.check}</span>` : '';
+}
+
+function lvlBadge(h, e, cls) {
+  const own = bank.settings.sharedLevel && e.crystal === false;
+  return `<span class="${cls}${own ? ' own-level' : ''}"${own ? ' title="Own level (outside the shared level)"' : ''}>${effectiveLevel(h.id)}</span>`;
+}
+
+function cardTitle(h, e) {
+  if (!e?.owned) return `${h.name} · not owned`;
+  const t = e.asc === 'Ascended' ? starTier(e.stars) : null;
+  return `${h.name} · ${e.asc}${t ? ` ${t.count}★ ${t.tier}` : ''} · Lv ${effectiveLevel(h.id)}`;
+}
+
+function cardAttrs(h, e, cls) {
+  return `class="${cls}" role="button" tabindex="0" data-card="${h.id}" aria-selected="${ui.selected.has(h.id)}" data-owned="${!!e?.owned}" title="${esc(cardTitle(h, e))}"`;
+}
+
+function tile(h) {
   const e = bank.heroes[h.id];
   const owned = !!e?.owned;
-  const sel = ui.selected.has(h.id);
-  const size = ui.size;
-  const box = ui.selectMode ? `<input class="sel" type="checkbox" data-sel="${h.id}" ${sel ? 'checked' : ''} aria-label="Select ${esc(h.name)}">` : '';
-  const head = `<div class="bank-card" role="button" tabindex="0" data-card="${h.id}" aria-selected="${sel}" title="${esc(h.name)}">${box}${portrait(h, { size: PORTRAIT_SIZE[size], showBank: true, unowned: !owned })}`;
-  if (size === 1) return `${head}<span class="nm">${esc(h.name)}</span></div>`;
-  let info;
-  if (!owned) {
-    info = `<span class="st muted cls-line">${classIcon(h.class)} ${esc(h.class)}</span>${ui.selectMode ? '' : `<button class="btn small own-btn" type="button" data-own-hero="${h.id}">${size === 2 ? '+ Own' : '+ I own this'}</button>`}`;
-  } else if (size === 2) {
-    info = `<span class="st">${ascLine(e, 11)}</span>`;
-  } else if (size === 3) {
-    info = `<span class="st">${ascLine(e)}</span><span class="st">${upgradeLine(e)}</span><span class="st">${levelLine(h, e)}</span>`;
-  } else {
-    const ups = [
-      ['SI', e.si],
-      ['Furn.', e.furniture],
-      ['Engr.', e.engrave],
-      ['Gear', unset(e.gear) ? null : 'T' + e.gear],
-    ];
-    info = `<span class="st cls-line">${factionIcon(h.faction)}${classIcon(h.class)} ${esc(h.faction)} ${esc(h.class)}</span>
-      <span class="st">${ascLine(e, 15)}</span>
-      <dl class="up-grid">${ups.map(([k, v]) => `<div${unset(v) ? ' class="unset"' : ''}><dt>${k}</dt><dd>${dash(v)}</dd></div>`).join('')}</dl>
-      <span class="st">${levelLine(h, e)}</span>
-      ${e.notes ? `<span class="st note">${esc(e.notes)}</span>` : ''}`;
-  }
-  return `${head}<div class="bank-info"><span class="nm">${esc(h.name)}</span>${info}</div></div>`;
+  const stars = owned && e.asc === 'Ascended' && e.stars ? starRow(e.stars, { title: false }) : '';
+  return `<div ${cardAttrs(h, e, 'bank-tile')}>
+    <span class="fr" data-asc="${owned ? esc(e.asc) : ''}"><span class="fr-art">${heroArt(h)}</span>
+      <span class="fr-fac">${factionIcon(h.faction)}</span>
+      ${owned ? lvlBadge(h, e, 'fr-lvl') : ''}${stars ? `<span class="fr-stars">${stars}</span>` : ''}
+      ${cornerBadge(h, owned)}</span>
+    <span class="nm">${esc(h.name)}</span>
+  </div>`;
+}
+
+function bigCard(h) {
+  const e = bank.heroes[h.id];
+  const owned = !!e?.owned;
+  return `<div ${cardAttrs(h, e, 'bank-big')} data-asc="${owned ? esc(e.asc) : ''}">
+    <span class="big-art">${heroArt(h)}${cornerBadge(h, owned, { ownedMark: true })}</span>
+    <span class="big-body">
+      <span class="nm">${esc(h.name)}</span>
+      <span class="big-icons">${factionIcon(h.faction)}${classIcon(h.class)}</span>
+      <span class="big-line">${owned ? `Lv ${lvlBadge(h, e, 'big-lvl')} · ${ascLine(e, 13)}` : '<span class="muted">Not owned</span>'}</span>
+    </span>
+  </div>`;
+}
+
+function row(h) {
+  const e = bank.heroes[h.id];
+  const owned = !!e?.owned;
+  const chip = (label, v) => `<span class="up${unset(v) ? ' unset' : ''}">${label}<b>${dash(v)}</b></span>`;
+  const right = owned
+    ? `<span class="row-lvl"><small>Lv</small>${lvlBadge(h, e, '')}</span>`
+    : ui.selectMode
+      ? ''
+      : `<button class="btn small" type="button" data-own-hero="${h.id}">+ Own</button>`;
+  return `<div ${cardAttrs(h, e, 'bank-row')}>
+    <span class="fr" data-asc="${owned ? esc(e.asc) : ''}"><span class="fr-art">${heroArt(h)}</span>${ui.selectMode ? cornerBadge(h, owned) : ''}</span>
+    <span class="row-main">
+      <span class="nm">${esc(h.name)}<span class="row-icons">${factionIcon(h.faction)}${classIcon(h.class)}</span></span>
+      ${
+        owned
+          ? `<span class="row-line">${ascLine(e, 14)}</span>
+      <span class="row-ups">${chip('SI', e.si)}${chip('F', e.furniture)}${chip('E', e.engrave)}${chip('Gear', unset(e.gear) ? null : 'T' + e.gear)}</span>`
+          : '<span class="row-line muted">Not owned</span>'
+      }
+    </span>
+    ${right}<span class="row-chev" aria-hidden="true">${ICON.next}</span>
+  </div>`;
 }
 
 function numCell(id, field, value, max, disabled) {
@@ -575,8 +628,9 @@ function onClick(ev) {
   const view = t.closest('[data-view]');
   if (view) {
     ui.view = view.dataset.view;
+    local.set(VIEW_KEY, ui.view);
     $$('[data-view]', root).forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.view === ui.view)));
-    $('#bank-size-ctl', root).hidden = ui.view === 'table';
+    $('#bank-size-ctl', root).hidden = ui.view !== 'cards';
     renderList();
     return;
   }
@@ -626,7 +680,11 @@ function toggleSelect(id) {
   toggleSet(ui.selected, id);
   const sel = ui.selected.has(id);
   const c = root.querySelector(`[data-card="${id}"]`);
-  if (c) c.setAttribute('aria-selected', String(sel));
+  if (c) {
+    c.setAttribute('aria-selected', String(sel));
+    const pick = c.querySelector('.pick');
+    if (pick) pick.innerHTML = sel ? ICON.check : '';
+  }
   const box = root.querySelector(`[data-sel="${id}"]`);
   if (box) {
     box.checked = sel;
