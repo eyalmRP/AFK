@@ -224,7 +224,7 @@ function renderResult(ctx) {
       return `<li><b>${esc(getHero(id).name)}</b><span>${esc((counterReasons.length ? counterReasons : m.reasons.slice(0, 2)).join(' · '))}</span></li>`;
     })
     .join('');
-  const bp = beastFor(ctx, Object.values(s.layout));
+  const bp = beastFor(ctx, Object.values(s.layout), s);
   host.innerHTML = `<div class="side-title">${ICON.spark} Your counter (rules engine)</div>
     <p class="small muted">Recalculated each time you change the enemy, the mode or your heroes.</p>
     ${counterKnowledge(ctx) ? '' : `<p class="callout small"><strong>No counter data for these enemies yet.</strong> The sources this week don't say which heroes beat ${esc(ctx.enemy.map((h) => h.name).join(', '))}, so this is your strongest team for ${esc(ctx.mode?.name || 'this mode')}, adjusted for faction advantage and positions. Ask Claude below for a matchup-based counter.</p>`}
@@ -311,11 +311,17 @@ function counterKnowledge(ctx) {
   return data.heroes.some((h) => (h.counters || []).some((c) => ids.has(c)));
 }
 
-function beastFor(ctx, ids) {
+// The beast the lineup's source uses, if it names one.
+function sourceBeast(score) {
+  const from = score?.beats?.beast ? score.beats : score?.template?.beast ? score.template : null;
+  return from ? { id: from.beast, label: `used with ${from.name}` } : null;
+}
+
+function beastFor(ctx, ids, score) {
   if (!data.beasts?.length || !beastAllowed(ctx.mode)) return { id: null, html: '' };
   const mine = ui.pool === 'mine';
   if (mine && !ownedBeasts().length) return { id: null, html: '<p class="beast-why">Mark your beasts in the Bank to get a beast pick.</p>' };
-  const pick = suggestBeast(ctx, ids, { beasts: data.beasts, owned: mine ? bank.beasts : null, recommendations: data.beastModes });
+  const pick = suggestBeast(ctx, ids, { beasts: data.beasts, owned: mine ? bank.beasts : null, recommendations: data.beastModes, prefer: sourceBeast(score) });
   if (!pick) return { id: null, html: '' };
   return { id: pick.id, html: `<p class="beast-why"><strong>${esc(data.beastById.get(pick.id).name)}</strong>${pick.reasons?.length ? ` · ${esc(pick.reasons.slice(0, 3).join(' · '))}` : ''}</p>` };
 }

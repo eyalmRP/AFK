@@ -3631,7 +3631,8 @@
       "athena",
       "medusa",
       "awakened-eluard"
-     ]
+     ],
+     "beast": "nightfall-pegasus"
     },
     {
      "name": "Groody LC Team 11",
@@ -3641,7 +3642,8 @@
       "dracula",
       "awakened-theowyn",
       "gavus"
-     ]
+     ],
+     "beast": "twinlum-spirit"
     },
     {
      "name": "Groody LC Team 12",
@@ -3651,7 +3653,8 @@
       "serenmira",
       "mira",
       "zohra"
-     ]
+     ],
+     "beast": "count-snickerfang"
     }
    ],
    "claim": "Asked 'Which team has a chance to beat the MVP team 13?', the guide's author answered '10 11 and 12'.",

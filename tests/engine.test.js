@@ -200,3 +200,14 @@ test('a lineup the sources say beats the enemy is preferred and named', () => {
   const other = makeContext({ heroes: data.heroById, mode, category: 'pvp', enemy: ['liberta', 'ivan', 'daemia'], matchups });
   assert.equal(other.enemyMatchups.length, 0);
 });
+
+test('a beast its source lineup uses wins when the player owns it', async () => {
+  const { suggestBeast } = await import('../src/js/engine.js');
+  const beasts = [{ id: 'a', tiers: { pvp: 'S+' } }, { id: 'b', tiers: { pvp: 'B' } }];
+  const ctx = makeContext({ heroes: data.heroById, mode: data.modeById.get('arena-of-heroes'), category: 'pvp' });
+  const owned = { a: { owned: true }, b: { owned: true } };
+  assert.equal(suggestBeast(ctx, [], { beasts, owned }).id, 'a');
+  assert.equal(suggestBeast(ctx, [], { beasts, owned, prefer: { id: 'b', label: 'used with X' } }).id, 'b');
+  // Not owned: falls back to the rating.
+  assert.equal(suggestBeast(ctx, [], { beasts, owned: { a: { owned: true } }, prefer: { id: 'b' } }).id, 'a');
+});

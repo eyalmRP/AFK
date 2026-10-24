@@ -417,7 +417,7 @@ export function scoreTeam(ctx, ids) {
     // lift each named hero through modePresence.
     if (tIds.length >= 3 && overlap >= Math.min(4, tIds.length)) {
       const bonus = 1.5 * (CONSENSUS_WEIGHT[t.consensus] ?? 0.8);
-      if (!template || bonus > template.bonus) template = { name: t.name, overlap, size: tIds.length, bonus };
+      if (!template || bonus > template.bonus) template = { name: t.name, overlap, size: tIds.length, bonus, beast: t.beast || null };
     }
   }
   if (template) total += template.bonus;
@@ -427,7 +427,7 @@ export function scoreTeam(ctx, ids) {
   for (const m of ctx.enemyMatchups || []) {
     for (const t of m.beatenBy || []) {
       const overlap = (t.heroes || []).filter((id) => idSet.has(id)).length;
-      if (overlap >= Math.min(4, (t.heroes || []).length) && (!beats || overlap > beats.overlap)) beats = { name: t.name, vsName: m.vsName, heroes: t.heroes, overlap, size: t.heroes.length, claim: m.claim, url: m.url, date: m.date };
+      if (overlap >= Math.min(4, (t.heroes || []).length) && (!beats || overlap > beats.overlap)) beats = { name: t.name, vsName: m.vsName, heroes: t.heroes, beast: t.beast || null, overlap, size: t.heroes.length, claim: m.claim, url: m.url, date: m.date };
     }
   }
   if (beats) total += 2 + beats.overlap;
@@ -665,12 +665,16 @@ export function nextUpgrade(ctx, ids) {
   return best && best.gain > 0.05 ? best : null;
 }
 
-// Best owned beast for a team: its rating for the mode, how well its buffs
-// match the team's hero types, and community picks for the mode or heroes.
-export function suggestBeast(ctx, ids, { beasts, owned, recommendations = [], exclude = null }) {
+// Best owned beast for a team: the beast its source lineup uses (`prefer`,
+// {id, label}) when the player has it, otherwise its rating for the mode, how
+// well its buffs match the team's hero types, and community picks for the
+// mode or heroes.
+export function suggestBeast(ctx, ids, { beasts, owned, recommendations = [], exclude = null, prefer = null }) {
   if (!beasts?.length) return null;
   const pool = (owned ? beasts.filter((b) => owned[b.id]?.owned) : beasts).filter((b) => !exclude?.has(b.id));
   if (!pool.length) return null;
+  const fav = prefer?.id && pool.find((b) => b.id === prefer.id);
+  if (fav) return { id: fav.id, score: Infinity, reasons: [prefer.label || 'the beast its lineup uses'] };
   const types = { Strength: 0, Intelligence: 0, Agility: 0 };
   for (const id of ids) {
     const t = ctx.heroes.get(id)?.type;
@@ -699,9 +703,11 @@ export function suggestBeast(ctx, ids, { beasts, owned, recommendations = [], ex
     }
     for (const r of recommendations) {
       if (r.beast !== b.id) continue;
+      // Mode picks in beast guides are general ("strong in PvP"), so they weigh
+      // less than a tier step.
       if (r.mode && r.mode === ctx.mode?.id) {
-        score += 2;
-        reasons.push(`community pick for ${ctx.mode.name}`);
+        score += 1;
+        reasons.push(`a guide's pick for ${ctx.mode.name}`);
       }
       const shared = (r.heroes || []).filter((h) => ids.includes(h));
       if (shared.length) {

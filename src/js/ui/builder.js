@@ -213,7 +213,9 @@ function withBeasts(teams, ctx) {
   const used = new Set();
   const mine = ui.pool === 'mine';
   return teams.map((t) => {
-    const pick = suggestBeast(ctx, t.ids, { beasts: data.beasts, owned: mine ? bank.beasts : null, recommendations: data.beastModes, exclude: teams.length > 1 ? used : null });
+    const from = t.score?.template?.beast ? t.score.template : null;
+    const prefer = from ? { id: from.beast, label: `used with ${from.name}` } : null;
+    const pick = suggestBeast(ctx, t.ids, { beasts: data.beasts, owned: mine ? bank.beasts : null, recommendations: data.beastModes, exclude: teams.length > 1 ? used : null, prefer: prefer && !used.has(prefer.id) ? prefer : null });
     if (pick) used.add(pick.id);
     return { ...t, beastPick: pick };
   });
