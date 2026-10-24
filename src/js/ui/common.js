@@ -171,7 +171,12 @@ export function starRow(stars, { size = 14, title = true, engrave = null } = {})
 
 // Estimated combat rating of the player's copy (see estimateCR in engine.js).
 export function heroCR(h) {
-  return estimateCR(bankEntry(h.id), h, { level: effectiveLevel(h.id), elderTree: bank.settings.elderTree });
+  return entryCR(bankEntry(h.id), h, effectiveLevel(h.id));
+}
+
+// The same for an entry not saved yet (the hero editor's fields).
+export function entryCR(e, h, level) {
+  return estimateCR(e, h, { level, elderTree: bank.settings.elderTree });
 }
 
 // Written the way the game writes power: 19B, 9509M, 512K.

@@ -7,7 +7,7 @@ import { data, FACTION_IDS, CLASSES, ASCENSIONS, LIMITS, TIERS, tierOf, hero as 
 import { bank, updateHeroes, updateSettings, updateElderTree, replaceBank, removeHeroes, effectiveLevel, exportBank, sanitizeEntry, defaultEntry, ownedIds, ownedBeasts } from '../store.js';
 import { aiState, initAi, readScreenshots, readElderTree, errorCopy } from '../ai.js';
 import { ICON, classIcon, factionIcon } from './icons.js';
-import { portrait, openDrawer, closeDrawer, tierPill, gameFilterBar, handleGameFilter, syncGameFilter, bindFolding, starRow, ascText, heroCR, fmtCR, CR_NOTE } from './common.js';
+import { portrait, openDrawer, closeDrawer, tierPill, gameFilterBar, handleGameFilter, syncGameFilter, bindFolding, starRow, ascText, heroCR, entryCR, fmtCR, CR_NOTE } from './common.js';
 import { openHeroDetail } from './heroDetail.js';
 import { beastPanel, bindBeastPanel, refreshBeastPanel } from './beastPanel.js';
 import { emblem, upgradeText, plusCorners } from './emblem.js';
@@ -882,6 +882,7 @@ export function openEditor(id) {
       ${upField(cur, 'engrave', 'Engraving', LIMITS.engrave)}
       <label class="field"><span>Mythic gear tier</span><select class="select" id="ed-gear"><option value="">Not recorded</option>${Array.from({ length: LIMITS.gear + 1 }, (_, i) => `<option value="${i}" ${cur.gear === i ? 'selected' : ''}>T${i}</option>`).join('')}</select></label>
     </div>
+    <div class="field cr-out" title="${esc(CR_NOTE)}"><span>Combat rating <span class="tag">estimate</span></span><output class="cr-val num" id="ed-cr" for="ed-asc ed-stars ed-level ed-si ed-furniture ed-engrave ed-gear"></output><p class="small muted">Calculated from the fields above, so it can't be typed in. It changes as you edit them.</p></div>
     <p class="small muted" id="ed-est"${(cur.est || []).length ? '' : ' hidden'}>Fields marked "at least" were read from the card icon: the ring around the faction emblem (signature item), the pendant under it (furniture) and the star colour (engraving). Type the exact number to replace them.</p>
     ${shared ? `<label class="check"><input type="checkbox" id="ed-crystal" ${cur.crystal !== false ? 'checked' : ''}> Uses the shared level (${bank.settings.crystalLevel})</label>` : ''}
     ${h.investment?.note ? `<p class="callout info small"><strong>Investment tip:</strong> ${esc(h.investment.note)}</p>` : ''}
@@ -894,6 +895,31 @@ export function openEditor(id) {
   });
   // Fields you type in are exact; untouched ones keep their "at least" mark.
   const est = new Set(cur.est || []);
+  const opt = (sel) => ($(sel, d).value === '' ? null : toInt($(sel, d).value));
+  const readPatch = () => {
+    const patch = {
+      owned: $('#ed-owned', d).checked,
+      asc: $('#ed-asc', d).value,
+      stars: toInt($('#ed-stars', d).value),
+      si: opt('#ed-si'),
+      furniture: opt('#ed-furniture'),
+      engrave: opt('#ed-engrave'),
+      gear: opt('#ed-gear'),
+      notes: $('#ed-notes', d).value,
+      est: [...est],
+    };
+    const crystalBox = $('#ed-crystal', d);
+    if (crystalBox) patch.crystal = crystalBox.checked;
+    if (!shared || (crystalBox && !crystalBox.checked)) patch.level = toInt($('#ed-level', d).value, cur.level);
+    return patch;
+  };
+  const showCR = () => {
+    const e = sanitizeEntry({ ...cur, ...readPatch() });
+    const level = shared && e.crystal !== false ? bank.settings.crystalLevel : e.level;
+    $('#ed-cr', d).textContent = e.owned ? `≈ ${fmtCR(entryCR(e, h, level))}` : 'Not owned';
+  };
+  d.addEventListener('input', showCR);
+  d.addEventListener('change', showCR);
   const showStars = () => {
     const asc = $('#ed-asc', d).value;
     const stars = toInt($('#ed-stars', d).value);
@@ -919,6 +945,7 @@ export function openEditor(id) {
     });
   }
   showStars();
+  showCR();
   $('#ed-crystal', d)?.addEventListener('change', (e) => {
     $('#ed-level', d).disabled = e.target.checked;
     if (e.target.checked) $('#ed-level', d).value = bank.settings.crystalLevel;
@@ -933,22 +960,7 @@ export function openEditor(id) {
       closeDrawer();
       toast(`Removed ${h.name} from your bank.`);
     } else if (ev.target.closest('[data-save]')) {
-      const opt = (sel) => ($(sel, d).value === '' ? null : toInt($(sel, d).value));
-      const patch = {
-        owned: $('#ed-owned', d).checked,
-        asc: $('#ed-asc', d).value,
-        stars: toInt($('#ed-stars', d).value),
-        si: opt('#ed-si'),
-        furniture: opt('#ed-furniture'),
-        engrave: opt('#ed-engrave'),
-        gear: opt('#ed-gear'),
-        notes: $('#ed-notes', d).value,
-        est: [...est],
-      };
-      const crystalBox = $('#ed-crystal', d);
-      if (crystalBox) patch.crystal = crystalBox.checked;
-      if (!shared || (crystalBox && !crystalBox.checked)) patch.level = toInt($('#ed-level', d).value, cur.level);
-      updateHeroes({ [id]: { ...cur, ...patch } });
+      updateHeroes({ [id]: { ...cur, ...readPatch() } });
       closeDrawer();
       toast(`Saved ${h.name}.`);
     }
