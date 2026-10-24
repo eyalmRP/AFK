@@ -2,10 +2,10 @@
 // (community vs AI side by side), combinations and PvP archetypes.
 
 import { esc, fmtDate, $, local } from '../util.js';
-import { data, TIERS, CATEGORIES, FACTION_IDS, CLASSES, tierOf, tierScore, hero as getHero } from '../data.js';
+import { data, TIERS, CATEGORIES, tierOf, tierScore, hero as getHero } from '../data.js';
 import { entry as bankEntry } from '../store.js';
-import { ICON, factionIcon, classIcon } from './icons.js';
-import { panel, heroTile, portrait, board, slotsFromList, artifactChip, artifactGlyph, tierPill, bindFolding, foldAll, isFolded, facClass, trendBadge, ownedBadge } from './common.js';
+import { ICON } from './icons.js';
+import { panel, heroTile, portrait, board, slotsFromList, artifactChip, artifactGlyph, tierPill, bindFolding, foldAll, isFolded, trendBadge, ownedBadge, gameFilterBar, handleGameFilter, artifactArt } from './common.js';
 import { openHeroDetail } from './heroDetail.js';
 
 // Short descriptions shown under each tier letter, in the style of the
@@ -19,13 +19,14 @@ const TIER_DESC = {
   D: 'Skip',
   '?': 'Not rated this week',
 };
-const ARTIFACT_DESC = { 'S+': 'Best in slot for most', S: 'Strong', A: 'Good', B: 'Situational', C: 'Niche', D: 'Skip' };
+const ARTIFACT_DESC = { 'S+': 'Best in slot for most', S: 'Strong', A: 'Good', B: 'Situational', C: 'Niche', D: 'Skip', '?': 'Not rated yet' };
 
 const ui = {
   category: 'overall',
   showNames: !!local.get('afk-codex-show-names', false),
   factions: new Set(),
   classes: new Set(),
+  types: new Set(),
   q: '',
   ownedOnly: false,
 };
@@ -72,15 +73,7 @@ function onClick(ev) {
     renderTiers();
     return;
   }
-  const fac = t.closest('[data-fac]');
-  if (fac) {
-    toggle(ui.factions, fac.dataset.fac);
-    renderTiers();
-    return;
-  }
-  const cls = t.closest('[data-cls]');
-  if (cls) {
-    toggle(ui.classes, cls.dataset.cls);
+  if (t.closest('.gamebar') && handleGameFilter(ev, ui)) {
     renderTiers();
     return;
   }
@@ -89,11 +82,6 @@ function onClick(ev) {
     const scope = all.dataset.scope ? $(all.dataset.scope, root) : root;
     foldAll(scope, all.dataset.foldAll === 'fold');
   }
-}
-
-function toggle(set, v) {
-  if (set.has(v)) set.delete(v);
-  else set.add(v);
 }
 
 function render() {
@@ -150,10 +138,6 @@ function summaryPanel() {
 
 function tierControls() {
   const seg = CATEGORIES.map((c) => `<button type="button" data-cat="${c.id}" aria-pressed="${ui.category === c.id}">${c.label}</button>`).join('');
-  const facs = FACTION_IDS.map(
-    (f) => `<button type="button" class="chip ${facClass(f)}" data-fac="${f}" aria-pressed="${ui.factions.has(f)}"><span style="color:var(--fc)">${factionIcon(f)}</span>${f}</button>`
-  ).join('');
-  const clss = CLASSES.map((c) => `<button type="button" class="chip" data-cls="${c}" aria-pressed="${ui.classes.has(c)}">${classIcon(c)}${c}</button>`).join('');
   return `<div class="toolbar">
       <div class="seg" role="group" aria-label="Rating category">${seg}</div>
       <label class="search">${ICON.search}<input class="input" id="tier-q" type="search" placeholder="Find hero" value="${esc(ui.q)}" autocomplete="off"></label>
@@ -163,13 +147,13 @@ function tierControls() {
       <button class="btn small ghost" type="button" data-fold-all="open" data-scope="#tier-table">Expand tiers</button>
       <button class="btn small ghost" type="button" data-fold-all="fold" data-scope="#tier-table">Fold tiers</button>
     </div>
-    <div class="chips" role="group" aria-label="Faction filter">${facs}</div>
-    <div class="chips" role="group" aria-label="Class filter">${clss}</div>`;
+    ${gameFilterBar(ui)}`;
 }
 
 function heroMatches(h) {
   if (ui.factions.size && !ui.factions.has(h.faction)) return false;
   if (ui.classes.size && !ui.classes.has(h.class)) return false;
+  if (ui.types.size && !ui.types.has(h.type)) return false;
   if (ui.ownedOnly && !bankEntry(h.id)?.owned) return false;
   if (ui.q) {
     const s = ui.q.toLowerCase();
@@ -228,21 +212,21 @@ function tmTile(h, { mini = false } = {}) {
 function artifactsPanel() {
   const list = data.artifacts;
   if (!list.length) return '';
-  const tierKey = (a) => a.tier?.pve || a.tier?.pvp || 'C';
   const rank = (t) => TIERS.indexOf(t);
   const groups = new Map();
   for (const a of list) {
-    const best = [a.tier?.pve, a.tier?.pvp].filter(Boolean).sort((x, y) => rank(x) - rank(y))[0] || tierKey(a);
+    const best = [a.tier?.pve, a.tier?.pvp].filter(Boolean).sort((x, y) => rank(x) - rank(y))[0] || '?';
     if (!groups.has(best)) groups.set(best, []);
     groups.get(best).push(a);
   }
-  const rows = TIERS.filter((t) => groups.has(t))
+  const rows = [...TIERS, '?']
+    .filter((t) => groups.has(t))
     .map((t) => {
       const id = `art-tier-${t}`;
       const folded = isFolded(id, false);
       const items = groups.get(t);
       return `<div class="tier-row" data-tier="${t}" data-fold-id="${id}" data-folded="${folded}">
-        <button class="tier-label" type="button" data-fold-toggle aria-expanded="${!folded}"><span class="letter">${t}</span><span class="desc">${ARTIFACT_DESC[t] || ''}</span><span class="cnt">${items.length}${ICON.chevron}</span></button>
+        <button class="tier-label" type="button" data-fold-toggle aria-expanded="${!folded}"><span class="letter">${t === '?' ? '–' : t}</span><span class="desc">${ARTIFACT_DESC[t] || ''}</span><span class="cnt">${items.length}${ICON.chevron}</span></button>
         <div class="tier-heroes artifact-list">${items.map(artifactCard).join('')}</div>
         <div class="tier-folded" data-fold-toggle><span class="more">${items.map((a) => esc(a.name)).join(' · ')}</span></div>
       </div>`;
@@ -272,10 +256,10 @@ function artifactsPanel() {
 function artifactCard(a) {
   const bis = (a.bis || []).map(getHero).filter(Boolean);
   return `<div class="artifact-card">
-    ${artifactGlyph(a.name)}
+    ${artifactArt(a.id, a.name)}
     <div>
       <h4>${esc(a.name)}</h4>
-      <p>${esc(a.effect || '')}</p>
+      <p>${esc(a.effect || a.note || '')}</p>
       <div class="row"><span class="tag">PvE ${tierPill(a.tier?.pve)}</span><span class="tag">PvP ${tierPill(a.tier?.pvp)}</span>${(a.suits || [])
         .slice(0, 4)
         .map((s) => `<span class="tag">${esc(s)}</span>`)

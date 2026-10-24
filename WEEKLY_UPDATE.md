@@ -65,7 +65,7 @@ Update these fields:
 ```sh
 npm run validate && npm test && npm run build
 git add -A && git commit -m "Weekly meta update YYYY-MM-DD" && git push -u origin main
-node scripts/publish-files.mjs   # prints the files list
+node scripts/publish-files.mjs --since HEAD~1   # data files + images changed in this commit
 ```
 Republish with the Artifact tool:
 - `url`: https://claude.ai/artifact/DFpXATaCfamkF5vLMpYpFG

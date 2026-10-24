@@ -37,6 +37,13 @@ for (const h of heroesFile.heroes) {
 const artIds = new Set(artifactsFile.artifacts.map((a) => a.id));
 for (const a of artifactsFile.artifacts) {
   for (const id of a.bis || []) known(id, `artifact ${a.id} bis`);
+  if (a.img) {
+    try {
+      await access(root + a.img);
+    } catch {
+      err(`artifact ${a.id}: image ${a.img} is missing`);
+    }
+  }
   for (const k of ['pve', 'pvp']) if (a.tier?.[k] && !TIERS.has(a.tier[k])) err(`artifact ${a.id}: bad ${k} tier`);
 }
 const checkTeam = (t, where) => {

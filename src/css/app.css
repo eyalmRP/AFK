@@ -310,6 +310,53 @@ main {
 .panel[data-folded='true'] > .panel-body { display: none; }
 .panel-head .actions { display: flex; gap: 6px; }
 
+/* ---------- game icons (faction, class, type) ---------- */
+.gi { width: 18px; height: 18px; display: inline-block; vertical-align: middle; flex: none; border-radius: 50%; }
+.tag .gi { width: 16px; height: 16px; margin-left: -4px; }
+.cls-line .gi { width: 15px; height: 15px; margin-right: 2px; }
+
+/* In-game style filter bar: ALL plus round icons, one row each for class,
+   type and faction. Always dark, like the game's own panel. */
+.gamebar {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: fit-content;
+  max-width: 100%;
+  padding: 8px 10px;
+  border-radius: 16px;
+  background: linear-gradient(180deg, #2e241a, #1c1611);
+  border: 2px solid #6e5634;
+  box-shadow: inset 0 0 0 1px #0b0805, var(--shadow);
+  color-scheme: dark;
+}
+.gamebar .row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.gbtn {
+  appearance: none;
+  border: 0;
+  padding: 0;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: #15100c;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition: opacity 0.12s ease, box-shadow 0.12s ease, transform 0.12s ease;
+}
+.gbtn .gi { width: 100%; height: 100%; }
+.gbtn:hover { transform: translateY(-1px); }
+.gbtn:focus-visible { outline: 2px solid #f3d27a; outline-offset: 2px; }
+.gbtn.all {
+  font-family: var(--font-display);
+  font-size: 0.92rem;
+  color: #f2dfae;
+  border: 2px solid #8b6b3d;
+  background: radial-gradient(circle at 50% 40%, #3d2f21, #17110c);
+}
+.gbtn[aria-pressed='true'] { box-shadow: 0 0 0 2px #f5d47c, 0 0 12px 2px rgb(245 212 124 / 55%); }
+.gamebar .row[data-active='true'] .gbtn:not(.all):not([aria-pressed='true']) { opacity: 0.42; }
+
 /* ---------- hero tiles ---------- */
 .portrait {
   display: inline-block;
@@ -336,20 +383,17 @@ main {
 .portrait .initials { font-family: var(--font-display); font-size: calc(var(--ps, 64px) * 0.36); color: var(--ink); opacity: 0.85; }
 .portrait .fac {
   position: absolute;
-  left: -4px;
-  top: -4px;
-  width: calc(var(--ps, 64px) * 0.36);
-  height: calc(var(--ps, 64px) * 0.36);
-  min-width: 16px;
-  min-height: 16px;
+  left: -5px;
+  top: -5px;
+  width: calc(var(--ps, 64px) * 0.38);
+  height: calc(var(--ps, 64px) * 0.38);
+  min-width: 18px;
+  min-height: 18px;
   border-radius: 50%;
-  background: var(--fc);
-  color: #fff;
-  display: grid;
-  place-items: center;
-  border: 2px solid var(--surface);
+  display: block;
+  filter: drop-shadow(0 1px 1px rgb(0 0 0 / 45%));
 }
-.portrait .fac svg { width: 70%; height: 70%; }
+.portrait .fac .gi { width: 100%; height: 100%; }
 .portrait .badge-tr { position: absolute; right: -5px; top: -5px; }
 .portrait .lvl {
   position: absolute;
@@ -519,13 +563,16 @@ main {
 
 /* ---------- artifacts ---------- */
 .artifact-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 8px; padding: 8px; min-width: 0; }
-.artifact-card { display: grid; grid-template-columns: 42px minmax(0, 1fr); gap: 10px; padding: 10px; border-radius: var(--r-sm); background: var(--surface); border: 1px solid var(--line); }
+.artifact-card { display: grid; grid-template-columns: 52px minmax(0, 1fr); gap: 10px; padding: 10px; border-radius: var(--r-sm); background: var(--surface); border: 1px solid var(--line); }
 .artifact-glyph { width: 42px; height: 42px; border-radius: 50%; display: grid; place-items: center; background: radial-gradient(circle at 35% 30%, var(--accent-soft), color-mix(in srgb, var(--accent) 50%, var(--surface-2))); color: var(--ink); font-family: var(--font-display); font-size: 1rem; border: 1px solid color-mix(in srgb, var(--accent) 50%, transparent); }
+.artifact-card > .art-img { width: 52px; height: 52px; }
 .artifact-card h4 { font-size: 1rem; }
 .artifact-card p { font-size: 0.88rem; color: var(--ink-2); }
 .artifact-card .row { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin-top: 6px; }
 .art-chip { display: inline-flex; align-items: center; gap: 5px; font-size: 0.8rem; color: var(--ink-2); }
 .art-chip .artifact-glyph { width: 20px; height: 20px; font-size: 0.6rem; }
+.art-img { width: 42px; height: 42px; border-radius: 8px; object-fit: cover; display: block; flex: none; box-shadow: 0 0 0 1px rgb(0 0 0 / 35%); }
+.art-chip .art-img { width: 20px; height: 20px; border-radius: 4px; }
 
 /* ---------- modes & formations ---------- */
 .mode-group { display: flex; flex-direction: column; gap: 8px; }
@@ -710,6 +757,10 @@ table.bank .input, table.bank .select { padding: 3px 6px; font-size: 0.85rem; }
   .side-by-side, .compare, .grid-2 { grid-template-columns: minmax(0, 1fr); }
   .brand-meta { margin-left: 0; }
   .tier-table { --tm-size: 54px; }
+  .gamebar { padding: 6px 8px; gap: 5px; }
+  .gamebar .row { gap: 4px; }
+  .gbtn { width: 36px; height: 36px; }
+  .gbtn.all { font-size: 0.74rem; }
   .tier-row { grid-template-columns: 72px minmax(0, 1fr); }
   .tier-label { padding: 6px 4px; }
   .tier-label .letter { font-size: 1.15rem; }

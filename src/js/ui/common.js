@@ -1,9 +1,9 @@
 // Shared UI pieces: portraits, foldable panels, formation boards, drawers.
 
 import { esc, local, $ } from '../util.js';
-import { data, hero as getHero, POSITIONS } from '../data.js';
+import { data, hero as getHero, POSITIONS, CLASSES, TYPES, FACTION_IDS } from '../data.js';
 import { entry as bankEntry, effectiveLevel } from '../store.js';
-import { ICON, factionIcon, classIcon } from './icons.js';
+import { ICON, factionIcon, classIcon, typeIcon } from './icons.js';
 
 // ---- fold state ------------------------------------------------------------
 
@@ -143,10 +143,16 @@ export function artifactGlyph(name) {
   return `<span class="artifact-glyph" aria-hidden="true">${esc(artInitials(name))}</span>`;
 }
 
+// The artifact's in-game art when we have it, else a lettered medallion.
+export function artifactArt(id, name = artifactName(id)) {
+  const a = data.artifactById.get(id);
+  return a?.img ? `<img class="art-img" src="${esc(a.img)}" alt="" loading="lazy">` : artifactGlyph(name);
+}
+
 export function artifactChip(id) {
   if (!id) return '';
   const name = artifactName(id);
-  return `<span class="art-chip" title="${esc(name)}">${artifactGlyph(name)}<span>${esc(name.replace(/^Dura's\s+/i, ''))}</span></span>`;
+  return `<span class="art-chip" title="${esc(name)}">${artifactArt(id, name)}<span>${esc(name.replace(/^Dura's\s+/i, ''))}</span></span>`;
 }
 
 // ---- formation board (2 front / 3 back) -------------------------------------
@@ -258,5 +264,59 @@ export function pickHero({ title = 'Choose a hero', pool = null, allowClear = fa
 }
 
 export function classLabel(c) {
-  return `<span class="tag">${classIcon(c).replace('<svg', '<svg width="12" height="12"')} ${esc(c)}</span>`;
+  return `<span class="tag">${classIcon(c)} ${esc(c)}</span>`;
+}
+
+export function typeLabel(t) {
+  return t ? `<span class="tag">${typeIcon(t)} ${esc(t)}</span>` : '';
+}
+
+export function factionLabel(f) {
+  return `<span class="tag">${factionIcon(f)} ${esc(f)}</span>`;
+}
+
+// ---- in-game style filter bar: classes, types, factions -----------------
+
+const FILTER_ROWS = [
+  { key: 'classes', label: 'Class', values: CLASSES, icon: classIcon },
+  { key: 'types', label: 'Type', values: TYPES, icon: typeIcon },
+  { key: 'factions', label: 'Faction', values: FACTION_IDS, icon: factionIcon },
+];
+
+// `state` holds a Set per row (classes, types, factions). An empty set means
+// ALL. Several icons in one row can be on at once.
+export function gameFilterBar(state) {
+  return `<div class="gamebar" role="group" aria-label="Filter heroes">${FILTER_ROWS.map((r) => {
+    const set = state[r.key];
+    return `<div class="row" role="group" aria-label="${r.label}" data-active="${set.size > 0}">
+      <button type="button" class="gbtn all" data-gf-all="${r.key}" aria-pressed="${set.size === 0}" title="All ${r.label.toLowerCase()}s">ALL</button>
+      ${r.values.map((v) => `<button type="button" class="gbtn" data-gf="${r.key}" data-gv="${esc(v)}" aria-pressed="${set.has(v)}" title="${esc(v)}" aria-label="${esc(v)}">${r.icon(v)}</button>`).join('')}
+    </div>`;
+  }).join('')}</div>`;
+}
+
+// Handles a click inside the bar. Returns true when it changed the state.
+export function handleGameFilter(ev, state) {
+  const all = ev.target.closest('[data-gf-all]');
+  if (all) {
+    state[all.dataset.gfAll].clear();
+    return true;
+  }
+  const b = ev.target.closest('[data-gf]');
+  if (!b) return false;
+  const set = state[b.dataset.gf];
+  const v = b.dataset.gv;
+  if (set.has(v)) set.delete(v);
+  else set.add(v);
+  return true;
+}
+
+export function syncGameFilter(root, state) {
+  for (const row of root.querySelectorAll('.gamebar .row')) {
+    const key = row.querySelector('[data-gf-all]').dataset.gfAll;
+    const set = state[key];
+    row.dataset.active = String(set.size > 0);
+    row.querySelector('[data-gf-all]').setAttribute('aria-pressed', String(set.size === 0));
+    for (const b of row.querySelectorAll('[data-gf]')) b.setAttribute('aria-pressed', String(set.has(b.dataset.gv)));
+  }
 }

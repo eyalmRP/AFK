@@ -5,8 +5,8 @@ import { esc, $, $$, toast, toInt, debounce } from '../util.js';
 import { data, FACTION_IDS, CLASSES, ASCENSIONS, LIMITS, TIERS, tierOf, hero as getHero } from '../data.js';
 import { bank, updateHeroes, updateSettings, replaceBank, removeHeroes, effectiveLevel, exportBank, sanitizeEntry, defaultEntry, ownedIds } from '../store.js';
 import { aiState, initAi, readScreenshots, errorCopy } from '../ai.js';
-import { ICON, factionIcon, classIcon } from './icons.js';
-import { portrait, openDrawer, closeDrawer, tierPill, facClass } from './common.js';
+import { ICON, classIcon } from './icons.js';
+import { portrait, openDrawer, closeDrawer, tierPill, gameFilterBar, handleGameFilter, syncGameFilter } from './common.js';
 import { openHeroDetail } from './heroDetail.js';
 
 const ui = {
@@ -17,6 +17,7 @@ const ui = {
   asc: 'any',
   factions: new Set(),
   classes: new Set(),
+  types: new Set(),
   view: 'cards',
   selectMode: false,
   selected: new Set(),
@@ -69,6 +70,7 @@ function visibleHeroes() {
     if (ui.asc !== 'any' && (!owned || e.asc !== ui.asc)) return false;
     if (ui.factions.size && !ui.factions.has(h.faction)) return false;
     if (ui.classes.size && !ui.classes.has(h.class)) return false;
+    if (ui.types.size && !ui.types.has(h.type)) return false;
     if (s && !h.name.toLowerCase().includes(s) && !h.faction.toLowerCase().includes(s) && !(h.title || '').toLowerCase().includes(s)) return false;
     return true;
   });
@@ -150,10 +152,7 @@ function render() {
           .join('')}</div>
         <button class="btn small" type="button" data-act="select" aria-pressed="${ui.selectMode}">${ui.selectMode ? 'Done selecting' : 'Select'}</button>
       </div>
-      <div class="chips" role="group" aria-label="Faction filter">${FACTION_IDS.map(
-        (f) => `<button type="button" class="chip ${facClass(f)}" data-fac="${f}" aria-pressed="${ui.factions.has(f)}"><span style="color:var(--fc)">${factionIcon(f)}</span>${f}</button>`
-      ).join('')}</div>
-      <div class="chips" role="group" aria-label="Class filter">${CLASSES.map((c) => `<button type="button" class="chip" data-cls="${c}" aria-pressed="${ui.classes.has(c)}">${classIcon(c)}${c}</button>`).join('')}</div>
+      ${gameFilterBar(ui)}
       <p class="small muted" id="bank-counts"></p>
     </div>
     <div id="bank-list"></div>
@@ -208,7 +207,7 @@ function card(h) {
       ${
         owned
           ? `<span class="st">${statLine(e)}</span><span class="st">Lv ${effectiveLevel(h.id)} · T${e.gear ?? 0} gear</span>`
-          : `<span class="st muted">${esc(h.faction)} ${esc(h.class)}</span>${ui.selectMode ? '' : `<button class="btn small own-btn" type="button" data-own-hero="${h.id}">+ I own this</button>`}`
+          : `<span class="st muted cls-line">${classIcon(h.class)} ${esc(h.class)}</span>${ui.selectMode ? '' : `<button class="btn small own-btn" type="button" data-own-hero="${h.id}">+ I own this</button>`}`
       }
     </div>
   </div>`;
@@ -302,17 +301,8 @@ function onClick(ev) {
     renderList();
     return;
   }
-  const fac = t.closest('[data-fac]');
-  if (fac) {
-    toggleSet(ui.factions, fac.dataset.fac);
-    fac.setAttribute('aria-pressed', String(ui.factions.has(fac.dataset.fac)));
-    refreshBank();
-    return;
-  }
-  const cls = t.closest('[data-cls]');
-  if (cls) {
-    toggleSet(ui.classes, cls.dataset.cls);
-    cls.setAttribute('aria-pressed', String(ui.classes.has(cls.dataset.cls)));
+  if (t.closest('.gamebar') && handleGameFilter(ev, ui)) {
+    syncGameFilter(root, ui);
     refreshBank();
     return;
   }

@@ -64,7 +64,8 @@
   "Kits were verified for 23 heroes. The rest use the game's own role tags (main and secondary role).",
   "No current community team sets were found for Legends Championship, Cursed Realm, King's Tower or the faction towers.",
   "PvP ratings are thin for many Lightbearer, Mauler and Wilder heroes. Where a category rating is missing, the overall rating is used.",
-  "Signature Item caps: patch 1.134 raised the cap to +50, but some 2025 guides still stop at +40. Check in game."
+  "Signature Item caps: patch 1.134 raised the cap to +50, but some 2025 guides still stop at +40. Check in game.",
+  "Seraphic Tide (Support artifact) has no effect text or rating yet."
  ],
  "limits": {
   "level": 800,
@@ -653,6 +654,12 @@
    "url": "https://www.apkmirror.com/apk/lilith-games/afk-arena/",
    "date": "2025-07 / 2026-07",
    "kind": "roster"
+  },
+  {
+   "name": "AFK Calc (brunosabot/afkalc) - faction, class, type and artifact icons",
+   "url": "https://github.com/brunosabot/afkalc",
+   "date": "2026-06-03",
+   "kind": "roster"
   }
  ],
  "changelog": [
@@ -661,7 +668,8 @@
    "changes": [
     "First edition: 229 heroes in 8 factions, ratings for 122 heroes from 7 sources dated Apr to Oct 2026",
     "21 artifacts, 13 game modes plus 6 faction towers, 16 community combos",
-    "AI analysis for every mode, calculated from the full roster"
+    "AI analysis for every mode, calculated from the full roster",
+    "Game icons for factions, classes and types, and artifact art (from AFK Calc)"
    ]
   }
  ]

@@ -24,6 +24,8 @@ export const FACTIONS = [
 export const FACTION_IDS = FACTIONS.map((f) => f.id);
 
 export const CLASSES = ['Warrior', 'Tank', 'Ranger', 'Mage', 'Support'];
+// Same order as the in-game filter bar.
+export const TYPES = ['Strength', 'Intelligence', 'Agility'];
 
 // Ascension ladder as shown in game. Index doubles as a strength rank.
 export const ASCENSIONS = ['Elite', 'Elite+', 'Legendary', 'Legendary+', 'Mythic', 'Mythic+', 'Ascended'];

@@ -5,8 +5,7 @@ import { esc } from '../util.js';
 import { data, CATEGORIES, tierOf, hero as getHero } from '../data.js';
 import { entry as bankEntry, effectiveLevel } from '../store.js';
 import { suggestArtifact } from '../engine.js';
-import { portrait, tierPill, openDrawer, closeDrawer, classLabel, trendBadge, artifactChip, facClass } from './common.js';
-import { factionIcon } from './icons.js';
+import { portrait, tierPill, openDrawer, closeDrawer, classLabel, typeLabel, factionLabel, trendBadge, artifactChip } from './common.js';
 
 const MODE_LABEL = {
   pvp: 'PvP',
@@ -51,9 +50,9 @@ export function openHeroDetail(id) {
       <div style="display:flex;flex-direction:column;gap:6px;min-width:0">
         ${h.title ? `<span class="muted">${esc(h.title)}</span>` : ''}
         <div class="chips">
-          <span class="tag ${facClass(h.faction)}"><span style="color:var(--fc);display:inline-flex;width:12px">${factionIcon(h.faction)}</span>${esc(h.faction)}</span>
+          ${factionLabel(h.faction)}
           ${classLabel(h.class)}
-          ${h.type ? `<span class="tag">${esc(h.type)}</span>` : ''}
+          ${typeLabel(h.type)}
           ${h.position ? `<span class="tag">${esc(h.position)} line</span>` : ''}
           ${h.release ? `<span class="tag">since ${esc(h.release)}</span>` : ''}
         </div>

@@ -16,7 +16,8 @@
     "pvp": "S+"
    },
    "bis": [],
-   "restriction": null
+   "restriction": null,
+   "img": "img/artifacts/duras-eye.webp"
   },
   {
    "id": "duras-call",
@@ -37,7 +38,8 @@
    "bis": [
     "leofric"
    ],
-   "restriction": null
+   "restriction": null,
+   "img": "img/artifacts/duras-call.webp"
   },
   {
    "id": "duras-grace",
@@ -53,7 +55,8 @@
     "pvp": "B"
    },
    "bis": [],
-   "restriction": null
+   "restriction": null,
+   "img": "img/artifacts/duras-grace.webp"
   },
   {
    "id": "duras-drape",
@@ -69,7 +72,8 @@
     "pvp": "C"
    },
    "bis": [],
-   "restriction": null
+   "restriction": null,
+   "img": "img/artifacts/duras-drape.webp"
   },
   {
    "id": "duras-blade",
@@ -84,7 +88,8 @@
     "pvp": "C"
    },
    "bis": [],
-   "restriction": null
+   "restriction": null,
+   "img": "img/artifacts/duras-blade.webp"
   },
   {
    "id": "duras-chalice-of-vitality",
@@ -99,7 +104,8 @@
     "pvp": "C"
    },
    "bis": [],
-   "restriction": null
+   "restriction": null,
+   "img": "img/artifacts/duras-chalice-of-vitality.webp"
   },
   {
    "id": "duras-conviction",
@@ -115,7 +121,8 @@
     "pvp": "B"
    },
    "bis": [],
-   "restriction": null
+   "restriction": null,
+   "img": "img/artifacts/duras-conviction.webp"
   },
   {
    "id": "chaos-bringer",
@@ -129,7 +136,8 @@
     "pvp": "A"
    },
    "bis": [],
-   "restriction": "Warrior only"
+   "restriction": "Warrior only",
+   "img": "img/artifacts/chaos-bringer.webp"
   },
   {
    "id": "pauldron-of-burning-fury",
@@ -144,7 +152,8 @@
     "pvp": "B"
    },
    "bis": [],
-   "restriction": "Warrior only"
+   "restriction": "Warrior only",
+   "img": "img/artifacts/pauldron-of-burning-fury.webp"
   },
   {
    "id": "carnage",
@@ -158,7 +167,8 @@
     "pvp": "C"
    },
    "bis": [],
-   "restriction": "Warrior only"
+   "restriction": "Warrior only",
+   "img": "img/artifacts/carnage.webp"
   },
   {
    "id": "lifes-limit",
@@ -172,7 +182,8 @@
     "pvp": "A"
    },
    "bis": [],
-   "restriction": "Tank only"
+   "restriction": "Tank only",
+   "img": "img/artifacts/lifes-limit.webp"
   },
   {
    "id": "the-barricade",
@@ -187,7 +198,8 @@
     "pvp": "A"
    },
    "bis": [],
-   "restriction": "Tank only"
+   "restriction": "Tank only",
+   "img": "img/artifacts/the-barricade.webp"
   },
   {
    "id": "waistband-of-resilience",
@@ -202,7 +214,8 @@
     "pvp": "B"
    },
    "bis": [],
-   "restriction": "Tank only"
+   "restriction": "Tank only",
+   "img": "img/artifacts/waistband-of-resilience.webp"
   },
   {
    "id": "dual-divinity",
@@ -217,7 +230,8 @@
     "pvp": "A"
    },
    "bis": [],
-   "restriction": "Ranger only"
+   "restriction": "Ranger only",
+   "img": "img/artifacts/dual-divinity.webp"
   },
   {
    "id": "verdant-longbow",
@@ -232,7 +246,8 @@
     "pvp": "B"
    },
    "bis": [],
-   "restriction": "Ranger only"
+   "restriction": "Ranger only",
+   "img": "img/artifacts/verdant-longbow.webp"
   },
   {
    "id": "shroud-of-verdure",
@@ -246,7 +261,8 @@
     "pvp": "B"
    },
    "bis": [],
-   "restriction": "Ranger only"
+   "restriction": "Ranger only",
+   "img": "img/artifacts/shroud-of-verdure.webp"
   },
   {
    "id": "windbinder",
@@ -263,7 +279,8 @@
    "bis": [
     "zaphrael"
    ],
-   "restriction": "Mage only"
+   "restriction": "Mage only",
+   "img": "img/artifacts/windbinder.webp"
   },
   {
    "id": "warden-of-the-arcane",
@@ -280,7 +297,8 @@
     "oden",
     "zaphrael"
    ],
-   "restriction": "Mage only"
+   "restriction": "Mage only",
+   "img": "img/artifacts/warden-of-the-arcane.webp"
   },
   {
    "id": "winged-warden",
@@ -294,7 +312,8 @@
     "pvp": "C"
    },
    "bis": [],
-   "restriction": "Mage only"
+   "restriction": "Mage only",
+   "img": "img/artifacts/winged-warden.webp"
   },
   {
    "id": "oceanic-strings",
@@ -309,7 +328,8 @@
     "pvp": "A"
    },
    "bis": [],
-   "restriction": "Support only"
+   "restriction": "Support only",
+   "img": "img/artifacts/oceanic-strings.webp"
   },
   {
    "id": "tidebearer",
@@ -325,7 +345,21 @@
    "bis": [
     "leofric"
    ],
-   "restriction": "Support only"
+   "restriction": "Support only",
+   "img": "img/artifacts/tidebearer.webp"
+  },
+  {
+   "id": "seraphic-tide",
+   "name": "Seraphic Tide",
+   "effect": null,
+   "suits": [
+    "Support"
+   ],
+   "tier": null,
+   "bis": [],
+   "restriction": "Support only",
+   "note": "Listed in AFK Calc; effect and rating not researched yet.",
+   "img": "img/artifacts/seraphic-tide.webp"
   }
  ],
  "collections": [
