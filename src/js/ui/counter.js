@@ -232,7 +232,7 @@ function renderResult(ctx) {
           ? `<p class="callout ${s.beats.evidence === 'suggested' ? 'info' : 'good'} small"><strong>${s.beats.evidence === 'suggested' ? 'Based on a suggestion:' : 'Built on'} ${esc(s.beats.name)}</strong>${s.beats.overlap < s.beats.size ? ` (${s.beats.overlap} of its ${s.beats.size} heroes: ${swapText(s.beats.heroes, Object.values(s.layout))})` : ''}, which beats ${esc(s.beats.vsName)}${s.beats.vsMatch < s.beats.vsSize ? ` (your enemy has ${s.beats.vsMatch} of its ${s.beats.vsSize} heroes)` : ''}: ${esc(s.beats.claim || '')} <a href="${esc(s.beats.url)}" target="_blank" rel="noopener">Source</a>, ${esc(s.beats.date || '')}.</p>`
           : ''
       }
-      <header><h4>${esc(s.own?.wins && s.own.bonus > 0 ? 'Your winning team' : s.beats?.name || s.template?.name || 'Counter formation')}</h4><span class="score">${s.total.toFixed(1)} pts</span></header>
+      <header><h4>${esc(s.own?.wins && s.own.bonus > 0 ? 'Beat this lineup in your log' : s.beats?.name || s.template?.name || 'Counter formation')}</h4><span class="score">${s.total.toFixed(1)} pts</span></header>
       ${board({ slots: s.layout, showBank: ui.pool === 'mine', beast: bp.id })}
       ${bp.html}
       <ul class="reasons">${reasons}</ul>
@@ -347,13 +347,13 @@ function ownCallout(own, ctx, ids) {
     const r = other[0];
     return `<p class="callout small"><strong>From your battle log:</strong> ${esc(names(r.team))} beat a lineup like this on ${esc(fmtDay(r.date))}${r.trust < 1 ? ', though that team was much stronger' : ''}. The counter rates the team below higher with your heroes as they are now.</p>`;
   }
-  const rec = `${own.wins} win${own.wins === 1 ? '' : 's'}, ${own.losses} loss${own.losses === 1 ? '' : 'es'}`;
+  const rec = `won ${own.wins}, lost ${own.losses}`;
   if (own.bonus > 0) {
     const team = own.lastWin.team;
-    const swaps = team.some((id) => !ids.includes(id)) ? ` This is your winning team with ${swapText(team, ids)}.` : '';
-    return `<p class="callout good small"><strong>From your battle log:</strong> with this team against a lineup like this: ${rec}, last win ${esc(fmtDay(own.lastWin.date))}.${swaps}</p>`;
+    const swaps = team.some((id) => !ids.includes(id)) ? ` Here it is with ${swapText(team, ids)}.` : '';
+    return `<p class="callout good small"><strong>From your battle log:</strong> this team against a lineup like this: ${rec} (last win ${esc(fmtDay(own.lastWin.date))}).${swaps}</p>`;
   }
-  return `<p class="callout small"><strong>From your battle log:</strong> this team (or nearly) is ${rec} against a lineup like this. It's still the best the counter found, so check the swaps.</p>`;
+  return `<p class="callout small"><strong>From your battle log:</strong> a team like this against a lineup like this: ${rec}. It's still the best the counter found with your heroes, so check the swaps.</p>`;
 }
 
 // The beast the lineup's source uses, if it names one.

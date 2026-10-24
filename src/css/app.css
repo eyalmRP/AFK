@@ -1188,3 +1188,29 @@ table.bank .input, table.bank .select { padding: 3px 6px; min-height: 30px; font
 @media (max-width: 760px) {
   .bt-vs { grid-template-columns: minmax(0, 1fr); }
 }
+.bt-add { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+.bt-ways { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); gap: 10px; }
+.bt-way { appearance: none; display: flex; align-items: flex-start; gap: 12px; text-align: left; padding: 14px; border-radius: var(--r-md); border: 1px solid var(--line-2); background: var(--surface); color: var(--ink); cursor: pointer; box-shadow: var(--shadow); font: inherit; }
+.bt-way[hidden] { display: none; }
+.bt-way:hover:not(:disabled) { border-color: var(--accent); }
+.bt-way:disabled { opacity: 0.7; cursor: progress; }
+.bt-way > svg { width: 28px; height: 28px; flex: none; color: var(--accent); }
+.bt-way > span { display: flex; flex-direction: column; gap: 3px; }
+.bt-way b { font-family: var(--font-display); font-weight: 400; font-size: 1.08rem; }
+.bt-add-foot { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.field.inline { flex-direction: row; align-items: center; gap: 8px; }
+.bt-add > .small, #bt-pending > p { margin: 0; }
+#bt-pending:not(:empty) { display: flex; flex-direction: column; gap: 10px; margin-bottom: 22px; }
+.bt-item.unsure { border-color: color-mix(in srgb, #f08a24 70%, var(--line)); }
+.bt-ask { color: #f08a24; font-weight: 600; }
+.qe-teams { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }
+.qe-teams p { margin: 0; }
+.qe-row { display: flex; align-items: center; gap: 8px; }
+.qe-row .bt-tag { width: 46px; text-align: center; flex: none; }
+.qe-slots { display: flex; gap: 4px; flex-wrap: wrap; }
+.qe-pick { appearance: none; border: 0; background: none; padding: 0; cursor: pointer; line-height: 0; }
+.qe-empty { display: inline-block; width: 40px; height: 40px; border-radius: 8px; border: 1.5px dashed var(--line-2); }
+.qe-badge { display: inline-grid; place-items: center; min-width: 18px; height: 18px; border-radius: 9px; font-family: var(--font-data); font-size: 0.68rem; font-weight: 800; color: #fff; }
+.qe-badge.win { background: var(--good); }
+.qe-badge.lose { background: var(--bad); }
+.qe-head { position: sticky; top: -16px; z-index: 6; margin: -16px -16px 0; padding: 12px 16px 10px; background: var(--surface); border-bottom: 1px solid var(--line); display: flex; flex-direction: column; gap: 8px; }

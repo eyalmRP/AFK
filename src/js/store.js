@@ -293,6 +293,15 @@ export function addBattle(b) {
   return item;
 }
 
+// Several at once (a batch read from screenshots), in one write.
+export function addBattles(list) {
+  const now = Date.now();
+  const items = list.map((b, i) => sanitizeBattle({ ...b, id: 'b' + (now + i).toString(36) + Math.random().toString(36).slice(2, 5), at: b.at || now - i }));
+  battles.items = [...items, ...battles.items].slice(0, BATTLES_MAX);
+  touchBattles();
+  return items;
+}
+
 export function updateBattle(id, patch) {
   battles.items = battles.items.map((b) => (b.id === id ? sanitizeBattle({ ...b, ...patch, id }) : b));
   touchBattles();
