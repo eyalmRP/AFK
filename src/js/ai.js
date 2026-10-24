@@ -3,7 +3,7 @@
 // `sample` capability on the viewer's Claude account, so it only lights up
 // when the page is opened inside Claude.
 
-import { data, ASCENSIONS, tierOf, POSITIONS, CLASSES, ELDER_MAX, LIMITS } from './data.js';
+import { data, ASCENSIONS, tierOf, POSITIONS, CLASSES, ELDER_MAX, LIMITS, BEAST_BUFF_TOTAL } from './data.js';
 
 let samplePromise = null;
 export const aiState = { text: false, images: false, maxImages: 0, mediaTypes: [], disabled: false };
@@ -140,6 +140,56 @@ Reply with only JSON: {"slots":{"F1":"id or null","F2":"id or null","B1":"id or 
   const level = numOrNull(out?.level);
   const beast = out?.beast && data.beastById?.has(String(out.beast)) ? String(out.beast) : null;
   return { slots, level: level && level >= 1 && level <= LIMITS.level ? level : null, beast, notes: String(out?.notes || '').slice(0, 300) };
+}
+
+// Read battle screenshots for the battle log: both teams and who won.
+// Returns {battles:[{left, right, winner:'left'|'right'|null, mode, notes}], notes};
+// a side is {slots:{F1:id,...}, level, beast, beastLevel, player}.
+export async function readBattleScreenshots(files, { signal } = {}) {
+  const sample = await initAi();
+  if (!sample) throw { code: 'not_granted' };
+  const pvp = data.modes.filter((m) => m.category === 'pvp').map((m) => `${m.id}|${m.name}`);
+  const prompt = `These are ${files.length} screenshot(s) from the mobile game AFK Arena (not AFK Journey), each showing a finished battle between two teams of up to 5 heroes: a Victory or Defeat screen, its damage statistics, a battle record or replay, or a Legends Championship result. The player wants to log who beat whom.
+
+For every battle shown, read both teams. The team on the left is usually the player's (attacker); the right one is the opponent.
+- Positions, when the screen shows the formation: a formation has 2 front slots and 3 back slots. On a battle screen the two front lines face each other in the middle: each team's front line (2 heroes) is its column nearer the middle and its back line (3) the outer column. Number each line top to bottom: F1 top, F2 bottom; B1 top, B2 middle, B3 bottom. On a lineup panel with a row of 2 above a row of 3, the 2 are the front line (F1, F2 left to right) and the 3 the back line (B1, B2, B3 left to right). When the screen lists heroes without showing positions (damage statistics), give pos null and keep the order shown.
+- Winner: "Victory" means the player's side (left) won, "Defeat" that it lost; records and replays mark the winner with "Win"/"Victory", a crown or a highlighted side. If nothing on the screen says who won, use null. Never guess the winner.
+- Level: the heroes' level if shown (one shared number or "Lv" per hero), otherwise null. Beast: the team's beast and its level if shown, otherwise null.
+- Mode, if the screen shows it, one of (id|name): ${pvp.join(', ')}; otherwise null.
+
+Heroes (id|name|faction|class):
+${rosterLines()}
+
+Beasts (id|name):
+${(data.beasts || []).map((b) => `${b.id}|${b.name}`).join('\n')}
+
+Reply with only JSON: {"battles":[{"left":{"heroes":[{"id":"hero id","pos":"F1|F2|B1|B2|B3|null"}],"level":null,"beast":null,"beastLevel":null,"player":true},"right":{"heroes":[],"level":null,"beast":null,"beastLevel":null,"player":false},"winner":"left|right|null","mode":null,"seen":"what told you the winner"}],"notes":"anything the player should check"}`;
+  const out = await sample.json(prompt, { images: files, signal, modelTier: 'default', cache: false });
+  const valid = new Set(data.heroes.map((h) => h.id));
+  const side = (x) => {
+    const list = (Array.isArray(x?.heroes) ? x.heroes : [])
+      .filter((h) => h && valid.has(String(h.id)))
+      .slice(0, 5)
+      .map((h) => ({ id: String(h.id), pos: POSITIONS.includes(h.pos) ? h.pos : null }));
+    const slots = {};
+    const seen = new Set();
+    for (const h of list) if (h.pos && !slots[h.pos] && !seen.has(h.id)) (slots[h.pos] = h.id), seen.add(h.id);
+    for (const h of list) {
+      if (seen.has(h.id)) continue;
+      const free = POSITIONS.find((p) => !slots[p]);
+      if (free) (slots[free] = h.id), seen.add(h.id);
+    }
+    const level = numOrNull(x?.level);
+    const beast = x?.beast && data.beastById?.has(String(x.beast)) ? String(x.beast) : null;
+    const bl = numOrNull(x?.beastLevel);
+    return { slots, level: level && level >= 1 && level <= LIMITS.level ? level : null, beast, beastLevel: beast && bl && bl >= 1 ? Math.min(bl, BEAST_BUFF_TOTAL) : null, player: x?.player === true };
+  };
+  const modes = new Set(data.modes.map((m) => m.id));
+  const battles = (Array.isArray(out?.battles) ? out.battles : [])
+    .map((b) => ({ left: side(b?.left), right: side(b?.right), winner: b?.winner === 'left' || b?.winner === 'right' ? b.winner : null, mode: modes.has(String(b?.mode)) ? String(b.mode) : null, seen: String(b?.seen || '').slice(0, 200) }))
+    .filter((b) => Object.keys(b.left.slots).length || Object.keys(b.right.slots).length)
+    .slice(0, 12);
+  return { battles, notes: String(out?.notes || '').slice(0, 400) };
 }
 
 // Read the Elder Tree screen. Returns {core, Warrior, Tank, Ranger, Mage, Support, notes}.

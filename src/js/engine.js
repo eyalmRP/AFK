@@ -191,7 +191,12 @@ export function elderTreeFactors(tree) {
 // instead of by its upgrade levels (see heroValue).
 // `matchups` are team-vs-team results from the sources (modes.json
 // pvpMatchups): a lineup and the lineups said to beat it.
-export function makeContext({ heroes, entries = null, mode = null, category, enemy = [], combos = [], archetypes = [], elderTree = null, power = null, matchups = [] }) {
+// `records` are the player's own battles (Battles tab) as {id, date, win,
+// lose, winBeast, loseBeast, winPower, losePower} with hero id lists: facts,
+// used straight away.
+// `learned` is what the battle log taught (learn.js learnedMap): hero id ->
+// {points, n}, passed only once that model has proved itself.
+export function makeContext({ heroes, entries = null, mode = null, category, enemy = [], combos = [], archetypes = [], elderTree = null, power = null, matchups = [], records = [], learned = null }) {
   const cat = category || mode?.category || 'pve';
   const ctx = {
     heroes,
@@ -206,6 +211,7 @@ export function makeContext({ heroes, entries = null, mode = null, category, ene
     elder: elderTreeFactors(elderTree),
     power: power && power.size ? power : null,
     powerRef: 0,
+    learned: learned && learned.size ? learned : null,
     cache: new Map(),
   };
   if (ctx.power) {
@@ -215,6 +221,7 @@ export function makeContext({ heroes, entries = null, mode = null, category, ene
   }
   ctx.enemyArchetypes = detectArchetypes(ctx.enemy, archetypes);
   ctx.enemyMatchups = detectMatchups(ctx.enemy, matchups);
+  ctx.enemyRecords = detectRecords(ctx.enemy, records);
   ctx.enemyThreats = enemyThreats(ctx.enemy);
   return ctx;
 }
@@ -237,6 +244,24 @@ export function detectMatchups(enemyHeroes, matchups) {
   return (matchups || [])
     .map((m) => ({ ...m, overlap: (m.vs || []).filter((id) => ids.has(id)).length }))
     .filter((m) => m.overlap >= Math.min(3, (m.vs || []).length));
+}
+
+// The player's own battles against a lineup like this enemy: the side the
+// enemy matches shares at least four of its heroes. A battle can count both
+// ways (a win when the enemy looks like the loser, a loss when it looks like
+// the winner). `trust` drops when the winner was much stronger: then the
+// result says more about power than about the lineups.
+export function detectRecords(enemyHeroes, records) {
+  const ids = new Set(enemyHeroes.map((h) => h.id));
+  const n = (list) => (list || []).filter((id) => ids.has(id)).length;
+  const out = [];
+  for (const r of records || []) {
+    const ratio = r.winPower > 0 && r.losePower > 0 ? r.winPower / r.losePower : 1;
+    const trust = Math.max(0.25, Math.min(1, 1 - (ratio - 1.1) * 1.5));
+    if ((r.lose || []).length && n(r.lose) >= 4) out.push({ ...r, result: 'win', team: r.win, vs: r.lose, match: n(r.lose), beast: r.winBeast || null, trust });
+    if ((r.win || []).length && n(r.win) >= 4) out.push({ ...r, result: 'loss', team: r.lose, vs: r.win, match: n(r.win), beast: r.loseBeast || null, trust });
+  }
+  return out;
 }
 
 function enemyThreats(enemyHeroes) {
@@ -293,8 +318,13 @@ export function heroValue(ctx, id) {
   }
   const classBonus = ctx.mode?.classBonus?.[h.class] || 0;
   if (classBonus) reasons.push(`${h.class.toLowerCase()}s suit ${ctx.mode.name}`);
-  const value = (base + classBonus) * inv.factor + counterBonus;
-  const out = { value, base, tier, factor: inv.factor, counterBonus, reasons, investNotes: inv.notes };
+  // The battle log: how much more (or less) often this hero's team won than
+  // power and tiers predicted.
+  const learned = ctx.learned?.get(id);
+  const logBonus = learned?.points || 0;
+  if (learned && Math.abs(logBonus) >= 0.2) reasons.push(`your battle log: ${logBonus > 0 ? 'wins more' : 'wins less'} than its power and tier predict (${learned.n} battles)`);
+  const value = (base + classBonus) * inv.factor + counterBonus + logBonus;
+  const out = { value, base, tier, factor: inv.factor, counterBonus, logBonus, reasons, investNotes: inv.notes };
   ctx.cache.set(id, out);
   return out;
 }
@@ -439,7 +469,33 @@ export function scoreTeam(ctx, ids) {
   }
   if (beats) total += beats.bonus;
 
-  return { total, members, synergies, combos, coverage, layout: layout.slots, template, beats };
+  // The player's own results with (nearly) this team against a lineup like
+  // this enemy: proof, so one full-match win (+15) counts for twice a
+  // guide's tested result and outweighs a fair gap in power; more results
+  // firm it up, losses pull it down.
+  let own = null;
+  for (const r of ctx.enemyRecords || []) {
+    const overlap = (r.team || []).filter((id) => idSet.has(id)).length;
+    if (overlap < Math.min(4, (r.team || []).length) || !r.team.length) continue;
+    // Squared: swapping a hero out of a team that won is a gamble.
+    const q = (r.match / r.vs.length) * (overlap / r.team.length) ** 2 * (r.trust ?? 1);
+    own ||= { wins: 0, losses: 0, W: 0, L: 0, lastWin: null, lastLoss: null, bonus: 0 };
+    if (r.result === 'win') {
+      own.wins++;
+      own.W += q;
+      if (!own.lastWin || (r.date || '') > (own.lastWin.date || '')) own.lastWin = r;
+    } else {
+      own.losses++;
+      own.L += q;
+      if (!own.lastLoss || (r.date || '') > (own.lastLoss.date || '')) own.lastLoss = r;
+    }
+  }
+  if (own) {
+    own.bonus = ((own.W - own.L) / (own.W + own.L + 1)) * 30;
+    total += own.bonus;
+  }
+
+  return { total, members, synergies, combos, coverage, layout: layout.slots, template, beats, own };
 }
 
 // Two front slots, three back slots. Front goes to the sturdiest heroes.
@@ -511,7 +567,8 @@ function templateSeeds(ctx, pool) {
   const owned = new Set(pool);
   const seeds = [];
   const winners = (ctx.enemyMatchups || []).flatMap((m) => (m.beatenBy || []).map((t) => ({ name: t.name, heroes: (t.heroes || []).map((id) => ({ id })) })));
-  const teams = [...winners, ...(ctx.mode?.community || []), ...(ctx.mode?.ai || [])];
+  const ownWins = (ctx.enemyRecords || []).filter((r) => r.result === 'win').map((r) => ({ name: 'your win', heroes: r.team.map((id) => ({ id })) }));
+  const teams = [...ownWins, ...winners, ...(ctx.mode?.community || []), ...(ctx.mode?.ai || [])];
   for (const t of teams) {
     const picked = [];
     const swaps = [];
@@ -547,6 +604,7 @@ export function shortlist(ctx, pool, k = 30) {
     for (const x of t.heroes || []) if (inPool.has(x.id)) keep.add(x.id);
   }
   for (const m of ctx.enemyMatchups || []) for (const t of m.beatenBy || []) for (const id of t.heroes || []) if (inPool.has(id)) keep.add(id);
+  for (const r of ctx.enemyRecords || []) if (r.result === 'win') for (const id of r.team) if (inPool.has(id)) keep.add(id);
   return [...keep];
 }
 

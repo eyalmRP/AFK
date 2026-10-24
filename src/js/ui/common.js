@@ -166,6 +166,13 @@ export function heroCR(h) {
   return entryCR(bankEntry(h.id), h, effectiveLevel(h.id));
 }
 
+// The player's hero level: the crystal level, or their highest hero.
+export function playerLevel() {
+  if (bank.settings.sharedLevel) return bank.settings.crystalLevel;
+  const levels = Object.values(bank.heroes).filter((e) => e?.owned).map((e) => e.level || 0);
+  return Math.max(240, ...levels);
+}
+
 // The same for an entry not saved yet (the hero editor's fields).
 export function entryCR(e, h, level) {
   return estimateCR(e, h, { level, elderTree: bank.settings.elderTree });

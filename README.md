@@ -12,6 +12,7 @@ A weekly-updated meta tracker and team planner for **AFK Arena** (Lilith Games).
 | **Hero Bank** | Your Elder Tree levels, your beasts with their buff levels, and your roster: find, sort, filter, select and batch edit, per-hero editor, card or table view (edit values inline), import/export JSON, and **upload screenshots** that Claude reads to fill in ascension, stars, level, signature item, furniture and engraving. "All heroes share the same level" is on by default, with one level box (the Resonating Crystal level). |
 | **Formation Builder** | Pick a game mode and 1–7 formations. The rules engine builds teams from your heroes that never share a hero, with artifacts, coverage checks, reasons and the best next upgrade. "Ask Claude" gives Claude's own lineups next to the engine's. |
 | **Counter** | Enter the enemy formation by hand, from a screenshot, or from a common comp. You get a counter team from your heroes, plus a ranking of your best individual counter picks and Claude's take. |
+| **Battles** | Log battles you fought or watched: the winning and the losing team with their levels, beasts and assumed upgrades, by hand or from screenshots Claude reads (flip the winner if it's read the wrong way). The counter uses your results against a lineup straight away. A small model (`src/js/learn.js`) learns which heroes win more or less than power and tiers predict; it switches on only after 30 battles, and only while it predicts battles it wasn't fitted on better than power and tiers alone. Until then the tab says how many more battles it needs. |
 
 Screenshot reading and "Ask Claude" run on the viewer's own Claude account and only work when the page is opened in Claude. The hero bank is saved privately to your Claude account, with a copy in the browser.
 
@@ -47,6 +48,6 @@ python3 scripts/sync_roster.py             # list heroes that are new in the gam
 
 `dist/index.html` also works on any static host, such as GitHub Pages. There, the bank is saved in the browser only, and the Claude features are hidden.
 
-Code layout: `src/js/engine.js` (team scoring and search), `src/js/store.js` (bank persistence), `src/js/ai.js` (Claude calls), `src/js/ui/*` (tabs), `src/css/app.css`.
+Code layout: `src/js/engine.js` (team scoring and search), `src/js/learn.js` (the battle log model), `src/js/store.js` (bank, formations and battle log persistence), `src/js/ai.js` (Claude calls), `src/js/ui/*` (tabs), `src/css/app.css`.
 
 Fan-made and not affiliated with Lilith Games. Hero art belongs to its owners.

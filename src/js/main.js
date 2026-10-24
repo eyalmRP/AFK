@@ -1,12 +1,13 @@
-// App entry: load the weekly data, mount the four tabs, wire persistence.
+// App entry: load the weekly data, mount the tabs, wire persistence.
 
 import { loadData, data } from './data.js';
 import { esc, fmtDate, $, $$, local } from './util.js';
-import { loadLocal, connectRemote, onBankChange, onSyncChange, sync, ownedIds } from './store.js';
+import { loadLocal, connectRemote, onBankChange, onSyncChange, sync, ownedIds, battles } from './store.js';
 import { mountMeta, refreshMeta } from './ui/meta.js';
 import { mountBank, refreshBank } from './ui/bank.js';
 import { mountBuilder, refreshBuilder } from './ui/builder.js';
 import { mountCounter, refreshCounter } from './ui/counter.js';
+import { mountBattles, refreshBattles } from './ui/battles.js';
 import { mountCodes, refreshCodes, codesToRedeem } from './ui/codes.js';
 import { bindImageFallback } from './ui/common.js';
 import { BRAND, ICON, GEM_SPRITE } from './ui/icons.js';
@@ -18,6 +19,7 @@ const TABS = [
   { id: 'bank', label: 'Hero Bank', short: 'Bank', icon: 'tabBank', mount: mountBank, refresh: refreshBank },
   { id: 'builder', label: 'Formation Builder', short: 'Build', icon: 'tabBuild', mount: mountBuilder, refresh: refreshBuilder },
   { id: 'counter', label: 'Counter', short: 'Counter', icon: 'tabCounter', mount: mountCounter, refresh: refreshCounter },
+  { id: 'battles', label: 'Battles', short: 'Battles', icon: 'tabBattles', mount: mountBattles, refresh: refreshBattles },
   { id: 'codes', label: 'Codes', short: 'Codes', icon: 'tabCodes', mount: mountCodes, refresh: refreshCodes },
 ];
 
@@ -124,6 +126,7 @@ function renderSync() {
 function updateBankCount() {
   const n = ownedIds().length;
   for (const c of document.querySelectorAll('[data-tab="bank"] .count')) c.textContent = n ? String(n) : '';
+  for (const c of document.querySelectorAll('[data-tab="battles"] .count')) c.textContent = battles.items.length ? String(battles.items.length) : '';
   const k = codesToRedeem();
   for (const c of document.querySelectorAll('[data-tab="codes"] .count')) {
     c.textContent = k ? String(k) : '';

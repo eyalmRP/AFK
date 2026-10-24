@@ -33,6 +33,9 @@ export const ICON = {
   themeDark: svg('<path fill="currentColor" d="M20.5 14.6A8.6 8.6 0 0 1 9.4 3.5a8.6 8.6 0 1 0 11.1 11.1z"/>'),
   themeLight: svg('<g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6"/></g>'),
   stop: svg('<rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor"/>'),
+  trophy: svg('<g fill="currentColor"><path d="M7 3h10v6a5 5 0 0 1-10 0z"/><path d="M5 5H3v1.5A3.5 3.5 0 0 0 6.5 10H7V8.3A1.8 1.8 0 0 1 5 6.5zM19 5h2v1.5A3.5 3.5 0 0 1 17.5 10H17V8.3a1.8 1.8 0 0 0 2-1.8z" opacity=".6"/><path d="M10.5 13.5h3V17h-3z"/><rect x="7" y="17" width="10" height="3.5" rx="1"/></g>'),
+  flip: svg('<g fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h14M14 4l4 4-4 4"/><path d="M20 16H6M10 12l-4 4 4 4"/></g>'),
+  tabBattles: svg('<g fill="currentColor"><path d="M7 3h10v6a5 5 0 0 1-10 0z"/><path d="M5 5H3v1.5A3.5 3.5 0 0 0 6.5 10H7V8.3A1.8 1.8 0 0 1 5 6.5zM19 5h2v1.5A3.5 3.5 0 0 1 17.5 10H17V8.3a1.8 1.8 0 0 0 2-1.8z" opacity=".55"/><path d="M10.5 13.5h3V17h-3z"/><rect x="7" y="17" width="10" height="3.5" rx="1"/></g>'),
 };
 
 // Faceted stars in the game's four engraving colours: gold (below E30),

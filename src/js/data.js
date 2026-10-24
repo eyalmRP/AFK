@@ -94,6 +94,24 @@ export const ELDER_MAX = 1000;
 
 export const BEAST_LEVEL_MAX = 100;
 
+// Upgrades assumed for heroes whose build the screen doesn't show (an enemy
+// in the counter, either team in the battle log): Ascended 5 stars with these.
+export const ASSUMED_BUILDS = {
+  max: { label: 'Best · SI +50 · 36F · E100', si: 50, furniture: 36, engrave: 100, gear: 5 },
+  high: { label: 'High · SI +40 · 9F · E80', si: 40, furniture: 9, engrave: 80, gear: 4 },
+  mid: { label: 'Medium · SI +30 · 9F · E60', si: 30, furniture: 9, engrave: 60, gear: 4 },
+};
+
+export function assumedEntry(build) {
+  const { label, ...b } = ASSUMED_BUILDS[build] || ASSUMED_BUILDS.high;
+  void label;
+  return { owned: true, asc: 'Ascended', stars: 5, ...b };
+}
+
+// Beast level as the counter and battle log take it: the sum of its three
+// buffs (up to 18 each on legendary beasts).
+export const BEAST_BUFF_TOTAL = 54;
+
 // Beast buffs: one level per hero attribute type.
 export const BEAST_BUFFS = [
   { key: 'str', type: 'Strength' },

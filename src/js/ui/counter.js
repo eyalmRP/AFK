@@ -2,14 +2,16 @@
 // screenshot) and get the best answer from the player's own heroes.
 
 import { esc, $, toast } from '../util.js';
-import { data, hero as getHero, POSITIONS, FACTIONS, LIMITS, factionAdvantage } from '../data.js';
+import { data, hero as getHero, POSITIONS, FACTIONS, LIMITS, ASSUMED_BUILDS, BEAST_BUFF_TOTAL, assumedEntry, factionAdvantage } from '../data.js';
 import { bank, ownedIds, ownedBeasts } from '../store.js';
 import { makeContext, buildTeam, heroValue, scoreTeam, suggestBeast } from '../engine.js';
 import { aiState, initAi, claudeCounter, readEnemyScreenshot, errorCopy } from '../ai.js';
 import { ICON } from './icons.js';
-import { board, pickHero, pickBeast, portrait, slotsFromList, beastAllowed, entryCR, heroCR, fmtCR, CR_NOTE } from './common.js';
+import { board, pickHero, pickBeast, portrait, slotsFromList, beastAllowed, entryCR, heroCR, fmtCR, CR_NOTE, playerLevel } from './common.js';
 import { openHeroDetail } from './heroDetail.js';
 import { openBeastDetail } from './beastDetail.js';
+import { battleRecords, logStatus, logLine } from './battles.js';
+import { learnedMap, winChance } from '../learn.js';
 
 const ui = {
   enemy: {},
@@ -37,25 +39,16 @@ const WEIGH = [
   ['tier', 'Tier only', 'Tier ratings, counters and synergies, as if every hero were fully built'],
 ];
 
-const ENEMY_BUILDS = {
-  max: { label: 'Maxed · SI +50 · 36F · E100', si: 50, furniture: 36, engrave: 100, gear: 5 },
-  high: { label: 'High · SI +40 · 9F · E80', si: 40, furniture: 9, engrave: 80, gear: 4 },
-  mid: { label: 'Medium · SI +30 · 9F · E60', si: 30, furniture: 9, engrave: 60, gear: 4 },
-};
-// Beast level is the sum of its three buffs (up to 18 each on legendary beasts).
-const BEAST_LEVELS = 54;
+const ENEMY_BUILDS = ASSUMED_BUILDS;
 
 // Enemy heroes as drawn and rated: Ascended 5 stars with the chosen upgrades.
 function enemyBuild() {
-  const { label, ...b } = ENEMY_BUILDS[ui.enemyBuild] || ENEMY_BUILDS.high;
-  return { owned: true, asc: 'Ascended', stars: 5, ...b };
+  return assumedEntry(ui.enemyBuild);
 }
 
 // The player's own level, the default for the enemy.
 function myLevel() {
-  if (bank.settings.sharedLevel) return bank.settings.crystalLevel;
-  const levels = ownedIds().map((id) => bank.heroes[id]?.level || 0);
-  return Math.max(240, ...levels);
+  return playerLevel();
 }
 
 function enemyLevel() {
@@ -106,6 +99,9 @@ function context() {
     archetypes: data.archetypes,
     elderTree: ui.pool === 'mine' && ui.weigh === 'upgrades' ? bank.settings.elderTree : null,
     power: ui.pool === 'mine' && ui.weigh === 'power' ? new Map(ownedIds().map((id) => [id, heroCR(getHero(id))])) : null,
+    // The battle log: its results always, what it learned only once that proved itself (learn.js).
+    records: battleRecords(),
+    learned: learnedMap(logStatus()),
   });
 }
 
@@ -168,7 +164,7 @@ function render() {
             .join('')}</select></label>
           ${
             beasts
-              ? `<label class="field"><span>Beast level</span><select class="select" id="ct-eblevel" ${ui.enemyBeast ? '' : 'disabled'}>${Array.from({ length: BEAST_LEVELS }, (_, i) => i + 1)
+              ? `<label class="field"><span>Beast level</span><select class="select" id="ct-eblevel" ${ui.enemyBeast ? '' : 'disabled'}>${Array.from({ length: BEAST_BUFF_TOTAL }, (_, i) => i + 1)
                   .map((n) => `<option value="${n}" ${n === ui.enemyBeastLevel ? 'selected' : ''}>${n}</option>`)
                   .join('')}</select></label>`
               : ''
@@ -186,7 +182,7 @@ function render() {
           ctx.enemyMatchups.length
             ? `<p class="small"><span class="muted">Known answer:</span> ${ctx.enemyMatchups.map((m) => `${esc(m.vsName)} loses to ${esc(m.beatenBy.map((t) => t.name).join(', '))} (<a href="${esc(m.url)}" target="_blank" rel="noopener">source</a>)`).join('; ')}</p>`
             : ''
-        }` : '<p class="small muted">Select a slot to add an enemy hero.</p>'}
+        }${logFacts(ctx)}` : '<p class="small muted">Select a slot to add an enemy hero.</p>'}
       </section>
       <section><div id="ct-result"></div><div id="ct-claude"></div></section>
     </div>
@@ -229,18 +225,20 @@ function renderResult(ctx) {
     <p class="small muted">Recalculated each time you change the enemy, the mode or your heroes.</p>
     ${counterKnowledge(ctx) ? '' : `<p class="callout small"><strong>No counter data for these enemies yet.</strong> The sources this week don't say which heroes beat ${esc(ctx.enemy.map((h) => h.name).join(', '))}, so this is your strongest team for ${esc(ctx.mode?.name || 'this mode')}, adjusted for faction advantage and positions. Ask Claude below for a matchup-based counter.</p>`}
     <article class="result-card">
-      ${verdict(Object.values(s.layout))}
+      ${verdict(Object.values(s.layout), bp.id)}
+      ${ownCallout(s.own, ctx, Object.values(s.layout))}
       ${
         s.beats
           ? `<p class="callout ${s.beats.evidence === 'suggested' ? 'info' : 'good'} small"><strong>${s.beats.evidence === 'suggested' ? 'Based on a suggestion:' : 'Built on'} ${esc(s.beats.name)}</strong>${s.beats.overlap < s.beats.size ? ` (${s.beats.overlap} of its ${s.beats.size} heroes: ${swapText(s.beats.heroes, Object.values(s.layout))})` : ''}, which beats ${esc(s.beats.vsName)}${s.beats.vsMatch < s.beats.vsSize ? ` (your enemy has ${s.beats.vsMatch} of its ${s.beats.vsSize} heroes)` : ''}: ${esc(s.beats.claim || '')} <a href="${esc(s.beats.url)}" target="_blank" rel="noopener">Source</a>, ${esc(s.beats.date || '')}.</p>`
           : ''
       }
-      <header><h4>${esc(s.beats?.name || s.template?.name || 'Counter formation')}</h4><span class="score">${s.total.toFixed(1)} pts</span></header>
+      <header><h4>${esc(s.own?.wins && s.own.bonus > 0 ? 'Your winning team' : s.beats?.name || s.template?.name || 'Counter formation')}</h4><span class="score">${s.total.toFixed(1)} pts</span></header>
       ${board({ slots: s.layout, showBank: ui.pool === 'mine', beast: bp.id })}
       ${bp.html}
       <ul class="reasons">${reasons}</ul>
       ${s.synergies.length ? `<p class="small"><span class="muted">Synergy:</span> ${s.synergies.map((x) => `${esc(getHero(x.a).name)} + ${esc(getHero(x.b).name)}`).join(', ')}</p>` : ''}
-    </article>`;
+    </article>
+    <p class="small muted bt-line">${esc(logLine())}</p>`;
   // Individual hero ranking against this enemy.
   const ranked = pool
     .map((id) => ({ id, v: heroValue(ctx, id) }))
@@ -261,7 +259,7 @@ function renderResult(ctx) {
 // enemy's at its assumed build and level (combat rating estimate, engine.js;
 // beasts not counted). A rough guide: counters and faction edge can swing a
 // close fight, rarely a gap of 20% or more.
-function verdict(ids) {
+function verdict(ids, beastId = null) {
   const enemy = enemyIds();
   if (ui.pool !== 'mine' || !enemy.length) return '';
   const theirs = enemy.reduce((t, id) => t + entryCR(enemyBuild(), getHero(id), enemyLevel()), 0);
@@ -274,6 +272,12 @@ function verdict(ids) {
   else if (r >= 0.9) v = ['close', 'Close match', `The teams are within ${pct}% of each other, so faction edge, counters and positioning decide it.`];
   else if (r >= 0.8) v = ['warn', 'Hard fight', `The enemy is about ${pct}% stronger. You need the counters and faction edge to land.`];
   else v = ['bad', "You probably can't win this", `The enemy is about ${pct}% stronger. Counters and faction edge rarely make up that much: upgrade your heroes first or pick another opponent.`];
+  // Once the battle log's model has proved itself, its own estimate.
+  const st = logStatus();
+  const mine = beastId ? bank.beasts[beastId] : null;
+  const myBeast = mine && [mine.str, mine.int, mine.agi].every((x) => Number.isFinite(x)) ? mine.str + mine.int + mine.agi : null;
+  const chance = enemy.length >= 3 ? winChance(st, { ids, power: ours, beastLevel: myBeast }, { ids: enemy, power: theirs, beastLevel: ui.enemyBeast ? ui.enemyBeastLevel : null }, data.heroById) : null;
+  if (chance !== null) v[2] += ` Your battle log puts your chance at about ${Math.round(chance * 100)}%.`;
   return `<div class="verdict ${v[0]}" role="status" title="${esc(CR_NOTE)}"><strong>${v[0] === 'bad' ? '⚠ ' : ''}${v[1]}</strong><span>${v[2]}</span>
     <span class="small">Team power ≈ <b class="num">${fmtCR(ours)}</b> vs enemy ≈ <b class="num">${fmtCR(theirs)}</b> (estimates; enemy assumed ${esc(ENEMY_BUILDS[ui.enemyBuild]?.label || '')} at level ${enemyLevel()})</span></div>`;
 }
@@ -283,7 +287,14 @@ function swapText(source, team) {
   const out = source.filter((id) => !team.includes(id)).map((id) => getHero(id)?.name || id);
   const inn = team.filter((id) => !source.includes(id)).map((id) => getHero(id)?.name || id);
   if (!out.length) return 'all of it';
-  const why = out.map((n, i) => { const id = source.filter((x) => !team.includes(x))[i]; return bank.heroes[id]?.owned ? `${n} (your copy is less built)` : `${n} (not owned)`; });
+  const outIds = source.filter((x) => !team.includes(x));
+  const inIds = team.filter((x) => !source.includes(x));
+  const why = out.map((n, i) => {
+    const id = outIds[i];
+    if (!bank.heroes[id]?.owned) return `${n} (not owned)`;
+    const swapIn = inIds[i] && getHero(inIds[i]);
+    return swapIn && heroCR(getHero(id)) < heroCR(swapIn) ? `${n} (your copy is less built)` : `${n} (rated lower against this enemy)`;
+  });
   return `${inn.join(', ')} instead of ${why.join(', ')}`;
 }
 
@@ -308,11 +319,47 @@ function counterKnowledge(ctx) {
   if (ctx.enemy.some((h) => (h.counteredBy || []).length)) return true;
   if (ctx.enemyArchetypes.some((a) => (a.counteredBy || []).length)) return true;
   if (ctx.enemyMatchups.length) return true;
+  if ((ctx.enemyRecords || []).some((r) => r.result === 'win')) return true;
   return data.heroes.some((h) => (h.counters || []).some((c) => ids.has(c)));
+}
+
+const fmtDay = (iso) => new Date(iso + 'T12:00:00').toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+const names = (ids) => ids.map((id) => getHero(id)?.name || id).join(', ');
+
+// What the battle log says about this enemy: lineups like it that were beaten, and by whom.
+function logFacts(ctx) {
+  const recs = ctx.enemyRecords || [];
+  if (!recs.length) return '';
+  const wins = recs.filter((r) => r.result === 'win');
+  const losses = recs.filter((r) => r.result === 'loss');
+  const part = (list) => list.slice(0, 3).map((r) => `${esc(names(r.team))} (${esc(fmtDay(r.date))})`).join('; ');
+  return `<p class="small"><span class="muted">In your battle log, a lineup like this</span> ${[wins.length ? `lost ${wins.length}×, to ${part(wins)}` : '', losses.length ? `won ${losses.length}×, against ${part(losses)}` : ''].filter(Boolean).join('; and ')}.</p>`;
+}
+
+// The player's own results with (nearly) the suggested team against a lineup
+// like this; or, when the counter picked something else, the logged wins it
+// passed over with teams the player can field.
+function ownCallout(own, ctx, ids) {
+  if (!own) {
+    const pool = new Set(poolIds());
+    const other = (ctx.enemyRecords || []).filter((r) => r.result === 'win' && r.team.filter((id) => pool.has(id)).length >= 4 && r.team.filter((id) => ids.includes(id)).length < 4);
+    if (!other.length) return '';
+    const r = other[0];
+    return `<p class="callout small"><strong>From your battle log:</strong> ${esc(names(r.team))} beat a lineup like this on ${esc(fmtDay(r.date))}${r.trust < 1 ? ', though that team was much stronger' : ''}. The counter rates the team below higher with your heroes as they are now.</p>`;
+  }
+  const rec = `${own.wins} win${own.wins === 1 ? '' : 's'}, ${own.losses} loss${own.losses === 1 ? '' : 'es'}`;
+  if (own.bonus > 0) {
+    const team = own.lastWin.team;
+    const swaps = team.some((id) => !ids.includes(id)) ? ` This is your winning team with ${swapText(team, ids)}.` : '';
+    return `<p class="callout good small"><strong>From your battle log:</strong> with this team against a lineup like this: ${rec}, last win ${esc(fmtDay(own.lastWin.date))}.${swaps}</p>`;
+  }
+  return `<p class="callout small"><strong>From your battle log:</strong> this team (or nearly) is ${rec} against a lineup like this. It's still the best the counter found, so check the swaps.</p>`;
 }
 
 // The beast the lineup's source uses, if it names one.
 function sourceBeast(score) {
+  const won = score?.own?.lastWin;
+  if (won?.beast && score.own.bonus > 0) return { id: won.beast, label: `you won with it on ${fmtDay(won.date)}` };
   const from = score?.beats?.beast ? score.beats : score?.template?.beast ? score.template : null;
   return from ? { id: from.beast, label: `used with ${from.name}` } : null;
 }

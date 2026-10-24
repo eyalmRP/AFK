@@ -412,6 +412,9 @@ input.switch.small:checked::before { transform: translateX(14px); }
 .portrait.small .fr-fac { --es: 30cqw; top: 1cqw; left: 1cqw; }
 .portrait.empty .fr { background: none; border: 1.5px dashed var(--line-2); }
 .portrait.empty .fr-art { background: none; }
+/* Not the empty-state box (.empty below): an empty slot keeps the slot's own layout. */
+.portrait.empty { display: inline-block; padding: 0; }
+.slot.empty { padding: 0; gap: 3px; color: inherit; }
 
 /* Stars as a row of icons in the game's colours: gold 1–5, red 6–10, white 11–15. */
 /* Stars overlap a little, like the in-game ones; white stars glow. */
@@ -1007,7 +1010,7 @@ table.bank .input, table.bank .select { padding: 3px 6px; min-height: 30px; font
   :root { --nav-h: 54px; }
   .phone-nav {
     display: grid;
-    grid-template-columns: repeat(5, minmax(0, 1fr));
+    grid-template-columns: repeat(6, minmax(0, 1fr));
     flex: none;
     position: relative;
     z-index: 30;
@@ -1148,4 +1151,40 @@ table.bank .input, table.bank .select { padding: 3px 6px; min-height: 30px; font
 }
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; animation: none !important; }
+}
+
+/* Battles tab */
+.bt-form { display: flex; flex-direction: column; gap: 12px; margin-bottom: 22px; }
+.bt-side { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.bt-side .side-title .spacer, .side-title .spacer { flex: 1; }
+.bt-side.win .side-title { border-bottom-color: color-mix(in srgb, var(--good) 60%, var(--line)); }
+.bt-side.win .side-title svg { color: var(--good); }
+.bt-side.lose .side-title { border-bottom-color: color-mix(in srgb, var(--bad) 50%, var(--line)); }
+.bt-side.lose .side-title svg { color: var(--bad); }
+.bt-actions { flex-wrap: wrap; }
+.bt-status { margin-bottom: 18px; }
+.bt-status.on { border-color: color-mix(in srgb, var(--good) 55%, var(--line)); }
+.bt-status.on header .score { color: var(--good); }
+.bt-status h4 { display: flex; align-items: center; gap: 8px; }
+.bt-status h4 svg { width: 18px; height: 18px; color: var(--accent); }
+.bt-status p { margin: 0; }
+.bt-bar { height: 10px; border-radius: 5px; background: var(--line); overflow: hidden; }
+.bt-bar i { display: block; height: 100%; background: var(--accent); border-radius: 5px; }
+.bt-learned td.bt-up { color: var(--good); font-weight: 700; }
+.bt-learned td.bt-down { color: var(--bad); font-weight: 700; }
+.bt-learned .hero-cell { cursor: pointer; }
+.bt-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 520px), 1fr)); gap: 12px; margin-top: 10px; }
+.bt-item.editing { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); }
+.bt-item header .small { white-space: nowrap; }
+.bt-vs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.bt-vs > div { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.bt-tag { display: inline-block; font-family: var(--font-data); font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; padding: 1px 7px; border-radius: 999px; }
+.bt-tag.win { color: var(--good); background: color-mix(in srgb, var(--good) 15%, transparent); }
+.bt-tag.lose { color: var(--bad); background: color-mix(in srgb, var(--bad) 13%, transparent); }
+.bt-line { margin: 6px 0 0; }
+.bt-meta { display: flex; align-items: center; gap: 8px; margin: 0; flex-wrap: wrap; }
+.bt-progress { margin-top: 6px; }
+.bt-status { margin-top: 4px; }
+@media (max-width: 760px) {
+  .bt-vs { grid-template-columns: minmax(0, 1fr); }
 }

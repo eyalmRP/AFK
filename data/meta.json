@@ -836,7 +836,8 @@
     "AFK Global's tier list turned out to be a copy of AllClash's; heroes rated only by the two now show as single-source. Gwyneth (Draconis) rated B from AllClash.",
     "Overall tiers recalculated for every hero with one rule: the median of the lists from the last two months (AllClash's live list counted once), and older lists only when nothing recent rates the hero. 75 heroes moved, e.g. Daimon and Rowan from S+ to A (their S+ came only from Pocket Tactics' April list). The AI lineups were recalculated with the new tiers.",
     "Legends Championship: the 14 teams of Groody's Oct 24 guide, and its author's answer that Teams 10, 11 and 12 beat the MVP Team 13, which the counter now uses. Arena of Heroes: afk.guide's eight full PvP lineups. Formations show in one row with a slot map over each hero.",
-    "Beasts: Bosses ratings from the r/afkarena usage tier list (Sept 2026); the Meta tab switches beasts between PvE, PvP and Bosses instead of showing each at its best rating."
+    "Beasts: Bosses ratings from the r/afkarena usage tier list (Sept 2026); the Meta tab switches beasts between PvE, PvP and Bosses instead of showing each at its best rating.",
+    "New Battles tab: log battles (winner and loser, levels, beasts, by hand or from screenshots). The counter uses your own results against a lineup straight away, and what the log teaches about each hero once it has 30+ battles and predicts unseen battles better than power and tiers alone."
    ]
   }
  ]
