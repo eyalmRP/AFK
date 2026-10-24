@@ -3,7 +3,7 @@
 // when the page is opened on its own (GitHub Pages, a local file server).
 
 import { local, debounce, clamp, toInt } from './util.js';
-import { ASCENSIONS, LIMITS, CLASSES, ELDER_MAX } from './data.js';
+import { ASCENSIONS, LIMITS, CLASSES, ELDER_MAX, BEAST_LEVEL_MAX } from './data.js';
 
 const LOCAL_KEY = 'afk-codex-bank-v1';
 const LOCAL_FORMATIONS = 'afk-codex-formations-v1';
@@ -21,7 +21,8 @@ export const bank = {
 // A beast the player owns, with its Strength / Intelligence / Agility buff levels.
 export function sanitizeBeast(e, max = 18) {
   const lvl = (v) => (v === null || v === undefined || v === '' ? null : clamp(toInt(v, 0), 0, max));
-  return { owned: !!e?.owned, str: lvl(e?.str), int: lvl(e?.int), agi: lvl(e?.agi), updated: e?.updated || Date.now(), source: e?.source || 'manual' };
+  const level = e?.level === null || e?.level === undefined || e?.level === '' ? null : clamp(toInt(e.level, 0), 0, BEAST_LEVEL_MAX);
+  return { owned: !!e?.owned, level, str: lvl(e?.str), int: lvl(e?.int), agi: lvl(e?.agi), updated: e?.updated || Date.now(), source: e?.source || 'manual' };
 }
 
 function loadBeasts(src) {

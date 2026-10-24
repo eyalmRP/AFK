@@ -343,7 +343,7 @@ function openBeastDetail(id) {
       ${b.suits ? `<div class="side"><div class="side-title">Suits</div><p class="prose">${esc(b.suits)}</p></div>` : ''}
       ${best ? `<div class="side"><div class="side-title">Best for</div><p class="small">${best}</p></div>` : ''}
       <div class="side"><div class="side-title">Your beast</div>${
-        e?.owned ? `<p class="num">Strength ${e.str ?? '–'} · Intelligence ${e.int ?? '–'} · Agility ${e.agi ?? '–'}</p>` : '<p class="small muted">Not in your bank. Add it in the Hero Bank tab.</p>'
+        e?.owned ? `<p class="num">Level ${e.level ?? '–'} · Strength ${e.str ?? '–'} · Intelligence ${e.int ?? '–'} · Agility ${e.agi ?? '–'}</p>` : '<p class="small muted">Not in your bank. Add it in the Hero Bank tab.</p>'
       }</div>`,
   });
 }

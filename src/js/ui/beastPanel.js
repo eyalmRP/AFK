@@ -2,7 +2,7 @@
 // Strength / Intelligence / Agility buff levels, by hand or from screenshots.
 
 import { esc, $, $$, toast, toInt } from '../util.js';
-import { data, BEAST_BUFFS } from '../data.js';
+import { data, BEAST_BUFFS, BEAST_LEVEL_MAX } from '../data.js';
 import { bank, updateBeasts, ownedBeasts } from '../store.js';
 import { aiState, initAi, readBeasts, errorCopy } from '../ai.js';
 import { ICON, typeIcon } from './icons.js';
@@ -16,12 +16,23 @@ function summary() {
   return `${ownedBeasts().length} of ${data.beasts.length} owned`;
 }
 
+// Owned beasts first, highest level first, then rarity.
+const RARITY = { legendary: 0, elite: 1, rare: 2 };
+function sorted(list) {
+  return [...list].sort((a, b) => {
+    const ea = bank.beasts[a.id] || {};
+    const eb = bank.beasts[b.id] || {};
+    return (eb.owned ? 1 : 0) - (ea.owned ? 1 : 0) || (eb.level ?? -1) - (ea.level ?? -1) || RARITY[a.rarity] - RARITY[b.rarity] || a.name.localeCompare(b.name);
+  });
+}
+
 function card(b) {
   const e = bank.beasts[b.id] || {};
   const owned = !!e.owned;
   return `<div class="beast-card" data-beast="${esc(b.id)}" data-owned="${owned}">
     <div class="beast-top">${beastArt(b.id, 52)}<div style="min-width:0"><strong>${esc(b.name)}</strong><br><span class="tag rarity-${esc(b.rarity)}">${esc(b.rarity)}</span></div></div>
-    <label class="check"><input type="checkbox" data-beast-own="${esc(b.id)}" ${owned ? 'checked' : ''}> Owned</label>
+    <div class="beast-own"><label class="check"><input type="checkbox" data-beast-own="${esc(b.id)}" ${owned ? 'checked' : ''}> Owned</label>
+      <label class="check">Lvl <input class="input num-input" type="number" min="0" max="${BEAST_LEVEL_MAX}" data-beast-level="${esc(b.id)}" value="${e.level ?? ''}" placeholder="–" aria-label="${esc(b.name)} level"></label></div>
     <div class="buffs">${BEAST_BUFFS.map(
       (f) => `<label class="buff" title="${f.type} buff (0–${b.maxBuff})">${typeIcon(f.type)}<input class="input num-input" type="number" min="0" max="${b.maxBuff}" data-beast-buff="${esc(b.id)}" data-key="${f.key}" value="${e[f.key] ?? ''}" placeholder="–" aria-label="${esc(b.name)} ${f.type} buff"></label>`
     ).join('')}</div>
@@ -29,7 +40,7 @@ function card(b) {
 }
 
 function grid() {
-  const list = data.beasts.filter((b) => showAll || bank.beasts[b.id]?.owned);
+  const list = sorted(data.beasts.filter((b) => showAll || bank.beasts[b.id]?.owned));
   return list.length ? list.map(card).join('') : '<p class="small muted">No beasts marked as owned yet.</p>';
 }
 
@@ -69,13 +80,14 @@ export function bindBeastPanel(el) {
     if (t.dataset.beastOwn) {
       t.closest('.beast-card')?.setAttribute('data-owned', String(t.checked));
       updateBeasts({ [t.dataset.beastOwn]: { owned: t.checked } });
+    } else if (t.dataset.beastLevel) {
+      const v = t.value === '' ? null : Math.max(0, Math.min(BEAST_LEVEL_MAX, toInt(t.value)));
+      markOwned(t);
+      updateBeasts({ [t.dataset.beastLevel]: { owned: true, level: v } });
     } else if (t.dataset.beastBuff) {
       const b = data.beastById.get(t.dataset.beastBuff);
       const v = t.value === '' ? null : Math.max(0, Math.min(b.maxBuff, toInt(t.value)));
-      const cardEl = t.closest('.beast-card');
-      cardEl?.setAttribute('data-owned', 'true');
-      const box = cardEl?.querySelector('[data-beast-own]');
-      if (box) box.checked = true;
+      markOwned(t);
       updateBeasts({ [b.id]: { owned: true, [t.dataset.key]: v, max: b.maxBuff } });
     } else if (t.id === 'beast-file') {
       const files = [...(t.files || [])];
@@ -98,6 +110,13 @@ export function bindBeastPanel(el) {
       $('#beast-review', root).innerHTML = '';
     }
   });
+}
+
+function markOwned(input) {
+  const cardEl = input.closest('.beast-card');
+  cardEl?.setAttribute('data-owned', 'true');
+  const box = cardEl?.querySelector('[data-beast-own]');
+  if (box) box.checked = true;
 }
 
 async function readShots(files) {
@@ -131,11 +150,11 @@ async function readShots(files) {
         if (v === undefined || v === null) return `<td class="muted">${cur[k] ?? '–'}</td>`;
         return `<td class="${cur[k] !== v ? 'diff' : ''}">${v}${cur.owned && cur[k] !== v ? ` <span class="muted small">was ${cur[k] ?? '–'}</span>` : ''}</td>`;
       };
-      return `<tr><td><input type="checkbox" data-beast-take="${i}" checked aria-label="Apply ${esc(b.name)}"></td><td><span class="hero-cell">${beastArt(b.id, 30)} ${esc(b.name)}</span></td>${cell('str')}${cell('int')}${cell('agi')}
+      return `<tr><td><input type="checkbox" data-beast-take="${i}" checked aria-label="Apply ${esc(b.name)}"></td><td><span class="hero-cell">${beastArt(b.id, 30)} ${esc(b.name)}</span></td>${cell('level')}${cell('str')}${cell('int')}${cell('agi')}
         <td><span class="tag ${r.confidence === 'high' ? 'good' : r.confidence === 'low' ? 'bad' : 'warn'}">${esc(r.confidence || 'medium')}</span></td><td class="small muted" style="white-space:normal">${esc(r.seen || '')}</td></tr>`;
     })
     .join('');
-  $('#beast-review', root).innerHTML = `<div class="table-wrap"><table class="bank"><thead><tr><th></th><th>Beast</th><th>Str</th><th>Int</th><th>Agi</th><th>Confidence</th><th>What Claude saw</th></tr></thead><tbody>${rows}</tbody></table></div>
+  $('#beast-review', root).innerHTML = `<div class="table-wrap"><table class="bank"><thead><tr><th></th><th>Beast</th><th>Level</th><th>Str</th><th>Int</th><th>Agi</th><th>Confidence</th><th>What Claude saw</th></tr></thead><tbody>${rows}</tbody></table></div>
     ${notes.length ? `<p class="callout info small">${esc(notes.join(' '))}</p>` : ''}
     <div class="toolbar"><button class="btn primary" type="button" data-beast-apply>Apply checked beasts</button><button class="btn ghost" type="button" data-beast-discard>Discard</button><span class="small muted">Beasts found are marked as owned. Empty readings keep what you have.</span></div>`;
 }
@@ -148,6 +167,7 @@ function applyReview() {
     const r = review[toInt(box.dataset.beastTake)];
     const b = data.beastById.get(r.id);
     const patch = { owned: true, max: b.maxBuff };
+    if (r.level !== undefined && r.level !== null) patch.level = r.level;
     for (const f of BEAST_BUFFS) if (r[f.key] !== undefined && r[f.key] !== null) patch[f.key] = r[f.key];
     patches[r.id] = patch;
   }

@@ -161,11 +161,11 @@ export async function readBeasts(files, { signal } = {}) {
   if (!sample) throw { code: 'not_granted' };
   const list = (data.beasts || []).map((b) => `${b.id}|${b.name}|${b.rarity}|max buff ${b.maxBuff}`).join('\n');
   const hints = data.beastSystem?.screenHints ? `Screen notes: ${JSON.stringify(data.beastSystem.screenHints)}` : '';
-  const prompt = `These are screenshots of the Beasts screens in the mobile game AFK Arena (not AFK Journey). Each beast has three buff levels: Strength (red fist icon), Intelligence (blue head icon) and Agility (green boot icon). ${hints}
+  const prompt = `These are screenshots of the Beasts screens in the mobile game AFK Arena (not AFK Journey). On the beast list each card shows the beast's level as "LvlN" at the top; the frame colour shows rarity (orange = legendary, purple = elite, blue = rare). A green tick marks the beast currently in use. A beast's detail page also shows three buff levels: Strength (red fist icon), Intelligence (blue head icon) and Agility (green boot icon). ${hints}
 Identify every beast the player owns that is visible, matching each to this list (id|name|rarity|max buff):
 ${list}
 Report each buff level only if you can read it; use null otherwise. Never guess.
-Reply with only JSON: {"beasts":[{"id":"beast id","str":12,"int":10,"agi":null,"confidence":"high|medium|low","seen":"short note"}],"notes":"anything to check"}`;
+Reply with only JSON: {"beasts":[{"id":"beast id","level":21,"str":null,"int":null,"agi":null,"confidence":"high|medium|low","seen":"short note"}],"notes":"anything to check"}`;
   const out = await sample.json(prompt, { images: files, signal, modelTier: 'default', cache: false });
   const valid = new Map((data.beasts || []).map((b) => [b.id, b]));
   const beasts = (Array.isArray(out?.beasts) ? out.beasts : [])
@@ -176,7 +176,8 @@ Reply with only JSON: {"beasts":[{"id":"beast id","str":12,"int":10,"agi":null,"
         const n = numOrNull(v);
         return n === null ? null : Math.max(0, Math.min(max, n));
       };
-      return { id: String(b.id), str: lv(b.str), int: lv(b.int), agi: lv(b.agi), confidence: ['high', 'medium', 'low'].includes(b.confidence) ? b.confidence : 'medium', seen: String(b.seen || '').slice(0, 160) };
+      const level = numOrNull(b.level);
+      return { id: String(b.id), level: level === null ? null : Math.max(0, Math.min(100, level)), str: lv(b.str), int: lv(b.int), agi: lv(b.agi), confidence: ['high', 'medium', 'low'].includes(b.confidence) ? b.confidence : 'medium', seen: String(b.seen || '').slice(0, 160) };
     });
   return { beasts, notes: String(out?.notes || '').slice(0, 300) };
 }
@@ -185,7 +186,7 @@ export function beastsLine(owned) {
   if (!owned) return '';
   const rows = Object.entries(owned)
     .filter(([, e]) => e?.owned)
-    .map(([id, e]) => `${id} (${data.beastById?.get(id)?.name || id}; buffs Str ${e.str ?? '?'} / Int ${e.int ?? '?'} / Agi ${e.agi ?? '?'})`);
+    .map(([id, e]) => `${id} (${data.beastById?.get(id)?.name || id}; level ${e.level ?? '?'}; buffs Str ${e.str ?? '?'} / Int ${e.int ?? '?'} / Agi ${e.agi ?? '?'})`);
   return rows.length ? `Player's beasts (one per formation where the mode allows; buffs boost heroes of that attribute type): ${rows.join(', ')}.` : '';
 }
 

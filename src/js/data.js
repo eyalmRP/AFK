@@ -58,6 +58,8 @@ export const POSITIONS = ['F1', 'F2', 'B1', 'B2', 'B3'];
 export const ELDER_BRANCHES = ['Support', 'Mage', 'Warrior', 'Tank', 'Ranger'];
 export const ELDER_MAX = 1000;
 
+export const BEAST_LEVEL_MAX = 100;
+
 // Beast buffs: one level per hero attribute type.
 export const BEAST_BUFFS = [
   { key: 'str', type: 'Strength' },

@@ -575,6 +575,10 @@ export function suggestBeast(ctx, ids, { beasts, owned, recommendations = [], ex
     let score = tierScore(tier);
     if (tier) reasons.push(`${tier} in ${cat.toUpperCase()}`);
     const e = owned?.[b.id];
+    if (e?.level) {
+      score += e.level * 0.05;
+      reasons.push(`level ${e.level}`);
+    }
     if (e) {
       let buff = 0;
       // Absolute buff level: a legendary beast at 18 gives more than an elite at 12.
