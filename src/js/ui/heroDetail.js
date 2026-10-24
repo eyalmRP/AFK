@@ -47,10 +47,11 @@ export function openHeroDetail(id) {
   const inv = h.investment;
   const body = `
     <div style="display:flex;gap:14px;align-items:center">
-      ${portrait(h, { size: 88, showBank: true, badge: trendBadge(h) })}
+      ${portrait(h, { size: 88, showBank: true })}
       <div style="display:flex;flex-direction:column;gap:6px;min-width:0">
         ${h.title ? `<span class="muted">${esc(h.title)}</span>` : ''}
         <div class="chips">
+          ${trendBadge(h)}
           ${factionLabel(h.faction)}
           ${classLabel(h.class)}
           ${typeLabel(h.type)}

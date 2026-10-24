@@ -3,7 +3,7 @@
 // `sample` capability on the viewer's Claude account, so it only lights up
 // when the page is opened inside Claude.
 
-import { data, ASCENSIONS, tierOf, POSITIONS, CLASSES, ELDER_MAX } from './data.js';
+import { data, ASCENSIONS, tierOf, POSITIONS, CLASSES, ELDER_MAX, LIMITS } from './data.js';
 
 let samplePromise = null;
 export const aiState = { text: false, images: false, maxImages: 0, mediaTypes: [], disabled: false };
@@ -126,7 +126,10 @@ export async function readEnemyScreenshot(file, { signal } = {}) {
 Identify the enemy heroes from this roster (id|name|faction|class):
 ${rosterLines()}
 
-Reply with only JSON: {"slots":{"F1":"id or null","F2":"id or null","B1":"id or null","B2":"id or null","B3":"id or null"},"notes":"what you were unsure about"}`;
+If the screen shows the enemy heroes' level (one shared number or "Lv" under each hero) or their beast, report them; use null otherwise. Beasts (id|name):
+${(data.beasts || []).map((b) => `${b.id}|${b.name}`).join('\n')}
+
+Reply with only JSON: {"slots":{"F1":"id or null","F2":"id or null","B1":"id or null","B2":"id or null","B3":"id or null"},"level":null,"beast":null,"notes":"what you were unsure about"}`;
   const out = await sample.json(prompt, { images: [file], signal, modelTier: 'default', cache: false });
   const valid = new Set(data.heroes.map((h) => h.id));
   const slots = {};
@@ -134,7 +137,9 @@ Reply with only JSON: {"slots":{"F1":"id or null","F2":"id or null","B1":"id or 
     const id = out?.slots?.[p];
     if (id && valid.has(String(id))) slots[p] = String(id);
   }
-  return { slots, notes: String(out?.notes || '').slice(0, 300) };
+  const level = numOrNull(out?.level);
+  const beast = out?.beast && data.beastById?.has(String(out.beast)) ? String(out.beast) : null;
+  return { slots, level: level && level >= 1 && level <= LIMITS.level ? level : null, beast, notes: String(out?.notes || '').slice(0, 300) };
 }
 
 // Read the Elder Tree screen. Returns {core, Warrior, Tank, Ranger, Mage, Support, notes}.
@@ -276,7 +281,7 @@ Reply with only JSON: {"teams":[{"name":"short archetype name","slots":{"F1":"id
   return parseTeams(out, new Set(pool), count);
 }
 
-export async function claudeCounter({ enemySlots, mode, pool, entries, engineTeam, signal, elderTree = null, beasts = null }) {
+export async function claudeCounter({ enemySlots, mode, pool, entries, engineTeam, signal, elderTree = null, beasts = null, enemyInfo = null }) {
   const sample = await initAi();
   if (!sample) throw { code: 'not_granted' };
   const enemy = POSITIONS.filter((p) => enemySlots[p]).map((p) => `${p}: ${heroLine(enemySlots[p], null)}`);
@@ -286,6 +291,7 @@ Mode: ${modeBrief(mode)}
 
 Enemy formation:
 ${enemy.join('\n')}
+${enemyInfo ? `Enemy heroes are level ${enemyInfo.level}; their upgrades are not visible, so assume Ascended 5 stars with ${enemyInfo.build}. Enemy beast: ${enemyInfo.beast ? `${enemyInfo.beast} at level ${enemyInfo.beastLevel}` : 'unknown'}.` : ''}
 
 Owned heroes (id | name | faction class | tier ratings | player's investment | roles | kit):
 ${pool.map((id) => heroLine(id, entries)).join('\n')}

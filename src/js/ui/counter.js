@@ -2,12 +2,12 @@
 // screenshot) and get the best answer from the player's own heroes.
 
 import { esc, $, toast } from '../util.js';
-import { data, hero as getHero, POSITIONS, FACTIONS, factionAdvantage } from '../data.js';
+import { data, hero as getHero, POSITIONS, FACTIONS, LIMITS, factionAdvantage } from '../data.js';
 import { bank, ownedIds, ownedBeasts } from '../store.js';
 import { makeContext, buildTeam, heroValue, suggestArtifact, scoreTeam, suggestBeast } from '../engine.js';
 import { aiState, initAi, claudeCounter, readEnemyScreenshot, errorCopy } from '../ai.js';
 import { ICON } from './icons.js';
-import { board, pickHero, portrait, slotsFromList, beastAllowed } from './common.js';
+import { board, pickHero, pickBeast, portrait, slotsFromList, beastAllowed, entryCR, heroCR, fmtCR, CR_NOTE } from './common.js';
 import { openHeroDetail } from './heroDetail.js';
 import { openBeastDetail } from './beastDetail.js';
 
@@ -21,7 +21,49 @@ const ui = {
   busy: false,
   ctl: null,
   reading: false,
+  // The enemy's level, upgrades and beast. The formation screen doesn't show
+  // enemy upgrades, so the counter assumes a well-built enemy.
+  enemyLevel: null,
+  enemyBuild: 'high',
+  enemyBeast: null,
+  enemyBeastLevel: 18,
 };
+
+const ENEMY_BUILDS = {
+  max: { label: 'Maxed · SI +50 · 36F · E100', si: 50, furniture: 36, engrave: 100, gear: 5 },
+  high: { label: 'High · SI +40 · 9F · E80', si: 40, furniture: 9, engrave: 80, gear: 4 },
+  mid: { label: 'Medium · SI +30 · 9F · E60', si: 30, furniture: 9, engrave: 60, gear: 4 },
+};
+// Beast level is the sum of its three buffs (up to 18 each on legendary beasts).
+const BEAST_LEVELS = 54;
+
+// Enemy heroes as drawn and rated: Ascended 5 stars with the chosen upgrades.
+function enemyBuild() {
+  const { label, ...b } = ENEMY_BUILDS[ui.enemyBuild] || ENEMY_BUILDS.high;
+  return { owned: true, asc: 'Ascended', stars: 5, ...b };
+}
+
+// The player's own level, the default for the enemy.
+function myLevel() {
+  if (bank.settings.sharedLevel) return bank.settings.crystalLevel;
+  const levels = ownedIds().map((id) => bank.heroes[id]?.level || 0);
+  return Math.max(240, ...levels);
+}
+
+function enemyLevel() {
+  return ui.enemyLevel ?? myLevel();
+}
+
+function levelOptions() {
+  const cur = enemyLevel();
+  const mine = myLevel();
+  const set = new Set([240, ...Array.from({ length: 25 }, (_, i) => 300 + i * 50), mine, cur]);
+  return [...set]
+    .filter((n) => n >= 1 && n <= LIMITS.level)
+    .sort((a, b) => a - b)
+    .map((n) => `<option value="${n}" ${n === cur ? 'selected' : ''}>${n}${n === mine ? ' · yours' : ''}</option>`)
+    .join('');
+}
 
 let root;
 
@@ -95,6 +137,7 @@ function render() {
   const modes = data.modes.filter((m) => !m.builderOnly);
   const owned = ownedIds().length;
   const ctx = context();
+  const beasts = !!data.beasts?.length && beastAllowed(data.modeById.get(ui.modeId));
   const archetypeOpts = (data.archetypes || [])
     .map((a, i) => `<option value="arch-${i}">${esc(a.name)}</option>`)
     .concat(
@@ -116,19 +159,32 @@ function render() {
     <div class="compare">
       <section>
         <div class="side-title">${ICON.swords} Enemy formation</div>
-        ${board({ slots: ui.enemy, editable: true, cls: 'enemy-board', size: 58 })}
+        ${board({ slots: ui.enemy, editable: true, cls: 'enemy-board', size: 60, build: enemyBuild(), level: enemyLevel(), beastEdit: beasts, beast: beasts ? ui.enemyBeast : null, beastLevel: ui.enemyBeastLevel })}
+        <div class="enemy-opts">
+          <label class="field"><span>Hero level</span><select class="select" id="ct-elevel">${levelOptions()}</select></label>
+          <label class="field"><span>Upgrades (assumed)</span><select class="select" id="ct-ebuild">${Object.entries(ENEMY_BUILDS)
+            .map(([k, b]) => `<option value="${k}" ${k === ui.enemyBuild ? 'selected' : ''}>${esc(b.label)}</option>`)
+            .join('')}</select></label>
+          ${
+            beasts
+              ? `<label class="field"><span>Beast level</span><select class="select" id="ct-eblevel" ${ui.enemyBeast ? '' : 'disabled'}>${Array.from({ length: BEAST_LEVELS }, (_, i) => i + 1)
+                  .map((n) => `<option value="${n}" ${n === ui.enemyBeastLevel ? 'selected' : ''}>${n}</option>`)
+                  .join('')}</select></label>`
+              : ''
+          }
+        </div>
+        <p class="small muted">The game doesn't show enemy upgrades, so enemy heroes count as Ascended 5 stars with the upgrades above.${beasts ? ' Tap the beast corner to set their beast.' : ''}</p>
         <div class="toolbar">
           <button class="btn" type="button" data-act="shot" id="ct-shot" hidden>${ICON.upload} Read a screenshot</button>
           <input type="file" id="ct-file" accept="image/png,image/jpeg,image/webp" hidden>
-          <button class="btn ghost" type="button" data-act="clear">Clear</button>
+          <button class="btn" type="button" data-act="clear">Clear</button>
           <span class="small muted" id="ct-status"></span>
         </div>
         ${enemyIds().length ? `<div class="chips">${threatChips(ctx)}</div>${factionAdvice(ctx)}${ctx.enemyArchetypes.length ? `<p class="small"><span class="muted">Recognised comp:</span> ${ctx.enemyArchetypes.map((a) => esc(a.name)).join(', ')}</p>` : ''}` : '<p class="small muted">Select a slot to add an enemy hero.</p>'}
       </section>
-      <section id="ct-result"></section>
+      <section><div id="ct-result"></div><div id="ct-claude"></div></section>
     </div>
-    <div id="ct-picks"></div>
-    <div class="compare" style="margin-top:4px"><section></section><section id="ct-claude"></section></div>`;
+    <div id="ct-picks"></div>`;
   renderResult(ctx);
   renderClaude();
   initAi().then(() => {
@@ -173,6 +229,7 @@ function renderResult(ctx) {
       <header><h4>${esc(s.template?.name || 'Counter formation')}</h4><span class="score">${s.total.toFixed(1)} pts</span></header>
       ${board({ slots: s.layout, artifacts: arts, showBank: ui.pool === 'mine', beast: bp.id })}
       ${bp.html}
+      ${powerLine(Object.values(s.layout))}
       <ul class="reasons">${reasons}</ul>
       ${s.synergies.length ? `<p class="small"><span class="muted">Synergy:</span> ${s.synergies.map((x) => `${esc(getHero(x.a).name)} + ${esc(getHero(x.b).name)}`).join(', ')}</p>` : ''}
     </article>`;
@@ -187,9 +244,24 @@ function renderResult(ctx) {
         ({ id, v }) => `<button type="button" class="combo" data-hero="${id}" style="cursor:pointer;text-align:left">
       <span class="heroes">${portrait(getHero(id), { size: 40, showBank: ui.pool === 'mine' })}</span>
       <span class="txt"><strong>${esc(getHero(id).name)}</strong> <span class="score">${v.counterBonus >= 0 ? '+' : ''}${v.counterBonus.toFixed(1)} matchup</span>
-      <p class="small">${esc(v.reasons.slice(0, 4).join(' · '))}</p></span></button>`
+      <p class="small clamp-2" title="${esc(v.reasons.join(' · '))}">${esc(v.reasons.slice(0, 4).join(' · '))}</p></span></button>`
       )
       .join('')}</div>`;
+}
+
+// Team power: the counter's estimated combat rating against the enemy's,
+// both from the same estimate (engine.js), the enemy's at the assumed build
+// and level. Beasts are not counted.
+function powerLine(ids) {
+  const enemy = enemyIds();
+  if (ui.pool !== 'mine' || !enemy.length) return '';
+  const theirs = enemy.reduce((t, id) => t + entryCR(enemyBuild(), getHero(id), enemyLevel()), 0);
+  const ours = ids.reduce((t, id) => t + heroCR(getHero(id)), 0);
+  const r = ours / theirs;
+  const verdict = enemy.length < 5 ? '' : r >= 1.1 ? 'Your team is stronger.' : r >= 0.9 ? 'A close match: faction edge and counters decide it.' : 'The enemy is stronger: expect a hard fight.';
+  return `<p class="power-line" title="${esc(CR_NOTE)}"><span class="muted">Team power</span> <strong class="num">≈ ${fmtCR(ours)}</strong> <span class="muted">vs enemy</span> <strong class="num">≈ ${fmtCR(theirs)}</strong>${
+    enemy.length < 5 ? ` <span class="muted">(${enemy.length} enemy hero${enemy.length === 1 ? '' : 'es'})</span>` : ''
+  }${verdict ? `<br><span class="small">${verdict}</span>` : ''}</p>`;
 }
 
 function beastFor(ctx, ids) {
@@ -246,6 +318,7 @@ async function askClaude() {
       pool: poolIds(),
       entries: ui.pool === 'mine' ? bank.heroes : null,
       engineTeam: ui.engineTeam ? { layout: ui.engineTeam.score.layout } : null,
+      enemyInfo: { level: enemyLevel(), build: ENEMY_BUILDS[ui.enemyBuild]?.label, beast: ui.enemyBeast ? data.beastById.get(ui.enemyBeast)?.name : null, beastLevel: ui.enemyBeast ? ui.enemyBeastLevel : null },
       signal: ui.ctl.signal,
       elderTree: ui.pool === 'mine' ? bank.settings.elderTree : null,
       beasts: ui.pool === 'mine' ? bank.beasts : null,
@@ -271,6 +344,8 @@ async function readShot(file) {
       return;
     }
     ui.enemy = out.slots;
+    if (out.level) ui.enemyLevel = out.level;
+    if (out.beast) ui.enemyBeast = out.beast;
     ui.claude = null;
     render();
     toast(`Read ${Object.keys(out.slots).length} enemy heroes. Check the slots and fix any mistakes.`);
@@ -285,7 +360,7 @@ function onClick(ev) {
   const slot = t.closest('[data-slot]');
   if (slot) {
     const pos = slot.dataset.slot;
-    pickHero({ title: `Enemy hero at ${pos}`, allowClear: true }).then((id) => {
+    pickHero({ title: `Enemy hero at ${pos}`, allowClear: true, showBank: false }).then((id) => {
       if (id === null) return;
       if (id) {
         for (const p of POSITIONS) if (ui.enemy[p] === id) delete ui.enemy[p];
@@ -316,8 +391,16 @@ function onClick(ev) {
   const act = t.closest('[data-act]')?.dataset.act;
   if (act === 'clear') {
     ui.enemy = {};
+    ui.enemyBeast = null;
     ui.claude = null;
     render();
+  } else if (act === 'beast') {
+    pickBeast({ title: 'Enemy beast', allowClear: true, category: data.modeById.get(ui.modeId)?.category === 'pvp' ? 'pvp' : 'pve' }).then((id) => {
+      if (id === null) return;
+      ui.enemyBeast = id || null;
+      ui.claude = null;
+      render();
+    });
   } else if (act === 'claude') askClaude();
   else if (act === 'stop') ui.ctl?.abort();
   else if (act === 'shot') $('#ct-file', root).click();
@@ -331,6 +414,18 @@ function onChange(ev) {
     render();
   } else if (t.id === 'ct-invest') {
     ui.invest = t.checked;
+    render();
+  } else if (t.id === 'ct-elevel') {
+    ui.enemyLevel = Number(t.value);
+    ui.claude = null;
+    render();
+  } else if (t.id === 'ct-ebuild') {
+    ui.enemyBuild = t.value;
+    ui.claude = null;
+    render();
+  } else if (t.id === 'ct-eblevel') {
+    ui.enemyBeastLevel = Number(t.value);
+    ui.claude = null;
     render();
   } else if (t.id === 'ct-file') {
     const f = t.files?.[0];

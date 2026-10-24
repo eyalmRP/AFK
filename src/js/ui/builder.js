@@ -110,7 +110,7 @@ function render() {
       <label class="check" ${ui.pool === 'mine' ? '' : 'hidden'}><input type="checkbox" id="bd-invest" ${ui.invest ? 'checked' : ''}> Weigh my upgrade levels</label>
       <div class="field" style="flex:1 1 220px"><span>Leave out</span><div class="chips">${[...ui.exclude]
         .map((id) => `<button type="button" class="chip plain" data-unexclude="${id}" aria-label="Allow ${esc(getHero(id)?.name)}">${esc(getHero(id)?.name || id)} ${ICON.close}</button>`)
-        .join('')}<button class="btn small" type="button" data-act="exclude">+ Leave out a hero</button></div></div>
+        .join('')}<button class="btn" type="button" data-act="exclude">+ Leave out a hero</button></div></div>
     </div>
     ${m ? `<p class="small muted">${esc(m.name)} uses ${m.teams || 1} formation${(m.teams || 1) > 1 ? 's' : ''}. ${m.teamsNote ? esc(m.teamsNote) + ' ' : ''}${m.restrictions ? esc(m.restrictions) : ''}</p>` : ''}
     ${

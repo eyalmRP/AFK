@@ -131,7 +131,7 @@ function summaryPanel() {
       </div>
       <div class="side">
         <div class="side-title">Newest heroes</div>
-        <div class="chips">${fresh.map((h) => heroTile(h, { size: 56, badge: h.release ? `<span class="trend new">${esc(String(h.release).slice(0, 7))}</span>` : undefined })).join('') || '<span class="muted">None recorded.</span>'}</div>
+        <div class="chips">${fresh.map((h) => heroTile(h, { size: 56, badge: '', sub: h.release ? String(h.release).slice(0, 7) : '' })).join('') || '<span class="muted">None recorded.</span>'}</div>
       </div>
     </div>
     ${
@@ -152,8 +152,8 @@ function tierControls() {
       <label class="check"><input type="checkbox" id="tier-owned" ${ui.ownedOnly ? 'checked' : ''}> Only heroes I own</label>
       <label class="check"><input type="checkbox" id="tier-names" ${ui.showNames ? 'checked' : ''}> Show names</label>
       <span class="spacer"></span>
-      <button class="btn small ghost" type="button" data-fold-all="open" data-scope="#tier-table">Expand tiers</button>
-      <button class="btn small ghost" type="button" data-fold-all="fold" data-scope="#tier-table">Fold tiers</button>
+      <button class="btn ghost" type="button" data-fold-all="open" data-scope="#tier-table">Expand tiers</button>
+      <button class="btn ghost" type="button" data-fold-all="fold" data-scope="#tier-table">Fold tiers</button>
     </div>
     ${gameFilterBar(ui)}`;
 }
@@ -444,7 +444,7 @@ function modeCard(mode) {
     <div class="mode-head" data-fold-toggle role="button" tabindex="0" aria-expanded="${!folded}">
       ${ICON.chevron}<h4>${esc(mode.name)}</h4>
       <span class="tag">${mode.teams || 1} team${(mode.teams || 1) > 1 ? 's' : ''}</span>
-      ${ag !== null ? `<span class="agree" title="Share of the AI's heroes that also appear in community teams">Agreement <span class="bar"><i style="width:${ag}%"></i></span> ${ag}%</span>` : ''}
+      ${ag !== null ? `<span class="agree" title="Share of the AI's heroes that also appear in community teams">Agreement <span class="bar"><i style="width:${ag}%"></i></span> ${ag}%</span>` : '<span class="agree"></span>'}
     </div>
     <div class="mode-body">
       ${mode.whatMatters ? `<p class="prose">${esc(mode.whatMatters)}</p>` : ''}

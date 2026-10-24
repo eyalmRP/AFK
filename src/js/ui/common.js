@@ -5,6 +5,7 @@ import { data, hero as getHero, POSITIONS, CLASSES, TYPES, FACTION_IDS, starTier
 import { entry as bankEntry, effectiveLevel, bank } from '../store.js';
 import { estimateCR } from '../engine.js';
 import { ICON, factionIcon, classIcon, typeIcon, gemStar } from './icons.js';
+import { emblem, plusCorners } from './emblem.js';
 
 // ---- fold state ------------------------------------------------------------
 
@@ -62,31 +63,51 @@ export function panel({ id, title, sub = '', body, actions = '', folded = false,
 
 // ---- hero portraits ----------------------------------------------------------
 
-export function facClass(f) {
-  return 'fac-' + String(f || 'dimensional').toLowerCase();
-}
-
 function initials(name) {
   const parts = String(name).replace(/^Awakened\s+/i, 'A ').split(/\s+/);
   return parts.length > 1 ? parts[0][0] + parts[1][0] : String(name).slice(0, 2);
 }
 
-export function portrait(h, { size = 64, showBank = false, unowned = false, badge = '' } = {}) {
+export function heroArt(h) {
+  const ini = esc(initials(h.name));
+  return h.img ? `<img src="${esc(h.img)}" alt="" loading="lazy" draggable="false" data-fallback="${ini}">` : `<span class="initials">${ini}</span>`;
+}
+
+// The player's level for a hero; blue when it keeps its own level outside the
+// shared (Resonating Crystal) level.
+export function levelBadge(h, e, cls, { prefix = false } = {}) {
+  const own = bank.settings.sharedLevel && e.crystal === false;
+  return `<span class="${cls}${own ? ' own-level' : ''}"${own ? ' title="Own level (outside the shared level)"' : ''}>${prefix ? '<span class="lv-l">Lvl </span>' : ''}${effectiveLevel(h.id)}</span>`;
+}
+
+// The hero as the game draws it: ascension frame, the faction emblem with its
+// signature item and furniture ornaments top-left, the level top-right and
+// the stars on the bottom edge. `e` is the player's copy or an assumed build
+// (enemy heroes); without one the frame is plain. `lvl` is the level badge
+// and `extra` more markup inside the frame.
+export function heroFrame(h, e, { lvl = '', extra = '' } = {}) {
+  const owned = !!e?.owned;
+  const stars = owned && e.asc === 'Ascended' && starTier(e.stars, e.engrave) ? starRow(e.stars, { title: false, engrave: e.engrave }) : '';
+  return `<span class="fr" data-asc="${owned ? esc(e.asc) : ''}"><span class="fr-art">${heroArt(h)}</span>${owned ? plusCorners(e.asc) : ''}${emblem(h, e, { cls: 'fr-fac' })}${
+    stars ? `<span class="fr-band">${stars}</span>` : ''
+  }${lvl}${extra}</span>`;
+}
+
+// A hero in that frame at any size. showBank draws the player's copy; build
+// draws an assumed copy at `level` instead. Below 56px the ornaments and the
+// level are left out, too small to read.
+export function portrait(h, { size = 64, showBank = false, unowned = false, badge = '', build = null, level = null } = {}) {
   if (!h) return '';
-  const e = showBank ? bankEntry(h.id) : null;
-  const asc = e?.owned ? e.asc : '';
-  const st = e?.owned && e.asc === 'Ascended' ? starTier(e.stars, e.engrave) : null;
-  const stars = st ? gemStar(st.tier).repeat(st.count) : '';
-  const img = h.img
-    ? `<img src="${esc(h.img)}" alt="" loading="lazy" data-fallback="${esc(initials(h.name))}">`
-    : `<span class="initials">${esc(initials(h.name))}</span>`;
-  return `<span class="portrait ${facClass(h.faction)}${unowned ? ' unowned' : ''}" style="--ps:${size}px" data-asc="${esc(asc)}">
-    <span class="art">${img}</span>
-    <span class="fac" title="${esc(h.faction)}">${factionIcon(h.faction)}</span>
-    ${badge ? `<span class="badge-tr">${badge}</span>` : ''}
-    ${stars ? `<span class="stars ${st.tier}">${stars}</span>` : ''}
-    ${e?.owned ? `<span class="lvl">${effectiveLevel(h.id)}</span>` : ''}
-  </span>`;
+  const e = build || (showBank ? bankEntry(h.id) : null);
+  const small = size < 56;
+  let lvl = '';
+  if (e?.owned && !small) lvl = build ? (level ? `<span class="fr-lvl"><span class="lv-l">Lvl </span>${esc(level)}</span>` : '') : levelBadge(h, e, 'fr-lvl', { prefix: true });
+  return `<span class="portrait${small ? ' small' : ''}" style="--ps:${size}px"${unowned ? ' data-owned="false"' : ''}>${heroFrame(h, e, { lvl })}${badge ? `<span class="badge-tr">${badge}</span>` : ''}</span>`;
+}
+
+// An empty formation slot in the same frame.
+export function emptyPortrait(size, label = '') {
+  return `<span class="portrait empty${size < 56 ? ' small' : ''}" style="--ps:${size}px"><span class="fr"><span class="fr-art"><span class="initials">${esc(label)}</span></span></span></span>`;
 }
 
 // Replace broken portrait images with initials.
@@ -116,10 +137,11 @@ export function ownedBadge(id) {
   return bankEntry(id)?.owned ? `<span class="owned-mark" title="In your hero bank">${ICON.check}</span>` : '';
 }
 
-export function heroTile(h, { size = 64, badge, showBank = false, attrs = '' } = {}) {
+// `sub` is a small line under the name (a release date).
+export function heroTile(h, { size = 64, badge, showBank = false, attrs = '', sub = '' } = {}) {
   return `<button class="hero-tile" type="button" data-hero="${esc(h.id)}" title="${esc(h.name)} · ${esc(h.faction)} ${esc(h.class)}" ${attrs}>
-    ${portrait(h, { size, badge: badge ?? (trendBadge(h) || ownedBadge(h.id)), showBank })}
-    <span class="name">${esc(h.name)}</span>
+    ${portrait(h, { size, badge: badge ?? (showBank ? '' : trendBadge(h) || ownedBadge(h.id)), showBank })}
+    <span class="name">${esc(h.name)}</span>${sub ? `<span class="sub">${esc(sub)}</span>` : ''}
   </button>`;
 }
 
@@ -219,25 +241,32 @@ export function beastLine(pick, { owned = true } = {}) {
 
 // ---- formation board (2 front / 3 back) -------------------------------------
 
-export function board({ slots = {}, artifacts = {}, showBank = false, size = 56, editable = false, cls = '', emptyLabel = '+', beast = null } = {}) {
+// A formation: front row of two, back row of three, with the beast in the
+// corner. `build` draws every hero as an assumed copy at `level` (enemy
+// formations); `beastEdit` turns the beast corner into a button
+// (data-act="beast") showing `beastLevel`.
+export function board({ slots = {}, artifacts = {}, showBank = false, size = 60, editable = false, cls = '', emptyLabel = '+', beast = null, build = null, level = null, beastEdit = false, beastLevel = null } = {}) {
   const cell = (pos) => {
     const id = slots[pos];
     const h = id ? getHero(id) : null;
     if (!h) {
-      const inner = `<span class="portrait" style="--ps:${size}px"><span class="art"><span class="initials">${editable ? emptyLabel : ''}</span></span></span><span class="name muted">${editable ? 'Add' : 'Open'}</span>`;
+      const inner = `${emptyPortrait(size, editable ? emptyLabel : '')}<span class="name muted">${editable ? 'Add' : 'Open'}</span>`;
       return `<div class="slot empty"><span class="pos">${pos}</span>${editable ? `<button type="button" data-slot="${pos}" aria-label="Choose hero for ${pos}">${inner}</button>` : inner}</div>`;
     }
-    const inner = `${portrait(h, { size, showBank, badge: showBank ? '' : trendBadge(h) })}<span class="name">${esc(h.name)}</span>`;
+    const inner = `${portrait(h, { size, showBank, build, level, badge: showBank || build ? '' : trendBadge(h) })}<span class="name">${esc(h.name)}</span>`;
     return `<div class="slot"><span class="pos">${pos}</span>${
       editable ? `<button type="button" data-slot="${pos}" aria-label="Change ${esc(h.name)} at ${pos}">${inner}</button>` : `<button type="button" data-hero="${esc(h.id)}">${inner}</button>`
     }${artifacts[id] ? artifactChip(artifacts[id]) : ''}</div>`;
   };
   const b = beast ? data.beastById?.get(beast) : null;
   // The beast sits in the corner, like the beast button on the battle screen.
-  const beastSlot = b
-    ? `<button type="button" class="board-beast" data-beast-detail="${esc(b.id)}" title="Beast: ${esc(b.name)}">${beastArt(b.id, 42)}<span>${esc(b.name)}</span></button>`
-    : '';
-  return `<div class="board ${cls}${b ? ' has-beast' : ''}">
+  let beastSlot = '';
+  if (beastEdit)
+    beastSlot = `<button type="button" class="board-beast${b ? '' : ' no-beast'}" data-act="beast" title="${b ? `Beast: ${esc(b.name)}` : 'Choose the beast'}">${
+      b ? beastArt(b.id, 42) : '<span class="beast-add">+</span>'
+    }<span>${b ? esc(b.name) : 'Beast'}</span>${b && beastLevel ? `<span class="beast-lvl">Lvl ${esc(beastLevel)}</span>` : ''}</button>`;
+  else if (b) beastSlot = `<button type="button" class="board-beast" data-beast-detail="${esc(b.id)}" title="Beast: ${esc(b.name)}">${beastArt(b.id, 42)}<span>${esc(b.name)}</span></button>`;
+  return `<div class="board ${cls}${beastSlot ? ' has-beast' : ''}">
     ${beastSlot}
     <span class="row-label">Front</span>
     <div class="row">${cell('F1')}${cell('F2')}</div>
@@ -294,7 +323,8 @@ export function closeDrawer() {
 }
 
 // Searchable hero picker. Resolves with a hero id, '' to clear, or null.
-export function pickHero({ title = 'Choose a hero', pool = null, allowClear = false } = {}) {
+// showBank draws the player's copies; enemy pickers show the heroes plain.
+export function pickHero({ title = 'Choose a hero', pool = null, allowClear = false, showBank = true } = {}) {
   return new Promise((resolve) => {
     let done = false;
     const list = (pool ? pool.map(getHero).filter(Boolean) : data.heroes).slice().sort((a, b) => a.name.localeCompare(b.name));
@@ -310,7 +340,7 @@ export function pickHero({ title = 'Choose a hero', pool = null, allowClear = fa
       const s = q.trim().toLowerCase();
       grid.innerHTML = list
         .filter((h) => !s || h.name.toLowerCase().includes(s) || h.faction.toLowerCase().includes(s) || h.class.toLowerCase().includes(s))
-        .map((h) => heroTile(h, { size: 54, showBank: true }))
+        .map((h) => heroTile(h, { size: 54, showBank }))
         .join('');
     };
     render();
@@ -326,6 +356,35 @@ export function pickHero({ title = 'Choose a hero', pool = null, allowClear = fa
         done = true;
         closeDrawer();
         resolve('');
+      }
+    });
+  });
+}
+
+// Beast picker, best rated first. Resolves with a beast id, '' to clear, or null.
+export function pickBeast({ title = 'Choose a beast', allowClear = false, category = 'pvp' } = {}) {
+  return new Promise((resolve) => {
+    let done = false;
+    const RANK = ['S+', 'S', 'A', 'B', 'C', 'D'];
+    const rank = (b) => {
+      const i = RANK.indexOf(b.tiers?.[category] || b.tiers?.overall);
+      return i < 0 ? RANK.length : i;
+    };
+    const list = (data.beasts || []).slice().sort((a, b) => rank(a) - rank(b) || a.name.localeCompare(b.name));
+    const d = openDrawer({
+      title: esc(title),
+      body: `${allowClear ? '<div class="toolbar"><button class="btn small" type="button" data-clear>No beast</button></div>' : ''}
+        <div class="picker-grid">${list
+          .map((b) => `<button class="hero-tile" type="button" data-beast-pick="${esc(b.id)}" title="${esc(b.name)}">${beastArt(b.id, 56)}<span class="name">${esc(b.name)}</span>${tierPill(b.tiers?.[category] || b.tiers?.overall)}</button>`)
+          .join('')}</div>`,
+      onClose: () => !done && resolve(null),
+    });
+    d.addEventListener('click', (ev) => {
+      const t = ev.target.closest('[data-beast-pick]');
+      if (t || ev.target.closest('[data-clear]')) {
+        done = true;
+        closeDrawer();
+        resolve(t ? t.dataset.beastPick : '');
       }
     });
   });

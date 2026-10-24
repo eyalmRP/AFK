@@ -7,10 +7,10 @@ import { data, FACTION_IDS, CLASSES, ASCENSIONS, LIMITS, TIERS, tierOf, hero as 
 import { bank, updateHeroes, updateSettings, updateElderTree, replaceBank, removeHeroes, effectiveLevel, exportBank, sanitizeEntry, defaultEntry, ownedIds, ownedBeasts } from '../store.js';
 import { aiState, initAi, readScreenshots, readElderTree, errorCopy } from '../ai.js';
 import { ICON, classIcon, factionIcon } from './icons.js';
-import { portrait, openDrawer, closeDrawer, tierPill, gameFilterBar, handleGameFilter, syncGameFilter, bindFolding, starRow, ascText, heroCR, entryCR, fmtCR, CR_NOTE } from './common.js';
+import { portrait, heroArt, heroFrame, levelBadge, openDrawer, closeDrawer, tierPill, gameFilterBar, handleGameFilter, syncGameFilter, bindFolding, starRow, ascText, heroCR, entryCR, fmtCR, CR_NOTE } from './common.js';
 import { openHeroDetail } from './heroDetail.js';
 import { beastPanel, bindBeastPanel, refreshBeastPanel } from './beastPanel.js';
-import { emblem, upgradeText, plusCorners } from './emblem.js';
+import { upgradeText, plusCorners } from './emblem.js';
 
 const SUB_KEY = 'afk-codex-bank-sub';
 const SIZE_KEY = 'afk-codex-bank-size';
@@ -314,7 +314,7 @@ function heroesPane() {
           .map(([v, l]) => `<button type="button" data-own="${v}" aria-pressed="${ui.own === v}">${l}</button>`)
           .join('')}</div>
         <label class="check">Sort <select class="select" id="bank-sort">${SORTS.map(([v, l]) => `<option value="${v}" ${ui.sort === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
-        <button class="btn small" type="button" data-act="dir" title="Reverse order" aria-label="Reverse order">${ui.dir === 1 ? '↓' : '↑'}</button>
+        <button class="btn icon-btn" type="button" data-act="dir" title="Reverse order" aria-label="Reverse order">${ui.dir === 1 ? '↓' : '↑'}</button>
       </div>
       <div class="toolbar">
         <label class="check">Ascension <select class="select" id="bank-asc"><option value="any">Any</option>${ASCENSIONS.map((a) => `<option ${ui.asc === a ? 'selected' : ''}>${a}</option>`).join('')}</select></label>
@@ -328,7 +328,7 @@ function heroesPane() {
         ]
           .map(([v, l]) => `<button type="button" data-view="${v}" aria-pressed="${ui.view === v}">${l}</button>`)
           .join('')}</div>
-        <button class="btn small" type="button" data-act="select" aria-pressed="${ui.selectMode}">${ICON.edit} Batch edit</button>
+        <button class="btn" type="button" data-act="select" aria-pressed="${ui.selectMode}">${ICON.edit} Batch edit</button>
         </div>
       </div>
       ${elderCard()}
@@ -416,22 +416,12 @@ function renderList() {
 // phone); zoom 4 is a portrait card (2 per row). The List view is one hero
 // per line with the upgrades showing, for filling in missing data.
 
-function heroArt(h) {
-  const ini = esc(String(h.name).replace(/^Awakened\s+/i, 'A ').split(/\s+/).map((w) => w[0]).slice(0, 2).join(''));
-  return h.img ? `<img src="${esc(h.img)}" alt="" loading="lazy" draggable="false" data-fallback="${ini}">` : `<span class="initials">${ini}</span>`;
-}
-
 // The selection mark while batch selecting; otherwise an "Own" button on
 // heroes not in the bank yet. Owned heroes need no mark: they show a level.
 function cornerBadge(h, owned) {
   if (ui.selectMode) return `<span class="pick" aria-hidden="true">${ui.selected.has(h.id) ? ICON.check : ''}</span>`;
   if (!owned) return `<button class="own-add" type="button" data-own-hero="${h.id}" aria-label="Add ${esc(h.name)} to my bank" title="I own this hero">+<span class="ow-l"> Own</span></button>`;
   return '';
-}
-
-function lvlBadge(h, e, cls, { prefix = false } = {}) {
-  const own = bank.settings.sharedLevel && e.crystal === false;
-  return `<span class="${cls}${own ? ' own-level' : ''}"${own ? ' title="Own level (outside the shared level)"' : ''}>${prefix ? '<span class="lv-l">Lvl </span>' : ''}${effectiveLevel(h.id)}</span>`;
 }
 
 function cardTitle(h, e) {
@@ -444,24 +434,18 @@ function cardAttrs(h, e, cls) {
   return `class="${cls}" role="button" tabindex="0" data-card="${h.id}" aria-selected="${ui.selected.has(h.id)}" data-owned="${!!e?.owned}" title="${esc(cardTitle(h, e))}"`;
 }
 
-// The hero as the game draws it: ascension frame, the faction emblem with its
-// signature item and furniture ornaments top-left, "Lvl" top-right, stars on
-// the bottom edge. Used by every card zoom.
-function heroFrame(h, e) {
+// The game-style frame (common.js) with "Lvl" and the selection or "Own" mark.
+// Used by every card zoom.
+function cardFrame(h, e) {
   const owned = !!e?.owned;
-  const st = owned && e.asc === 'Ascended' ? starTier(e.stars, e.engrave) : null;
-  const stars = st ? starRow(e.stars, { title: false, engrave: e.engrave }) : '';
-  return `<span class="fr" data-asc="${owned ? esc(e.asc) : ''}"><span class="fr-art">${heroArt(h)}</span>${owned ? plusCorners(e.asc) : ''}
-      ${emblem(h, e, { cls: 'fr-fac' })}
-      ${stars ? `<span class="fr-band">${stars}</span>` : ''}${owned ? lvlBadge(h, e, 'fr-lvl', { prefix: true }) : ''}
-      ${cornerBadge(h, owned)}</span>`;
+  return heroFrame(h, e, { lvl: owned ? levelBadge(h, e, 'fr-lvl', { prefix: true }) : '', extra: cornerBadge(h, owned) });
 }
 
 function tile(h) {
   const e = bank.heroes[h.id];
   // Sorting by combat rating shows the estimate under each name.
   const cr = ui.sort === 'cr' && e?.owned ? `<span class="cr" title="${esc(CR_NOTE)}">≈ ${fmtCR(heroCR(h))}</span>` : '';
-  return `<div ${cardAttrs(h, e, 'bank-tile')}>${heroFrame(h, e)}<span class="nm">${esc(h.name)}${cr}</span></div>`;
+  return `<div ${cardAttrs(h, e, 'bank-tile')}>${cardFrame(h, e)}<span class="nm">${esc(h.name)}${cr}</span></div>`;
 }
 
 function upChips(e) {
@@ -475,7 +459,7 @@ function upChips(e) {
 function bigCard(h) {
   const e = bank.heroes[h.id];
   const owned = !!e?.owned;
-  return `<div ${cardAttrs(h, e, 'bank-big')}>${heroFrame(h, e)}
+  return `<div ${cardAttrs(h, e, 'bank-big')}>${cardFrame(h, e)}
     <span class="big-body">
       <span class="nm">${esc(h.name)}</span>
       <span class="big-meta">${factionIcon(h.faction)}${classIcon(h.class)}${owned ? ascText(e.asc) : '<span class="muted">Not owned</span>'}</span>
@@ -489,7 +473,7 @@ function row(h) {
   const e = bank.heroes[h.id];
   const owned = !!e?.owned;
   const right = owned
-    ? `<span class="row-lvl"><small>Lv</small>${lvlBadge(h, e, '')}<span class="cr" title="${esc(CR_NOTE)}">≈ ${fmtCR(heroCR(h))}</span></span>`
+    ? `<span class="row-lvl"><small>Lv</small>${levelBadge(h, e, '')}<span class="cr" title="${esc(CR_NOTE)}">≈ ${fmtCR(heroCR(h))}</span></span>`
     : ui.selectMode
       ? ''
       : `<button class="btn small" type="button" data-own-hero="${h.id}">+ Own</button>`;
