@@ -128,7 +128,7 @@ function render() {
   const info = data.codes || {};
   const steps = (info.howToRedeem || []).map((s) => `<li>${esc(s)}</li>`).join('');
   const empty = {
-    todo: list.length ? "You've redeemed every active code. New ones are checked every day." : 'No active codes right now. New ones are checked every day.',
+    todo: list.length ? "You've redeemed every active code. New ones are checked every week." : 'No active codes right now. New ones are checked every week.',
     used: 'Codes you tick as redeemed show up here.',
     expired: 'No expired codes recorded.',
     all: 'No codes recorded yet.',
@@ -138,7 +138,7 @@ function render() {
       <p class="eyebrow">Free rewards</p>
       <h2>Redeem codes</h2>
       <p>Lilith posts codes in pairs, one for Classic and one for Companions servers, around events and holidays. Copy a code, redeem it on Lilith's site, then tick it so it drops off your list.</p>
-      ${info.lastChecked ? `<p class="small muted">Last checked for new codes ${esc(fmtDate(info.lastChecked))} · checked daily</p>` : ''}
+      ${info.lastChecked ? `<p class="small muted">Last checked for new codes ${esc(fmtDate(info.lastChecked))} · checked weekly</p>` : ''}
     </div></div>
     <div class="code-server">
       <span class="eyebrow">My server</span>

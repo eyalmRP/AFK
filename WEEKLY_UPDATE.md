@@ -19,7 +19,7 @@ Only record what a source actually says, and keep the URL and date of every sour
   AFK Global's hero tier list is AllClash's list with the bottom two tiers relabelled (AllClash C+ and C shown as C and D), so treat the two as one source: record AllClash's grade and don't count AFK Global as agreement. AllClash blocks scripts; ask the user for a PDF or text of its page if search results are thin. AFK Global calls Gwyneth (Draconis) "Awakened Gwyneth".
 - **Mode guides** for each mode in `data/modes.json`, with priority on modes that have no community team yet: Legends Championship, Cursed Realm, King's Tower, faction towers and Treasure Scramble. Also check the current Twisted Realm boss and the Nightmare Corridor cycle.
 - **Kits** for heroes whose `kitConfidence` is `low`. Fill in about 20 a week, newest and highest-rated first.
-- **Redeem codes**: a daily routine already checks them (see "Daily code check" below), but confirm `data/codes.json` is current.
+- **Redeem codes**: check them as part of this update (see "Code check" below). Codes last 4-10 weeks, so once a week catches them all.
 - **Beasts**: new beasts, beast tier lists, and the beast the community pairs with each comp (Nightmare Corridor guides name one per comp).
 
 ## 2. Roster and portraits
@@ -82,15 +82,14 @@ node scripts/publish-files.mjs --since HEAD~1   # data files + images changed in
 Republish with the Artifact tool:
 - `url`: https://claude.ai/artifact/DFpXATaCfamkF5vLMpYpFG
 - `file_path`: `/home/user/AFK/dist/artifact.html`, with `root`: `/home/user/AFK/dist`.
-- `files`: the four `data/*.json` plus any new `img/heroes/*.webp`. Files you leave out stay published, so you don't need to resend old portraits.
+- `files`: the `data/*.json` files that changed (codes.json included) plus any new `img/heroes/*.webp`. Files you leave out stay published, so you don't need to resend old portraits.
 - Leave out `capabilities` so the stored ones are kept.
 
 Before publishing, take one look at the built page (`npm run serve` and a Playwright screenshot). Finally, reply with a short summary: new heroes, tier moves, new community teams, and what is still missing.
 
-## Daily code check
-A separate daily routine only updates `data/codes.json`:
+## Code check
+Part of the weekly update (there is no separate daily routine any more). It only touches `data/codes.json`:
 1. Search for AFK Arena redemption codes posted or confirmed since `lastChecked`, and for codes that have expired.
 2. Add new codes with the exact code string, `server` (`classic` or `companions`; codes come in pairs, one per server), `rewards` (null if not published), `firstSeen`, `expires`, `status` (active / expired / unverified) and `sources`. Never invent a code. A code seen on only one low-reliability site is `unverified`. Mark codes past their expiry as `expired`.
 3. Set `lastChecked` and `asOf` to today.
-4. Run `npm run validate && npm run build`, then commit and push.
-5. Republish the artifact with only `data/codes.json` in `files`.
+4. It is committed, pushed and republished with the rest of the weekly update (step 7); include `data/codes.json` in `files`.
