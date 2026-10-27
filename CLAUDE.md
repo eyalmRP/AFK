@@ -8,3 +8,9 @@ A static web app (vanilla JS bundled with esbuild) published as a claude.ai arti
 - Hero ids are lowercase names with non-alphanumerics replaced by `-` (`awakened-talene`). Awakened-type heroes that have no base version use their plain name (`envydiel`, `hybris`).
 - `src/js/engine.js` and `src/js/learn.js` are pure and shared by the browser, `scripts/engine-baseline.mjs` and the tests. Keep them free of DOM code.
 - The game is AFK Arena by Lilith Games, not AFK Journey. Ignore AFK Journey sources.
+
+## Reel Studio (slot-animator/)
+
+- `slot-animator/` is a separate app: a slot machine win animator with MP4 and After Effects export. It shares only the root `package.json` and esbuild; see `slot-animator/README.md`.
+- Before committing changes there run `npm run slots:test && npm run slots:build`.
+- `slot-animator/src/js/core/` is pure (no DOM) and shared by the browser and the tests. The generated After Effects script must stay ES3.
