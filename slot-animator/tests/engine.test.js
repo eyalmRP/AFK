@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { defaultProject, candyProject, cellsProject, newRound } from '../src/js/core/defaults.js';
-import { buildTimeline } from '../src/js/core/timeline.js';
+import { buildTimeline, holdAlpha } from '../src/js/core/timeline.js';
 import { evalKeys, key } from '../src/js/core/keys.js';
 import { generatePaylines } from '../src/js/core/paylines.js';
 import { makeContext } from '../src/js/core/outcomes.js';
@@ -223,4 +223,94 @@ test('timeline is deterministic and emits sound cues in time order', () => {
   assert.deepEqual(a.rounds.map((r) => r.finalGrid), b.rounds.map((r) => r.finalGrid));
   for (let i = 1; i < a.sfx.length; i++) assert.ok(a.sfx[i].t >= a.sfx[i - 1].t);
   assert.ok(a.sfx.some((s) => s.type === 'pop') && a.sfx.some((s) => s.type === 'mult'));
+});
+
+// ---- Hold & Spin and the wheel game ----
+
+function holdShows(tl, t) {
+  const out = [];
+  for (let k = 0; k < tl.reels * tl.rows; k++) {
+    const P = Math.round(evalKeys(tl.hold.keys[k], t));
+    out.push({ sym: tl.hold.strips[k][P], value: tl.hold.values[k].get(P) });
+  }
+  return out;
+}
+
+function holdGame(rounds, extra = {}) {
+  const p = defaultProject();
+  p.game = 'holdspin';
+  Object.assign(p.holdspin, extra);
+  p.rounds = rounds;
+  return p;
+}
+
+test('hold & spin: coins lock, empty cells respin, the counter resets on a hit', () => {
+  const p = holdGame([newRound('respin', { seed: 1, coinsIn: 2 }), newRound('respin', { seed: 2, coinsIn: 0 }), newRound('respin', { seed: 3, coinsIn: 1, specials: ['mega'] }), newRound('respin', { seed: 4, coinsIn: 0 })], { startCoins: 3 });
+  const tl = buildTimeline(p);
+  const { lay } = tl;
+  for (const R of tl.rounds) {
+    const t = R.spinEnd + 0.01;
+    const shown = holdShows(tl, t);
+    shown.forEach(({ sym, value }, k) => {
+      const lock = tl.hold.locks.find((l) => l.c * tl.rows + l.r === k && l.from <= t && l.to > t);
+      assert.equal(sym, lock ? lock.sym : lay.blankSym, `round ${R.index} cell ${k}`);
+      if (lock) assert.equal(value, lock.value);
+    });
+    // Locked cells never spin again.
+    for (const ci of R.pres.holdspin.cells) assert.ok(!tl.hold.locks.some((l) => l.c === ci.c && l.r === ci.r && l.from < R.t0));
+  }
+  assert.deepEqual(tl.rounds.map((R) => [R.pres.holdspin.before, R.pres.holdspin.after]), [[3, 3], [3, 2], [2, 3], [3, 2]]);
+  assert.equal(tl.rounds.map((R) => R.pres.holdspin.coins).join(), '5,5,6,6');
+  assert.ok(tl.hold.locks.some((l) => l.special && l.sym === lay.coinBase + 1));
+  assert.equal(holdAlpha(tl, 0.1), 1);
+});
+
+test('hold & spin: filling the board adds the grand, collect totals every coin', () => {
+  const p = holdGame([newRound('respin', { seed: 1, coinsIn: 4 }), newRound('respin', { seed: 2, fill: true }), newRound('collect', { seed: 3 })]);
+  const tl = buildTimeline(p);
+  const [, fill, collect] = tl.rounds;
+  assert.ok(fill.pres.holdspin.full);
+  assert.equal(fill.pres.holdspin.coins, tl.reels * tl.rows);
+  const coins = tl.hold.locks.reduce((a, l) => a + l.value, 0);
+  const grand = p.holdspin.grand.value * p.machine.bet;
+  assert.equal(collect.pres.collect.items.length, tl.reels * tl.rows);
+  assert.ok(Math.abs(collect.pres.collect.total - coins - grand) < 1e-9);
+  assert.ok(Math.abs(evalKeys(tl.hold.collectKeys, collect.pres.collect.end) - collect.pres.collect.total) < 1e-6);
+  assert.ok(collect.pres.grand && collect.pres.overlay);
+  // The board fades back out after the total.
+  assert.equal(holdAlpha(tl, collect.next + 0.05), 0);
+});
+
+test('hold & spin trigger lands coins on the machine and carries them onto the board', () => {
+  for (const type of ['classic', 'cells', 'cascade']) {
+    const p = defaultProject();
+    p.spin.type = type;
+    p.rounds = [newRound('hstrigger', { seed: 4, coinsIn: 6, specials: ['ultra'] }), newRound('respin', { seed: 5, coinsIn: 0 }), newRound('collect', { seed: 6 }), newRound('none', { seed: 7 })];
+    const tl = buildTimeline(p);
+    const [trig, respin, collect, after] = tl.rounds;
+    assert.equal(trig.win.coins.length, 6);
+    for (const cn of trig.win.coins) assert.equal(trig.grid[cn.c][cn.r], cn.sym);
+    assert.equal(holdAlpha(tl, trig.spinEnd), 0);
+    const shown = holdShows(tl, respin.spinEnd + 0.01);
+    for (const cn of trig.win.coins) assert.deepEqual(shown[cn.c * tl.rows + cn.r], { sym: cn.sym, value: cn.value }, type);
+    assert.equal(collect.pres.collect.total, trig.win.coins.reduce((a, c) => a + c.value, 0));
+    assert.equal(holdAlpha(tl, after.t0 + 0.2), 0, type);
+  }
+});
+
+test('wheel game keeps the wheel on screen and lands every spin', () => {
+  const p = defaultProject();
+  p.game = 'wheel';
+  p.rounds = [newRound('wheel', { seed: 1, wheelSegment: 2 }), newRound('none', { seed: 2, wheelSegment: 5 }), newRound('wheel', { seed: 3, wheelSegment: 9 })];
+  const tl = buildTimeline(p);
+  assert.deepEqual(tl.rounds.map((R) => R.outcome), ['wheel', 'wheel', 'wheel']);
+  tl.rounds.forEach((R, i) => {
+    const w = R.pres.wheel;
+    assert.equal(R.spinEnd, R.t0, 'the machine never spins');
+    assert.equal(w.cont, i > 0);
+    if (i < 2) assert.ok(w.outStart > R.next, 'stays on screen');
+    const theta = evalKeys(tl.wheelKeys, w.spinEnd + 0.01);
+    const local = ((-theta % 360) + 360) % 360;
+    assert.equal(Math.floor(local / (360 / p.wheel.segments.length)), [2, 5, 9][i]);
+  });
 });

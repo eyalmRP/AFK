@@ -3,7 +3,8 @@
 // the same picture for the same t.
 
 import { evalKeys, evalVelocity } from '../core/keys.js';
-import { roundIndexAt } from '../core/timeline.js';
+import { roundIndexAt, holdAlpha } from '../core/timeline.js';
+import { isCoinSym, formatPrize, COIN_GLOW } from '../core/coins.js';
 import { lineColor } from '../core/paylines.js';
 import { hash01 } from '../core/rng.js';
 import { sparkle, roundRect } from './paint.js';
@@ -135,6 +136,19 @@ function drawMultLabel(ctx, scene, value, x, y, s = 1, alpha = 1) {
   drawCentered(ctx, img, x, y + L.cellH * 0.2 * s, s * Math.min(1, (L.cellW * 0.95) / img.width), alpha);
 }
 
+// Values riding on symbols: "x5" on a multiplier, the prize on a coin.
+function drawValueLabel(ctx, scene, sym, value, x, y, s = 1, alpha = 1) {
+  const { L, res, tl, project } = scene;
+  if (!isCoinSym(tl.lay, sym)) {
+    drawMultLabel(ctx, scene, value, x, y, s, alpha);
+    return;
+  }
+  const text = formatPrize(value, project.machine.currency || '', project.machine.decimals | 0);
+  const img = cachedTitle(res, 'coinval', text, Math.round(L.cellH * 0.2), 'silver');
+  const dy = res.coinLabelled?.[sym - tl.lay.coinBase] ? -L.cellH * 0.1 : 0;
+  drawCentered(ctx, img, x, y + dy * s, s * Math.min(1, (L.cellW * 0.64) / img.width), alpha);
+}
+
 function drawActor(ctx, scene, a, t, blurK, popDur) {
   const rowPos = evalKeys(a.keys, t);
   const v = Math.abs(evalVelocity(a.keys, t));
@@ -148,11 +162,74 @@ function drawActor(ctx, scene, a, t, blurK, popDur) {
   drawSymbol(ctx, scene, a.sym, a.c, rowPos, clamp01((v - 4) / 16) * blurK, scale, alpha);
   if (a.mult != null) {
     const m = scene.L.cellCenter(a.c, rowPos);
-    drawMultLabel(ctx, scene, a.mult, m.x, m.y, scale, alpha);
+    drawValueLabel(ctx, scene, a.sym, a.mult, m.x, m.y, scale, alpha);
   }
 }
 
+// Draws into an offscreen layer and composites it at the given opacity, so
+// overlapping symbols fade as one picture.
+function withAlpha(ctx, scene, a, fn) {
+  if (a >= 0.999) {
+    fn(ctx);
+    return;
+  }
+  if (a <= 0.001) return;
+  const cw = ctx.canvas.width;
+  const chh = ctx.canvas.height;
+  let tmp = scene.res.layerTmp;
+  if (!tmp || tmp.width !== cw || tmp.height !== chh) tmp = scene.res.layerTmp = canvas(cw, chh);
+  const g = tmp.getContext('2d');
+  g.setTransform(1, 0, 0, 1, 0, 0);
+  g.clearRect(0, 0, cw, chh);
+  g.setTransform(ctx.getTransform());
+  fn(g);
+  ctx.save();
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.globalAlpha = a;
+  ctx.drawImage(tmp, 0, 0);
+  ctx.restore();
+}
+
 function drawReels(ctx, scene, R, t) {
+  const hA = holdAlpha(scene.tl, t);
+  withAlpha(ctx, scene, 1 - hA, (g) => drawMachineReels(g, scene, R, t));
+  withAlpha(ctx, scene, hA, (g) => drawHoldBoard(g, scene, t));
+}
+
+// The Hold & Spin board: every cell is its own little reel of coins and
+// empty cells.
+function drawHoldBoard(ctx, scene, t) {
+  const { tl, L, project } = scene;
+  const H = tl.hold;
+  const blurK = Number(project.spin.blur) || 0;
+  for (let c = 0; c < tl.reels; c++) {
+    for (let r = 0; r < tl.rows; r++) {
+      const k = c * tl.rows + r;
+      const P = evalKeys(H.keys[k], t);
+      const blur = clamp01((Math.abs(evalVelocity(H.keys[k], t)) - 3) / 14) * blurK;
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(L.reelX[c], L.rowsTop + r * L.cellH, L.cellW, L.cellH);
+      ctx.clip();
+      const base = Math.floor(P);
+      for (let j = base - 2; j <= base + 2; j++) {
+        const local = tl.dir > 0 ? -(j - P) : j - P;
+        if (Math.abs(local) > 1.3) continue;
+        const sym = H.strips[k][j];
+        if (sym == null) continue;
+        drawSymbol(ctx, scene, sym, c, r + local, blur);
+        const v = H.values[k].get(j);
+        if (v != null) {
+          const m = L.cellCenter(c, r + local);
+          drawValueLabel(ctx, scene, sym, v, m.x, m.y, 1, 1 - blur * 0.6);
+        }
+      }
+      ctx.restore();
+    }
+  }
+}
+
+function drawMachineReels(ctx, scene, R, t) {
   const { tl, L, project } = scene;
   const blurK = Number(project.spin.blur) || 0;
   const popDur = Number(project.timing.tumblePop) || 0.36;
@@ -186,10 +263,10 @@ function drawReels(ctx, scene, R, t) {
           const sym = tl.strips[si][j];
           if (sym == null) continue;
           drawSymbol(ctx, scene, sym, c, r + local, blur);
-          const mv = tl.stripMults[si].get(j);
+          const mv = tl.stripValues[si].get(j);
           if (mv != null) {
             const m = L.cellCenter(c, r + local);
-            drawMultLabel(ctx, scene, mv, m.x, m.y);
+            drawValueLabel(ctx, scene, sym, mv, m.x, m.y);
           }
         }
         ctx.restore();
@@ -207,10 +284,10 @@ function drawReels(ctx, scene, R, t) {
         const sym = strip[j];
         if (sym == null) continue;
         drawSymbol(ctx, scene, sym, c, rowPos, blur);
-        const mv = tl.stripMults[c].get(j);
+        const mv = tl.stripValues[c].get(j);
         if (mv != null) {
           const m = L.cellCenter(c, rowPos);
-          drawMultLabel(ctx, scene, mv, m.x, m.y);
+          drawValueLabel(ctx, scene, sym, mv, m.x, m.y);
         }
       }
     }
@@ -574,6 +651,7 @@ function drawHudPanel(ctx, scene, t = null, panelOnly = false) {
   if (!h) return;
   const metal = res.theme.metal === 'neon' ? 'neon' : res.theme.metal === 'chrome' ? 'chrome' : 'gold';
   const fsNow = t == null ? null : fsStateAt(tl, t);
+  const holdNow = t != null && holdAlpha(tl, t) > 0.5;
   ctx.save();
   ctx.shadowColor = 'rgba(0,0,0,0.6)';
   ctx.shadowBlur = h.h * 0.3;
@@ -610,7 +688,12 @@ function drawHudPanel(ctx, scene, t = null, panelOnly = false) {
   ctx.fillStyle = 'rgba(255,255,255,0.75)';
   const cur = project.machine.currency || '';
   const dec = project.machine.decimals | 0;
-  if (fsNow) {
+  if (holdNow) {
+    ctx.fillStyle = res.theme.accent;
+    const n = tl.hold.locks.filter((l) => t >= l.from && t < l.to).length;
+    ctx.fillText(`COINS ${n}/${tl.reels * tl.rows}`, h.x + h.w * 0.15, h.y + h.h * 0.55);
+    ctx.fillText(`RESPINS ${Math.round(evalKeys(tl.hold.counterKeys, t))}`, h.x + h.w * 0.85, h.y + h.h * 0.55);
+  } else if (fsNow) {
     ctx.fillStyle = res.theme.accent;
     ctx.fillText(fsNow.total ? 'FREE SPINS DONE' : `FREE SPINS ${fsNow.index}/${Math.max(fsNow.n, fsNow.index)}`, h.x + h.w * 0.15, h.y + h.h * 0.55);
     const tot = evalKeys(tl.fsTotalKeys, t);
@@ -777,6 +860,7 @@ function drawWinCells(ctx, scene, R, t, cells, start, end, opts = {}) {
       ctx.drawImage(sp.sharp, -L.cellW / 2, -L.cellH / 2, L.cellW, L.cellH);
     }
     ctx.restore();
+    if (opts.values && opts.values[i] != null) drawValueLabel(ctx, scene, si, opts.values[i], m.x, m.y, s);
     // Cell frame with a chasing light.
     ctx.save();
     ctx.globalAlpha = a;
@@ -1071,9 +1155,13 @@ function drawStickies(ctx, scene, t) {
 function drawScatterFx(ctx, scene, R, t) {
   const { L, res, project } = scene;
   const p = R.pres;
-  // Scatter landing pops while the reels are still stopping.
-  for (const [c, r] of R.win.scatters) {
-    const a = t - (R.cells ? R.cells[c * scene.tl.rows + r].stop : R.reels[c].stop);
+  // Scatter (and trigger coin) landing pops while the reels are still stopping.
+  const coins = R.win.coins || [];
+  const landing = R.win.scatters.concat(coins.map((cn) => [cn.c, cn.r]));
+  for (const [c, r] of landing) {
+    const landT = R.cells ? R.cells[c * scene.tl.rows + r]?.stop : R.reels[c]?.stop;
+    if (landT == null) continue;
+    const a = t - landT;
     if (a >= 0 && a < 0.7) {
       const m = L.cellCenter(c, r);
       drawRing(ctx, m.x, m.y, a / 0.7, L.cellW * 0.95, res.theme.accent, L.cellW * 0.05);
@@ -1085,10 +1173,12 @@ function drawScatterFx(ctx, scene, R, t) {
       const sp = res.sym[R.grid[c][r]];
       if (sp) ctx.drawImage(sp.sharp, -L.cellW / 2, -L.cellH / 2, L.cellW, L.cellH);
       ctx.restore();
+      if (R.mult[c][r] != null) drawValueLabel(ctx, scene, R.grid[c][r], R.mult[c][r], m.x, m.y, s);
     }
   }
   if (p.celebrate && t >= p.celebrate.start && t <= p.celebrate.end + 0.4) {
-    drawWinCells(ctx, scene, R, t, R.win.scatters, p.celebrate.start, p.celebrate.end + 0.4, { rays: true, popMul: 1.4, color: res.theme.accent });
+    if (coins.length) drawWinCells(ctx, scene, R, t, coins.map((cn) => [cn.c, cn.r]), p.celebrate.start, p.celebrate.end + 0.4, { rays: true, popMul: 1.2, color: res.theme.accent, values: coins.map((cn) => cn.value) });
+    else drawWinCells(ctx, scene, R, t, R.win.scatters, p.celebrate.start, p.celebrate.end + 0.4, { rays: true, popMul: 1.4, color: res.theme.accent });
   }
   if (p.nearmiss && t >= p.nearmiss.start && t <= p.nearmiss.end) {
     drawWinCells(ctx, scene, R, t, R.win.scatters, p.nearmiss.start, p.nearmiss.end, { popMul: 0.6, color: '#9fb4ff' });
@@ -1195,13 +1285,17 @@ function drawBanner(ctx, scene, R, t) {
   drawRing(ctx, cx, cy, (t - b.start) / 0.8, L.H * 0.7, res.theme.accent, L.H * 0.02);
   const title = res.titles[b.kind] || res.titles.bonus;
   const s = 0.2 + 0.8 * ease.outElastic(clamp01((t - b.start) / 0.8));
-  const ty = b.kind === 'freespins' ? cy - L.H * 0.13 : cy;
+  const ty = b.kind === 'freespins' || b.kind === 'holdspin' ? cy - L.H * 0.13 : cy;
   drawCentered(ctx, title, cx, ty, s * Math.min(1, (L.W * 0.9) / title.width), a);
   drawShimmer(ctx, res, title, cx, ty, s * Math.min(1, (L.W * 0.9) / title.width), ((t - b.start) % 1.6) / 1.6 * 1.6 - 0.3, a);
   if (b.kind === 'freespins') {
     const num = cachedTitle(res, 'fs', String(b.freeSpins), Math.round(res.titlePx * 1.5), 'fire');
     const s2 = 0.1 + 0.9 * ease.outElastic(clamp01((t - b.start - 0.35) / 0.8));
     drawCentered(ctx, num, cx, cy + L.H * 0.12, s2, a);
+  } else if (b.kind === 'holdspin') {
+    const sub = cachedTitle(res, 'hsrespins', `${b.freeSpins} RESPINS`, Math.round(res.titlePx * 0.62), 'fire');
+    const s2 = 0.1 + 0.9 * ease.outElastic(clamp01((t - b.start - 0.35) / 0.8));
+    drawCentered(ctx, sub, cx, cy + L.H * 0.1, s2 * Math.min(1, (L.W * 0.8) / sub.width), a);
   } else if (b.amount > 0) {
     const v = evalKeys(tl.meterKeys, t);
     ctx.save();
@@ -1234,7 +1328,8 @@ function drawWheel(ctx, scene, R, t) {
   const tIn = clamp01((t - w.inStart) / (w.inEnd - w.inStart));
   const tOut = clamp01((t - w.outStart) / (w.outEnd - w.outStart));
   const a = ease.outCubic(tIn) * (1 - ease.inCubic(tOut));
-  darken(ctx, L, 0.86 * a);
+  const wheelGame = tl.game === 'wheel';
+  darken(ctx, L, (wheelGame ? 0.3 : 0.86) * a);
   const cx = L.W / 2;
   const cy = L.H * 0.54;
   const sc = (0.3 + 0.7 * ease.outBack(tIn)) * (1 - 0.35 * ease.inCubic(tOut));
@@ -1309,12 +1404,13 @@ function drawWheel(ctx, scene, R, t) {
   ctx.restore();
 
   // Title before the spin; prize plaque after landing.
-  const titleA = a * (1 - clamp01((t - w.spinStart - 0.6) / 0.5));
+  const titleIn = w.cont ? clamp01((t - w.titleIn) / 0.3) : 1;
+  const titleA = a * titleIn * (1 - clamp01((t - w.spinStart - 0.6) / 0.5));
   drawCentered(ctx, res.titles.wheel, cx, cy - wh.R * 1.28 * sc, 0.5 + 0.5 * ease.outBack(tIn), titleA);
   if (t > w.prizeStart) {
     drawCoins(ctx, scene, t, { start: w.prizeStart, end: w.prizeStart + 1.2, n: 110, x: cx, y: L.H * 1.03, w: L.W * 0.5, salt: 260 + R.index, spread: 1.2, vy0: 1.1, vy1: 0.55, life: 2.4, scale: 1.2 });
     drawRing(ctx, cx, cy, (t - w.prizeStart) / 0.8, wh.R * 1.6, res.theme.accent, wh.R * 0.05);
-    const k = ease.outBack(clamp01((t - w.prizeStart) / 0.5));
+    const k = ease.outBack(clamp01((t - w.prizeStart) / 0.5)) * clamp01((w.plaqueEnd - t) / 0.35);
     const pw = wh.R * 1.5;
     const ph = wh.R * 0.62;
     ctx.save();
@@ -1341,6 +1437,217 @@ function drawWheel(ctx, scene, R, t) {
     drawOdometer(ctx, res, v, cx, cy + ph * 0.2 * k * sc, Math.round(wh.R * 0.14), { currency: project.machine.currency || '', decimals: project.machine.decimals | 0, rate: evalVelocity(tl.meterKeys, t), scale: k * sc });
     ctx.restore();
   }
+}
+
+// ---- Hold & Spin effects ----
+
+function coinColor(scene, sym) {
+  const pal = scene.res.coinPalettes?.[sym - scene.tl.lay.coinBase] || 'gold';
+  return COIN_GLOW[pal] || COIN_GLOW.gold;
+}
+
+// The counter and the collect plaque sit on the frame's top edge.
+function holdBarY(L) {
+  return L.frame.y + L.pad * 0.25;
+}
+
+function plaque(ctx, res, w, h, glowA) {
+  drawGlow(ctx, res, res.theme.accent, 0, 0, w * 1.4, glowA);
+  roundRect(ctx, -w / 2, -h / 2, w, h, h * 0.32);
+  const g = ctx.createLinearGradient(0, -h / 2, 0, h / 2);
+  g.addColorStop(0, 'rgba(46,20,70,0.97)');
+  g.addColorStop(1, 'rgba(8,2,16,0.98)');
+  ctx.fillStyle = g;
+  ctx.fill();
+  ctx.lineWidth = h * 0.07;
+  ctx.strokeStyle = '#e9b949';
+  ctx.stroke();
+}
+
+function drawCellSprite(ctx, scene, sym, value, c, r, s, alpha) {
+  const { L, res } = scene;
+  const m = L.cellCenter(c, r);
+  const sp = res.sym[sym];
+  if (!sp) return;
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.translate(m.x, m.y);
+  ctx.scale(s, s * m.s);
+  ctx.drawImage(sp.sharp, -L.cellW / 2, -L.cellH / 2, L.cellW, L.cellH);
+  ctx.restore();
+  if (value != null) drawValueLabel(ctx, scene, sym, value, m.x, m.y, s, alpha);
+}
+
+// Lock frames, landing pops, teasing cells and the collect sequence.
+function drawHoldFx(ctx, scene, R, t) {
+  const { tl, L, res } = scene;
+  const hA = holdAlpha(tl, t);
+  if (hA <= 0.001) return;
+  const col = R && R.pres.collect;
+  // Teasing cells: the last empty cells crawl with an orange glow.
+  for (const ci of (R && R.pres.holdspin && R.pres.holdspin.cells) || []) {
+    if (!ci.antic) continue;
+    const a = env(t, ci.antic.start - 0.05, ci.antic.end + 0.25, 0.2, 0.25) * hA;
+    if (a <= 0) continue;
+    const x = L.reelX[ci.c];
+    const y = L.rowsTop + ci.r * L.cellH;
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.lineWidth = L.cellW * 0.05;
+    ctx.strokeStyle = `rgba(255,170,40,${0.95 * a})`;
+    ctx.shadowColor = 'rgba(255,120,0,1)';
+    ctx.shadowBlur = L.cellW * 0.35 * (0.6 + 0.4 * Math.sin(t * 18));
+    roundRect(ctx, x + 2, y + 2, L.cellW - 4, L.cellH - 4, L.cellW * 0.1);
+    ctx.stroke();
+    ctx.restore();
+    drawGlow(ctx, res, '#ff9a1a', x + L.cellW / 2, y + L.cellH / 2, L.cellW * 1.6, 0.4 * a);
+  }
+  for (const lk of tl.hold.locks) {
+    if (t < lk.from || t >= lk.to) continue;
+    const m = L.cellCenter(lk.c, lk.r);
+    const color = lk.special ? coinColor(scene, lk.sym) : res.theme.accent;
+    const age = t - lk.from;
+    const item = col && col.items.find((it) => it.c === lk.c && it.r === lk.r);
+    const done = item && t > item.arrive;
+    // Landing: shockwave, flash and a bounce of the coin.
+    if (age < 0.6) {
+      drawRing(ctx, m.x, m.y, age / 0.6, L.cellW * (lk.special ? 1.3 : 0.95), color, L.cellW * 0.05);
+      drawGlow(ctx, res, color, m.x, m.y, L.cellW * 2, 0.7 * (1 - age / 0.6) * hA);
+      const s = 1 + 0.28 * Math.sin(clamp01(age / 0.35) * Math.PI);
+      if (age < 0.35) drawCellSprite(ctx, scene, lk.sym, lk.value, lk.c, lk.r, s, hA);
+    }
+    // Held: a glowing frame; specials pulse.
+    const fa = clamp01(age / 0.15) * hA * (done ? 0.35 : 1);
+    ctx.save();
+    ctx.globalAlpha = fa;
+    const fw = L.cellW * 0.96;
+    const fh = L.cellH * 0.96 * m.s;
+    roundRect(ctx, m.x - fw / 2, m.y - fh / 2, fw, fh, L.cellW * 0.12);
+    ctx.lineWidth = L.cellW * (lk.special ? 0.04 : 0.028);
+    ctx.strokeStyle = color;
+    ctx.shadowColor = color;
+    ctx.shadowBlur = L.cellW * (lk.special ? 0.25 + 0.1 * Math.sin(t * 6) : 0.14);
+    ctx.stroke();
+    ctx.restore();
+    if (lk.special) drawGlow(ctx, res, color, m.x, m.y, L.cellW * 1.5, (0.18 + 0.1 * Math.sin(t * 5 + lk.c)) * fa);
+    // Collect: the coin flashes and its value flies to the plaque.
+    if (item && t >= item.at - 0.05) {
+      const k = clamp01((t - item.at) / 0.25);
+      if (t < item.arrive + 0.1) {
+        drawGlow(ctx, res, color, m.x, m.y, L.cellW * 2.2, 0.8 * (1 - k * 0.6) * hA);
+        drawCellSprite(ctx, scene, lk.sym, null, lk.c, lk.r, 1 + 0.22 * Math.sin(k * Math.PI), hA);
+      }
+      if (done) {
+        ctx.save();
+        ctx.globalAlpha = 0.45 * hA;
+        ctx.fillStyle = '#000';
+        roundRect(ctx, m.x - fw / 2, m.y - fh / 2, fw, fh, L.cellW * 0.12);
+        ctx.fill();
+        ctx.restore();
+      }
+    }
+  }
+  // Values in flight, drawn last so they pass over everything.
+  if (col) {
+    const ty = holdBarY(L);
+    for (const it of col.items) {
+      if (t < it.at || t > it.arrive) continue;
+      const m = L.cellCenter(it.c, it.r);
+      const u = ease.inOut(clamp01((t - it.at) / (it.arrive - it.at)));
+      const x = m.x + (L.W / 2 - m.x) * u;
+      const y = m.y + (ty - m.y) * u - Math.sin(u * Math.PI) * L.cellH * 0.6;
+      const text = formatPrize(it.value, scene.project.machine.currency || '', scene.project.machine.decimals | 0);
+      const img = cachedTitle(res, 'coinval', text, Math.round(L.cellH * 0.2), 'silver');
+      drawGlow(ctx, res, res.theme.accent, x, y, L.cellW * 0.9, 0.6 * hA);
+      drawCentered(ctx, img, x, y, (1.1 - 0.35 * u) * Math.min(1, (L.cellW * 0.8) / img.width), hA);
+    }
+  }
+}
+
+// Above the reels: the respins counter, then the collect plaque.
+function drawHoldBar(ctx, scene, R, t) {
+  const { tl, L, res, project } = scene;
+  const hA = holdAlpha(tl, t);
+  if (hA <= 0.001) return;
+  const y = holdBarY(L);
+  const col = R && R.pres.collect;
+  if (col && t >= col.start) {
+    const a = hA * clamp01((t - col.start) / 0.3) * clamp01((col.end + 0.6 - t) / 0.4);
+    if (a <= 0) return;
+    const pw = L.frame.w * 0.36;
+    const ph = L.H * 0.075;
+    const pulse = col.items.reduce((p, it) => Math.max(p, 1 - clamp01((t - it.arrive) / 0.25)), 0) * (t > col.items[0].arrive ? 1 : 0);
+    ctx.save();
+    ctx.globalAlpha = a;
+    ctx.translate(L.W / 2, y);
+    ctx.scale(1 + 0.06 * pulse, 1 + 0.06 * pulse);
+    plaque(ctx, res, pw, ph, 0.3 + 0.4 * pulse);
+    ctx.restore();
+    const v = evalKeys(tl.hold.collectKeys, t);
+    ctx.save();
+    ctx.globalAlpha = a;
+    drawOdometer(ctx, res, v, L.W / 2, y + ph * 0.04, Math.round(ph * 0.52), { currency: project.machine.currency || '', decimals: project.machine.decimals | 0, rate: evalVelocity(tl.hold.collectKeys, t) });
+    ctx.restore();
+    return;
+  }
+  // The respins counter: a label and one pip per respin, lit while left.
+  const n = Math.round(evalKeys(tl.hold.counterKeys, t));
+  const label = cachedTitle(res, 'hsbar', n === 1 ? 'LAST RESPIN' : 'RESPINS LEFT', Math.round(L.H * 0.028), n === 1 ? 'fire' : 'aqua');
+  let pop = 0;
+  const ks = tl.hold.counterKeys;
+  for (let i = 1; i < ks.length; i++) if (ks[i].v > ks[i - 1].v && t >= ks[i].t && t - ks[i].t < 0.45) pop = 1 - (t - ks[i].t) / 0.45;
+  const R0 = tl.hold.respins;
+  const pr = L.H * 0.012;
+  const gap = pr * 3;
+  const ph = L.H * 0.06;
+  const lw = label.width * 0.9;
+  const pw = lw + R0 * gap + ph * 0.6;
+  ctx.save();
+  ctx.globalAlpha = hA;
+  ctx.translate(L.W / 2, y);
+  const sc = 1 + 0.14 * Math.sin(pop * Math.PI);
+  ctx.scale(sc, sc);
+  plaque(ctx, res, pw, ph, 0.25 + 0.5 * pop);
+  ctx.drawImage(label, -pw / 2 + ph * 0.25, -label.height / 2, label.width * 0.9, label.height);
+  for (let i = 0; i < R0; i++) {
+    const px = -pw / 2 + ph * 0.25 + lw + gap * (i + 0.5);
+    ctx.beginPath();
+    ctx.arc(px, 0, pr, 0, Math.PI * 2);
+    ctx.fillStyle = i < n ? (n === 1 ? '#ffb23a' : '#7ff6ff') : 'rgba(255,255,255,0.16)';
+    ctx.fill();
+    if (i < n) drawGlow(ctx, res, n === 1 ? '#ff7a1a' : '#2fc8ff', px, 0, pr * 6, 0.55);
+  }
+  ctx.restore();
+  void project;
+}
+
+function drawGrand(ctx, scene, R, t) {
+  const g = R.pres.grand;
+  if (!g || t < g.start || t > g.end) return;
+  const { L, res, project } = scene;
+  const a = Math.min(clamp01((t - g.start) / 0.4), clamp01((g.end - t) / 0.5));
+  darken(ctx, L, 0.7 * a);
+  const cx = L.W / 2;
+  const cy = L.H * 0.44;
+  drawGlow(ctx, res, '#ff5a1f', cx, cy, L.H * 1.5, 0.6 * a);
+  if (Number(project.effects.rays) > 0) {
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    drawCentered(ctx, res.rays, cx, cy, ((L.H * 1.8) / res.rays.width) * ease.outBack(clamp01((t - g.start) / 0.45)), 0.6 * a, t * 0.3);
+    ctx.restore();
+  }
+  drawRing(ctx, cx, cy, (t - g.start) / 0.8, L.H * 0.8, '#ffb21a', L.H * 0.022);
+  drawCoins(ctx, scene, t, { start: g.start + 0.1, end: g.countEnd, n: 70, mode: 'rain', salt: 520 + R.index, life: 2.6, scale: 1.1 });
+  const title = res.titles.grand;
+  const s = (0.15 + 0.85 * ease.outElastic(clamp01((t - g.start) / 0.8))) * (1 + 0.03 * Math.sin(t * 5));
+  const fit = title ? Math.min(1, (L.W * 0.9) / title.width) : 1;
+  drawCentered(ctx, title, cx, cy - L.H * 0.06, s * fit, a);
+  drawShimmer(ctx, res, title, cx, cy - L.H * 0.06, s * fit, ((t - g.start) % 1.5) / 1.5 * 1.6 - 0.3, a);
+  const v = evalKeys(g.keys, t);
+  ctx.save();
+  ctx.globalAlpha = a;
+  drawOdometer(ctx, res, v, cx, cy + L.H * 0.14, Math.round(res.titlePx * 0.66), { currency: project.machine.currency || '', decimals: project.machine.decimals | 0, rate: evalVelocity(g.keys, t), scale: ease.outBack(clamp01((t - g.start - 0.3) / 0.5)) });
+  ctx.restore();
 }
 
 function drawFlashes(ctx, scene, t) {
@@ -1416,22 +1723,28 @@ export function renderFrame(ctx, scene, t, opts = {}) {
     }
   }
   ctx.translate(sx, sy);
-  ctx.drawImage(res.back, 0, 0);
-  drawReels(ctx, scene, R, t);
-  drawInWindowFx(ctx, scene, R, t);
-  ctx.drawImage(res.front, 0, 0);
-  drawMarquee(ctx, scene, R, t);
-  drawAnticFrames(ctx, scene, R, t);
-  drawStickies(ctx, scene, t);
-  drawLogo(ctx, scene, t);
-  drawFsRibbon(ctx, scene, t);
-  drawHud(ctx, scene, R, t);
+  // The wheel game has no machine: just the background and the wheel.
+  if (tl.game !== 'wheel') {
+    ctx.drawImage(res.back, 0, 0);
+    drawReels(ctx, scene, R, t);
+    drawInWindowFx(ctx, scene, R, t);
+    ctx.drawImage(res.front, 0, 0);
+    drawMarquee(ctx, scene, R, t);
+    drawAnticFrames(ctx, scene, R, t);
+    drawStickies(ctx, scene, t);
+    drawHoldFx(ctx, scene, R, t);
+    drawLogo(ctx, scene, t);
+    drawFsRibbon(ctx, scene, t);
+    drawHoldBar(ctx, scene, R, t);
+    drawHud(ctx, scene, R, t);
+  }
   if (R) {
     drawExpand(ctx, scene, R, t);
     drawScatterFx(ctx, scene, R, t);
     drawPops(ctx, scene, R, t);
     drawSteps(ctx, scene, R, t);
     drawMultPhase(ctx, scene, R, t);
+    drawGrand(ctx, scene, R, t);
     drawBigWin(ctx, scene, R, t);
     drawBanner(ctx, scene, R, t);
     drawWheel(ctx, scene, R, t);

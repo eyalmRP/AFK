@@ -59,9 +59,19 @@ What you get
   reads its source slider; key or pick-whip it to drive the counter
   yourself. The digits roll like the Odometer plugin (each column turns as
   the one below it wraps) and tick crisply while counting fast.
+- Hold and Spin/ (when the animation has coins): one comp per cell, "Hold
+  Cell C-R", each a little reel of coins and empty cells on its own Spin
+  slider. The coins are comps in Symbols/ too ("Symbol NN Coin", "Mega coin",
+  "Empty cell"...): restyle one and every cell follows. Their values ride on
+  "Value" text layers. In the main comp, "Coin Lock" frames glow on locked
+  coins, "Respins Counter" counts the respins, and the coins' running total
+  ("Collect", on SLOT CONTROL) rolls on the frame while they are collected;
+  each round's FX comp holds the landings, the collect and the grand.
 - SLOT CONTROL (main comp): "Meter" drives the win meter and "FS Total" the
   free spins total. SCREEN SHAKE is a parent null whose position expression
   holds the shake events; the Flash solid holds the flashes.
+- The wheel game has no machine layers: just the background, the wheel and
+  its prizes, one FX comp per spin handing the wheel to the next.
 
 Transparency
 - ${transparent ? 'Background and Vignette are switched off in this build.' : 'Switch off the Background and Vignette layers in the main comp.'}

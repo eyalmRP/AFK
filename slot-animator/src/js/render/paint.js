@@ -794,3 +794,141 @@ export function paintBuiltin(key, size = 512, font = 'Bungee, "Arial Black", Imp
   (PAINTERS[key] || PAINTERS.seven)(ctx, font);
   return c;
 }
+
+// ---- Hold & Spin coins and the empty cell ----
+
+const COIN_COLORS = {
+  gold: { face: ['#fffbe0', '#ffd75e', '#e39a12', '#9a5a00', '#4a2600'], metal: 'gold', ribbon: ['#ff3b46', '#9a0714'], glow: 'rgba(255,190,60,' },
+  fire: { face: ['#ffe9d0', '#ff9a3c', '#e8321a', '#8a0e08', '#3a0402'], metal: 'gold', ribbon: ['#ffe27a', '#c27a00'], glow: 'rgba(255,90,30,' },
+  violet: { face: ['#f6ecff', '#c993ff', '#8a3ae0', '#4a1488', '#1c0640'], metal: 'violet', ribbon: ['#ffe27a', '#c27a00'], glow: 'rgba(180,90,255,' },
+  aqua: { face: ['#ecfdff', '#8aeaff', '#1fa8e0', '#0a5a8a', '#03243a'], metal: 'neon', ribbon: ['#ff6fc1', '#9a0d55'], glow: 'rgba(60,210,255,' },
+  emerald: { face: ['#eafff2', '#86ffb9', '#16b866', '#0a5e34', '#022a14'], metal: 'gold', ribbon: ['#ffe27a', '#c27a00'], glow: 'rgba(60,255,150,' },
+  rose: { face: ['#fff2f8', '#ffa6d4', '#e0247a', '#8f0d4f', '#3d0020'], metal: 'rose', ribbon: ['#ffe27a', '#c27a00'], glow: 'rgba(255,90,180,' },
+  silver: { face: ['#ffffff', '#eef2f7', '#aab4c4', '#5b6676', '#232a33'], metal: 'chrome', ribbon: ['#3b7bff', '#0a2a80'], glow: 'rgba(200,220,255,' },
+};
+
+function sized(size) {
+  const c = document.createElement('canvas');
+  c.width = size;
+  c.height = size;
+  const ctx = c.getContext('2d');
+  ctx.translate(size / 2, size / 2);
+  ctx.scale((size / 512) * 0.94, (size / 512) * 0.94);
+  return { c, ctx };
+}
+
+// A coin with a metal rim and an embossed face. The value is drawn over it
+// at render time; a label (MEGA, SUPER...) rides on a ribbon across the
+// lower half, so the value sits a little higher on labelled coins.
+export function paintCoinSymbol(size = 512, palette = 'gold', label = '', font = 'Bungee, "Arial Black", Impact, sans-serif') {
+  const { c, ctx } = sized(size);
+  const P = COIN_COLORS[palette] || COIN_COLORS.gold;
+  if (label) {
+    const glow = ctx.createRadialGradient(0, 0, 120, 0, 0, 262);
+    glow.addColorStop(0, `${P.glow}0.75)`);
+    glow.addColorStop(1, `${P.glow}0)`);
+    ctx.fillStyle = glow;
+    ctx.fillRect(-262, -262, 524, 524);
+  }
+  const disc = () => {
+    ctx.beginPath();
+    ctx.arc(0, 0, 205, 0, Math.PI * 2);
+  };
+  layered(ctx, disc, { fill: radial(ctx, -30, -40, 215, P.face), rim: metalGradient(ctx, 0, -215, 0, 215, P.metal), rimWidth: 30, outline: '#140800', outlineWidth: 34 });
+  // Reeded edge and an embossed inner ring.
+  ctx.save();
+  disc();
+  ctx.clip();
+  ctx.strokeStyle = 'rgba(0,0,0,0.18)';
+  ctx.lineWidth = 3;
+  for (let i = 0; i < 72; i++) {
+    const a = (i / 72) * Math.PI * 2;
+    ctx.beginPath();
+    ctx.moveTo(Math.cos(a) * 178, Math.sin(a) * 178);
+    ctx.lineTo(Math.cos(a) * 205, Math.sin(a) * 205);
+    ctx.stroke();
+  }
+  // Faint sunburst on the face.
+  ctx.globalCompositeOperation = 'soft-light';
+  ctx.fillStyle = 'rgba(255,255,255,0.35)';
+  for (let i = 0; i < 16; i++) {
+    const a = (i / 16) * Math.PI * 2;
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.arc(0, 0, 170, a, a + Math.PI / 32);
+    ctx.closePath();
+    ctx.fill();
+  }
+  ctx.restore();
+  ctx.lineWidth = 9;
+  ctx.strokeStyle = 'rgba(255,255,255,0.45)';
+  ctx.beginPath();
+  ctx.arc(0, 0, 166, Math.PI * 0.9, Math.PI * 2.1);
+  ctx.stroke();
+  ctx.strokeStyle = 'rgba(0,0,0,0.3)';
+  ctx.beginPath();
+  ctx.arc(0, 0, 166, Math.PI * 0.1, Math.PI * 0.9);
+  ctx.stroke();
+  shine(ctx, disc, -80, -110, 80, 40, -0.6, 0.55);
+  sparkle(ctx, 140, -150, 60, 1);
+  if (label) {
+    const y0 = 70;
+    const h = 92;
+    const ribbon = () => {
+      ctx.beginPath();
+      ctx.moveTo(-238, y0 + h * 0.08);
+      ctx.lineTo(-206, y0 + h * 0.5);
+      ctx.lineTo(-238, y0 + h * 0.92);
+      ctx.lineTo(238, y0 + h * 0.92);
+      ctx.lineTo(206, y0 + h * 0.5);
+      ctx.lineTo(238, y0 + h * 0.08);
+      ctx.closePath();
+    };
+    const g = ctx.createLinearGradient(0, y0, 0, y0 + h);
+    g.addColorStop(0, P.ribbon[0]);
+    g.addColorStop(1, P.ribbon[1]);
+    layered(ctx, ribbon, { fill: g, outline: '#140800', outlineWidth: 16, shadow: true });
+    gloss(ctx, ribbon, -238, y0, 476, h, 0.4);
+    let px = 64;
+    ctx.font = `${px}px ${font}`;
+    const w = ctx.measureText(label).width;
+    if (w > 380) px = Math.floor((px * 380) / w);
+    ctx.font = `${px}px ${font}`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.lineJoin = 'round';
+    ctx.lineWidth = px * 0.22;
+    ctx.strokeStyle = '#1a0600';
+    ctx.strokeText(label, 0, y0 + h * 0.52);
+    ctx.fillStyle = metalGradient(ctx, 0, y0 + h * 0.2, 0, y0 + h * 0.85, 'gold');
+    ctx.fillText(label, 0, y0 + h * 0.52);
+  }
+  return c;
+}
+
+// An empty cell: a dark, slightly sunken socket that lets the reel show.
+export function paintEmptyCell(size = 512) {
+  const { c, ctx } = sized(size);
+  const path = () => roundRect(ctx, -236, -236, 472, 472, 70);
+  const g = ctx.createRadialGradient(0, -40, 40, 0, 0, 330);
+  g.addColorStop(0, 'rgba(255,255,255,0.05)');
+  g.addColorStop(1, 'rgba(0,0,0,0.42)');
+  path();
+  ctx.fillStyle = g;
+  ctx.fill();
+  ctx.save();
+  path();
+  ctx.clip();
+  ctx.shadowColor = 'rgba(0,0,0,0.75)';
+  ctx.shadowBlur = 50;
+  ctx.lineWidth = 40;
+  ctx.strokeStyle = 'rgba(0,0,0,0.6)';
+  path();
+  ctx.stroke();
+  ctx.restore();
+  path();
+  ctx.lineWidth = 6;
+  ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+  ctx.stroke();
+  return c;
+}

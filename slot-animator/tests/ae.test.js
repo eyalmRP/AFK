@@ -5,6 +5,7 @@ import { buildTimeline } from '../src/js/core/timeline.js';
 import { computeLayout } from '../src/js/core/layout.js';
 import { evalKeys } from '../src/js/core/keys.js';
 import { buildAEData, buildAEScript, AE_ASSETS, AE_SCRIPT, exportFormats, projectForFormat, parseFormat } from '../src/js/core/ae-export.js';
+import { formatPrize } from '../src/js/core/coins.js';
 import { createAE, runScript } from './ae-mock.js';
 
 const TITLE_KEYS = (p) => [...p.tiers.map((t) => t.id), 'total', 'bonus', 'freespins', 'wheel', 'nearmiss'];
@@ -94,7 +95,8 @@ test('AE batch export builds one comp tree per format and shares the symbol art'
   }
   const symImports = log.imports.filter((f) => /symbols\/symbol_/.test(f));
   assert.equal(symImports.length, new Set(symImports).size, 'symbol PNGs are imported once');
-  assert.equal(symImports.length, p.symbols.length);
+  // The machine's symbols, the built-in orb when needed, the coins and the empty cell.
+  assert.equal(symImports.length, buildTimeline(p).lay.total);
 });
 
 const fromExport = (ks) => ks.map((k) => ({ t: k.t, v: k.v, inSpeed: k.is, inInf: k.ii, outSpeed: k.os, outInf: k.oi, hold: !!k.h }));
@@ -241,4 +243,86 @@ test('AE transparent export switches the background off', () => {
   const main = log.comps.find((c) => c.name === p.name);
   const bg = main.layers.list.find((l) => l.name === 'Background');
   assert.equal(bg.enabled, false);
+});
+
+// What a strip comp's value slots show: row -> text.
+function shownLabels(comp, pval, peekRows, cellH, rows, time) {
+  const thisComp = { width: comp.width, frameDuration: comp.frameDuration, layer: () => ({ effect: () => () => ({ value: pval }) }) };
+  const out = {};
+  for (const T of comp.layers.list.filter((l) => /^Value \d+$/.test(l.name))) {
+    const txt = evalExpr(T.property('ADBE Text Properties').property('ADBE Text Document').expression, thisComp, time);
+    if (!txt) continue;
+    const op = evalExpr(T.property('ADBE Transform Group').property('ADBE Opacity').expression, thisComp, time);
+    if (!op) continue;
+    const xy = evalExpr(T.property('ADBE Transform Group').property('ADBE Position').expression, thisComp, time);
+    const r = Math.floor(xy[1] / cellH - peekRows);
+    if (r >= 0 && r < rows) out[r] = txt;
+  }
+  return out;
+}
+
+test('AE hold & spin board: every cell lands the preview coin, with its value', () => {
+  const p = defaultProject();
+  p.game = 'holdspin';
+  p.holdspin.startCoins = 2;
+  p.rounds = [newRound('respin', { seed: 1, coinsIn: 2 }), newRound('respin', { seed: 2, coinsIn: 0 }), newRound('respin', { seed: 3, fill: true, specials: ['mega'] }), newRound('collect', { seed: 4 })];
+  const { tl, list, log } = run(p);
+  assert.deepEqual(log.alerts, [], log.alerts.join('\n'));
+  const { L } = list[0];
+  const fmt = (v) => formatPrize(v, p.machine.currency, p.machine.decimals);
+  for (const R of tl.rounds.filter((x) => x.outcome === 'respin')) {
+    const t = R.spinEnd + 0.01;
+    for (let c = 0; c < tl.reels; c++) {
+      for (let r = 0; r < tl.rows; r++) {
+        const k = c * tl.rows + r;
+        const comp = log.comps.find((x) => x.name === `Hold Cell ${c + 1}-${r + 1}`);
+        assert.ok(comp, `hold cell ${c + 1}-${r + 1}`);
+        const pval = evalKeys(tl.hold.keys[k], t);
+        const lock = tl.hold.locks.find((l) => l.c === c && l.r === r && l.from <= t && l.to > t);
+        assert.deepEqual(shownSymbols(comp, pval, 0, L.cellH, 1), [lock ? lock.sym : tl.lay.blankSym], `cell ${c},${r} round ${R.index}`);
+        assert.deepEqual(shownLabels(comp, pval, 0, L.cellH, 1, t), lock ? { 0: fmt(lock.value) } : {}, `label ${c},${r} round ${R.index}`);
+      }
+    }
+  }
+  const main = log.comps.find((x) => x.name === p.name);
+  assert.equal(main.layers.list.filter((l) => /^Coin Lock /.test(l.name)).length, tl.hold.locks.length);
+  assert.ok(main.layers.list.some((l) => l.name === 'Respins Counter'));
+  assert.ok(log.comps.some((x) => / Grand Odometer$/.test(x.name)), 'grand counter');
+  assert.ok(log.comps.some((x) => x.name === 'Symbol 16 Empty cell'));
+});
+
+test('AE trigger round: coins land on the reels with their values, then carry onto the board', () => {
+  const p = defaultProject();
+  p.rounds = [newRound('hstrigger', { seed: 4, coinsIn: 5 }), newRound('respin', { seed: 5, coinsIn: 1 }), newRound('collect', { seed: 6 })];
+  const { tl, list, log } = run(p);
+  assert.deepEqual(log.alerts, [], log.alerts.join('\n'));
+  const { L } = list[0];
+  const trig = tl.rounds[0];
+  const t = trig.spinEnd + 0.01;
+  for (let c = 0; c < tl.reels; c++) {
+    const comp = log.comps.find((x) => x.name === `Reel ${c + 1}`);
+    const pval = evalKeys(tl.stripKeys[c], t);
+    const want = {};
+    for (const cn of trig.win.coins) if (cn.c === c) want[cn.r] = formatPrize(cn.value, p.machine.currency, p.machine.decimals);
+    assert.deepEqual(shownLabels(comp, pval, tl.peek, L.cellH, tl.rows, t), want, `reel ${c}`);
+  }
+  const main = log.comps.find((x) => x.name === p.name);
+  const reel1 = main.layers.list.find((l) => l.name === 'Reel 1');
+  assert.match(reel1.property('ADBE Transform Group').property('ADBE Opacity').expression, /HW/);
+});
+
+test('AE wheel game: no machine, and the wheel hands over from round to round', () => {
+  const p = defaultProject();
+  p.game = 'wheel';
+  p.rounds = [newRound('wheel', { seed: 1, wheelSegment: 2 }), newRound('wheel', { seed: 2, wheelSegment: 5 }), newRound('wheel', { seed: 3, wheelSegment: 9 })];
+  const { tl, log, list } = run(p);
+  assert.deepEqual(log.alerts, [], log.alerts.join('\n'));
+  assert.ok(!log.comps.some((c) => /^Reel \d/.test(c.name)));
+  const main = log.comps.find((c) => c.name === p.name);
+  assert.ok(!main.layers.list.some((l) => /Machine|Win Meter/.test(l.name)));
+  const fx = main.layers.list.filter((l) => /^R\d\d /.test(l.name)).sort((a, b) => a.startTime - b.startTime);
+  assert.equal(fx.length, 3);
+  const data = list[0].data;
+  for (let i = 0; i < 2; i++) assert.ok(Math.abs(fx[i].startTime + fx[i].source.duration - data.rounds[i + 1].start) < 1e-6, 'no gap and no overlap');
+  void tl;
 });

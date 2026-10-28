@@ -6,13 +6,14 @@
 // cues. Rendering is a pure function of time, so the preview, the MP4 and the
 // After Effects script agree.
 
-import { mulberry32, hashSeed } from './rng.js';
+import { mulberry32, hashSeed, shuffle } from './rng.js';
 import { key, pushKeys, evalKeys } from './keys.js';
 import { generatePaylines } from './paylines.js';
 import { makeContext, randomGrid, resolveRound, fillSymbol, tumbleEnabled } from './outcomes.js';
 import { orderList, ranksOf, cellOrderList } from './order.js';
 import { keyOf } from './grid.js';
-import { LINE_WINS, BIG_WINS, SCATTER_WINS } from './defaults.js';
+import { LINE_WINS, BIG_WINS, SCATTER_WINS, GAME_OUTCOMES } from './defaults.js';
+import { holdSpinConfig, pickCoinValue, coinTypeIndex } from './coins.js';
 
 export const STRIP_PAD = 4;
 
@@ -155,7 +156,7 @@ export function buildTimeline(project) {
   const stripRows = mode === 'cells' ? 1 : rows;
   const strips = [];
   const stripKeys = [];
-  const stripMults = [];
+  const stripValues = [];
   const pos = [];
   for (let i = 0; i < nStrips; i++) {
     const strip = [];
@@ -165,7 +166,7 @@ export function buildTimeline(project) {
     ensure(strip, STRIP_PAD + stripRows + 3, ctx, rngInit);
     strips.push(strip);
     stripKeys.push([key(0, STRIP_PAD)]);
-    stripMults.push(new Map());
+    stripValues.push(new Map());
     pos.push(STRIP_PAD);
   }
 
@@ -185,6 +186,96 @@ export function buildTimeline(project) {
   let fs = null;
   let stickyOpen = new Map();
   let actorId = 0;
+  const game = project.game || 'slot';
+
+  // ---- Hold & Spin board ----
+  // Its own per-cell strips of coins and empty cells, shown in windows over
+  // the machine's reels. Coins that land lock; the counter counts respins.
+  const lay = ctx.lay;
+  const hsCfg = holdSpinConfig(project);
+  const nCells = reels * rows;
+  const rngHS = mulberry32(hashSeed(project.seed, 'holdspin'));
+  const hsStrips = [];
+  const hsKeys = [];
+  const hsVals = [];
+  const hsPos = [];
+  const hsFill = (rng) => {
+    const x = rng();
+    if (x < 0.72) return [lay.blankSym, null];
+    const ti = x > 0.985 && hsCfg.coins.length > 1 ? 1 + Math.floor(rng() * (hsCfg.coins.length - 1)) : 0;
+    return [lay.coinBase + ti, pickCoinValue(hsCfg.coins[ti], rng) * bet];
+  };
+  const hsEnsure = (k, len, rng) => {
+    const strip = hsStrips[k];
+    while (strip.length < len) {
+      const [sym, val] = hsFill(rng);
+      if (val != null) hsVals[k].set(strip.length, val);
+      strip.push(sym);
+    }
+  };
+  const hsSet = (k, j, sym, val) => {
+    hsStrips[k][j] = sym;
+    if (val != null) hsVals[k].set(j, val);
+    else hsVals[k].delete(j);
+  };
+  for (let k = 0; k < nCells; k++) {
+    hsStrips.push([]);
+    hsVals.push(new Map());
+    hsEnsure(k, STRIP_PAD + 5, rngHS);
+    hsSet(k, STRIP_PAD, lay.blankSym, null);
+    hsKeys.push([key(0, STRIP_PAD)]);
+    hsPos.push(STRIP_PAD);
+  }
+  // Show a symbol on a cell from time t on, without spinning.
+  const hsJump = (k, t, sym, val) => {
+    const P2 = hsStrips[k].length + 2;
+    hsEnsure(k, P2 + 5, rngHS);
+    hsSet(k, P2, sym, val);
+    const ks = hsKeys[k];
+    if (t <= 0.02 && ks.length === 1) ks[0] = key(0, P2);
+    else pushKeys(ks, [key(t - 0.011, hsPos[k], { hold: true }), key(t - 0.001, P2, { hold: true })]);
+    hsPos[k] = P2;
+  };
+  const hsWindows = [];
+  const hsLocks = [];
+  const hsCounterKeys = [key(0, 0, { hold: true })];
+  const collectKeys = [key(0, 0, { hold: true })];
+  let hs = null;
+  const openHold = (t, fadeIn, coins) => {
+    hs = { start: t, counter: hsCfg.respins, locked: new Map(), full: false, window: { start: t, end: Infinity, fadeIn, fadeOut: 0.4 } };
+    hsWindows.push(hs.window);
+    const at = new Map(coins.map((cn) => [K(cn.c, cn.r), cn]));
+    for (let k = 0; k < nCells; k++) {
+      const cn = at.get(k);
+      const appear = cn && cn.appear != null ? Math.max(t, cn.appear) : t;
+      const now = cn && appear <= t + 1e-6;
+      hsJump(k, t, now ? cn.sym : lay.blankSym, now ? cn.value : null);
+      if (cn && !now) hsJump(k, appear, cn.sym, cn.value);
+      if (cn) {
+        const lock = { c: cn.c, r: cn.r, sym: cn.sym, value: cn.value, from: appear, to: Infinity, special: cn.sym !== lay.coinBase, start: true };
+        hs.locked.set(k, lock);
+        hsLocks.push(lock);
+        if (!now) sfx.push({ t: appear, type: 'coinLand', special: lock.special });
+      }
+    }
+    if (hs.locked.size >= nCells) hs.full = true;
+    pushKeys(hsCounterKeys, [key(t, hsCfg.respins, { hold: true })]);
+    pushKeys(collectKeys, [key(t, 0, { hold: true })]);
+    pushKeys(meterKeys, [key(t, 0, { hold: true })]);
+  };
+  const closeHold = (t) => {
+    if (!hs) return;
+    hs.window.end = t;
+    for (const l of hs.locked.values()) if (!Number.isFinite(l.to)) l.to = t;
+    hs = null;
+  };
+  // Starting coins in random cells, popping in one after another.
+  const startCoins = (n, rng, from) =>
+    shuffle(rng, range(nCells))
+      .slice(0, Math.min(nCells - 1, n))
+      .map((k, i) => ({ c: Math.floor(k / rows), r: k % rows, sym: lay.coinBase, value: pickCoinValue(hsCfg.coins[0], rng) * bet, appear: from + i * 0.09 }));
+  if (game === 'holdspin') openHold(0, 0, startCoins(hsCfg.startCoins, mulberry32(hashSeed(project.seed, 'hsstart')), 0.3));
+  let wheelShown = false;
 
   const closeBlock = (t) => {
     if (!fs) return;
@@ -197,7 +288,11 @@ export function buildTimeline(project) {
   project.rounds.forEach((round, i) => {
     const rng = mulberry32(hashSeed(project.seed, round.seed, i));
     const t0 = cursor;
-    if (fs && !round.free && round.outcome !== 'fstotal') closeBlock(t0);
+    // Each game plays only its own kinds of round.
+    const allowed = GAME_OUTCOMES[game] || GAME_OUTCOMES.slot;
+    const o = allowed.includes(round.outcome) ? round.outcome : game === 'wheel' ? 'wheel' : game === 'holdspin' ? 'respin' : 'none';
+    if (fs && !round.free && o !== 'fstotal') closeBlock(t0);
+    if (hs && game === 'slot' && o !== 'respin' && o !== 'collect') closeHold(t0);
     const stopOrderKind = round.stopOrder || sp.stopOrder || 'ltr';
     const stopOrder = orderList(stopOrderKind, reels, sp.customStop, rng);
     const startOrder = orderList(sp.startOrder || 'ltr', reels, sp.customStart, rng);
@@ -209,17 +304,18 @@ export function buildTimeline(project) {
       fsTotal: fs ? fs.total : 0,
       lastReel: stopOrder[stopOrder.length - 1],
     };
-    const res = resolveRound(ctx, project, round, rng, carry);
+    const res = resolveRound(ctx, project, o === round.outcome ? round : { ...round, outcome: o }, rng, carry);
     const { win } = res;
     const grid = res.grid;
-    const o = round.outcome;
     const mid = Math.max(0, num(round.midDuration, sp.midDuration));
     const reelInfo = [];
     const cellInfo = [];
     const actors = [];
     let actorsFrom = null;
     let spinEnd = t0;
-    const noSpin = o === 'fstotal';
+    // Respins spin the Hold & Spin board, not the machine; the wheel game
+    // and the Hold & Spin game never spin the machine.
+    const noSpin = o === 'fstotal' || o === 'respin' || o === 'collect' || game !== 'slot';
 
     // ---- anticipation: which reels (or cells) tease ----
     const anticReels = new Array(reels).fill(false);
@@ -254,7 +350,7 @@ export function buildTimeline(project) {
         pushKeys(stripKeys[c], keys);
         const strip = strips[c];
         ensure(strip, T, ctx, rng);
-        placeColumn(strip, T, grid[c], dir, rows, ctx, rng, stripMults[c], res.mult[c]);
+        placeColumn(strip, T, grid[c], dir, rows, ctx, rng, stripValues[c], res.mult[c]);
         ensure(strip, T + rows + 4, ctx, rng);
         if (win.nearMiss && win.nearMiss.reel === c) strip[win.nearMiss.position === 'above' ? T + rows : T - 1] = win.nearMiss.symbol;
         tmp[c] = { start: ts, stop, settle, antic: a ? { start: a.tSlow, end: stop } : null, from: pos[c], to: T };
@@ -286,7 +382,7 @@ export function buildTimeline(project) {
         pushKeys(stripKeys[idx], keys);
         const strip = strips[idx];
         ensure(strip, T, ctx, rng);
-        placeColumn(strip, T, [grid[c][r]], dir, 1, ctx, rng, stripMults[idx], [res.mult[c][r]]);
+        placeColumn(strip, T, [grid[c][r]], dir, 1, ctx, rng, stripValues[idx], [res.mult[c][r]]);
         ensure(strip, T + 5, ctx, rng);
         if (win.nearMiss && rank === cellOrder.length - 1) strip[win.nearMiss.position === 'above' ? T + 1 : T - 1] = win.nearMiss.symbol;
         cellInfo[idx] = { c, r, rank, start: ts, stop, settle, antic: a ? { start: a.tSlow, end: stop } : null };
@@ -340,6 +436,83 @@ export function buildTimeline(project) {
       sfx.push({ t: t0, type: 'spinLoop', dur: Math.max(0.2, Math.max(...reelInfo.map((r) => r.stop)) - t0) });
     }
 
+    for (const cn of win.coins || []) {
+      const landT = mode === 'cells' ? cellInfo[K(cn.c, cn.r)]?.stop : reelInfo[cn.c]?.stop;
+      if (landT != null) sfx.push({ t: landT + 0.02, type: 'coinLand', special: cn.type > 0 });
+    }
+
+    // ---- Hold & Spin respin: every empty cell spins on its own ----
+    let hsInfo = null;
+    if (o === 'respin') {
+      let tSpin = t0;
+      if (!hs) {
+        const n0 = hsCfg.startCoins;
+        openHold(t0, 0.4, startCoins(n0, rng, t0 + 0.45));
+        tSpin = t0 + 0.6 + n0 * 0.09;
+      }
+      const order = cellOrderList(sp.cellOrder || 'columns', reels, rows, stopOrder, rng).filter(([c, r]) => !hs.locked.has(K(c, r)));
+      const want = round.fill ? order.length : Math.max(0, Math.min(order.length, Math.round(Number(round.coinsIn)) || 0));
+      const before = hs.counter;
+      const hitSet = new Set(shuffle(rng, order.map(([c, r]) => K(c, r))).slice(0, want));
+      // Last chance: the coin that keeps the feature alive lands on the last cell to stop.
+      const lastK = order.length ? K(...order[order.length - 1]) : null;
+      if (want > 0 && before <= 1 && lastK != null && !hitSet.has(lastK)) {
+        hitSet.delete([...hitSet][0]);
+        hitSet.add(lastK);
+      }
+      const specials = (round.specials || []).map((id) => coinTypeIndex(project, id)).filter((x) => x > 0);
+      const typeOf = new Map(shuffle(rng, [...hitSet]).map((k, j) => [k, j < specials.length ? specials[j] : 0]));
+      const fills = want > 0 && want === order.length;
+      const teaseN = fills ? Math.min(2, order.length) : want > 0 && before <= 1 ? 1 : 0;
+      pushKeys(hsCounterKeys, [key(tSpin, Math.max(0, before - 1), { hold: true })]);
+      const cellsI = [];
+      let shift = 0;
+      let firstHit = Infinity;
+      const stag = Math.max(0.03, sp.stopStagger * 0.35);
+      const midHS = Math.max(0, num(round.midDuration, hsCfg.respinMid));
+      order.forEach(([c, r], rank) => {
+        const k = K(c, r);
+        const antic = rank >= order.length - teaseN;
+        const ts = tSpin + rank * 0.012;
+        const normalStop = tSpin + sp.startDuration + midHS + sp.endDuration + rank * stag;
+        const prevShift = shift;
+        if (antic) shift += sp.anticipation * 0.6;
+        const stop = Math.max(normalStop + shift, ts + sp.startDuration + 0.25);
+        const a = antic ? { tSlow: normalStop + prevShift - sp.endDuration } : null;
+        const { keys, T, settle } = reelKeysFor({ sp, ts, P0: hsPos[k], v, stop, antic: a, minDistance: 3 });
+        pushKeys(hsKeys[k], keys);
+        hsEnsure(k, T + 6, rng);
+        const hit = hitSet.has(k);
+        const ti = hit ? typeOf.get(k) : -1;
+        const sym = hit ? lay.coinBase + ti : lay.blankSym;
+        const value = hit ? pickCoinValue(hsCfg.coins[ti], rng) * bet : null;
+        hsSet(k, T, sym, value);
+        hsPos[k] = T;
+        cellsI.push({ c, r, k, rank, start: ts, stop, settle, antic: a ? { start: a.tSlow, end: stop } : null, hit, sym, value, special: ti > 0 });
+        if (hit) {
+          const lock = { c, r, sym, value, from: stop, to: Infinity, special: ti > 0 };
+          hs.locked.set(k, lock);
+          hsLocks.push(lock);
+          firstHit = Math.min(firstHit, stop);
+          sfx.push({ t: stop, type: 'coinLand', special: ti > 0, pan: reels > 1 ? (c / (reels - 1)) * 2 - 1 : 0 });
+        } else sfx.push({ t: stop, type: 'cellStop', pan: reels > 1 ? (c / (reels - 1)) * 2 - 1 : 0 });
+        if (a) sfx.push({ t: a.tSlow, type: 'anticipation', dur: stop - a.tSlow });
+      });
+      if (firstHit < Infinity && hsCfg.reset) {
+        pushKeys(hsCounterKeys, [key(firstHit, hsCfg.respins, { hold: true })]);
+        if (before - 1 < hsCfg.respins) sfx.push({ t: firstHit + 0.05, type: 'respinReset' });
+      }
+      hs.counter = firstHit < Infinity && hsCfg.reset ? hsCfg.respins : Math.max(0, before - 1);
+      if (hs.locked.size >= nCells) hs.full = true;
+      spinEnd = cellsI.length ? Math.max(...cellsI.map((x) => x.settle)) : tSpin;
+      if (cellsI.length) sfx.push({ t: tSpin, type: 'spinLoop', dur: Math.max(0.2, Math.max(...cellsI.map((x) => x.stop)) - tSpin) });
+      if (hs.full && fills) {
+        flashes.push({ t: spinEnd, amp: 0.5, dur: 0.35 });
+        shakes.push({ t: spinEnd, amp: 0.8, dur: 0.45 });
+      }
+      hsInfo = { kind: 'respin', tSpin, cells: cellsI, before, after: hs.counter, hits: cellsI.filter((x) => x.hit).length, coins: hs.locked.size, full: hs.full };
+    }
+
     // ---- sticky wilds: held cells shown from the moment they land ----
     if (fs && round.free && !noSpin && ctx.wildSym != null) {
       for (const [c, r] of win.wilds) {
@@ -354,11 +527,12 @@ export function buildTimeline(project) {
       }
     }
 
-    const pres = { start: spinEnd + 0.08 };
+    const pres = { start: spinEnd + 0.08, holdspin: hsInfo };
     let tcur = spinEnd + 0.08;
     let end;
-    // HUD win meter resets when a new spin starts.
-    if (!noSpin) pushKeys(meterKeys, [key(t0, 0, { hold: true })]);
+    // HUD win meter resets when a new spin starts (Hold & Spin rounds keep it
+    // for the collect).
+    if (o !== 'fstotal' && o !== 'respin' && o !== 'collect') pushKeys(meterKeys, [key(t0, 0, { hold: true })]);
 
     // ---- expanding wilds ----
     if (win.expand.length) {
@@ -527,14 +701,18 @@ export function buildTimeline(project) {
       sfx.push({ t: bs, type: 'fsTrigger' }, { t: bs, type: 'coins', dur: 1.2 });
       end = pres.banner.end;
     } else if (o === 'wheel') {
-      const cel = num(tm.celebrate, 1.8);
-      pres.celebrate = { start: tcur, end: tcur + cel };
+      // The wheel game keeps the wheel on screen from spin to spin.
+      const wheelGame = game === 'wheel';
+      const cont = wheelGame && wheelShown;
+      const keepOn = wheelGame && i < project.rounds.length - 1;
+      const cel = noSpin ? 0 : num(tm.celebrate, 1.8);
+      if (cel > 0) pres.celebrate = { start: tcur, end: tcur + cel };
       const segs = project.wheel.segments;
       const N = Math.max(2, segs.length);
       const segment = Math.min(N - 1, Math.max(0, round.wheelSegment | 0));
-      const inStart = tcur + cel - 0.2;
+      const inStart = cont ? tcur - 2 : tcur + Math.max(0, cel - 0.2);
       const inEnd = inStart + 0.9;
-      const spinStart = inEnd + 0.15;
+      const spinStart = cont ? tcur + 0.35 : inEnd + 0.15;
       const spinDur = Math.max(2, num(tm.wheelSpin, 5.8));
       const spinEnd2 = spinStart + spinDur;
       const segDeg = 360 / N;
@@ -571,17 +749,78 @@ export function buildTimeline(project) {
       wheelAngle = a0 + total;
       const countStart = spinEnd2 + 0.65;
       const countEnd = countStart + 2.2;
-      const outStart = countEnd + 1.3;
-      pres.wheel = { inStart, inEnd, spinStart, spinEnd: spinEnd2, prizeStart: spinEnd2 + 0.25, countStart, countEnd, outStart, outEnd: outStart + 0.8, segment, amount: win.amount };
+      const outStart = keepOn ? countEnd + 1000 : countEnd + 1.3;
+      pres.wheel = { inStart, inEnd, spinStart, spinEnd: spinEnd2, prizeStart: spinEnd2 + 0.25, countStart, countEnd, outStart, outEnd: outStart + 0.8, segment, amount: win.amount, cont, titleIn: tcur, plaqueEnd: keepOn ? countEnd + 1.3 : outStart + 0.8 };
+      wheelShown = wheelGame;
       pres.meter = { start: countStart, end: countEnd };
       pushKeys(meterKeys, [key(countStart, 0, { outSpeed: (win.amount / 2.2) * 1.25 }), key(countEnd, win.amount, { inInf: 0.6, hold: true })]);
       flashes.push({ t: inStart + 0.1, amp: 0.4, dur: 0.35 }, { t: spinEnd2 + 0.25, amp: 0.5, dur: 0.35 });
       shakes.push({ t: spinEnd2 + 0.25, amp: 0.8, dur: 0.5 });
-      sfx.push({ t: inStart, type: 'whoosh' }, { t: spinEnd2 + 0.2, type: 'wheelLand' }, { t: countStart, type: 'count', dur: 2.2 }, { t: spinEnd2 + 0.25, type: 'coins', dur: 1.5 }, { t: countEnd, type: 'countEnd' }, { t: outStart, type: 'whoosh' });
-      end = pres.wheel.outEnd;
+      if (!cont) sfx.push({ t: inStart, type: 'whoosh' });
+      if (!keepOn) sfx.push({ t: outStart, type: 'whoosh' });
+      sfx.push({ t: spinEnd2 + 0.2, type: 'wheelLand' }, { t: countStart, type: 'count', dur: 2.2 }, { t: spinEnd2 + 0.25, type: 'coins', dur: 1.5 }, { t: countEnd, type: 'countEnd' });
+      end = keepOn ? pres.wheel.plaqueEnd : pres.wheel.outEnd;
     } else if (o === 'fstotal') {
       pres.overlay = overlay(t0 + 0.2, win.amount, ['total']);
       end = pres.overlay.end;
+    } else if (o === 'hstrigger') {
+      // Coins glow, the banner announces the feature, and under it the board
+      // turns into the Hold & Spin board keeping the coins where they landed.
+      const cel = num(tm.celebrate, 1.8) * 0.75;
+      pres.celebrate = { start: tcur, end: tcur + cel };
+      const bs = tcur + cel - 0.3;
+      pres.banner = { start: bs, end: bs + num(tm.banner, 2.6), kind: 'holdspin', freeSpins: hsCfg.respins, amount: 0 };
+      closeHold(bs);
+      openHold(bs + 0.6, 0.4, (win.coins || []).map((cn) => ({ ...cn })));
+      flashes.push({ t: bs + 0.05, amp: 0.4, dur: 0.3 });
+      shakes.push({ t: bs + 0.1, amp: 0.6, dur: 0.4 });
+      sfx.push({ t: bs, type: 'fsTrigger' }, { t: bs, type: 'whoosh' });
+      end = pres.banner.end;
+    } else if (o === 'respin') {
+      end = tcur + (hsInfo && hsInfo.hits ? 0.45 : 0.22);
+    } else if (o === 'collect') {
+      if (!hs || !hs.locked.size) {
+        end = tcur + 0.5;
+      } else {
+        // Every coin flashes and its value flies into the collect plaque,
+        // reel by reel; a full board adds the grand prize; then the total.
+        const locks = [...hs.locked.values()].sort((a, b) => a.c - b.c || a.r - b.r);
+        const n = locks.length;
+        const per = Math.max(0.11, Math.min(num(tm.collectEach, 0.22), 5 / n));
+        let sum = 0;
+        const t1 = tcur + 0.35;
+        const items = locks.map((l, j) => {
+          const at = t1 + j * per;
+          const arrive = at + 0.42;
+          const prev = sum;
+          sum += l.value;
+          pushKeys(collectKeys, [key(arrive, prev), key(arrive + 0.1, sum, { hold: true })]);
+          pushKeys(meterKeys, [key(arrive, prev), key(arrive + 0.1, sum, { hold: true })]);
+          sfx.push({ t: at, type: 'collect', i: j, n });
+          l.collectAt = at;
+          return { c: l.c, r: l.r, sym: l.sym, value: l.value, at, arrive, special: l.special };
+        });
+        let tA = items[n - 1].arrive + 0.45;
+        if (hs.full && hsCfg.grand.enabled) {
+          const g = Math.max(0, Number(hsCfg.grand.value) || 0) * bet;
+          const cs = tA + 0.55;
+          const ce = cs + 1.4;
+          pres.grand = { start: tA, end: ce + 1.0, amount: g, countStart: cs, countEnd: ce, keys: [key(cs, 0, { outSpeed: (g / 1.4) * 1.25 }), key(ce, g, { inInf: 0.6, hold: true })] };
+          pushKeys(collectKeys, [key(cs, sum, { outSpeed: (g / 1.4) * 1.25 }), key(ce, sum + g, { inInf: 0.6, hold: true })]);
+          pushKeys(meterKeys, [key(cs, sum, { outSpeed: (g / 1.4) * 1.25 }), key(ce, sum + g, { inInf: 0.6, hold: true })]);
+          sfx.push({ t: tA, type: 'bigWin' }, { t: tA, type: 'whoosh' }, { t: cs, type: 'count', dur: 1.4, big: true }, { t: cs, type: 'coins', dur: 1.4 }, { t: ce, type: 'countEnd' });
+          flashes.push({ t: tA + 0.05, amp: 0.55, dur: 0.35 });
+          shakes.push({ t: tA + 0.1, amp: 1, dur: 0.5 });
+          sum += g;
+          tA = pres.grand.end - 0.1;
+        }
+        pres.collect = { start: tcur, items, end: tA, total: sum, per };
+        win.amount = sum;
+        cum = sum;
+        pres.overlay = overlay(tA, sum, ['total']);
+        closeHold(pres.overlay.end + 0.45);
+        end = pres.overlay.end + 0.45;
+      }
     } else {
       end = tcur + 0.5;
     }
@@ -595,7 +834,7 @@ export function buildTimeline(project) {
         const multCol = mode === 'cells' ? [res.finalMult[Math.floor(s / rows)][s % rows]] : res.finalMult[s];
         const P2 = strips[s].length + 3;
         ensure(strips[s], P2, ctx, rng);
-        placeColumn(strips[s], P2, col, dir, stripRows, ctx, rng, stripMults[s], multCol);
+        placeColumn(strips[s], P2, col, dir, stripRows, ctx, rng, stripValues[s], multCol);
         ensure(strips[s], P2 + stripRows + 4, ctx, rng);
         pushKeys(stripKeys[s], [key(next - 0.02, pos[s], { hold: true }), key(next - 0.01, P2, { hold: true })]);
         pos[s] = P2;
@@ -657,6 +896,11 @@ export function buildTimeline(project) {
   if (fs) closeBlock(cursor);
 
   const duration = Math.max(1, cursor + num(tm.outro, 0.9));
+  if (hs) {
+    hs.window.fadeOut = 0;
+    closeHold(duration);
+  }
+  for (const k of hsKeys) pushKeys(k, [key(duration, k[k.length - 1].v)]);
   for (const s of stickies) if (!Number.isFinite(s.to)) s.to = duration;
   for (const b of fsBlocks) if (!Number.isFinite(b.end)) b.end = duration;
   for (const R of rounds) for (const a of R.actors) if (!Number.isFinite(a.tOut)) a.tOut = R.next;
@@ -674,7 +918,7 @@ export function buildTimeline(project) {
     paylines,
     strips,
     stripKeys,
-    stripMults,
+    stripValues,
     reelKeys: mode === 'reels' ? stripKeys : [],
     meterKeys,
     fsTotalKeys,
@@ -688,7 +932,21 @@ export function buildTimeline(project) {
     initialGrid,
     tiers,
     orbSym: ctx.orbSym,
+    lay,
+    game,
+    hold: { strips: hsStrips, keys: hsKeys, values: hsVals, windows: hsWindows, locks: hsLocks, counterKeys: hsCounterKeys, collectKeys, respins: hsCfg.respins },
   };
+}
+
+// How much of the Hold & Spin board shows at time t (0 = the machine's reels).
+export function holdAlpha(tl, t) {
+  for (const w of tl.hold.windows) {
+    if (t < w.start || t > w.end) continue;
+    const a = w.fadeIn > 0 ? (t - w.start) / w.fadeIn : 1;
+    const b = w.fadeOut > 0 ? (w.end - t) / w.fadeOut : 1;
+    return Math.max(0, Math.min(1, a, b));
+  }
+  return 0;
 }
 
 function range(n) {

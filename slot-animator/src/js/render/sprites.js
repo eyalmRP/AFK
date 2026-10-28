@@ -3,7 +3,8 @@
 // Built once per project change so each frame is mostly cheap blits.
 
 import { THEMES } from '../core/defaults.js';
-import { paintBuiltin, metalGradient, roundRect, starPath, sparkle, METALS } from './paint.js';
+import { symbolLayout, holdSpinConfig } from '../core/coins.js';
+import { paintBuiltin, paintCoinSymbol, paintEmptyCell, metalGradient, roundRect, starPath, sparkle, METALS } from './paint.js';
 
 export function canvas(w, h) {
   const c = document.createElement('canvas');
@@ -40,7 +41,7 @@ export async function loadProjectImages(project) {
       return paintBuiltin(s.builtin || 'seven', 512, font);
     })
   );
-  if (!project.symbols.some((s) => s.role === 'multiplier')) symbols.push(paintBuiltin('orb', 512, font));
+  symbols.push(...(await extraSymbolImages(project, font)));
   const opt = async (src) => {
     if (!src) return null;
     try {
@@ -56,6 +57,30 @@ export async function loadProjectImages(project) {
     frame: await opt(project.assets.frame),
     logo: await opt(project.assets.logo),
   };
+}
+
+// The symbols after the project's own (see core/coins.js): the built-in
+// multiplier orb when needed, one image per Hold & Spin coin type, and the
+// empty cell. Uploaded art wins over the painted stand-ins.
+export async function extraSymbolImages(project, font, load = loadImage) {
+  const lay = symbolLayout(project);
+  const hs = holdSpinConfig(project);
+  const tryLoad = async (src, fallback) => {
+    if (src) {
+      try {
+        const img = await load(src);
+        if (img) return img;
+      } catch {
+        // fall back to the painted art
+      }
+    }
+    return fallback();
+  };
+  const out = [];
+  if (lay.virtualOrb) out.push(paintBuiltin('orb', 512, font));
+  for (const ct of hs.coins) out.push(await tryLoad(ct.src, () => paintCoinSymbol(512, ct.palette, ct.label, font)));
+  out.push(await tryLoad(hs.emptySrc, () => paintEmptyCell(512)));
+  return out;
 }
 
 // A symbol's win animation: a PNG sequence or a sprite sheet. Returns the
@@ -671,6 +696,8 @@ export function buildResources(project, L, images) {
   make('freespins', 'gold', 0.8);
   make('wheel', 'gold', 0.7);
   make('nearmiss', 'silver', 0.55);
+  make('holdspin', 'gold', 0.8);
+  make('grand', 'fire', 1.05);
   const wheelR = Math.round(Math.min(L.H * 0.36, L.W * 0.4));
   const segs = project.wheel.segments.length >= 2 ? project.wheel.segments : [{ label: '?', value: 0 }, { label: '?', value: 0 }];
   return {
@@ -685,6 +712,9 @@ export function buildResources(project, L, images) {
     titles,
     tierPalette,
     winAnim,
+    // Coin art painted with a label puts the value a little higher.
+    coinLabelled: holdSpinConfig(project).coins.map((c) => !!c.label && !c.src),
+    coinPalettes: holdSpinConfig(project).coins.map((c) => c.palette || 'gold'),
     titlePx,
     coin: paintCoin(Math.round(L.cellW * 0.5)),
     glow: paintGlow(256),

@@ -12,9 +12,29 @@ export const OUTCOMES = [
   { id: 'bonus', label: 'Bonus trigger', list: 'Bonus', short: 'Bonus', color: '#e36cff' },
   { id: 'wheel', label: 'Wheel of Fortune bonus', list: 'Wheel bonus', short: 'Wheel', color: '#ff5fd2' },
   { id: 'fstotal', label: 'Free spins total', list: 'Free spins total', short: 'Total', color: '#ff3d7f' },
+  { id: 'hstrigger', label: 'Hold & Spin trigger (coins land)', list: 'Hold & Spin trigger', short: 'H&S', color: '#ffd23d' },
+  { id: 'respin', label: 'Respin (coins land, or nothing)', list: 'Respin', short: 'Respin', color: '#41c9ff' },
+  { id: 'collect', label: 'Collect the coins', list: 'Collect', short: 'Collect', color: '#ff8a1f' },
 ];
 
 export const OUTCOME_BY_ID = Object.fromEntries(OUTCOMES.map((o) => [o.id, o]));
+
+// Game types. A slot machine plays any round; Hold & Spin is a board of
+// per-cell respins where coins land and lock; the wheel game is just the
+// Wheel of Fortune with no machine.
+export const GAMES = [
+  { id: 'slot', label: 'Slot machine', hint: 'Reels, wins, tumbles, free spins, bonus rounds. A Hold & Spin trigger round switches to the coin board.' },
+  { id: 'holdspin', label: 'Hold & Spin', hint: 'Every cell spins on its own and lands a coin or stays empty. Coins lock; respins run until the counter runs out or the board is full.' },
+  { id: 'wheel', label: 'Wheel only', hint: 'The Wheel of Fortune on its own, spin after spin, with no machine.' },
+];
+
+export const GAME_OUTCOMES = {
+  slot: OUTCOMES.map((o) => o.id),
+  holdspin: ['respin', 'collect', 'wheel'],
+  wheel: ['wheel'],
+};
+
+export const HS_OUTCOMES = ['hstrigger', 'respin', 'collect'];
 
 export const LINE_WINS = ['small', 'medium', 'big'];
 export const BIG_WINS = ['big'];
@@ -166,6 +186,26 @@ export const DEFAULT_SEGMENTS = [
 ];
 
 export const TITLE_PALETTE_NAMES = ['gold', 'fire', 'violet', 'aqua', 'rose', 'silver'];
+export const COIN_PALETTES = ['gold', 'fire', 'violet', 'aqua', 'emerald', 'rose', 'silver'];
+
+// The Hold & Spin coin set: its own symbols, separate from the machine's.
+// Values are in bets; a coin shows value × bet.
+export function defaultHoldSpin() {
+  return {
+    respins: 3,
+    reset: true,
+    startCoins: 0,
+    respinMid: 0.45,
+    coins: [
+      { id: 'coin', name: 'Coin', label: '', palette: 'gold', values: [1, 2, 3, 5, 8, 10, 15, 20], src: null },
+      { id: 'mega', name: 'Mega coin', label: 'MEGA', palette: 'fire', values: [50], src: null },
+      { id: 'super', name: 'Super coin', label: 'SUPER', palette: 'violet', values: [100], src: null },
+      { id: 'ultra', name: 'Ultra coin', label: 'ULTRA', palette: 'aqua', values: [250], src: null },
+    ],
+    emptySrc: null,
+    grand: { enabled: true, value: 1000 },
+  };
+}
 
 export function defaultTiers() {
   return [
@@ -196,6 +236,10 @@ export const SOUND_EVENTS = [
   { id: 'wheelTick', label: 'Wheel peg tick', group: 'reels' },
   { id: 'wheelLand', label: 'Wheel lands', group: 'bigwin' },
   { id: 'whoosh', label: 'Whoosh', group: 'ui' },
+  { id: 'coinLand', label: 'Coin lands and locks', group: 'wins' },
+  { id: 'cellStop', label: 'Empty cell stops', group: 'reels' },
+  { id: 'respinReset', label: 'Respins reset', group: 'ui' },
+  { id: 'collect', label: 'Coin collected', group: 'coins' },
 ];
 
 let roundCounter = 0;
@@ -226,6 +270,9 @@ export function newRound(outcome = 'none', extra = {}) {
     stopOrder: null,
     wheelSegment: 3,
     freeSpins: 10,
+    coinsIn: outcome === 'hstrigger' ? 6 : outcome === 'respin' ? 1 : 0,
+    specials: [],
+    fill: false,
     scatterCount: null,
     nearMissReel: null,
     ...extra,
@@ -235,6 +282,7 @@ export function newRound(outcome = 'none', extra = {}) {
 function baseProject() {
   return {
     version: 2,
+    game: 'slot',
     name: 'Royal Sevens',
     seed: 7,
     canvas: { width: 1920, height: 1080, fps: 30 },
@@ -295,6 +343,8 @@ function baseProject() {
         wheel: 'WHEEL BONUS',
         nearmiss: 'SO CLOSE!',
         total: 'TOTAL WIN',
+        holdspin: 'HOLD & SPIN',
+        grand: 'GRAND',
       },
     },
     tiers: defaultTiers(),
@@ -317,6 +367,7 @@ function baseProject() {
       tumbleFall: 0.34,
       multEach: 0.5,
       expand: 0.7,
+      collectEach: 0.22,
     },
     wheel: {
       segments: DEFAULT_SEGMENTS.map((s) => ({ ...s })),
@@ -331,6 +382,7 @@ function baseProject() {
       custom: {},
     },
     output: { transparent: false, formats: ['1920x1080'] },
+    holdspin: defaultHoldSpin(),
     symbols: BUILTIN_SYMBOLS.map((s, i) => ({ id: `s${i}`, src: null, winAnim: null, ...s })),
     assets: { background: null, frame: null, logo: null },
     rounds: [],
@@ -397,8 +449,38 @@ export function cellsProject() {
   return p;
 }
 
+// Hold & Spin: the board starts with a few coins, respins land more (or
+// nothing), the counter resets on every hit, and the last respins fill the
+// board for the grand.
+export function holdSpinProject() {
+  const p = baseProject();
+  p.game = 'holdspin';
+  p.name = 'Coin Rush';
+  p.seed = 61;
+  Object.assign(p.machine, { theme: 'royal', title: 'COIN RUSH' });
+  p.grid.curvature = 0;
+  p.grid.peek = 0;
+  p.holdspin.startCoins = 4;
+  const r = (coinsIn, extra = {}) => newRound('respin', { coinsIn, ...extra });
+  p.rounds = [r(2, { seed: 71 }), r(0, { seed: 72 }), r(1, { seed: 73 }), r(0, { seed: 74 }), r(0, { seed: 75 }), r(2, { seed: 76, specials: ['mega'] }), r(1, { seed: 77 }), r(0, { seed: 78 }), r(0, { seed: 79 }), r(1, { seed: 80, specials: ['super'] }), r(0, { seed: 81, fill: true, specials: ['ultra'] }), newRound('collect', { seed: 82 })];
+  return p;
+}
+
+// Just the wheel: three spins, the last one on the jackpot.
+export function wheelProject() {
+  const p = baseProject();
+  p.game = 'wheel';
+  p.name = 'Wheel of Fortune';
+  p.seed = 91;
+  p.machine.title = 'WHEEL OF FORTUNE';
+  p.rounds = [newRound('wheel', { seed: 92, wheelSegment: 2 }), newRound('wheel', { seed: 93, wheelSegment: 5 }), newRound('wheel', { seed: 94, wheelSegment: 3 })];
+  return p;
+}
+
 export const PRESETS = [
   { id: 'classic', label: 'Classic 5×3 paylines', make: defaultProject },
   { id: 'candy', label: 'Tumble 6×5 pay anywhere (Sweet Bonanza style)', make: candyProject },
   { id: 'cells', label: 'Per-cell spins 5×3', make: cellsProject },
+  { id: 'holdspin', label: 'Hold & Spin coins (fills the board)', make: holdSpinProject },
+  { id: 'wheel', label: 'Wheel of Fortune only', make: wheelProject },
 ];

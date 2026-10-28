@@ -5,6 +5,14 @@ symbol win animations), set up the reels and how the machine pays, sequence
 the spin rounds, tune the start/mid/end motion and the reel order, and export
 the result as an editable **After Effects project**.
 
+- Three games: a slot machine, Hold & Spin (a board of per-cell respins
+  where coins land and lock, or the cell stays empty; the counter resets on
+  every coin and the feature ends when it runs out or the board fills, then
+  every coin is collected), and the Wheel of Fortune on its own. A slot game
+  can trigger Hold & Spin from a spin that lands coins.
+- Hold & Spin has its own coin set: a regular coin with a list of values and
+  special coins (Mega, Super, Ultra or your own) with their own values,
+  colours, labels or uploaded art, plus the empty cell.
 - Pay modes: paylines, ways, pay anywhere (Sweet Bonanza style) and clusters.
 - Spin types: classic, staggered, turbo, tease, cascade drops and per-cell
   spins (hold and spin style). Start and stop order per project (left to
@@ -54,6 +62,7 @@ Everything is a pure function of time, built from one JSON project:
 | `src/js/core/outcomes.js` | Turns a round ("big win, 12 candies anywhere, two tumbles, x25 and x50") into symbol grids, one per tumble step. Filler is re-rolled until no unintended win remains, including wins the survivors would form after a collapse. |
 | `src/js/core/grid.js` | Win finding for every pay mode and the tumble collapse. |
 | `src/js/core/order.js` | Reel and cell start/stop orders. |
+| `src/js/core/coins.js` | The Hold & Spin coin set, and where coins, the multiplier orb and the empty cell sit in the symbol list. |
 | `src/js/core/timeline.js` | Schedules every round: reel or cell start/stop times, anticipation, tumble actors, wilds, multipliers, win presentations, the free spins block, the wheel, shakes, flashes and sound cues. Reel motion is stored as After Effects style keyframes (value + speed/influence eases). |
 | `src/js/core/keys.js` | Evaluates those keyframes with the same cubic Bézier After Effects uses, so exported curves play back identically. |
 | `src/js/core/layout.js` | Screen layout shared by the renderer and the exporter. |
@@ -77,6 +86,9 @@ Everything is a pure function of time, built from one JSON project:
   Trim Paths), win comps on the winning cells, cell frames, shockwaves,
   expanding wilds, multipliers flying into the total, tier titles, coins
   (expression physics), counters driven by `WIN CTRL > Amount`, the wheel rig.
+- `Hold and Spin/Hold Cell C-R`: one little reel per cell for the coin
+  board, on its own `Spin` slider, with the coin values as text layers; the
+  main comp adds lock frames, the respins counter and the collect total.
 - `Odometers/`: rolling-digit counters made of plain layers. `Odometer
   Digits` is the 0-9 strip shared by every counter; each counter's
   `ODO CTRL > Value` reads its source slider. Each column turns as the one

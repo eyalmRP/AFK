@@ -7,6 +7,7 @@
 import { pickWeighted, shuffle } from './rng.js';
 import { LINE_WINS, SCATTER_WINS } from './defaults.js';
 import { keyOf, cloneGrid, lineRuns, waysWins, anywhereWins, clusterWins, componentAt, collapse, countSymbols } from './grid.js';
+import { symbolLayout, holdSpinConfig, pickCoinValue, coinTypeIndex } from './coins.js';
 
 export function symbolRoles(symbols) {
   const roles = { normal: [], low: [], high: [], wild: [], scatter: [], bonus: [], multiplier: [] };
@@ -29,7 +30,11 @@ export function makeContext(project, paylines) {
   const roles = symbolRoles(symbols);
   const normal = new Set(roles.normal);
   const m = project.machine;
+  const lay = symbolLayout(project);
   return {
+    game: project.game || 'slot',
+    lay,
+    blankSym: lay.blankSym,
     reels: project.grid.reels,
     rows: project.grid.rows,
     paylines,
@@ -45,7 +50,7 @@ export function makeContext(project, paylines) {
     wildSym: roles.wild.length ? roles.wild[0] : null,
     scatterSym: roles.scatter[0] ?? roles.bonus[0] ?? null,
     // Without a multiplier symbol the renderer supplies a built-in orb here.
-    orbSym: roles.multiplier.length ? roles.multiplier[0] : symbols.length,
+    orbSym: lay.orbSym,
     payable: (s) => normal.has(s),
     weightOf: (i) => (symbols[i] ? Number(symbols[i].weight) || 0 : 0),
     tiers: project.tiers || [],
@@ -53,6 +58,8 @@ export function makeContext(project, paylines) {
 }
 
 export function fillSymbol(ctx, rng, exclude = null) {
+  // A Hold & Spin game's board is empty between coins.
+  if (ctx.game === 'holdspin') return ctx.blankSym;
   let pool = ctx.roles.normal;
   if (exclude && pool.length > 1) {
     const ex = exclude instanceof Set ? exclude : new Set([exclude]);
@@ -387,6 +394,22 @@ export function resolveRound(ctx, project, round, rng, carry = {}) {
     win.cells = win.scatters.slice();
     if (outcome !== 'nearmiss') win.amount = amountTotal;
     if (outcome === 'bonus' && !(round.amount != null && round.amount !== '')) win.amount = 0;
+  } else if (outcome === 'hstrigger') {
+    // Coins land among ordinary symbols; they carry into the Hold & Spin board.
+    const hs = holdSpinConfig(project);
+    const n = Math.max(1, Math.min(reels * rows - 1, Math.round(Number(round.coinsIn)) || 6));
+    const specials = (round.specials || []).map((id) => coinTypeIndex(project, id)).filter((i) => i > 0);
+    win.coins = [];
+    randomFreeCells(n).forEach(([c, r], i) => {
+      const ti = i < specials.length ? specials[i] : 0;
+      const value = pickCoinValue(hs.coins[ti], rng) * ctx.bet;
+      place(c, r, ctx.lay.coinBase + ti);
+      mult[c][r] = value;
+      win.coins.push({ c, r, sym: ctx.lay.coinBase + ti, value, type: ti });
+    });
+    sanitize(grid, ctx, rng, { locked, wildAt });
+    win.kind = 'coins';
+    win.cells = win.coins.map(({ c, r }) => [c, r]);
   } else if (outcome === 'fstotal') {
     win.kind = 'total';
     win.amount = round.amount != null && round.amount !== '' ? Number(round.amount) : carry.fsTotal || 0;

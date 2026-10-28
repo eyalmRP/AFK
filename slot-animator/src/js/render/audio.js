@@ -43,7 +43,7 @@ function noiseData() {
 }
 
 // How long each synth cue rings after its start (plus its own duration).
-const TAIL = { bigWin: 2.9, fsTrigger: 2.2, scatter: 1.2, wheelLand: 1.2, countEnd: 1.0, tierUp: 0.9, expand: 0.9, mult: 0.9, nearMiss: 0.8 };
+const TAIL = { bigWin: 2.9, fsTrigger: 2.2, scatter: 1.2, wheelLand: 1.2, countEnd: 1.0, tierUp: 0.9, expand: 0.9, mult: 0.9, nearMiss: 0.8, coinLand: 0.8, respinReset: 0.6 };
 
 function tailOf(e, custom) {
   const buf = custom.get(e.type);
@@ -273,6 +273,26 @@ function renderChunk(list, offset, length, sound, custom) {
     },
     nearMiss(e, o) {
       tone('sine', 520, e.t, 0.6, o, 0.14, { f1: 260 });
+    },
+    coinLand(e, o) {
+      tone('sine', 150, e.t, 0.18, o, 0.5, { f1: 62 });
+      tone('sine', 2637, e.t, 0.35, o, 0.12);
+      tone('sine', 3951, e.t + 0.01, 0.28, o, 0.07);
+      noise(e.t, 0.04, o, 0.16, { type: 'highpass', f0: 3500 });
+      if (e.special) [1046, 1318, 1568, 2093].forEach((f, i) => tone('triangle', f, e.t + 0.05 + i * 0.05, 0.3, o, 0.1));
+    },
+    cellStop(e, o) {
+      tone('sine', 260, e.t, 0.07, o, 0.16, { f1: 110 });
+      noise(e.t, 0.015, o, 0.05, { type: 'highpass', f0: 3000 });
+    },
+    respinReset(e, o) {
+      [880, 1175, 1760].forEach((f, i) => tone('triangle', f, e.t + i * 0.06, 0.22, o, 0.11));
+    },
+    collect(e, o) {
+      const f = 660 * Math.pow(2, ((e.i || 0) / Math.max(1, e.n || 1)) * 1.5);
+      tone('triangle', f, e.t, 0.12, o, 0.12);
+      tone('sine', f * 2, e.t + 0.02, 0.1, o, 0.06);
+      tone('sine', 3200, e.t + 0.42, 0.12, o, 0.06);
     },
   };
 

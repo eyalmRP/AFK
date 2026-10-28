@@ -22,7 +22,12 @@ import {
   TITLE_PALETTE_NAMES,
   defaultTiers,
   SOUND_EVENTS,
+  GAMES,
+  GAME_OUTCOMES,
+  HS_OUTCOMES,
+  COIN_PALETTES,
 } from '../core/defaults.js';
+import { holdSpinConfig, symbolLayout } from '../core/coins.js';
 import { buildTimeline, roundIndexAt } from '../core/timeline.js';
 import { computeLayout } from '../core/layout.js';
 import { evalVelocity } from '../core/keys.js';
@@ -30,7 +35,7 @@ import { lineColor, generatePaylines } from '../core/paylines.js';
 import { autoAmount, makeContext, defaultPattern, tumbleEnabled } from '../core/outcomes.js';
 import { orderList } from '../core/order.js';
 import { FORMAT_CHOICES } from '../core/ae-export.js';
-import { loadImage, loadWinAnim, buildResources, fontStack } from '../render/sprites.js';
+import { loadImage, loadWinAnim, buildResources, fontStack, extraSymbolImages } from '../render/sprites.js';
 import { paintBuiltin } from '../render/paint.js';
 import { renderFrame } from '../render/renderer.js';
 import { decodeCustomSounds, renderSoundtrack, audioBufferToWav } from '../render/audio.js';
@@ -199,8 +204,8 @@ async function loadImages(project) {
   const font = fontStack(project.effects.font);
   await withTimeout(document.fonts.load(`64px "${project.effects.font || 'Bungee'}"`).catch(() => null), 2500);
   const symbols = await Promise.all(project.symbols.map((s) => symbolImage(s, font)));
-  // Without a multiplier symbol the engine uses a built-in orb after the last symbol.
-  if (!project.symbols.some((s) => s.role === 'multiplier')) symbols.push(await symbolImage({ builtin: 'orb' }, font));
+  // Then the built-in orb (when needed), the Hold & Spin coins and the empty cell.
+  symbols.push(...(await extraSymbolImages(project, font, optImage)));
   return {
     symbols,
     winAnims: await Promise.all(project.symbols.map((s) => winAnimFor(s.winAnim))),
@@ -652,7 +657,7 @@ function renderSequence() {
   const addSel = h(
     'select',
     { id: 'add-outcome', 'aria-label': 'Outcome for the new round' },
-    OUTCOMES.map((o) => h('option', { value: o.id }, o.label))
+    OUTCOMES.filter((o) => (GAME_OUTCOMES[gameOf()] || GAME_OUTCOMES.slot).includes(o.id)).map((o) => h('option', { value: o.id }, o.label))
   );
   clear(
     el.sequence,
@@ -670,18 +675,23 @@ function renderSequence() {
   renderInspector();
 }
 
+const gameOf = () => state.project.game || 'slot';
+
 function tierTitle(i) {
   const tiers = state.project.tiers || [];
   return tiers[Math.min(tiers.length - 1, Math.max(0, i | 0))]?.title || 'BIG WIN';
 }
 
 function builderCard() {
+  if (gameOf() === 'wheel') return wheelBuilder();
+  if (gameOf() === 'holdspin') return holdBuilder();
   const b = state.builder;
   const tiers = state.project.tiers || [];
   const finales = [
     ...tiers.map((t, i) => ({ value: `big${i}`, label: i === 0 ? `Big win: ${t.title}` : `Big win counting up to ${t.title}` })),
     { value: 'tumble', label: 'Tumble chain into a big win, with multipliers' },
     { value: 'freespins', label: 'Free spins feature: trigger, spins, total' },
+    { value: 'holdspin', label: 'Hold & Spin feature: coins land, respins, collect' },
     { value: 'wheel', label: 'Wheel of Fortune bonus' },
     { value: 'big+wheel', label: 'Big win, then the wheel' },
   ];
@@ -758,6 +768,10 @@ function buildSequence() {
       else rounds.push(o === 'none' ? newRound('none', extra) : lineWin(o, extra));
     }
     rounds.push(newRound('fstotal'));
+  } else if (finale === 'holdspin') {
+    const cells = P.grid.reels * P.grid.rows;
+    rounds.push(newRound('hstrigger', { coinsIn: Math.min(6, cells - 2) }));
+    rounds.push(...holdRounds(P, { start: Math.min(6, cells - 2), finale: 'out', endCoins: Math.min(cells - 1, Math.round(cells * 0.7)), specials: 1 }));
   } else if (finale === 'wheel') rounds.push(newRound('wheel'));
   else if (finale === 'big+wheel') rounds.push(big(Math.min(1, top)), newRound('wheel'));
   P.rounds = rounds;
@@ -767,9 +781,109 @@ function buildSequence() {
   toast(`Built ${rounds.length} rounds: ${spins} warm-up spin${spins === 1 ? '' : 's'} and the finale.`);
 }
 
+// A respin plan from the starting coins to the finale: a few empty respins
+// between hits (never letting the counter run out early), specials late in
+// the feature, then the collect.
+function holdRounds(P, { start, finale, endCoins, specials }) {
+  const hs = holdSpinConfig(P);
+  const cells = P.grid.reels * P.grid.rows;
+  const R = hs.respins;
+  const target = finale === 'fill' ? cells : Math.max(start + 1, Math.min(cells - 1, endCoins));
+  const pick = (list) => list[Math.floor(Math.random() * list.length)];
+  const rounds = [];
+  const respin = (coinsIn, extra = {}) => rounds.push(newRound('respin', { coinsIn, ...extra }));
+  let coins = start;
+  let counter = R;
+  if (!hs.reset) {
+    // Without resets the feature is exactly R respins.
+    for (let i = 0; i < R; i++) {
+      const last = i === R - 1;
+      if (last && finale === 'fill') respin(0, { fill: true });
+      else {
+        const n = last ? target - coins : Math.min(target - coins, pick([0, 1, 1, 2]));
+        respin(Math.max(0, n));
+        coins += Math.max(0, n);
+      }
+    }
+  } else {
+    while (coins < target) {
+      const blanks = Math.min(Math.max(0, counter - 1), pick([0, 1, 1, 2]));
+      for (let i = 0; i < blanks; i++, counter--) respin(0);
+      const left = target - coins;
+      if (finale === 'fill' && left <= 4) {
+        respin(0, { fill: true });
+        coins = target;
+        break;
+      }
+      const n = Math.min(left, pick([1, 1, 2, 2, 3]));
+      respin(n);
+      coins += n;
+      counter = R;
+    }
+    if (finale !== 'fill') for (let i = 0; i < R; i++) respin(0);
+  }
+  const hits = rounds.filter((r) => r.coinsIn > 0 || r.fill);
+  hs.coins.slice(1, 1 + specials).forEach((ct, i, arr) => {
+    const r = hits[Math.min(hits.length - 1, Math.floor(hits.length * (0.4 + (0.6 * (i + 1)) / (arr.length + 1))))];
+    if (r && (r.fill || r.specials.length < r.coinsIn)) r.specials.push(ct.id);
+  });
+  rounds.push(newRound('collect'));
+  return rounds;
+}
+
+function holdBuilder() {
+  const b = state.builder;
+  const P = state.project;
+  const hs = holdSpinConfig(P);
+  const cells = P.grid.reels * P.grid.rows;
+  b.hsFinale = b.hsFinale || 'fill';
+  b.hsEnd = Math.min(cells - 1, b.hsEnd || Math.round(cells * 0.7));
+  b.hsSpecials = b.hsSpecials ?? 1;
+  return h(
+    'section',
+    { class: 'group builder' },
+    h('h3', null, 'Quick sequence'),
+    h('p', { class: 'hint' }, 'Builds every respin from the starting coins to the finale, then the collect. Fine-tune each respin below.'),
+    rangeField({ id: 'qb-hs-start', label: 'Coins on the board at the start', value: hs.startCoins, min: 0, max: cells - 2, step: 1, onInput: (v) => { P.holdspin.startCoins = v; changed('timeline'); } }),
+    segmented({ id: 'qb-hs-finale', label: 'Finale', value: b.hsFinale, options: [{ value: 'fill', label: 'Fill the board' }, { value: 'out', label: 'Respins run out' }], onChange: (v) => { b.hsFinale = v; renderSequence(); } }),
+    b.hsFinale === 'out' ? rangeField({ id: 'qb-hs-end', label: 'Coins when it ends', value: b.hsEnd, min: Math.min(cells - 1, hs.startCoins + 1), max: cells - 1, step: 1, onInput: (v) => (b.hsEnd = v) }) : null,
+    rangeField({ id: 'qb-hs-specials', label: 'Special coins', value: b.hsSpecials, min: 0, max: Math.max(0, hs.coins.length - 1), step: 1, onInput: (v) => (b.hsSpecials = v), hint: hs.coins.length > 1 ? `In order: ${hs.coins.slice(1).map((c) => c.name).join(', ')}.` : null }),
+    button('Build sequence', () => {
+      P.rounds = holdRounds(P, { start: hs.startCoins, finale: b.hsFinale, endCoins: b.hsEnd, specials: b.hsSpecials });
+      state.sel = 0;
+      changed('timeline');
+      renderSequence();
+      toast(`Built ${P.rounds.length - 1} respins and the collect.`);
+    }, { class: 'btn primary wide', id: 'qb-build' })
+  );
+}
+
+function wheelBuilder() {
+  const b = state.builder;
+  const P = state.project;
+  const segs = P.wheel.segments;
+  b.wheelSpins = b.wheelSpins || 3;
+  if (b.wheelLast == null || b.wheelLast >= segs.length) b.wheelLast = Math.max(0, segs.findIndex((s) => /jackpot/i.test(s.label)));
+  return h(
+    'section',
+    { class: 'group builder' },
+    h('h3', null, 'Quick sequence'),
+    h('p', { class: 'hint' }, 'One round per spin of the wheel. Pick where the last spin lands; the others land at random.'),
+    rangeField({ id: 'qb-wheel-spins', label: 'Spins', value: b.wheelSpins, min: 1, max: 8, step: 1, onInput: (v) => (b.wheelSpins = v) }),
+    selectField({ id: 'qb-wheel-last', label: 'The last spin lands on', value: b.wheelLast, options: segs.map((sg, i) => ({ value: i, label: `${i + 1}. ${sg.label}` })), onChange: (v) => (b.wheelLast = Number(v)) }),
+    button('Build sequence', () => {
+      P.rounds = Array.from({ length: b.wheelSpins }, (_, i) => newRound('wheel', { wheelSegment: i === b.wheelSpins - 1 ? b.wheelLast : Math.floor(Math.random() * segs.length) }));
+      state.sel = 0;
+      changed('timeline');
+      renderSequence();
+      toast(`Built ${b.wheelSpins} spin${b.wheelSpins === 1 ? '' : 's'}.`);
+    }, { class: 'btn primary wide', id: 'qb-build' })
+  );
+}
+
 function addRound(outcome) {
   const prev = state.project.rounds[state.sel];
-  const r = newRound(outcome, prev?.free && outcome !== 'freespins' && outcome !== 'fstotal' ? { free: true } : {});
+  const r = newRound(outcome, prev?.free && outcome !== 'freespins' && outcome !== 'fstotal' && !HS_OUTCOMES.includes(outcome) ? { free: true } : {});
   state.project.rounds.splice(state.sel + 1, 0, r);
   state.sel = Math.min(state.project.rounds.length - 1, state.sel + 1);
   changed('timeline');
@@ -800,6 +914,11 @@ function describe(r) {
   if (r.outcome === 'bonus') return 'Scatter trigger';
   if (r.outcome === 'nearmiss') return `${fs}Scatters short by one, the last one slides past`;
   if (r.outcome === 'fstotal') return 'Free spins total win';
+  const specials = (r.specials || []).map((id) => holdSpinConfig(P).coins.find((c) => c.id === id)?.name).filter(Boolean);
+  const sp = specials.length ? ` · ${specials.join(', ')}` : '';
+  if (r.outcome === 'hstrigger') return `${r.coinsIn} coins land${sp}`;
+  if (r.outcome === 'respin') return r.fill ? `Fills the board${sp}` : r.coinsIn > 0 ? `${r.coinsIn} coin${r.coinsIn === 1 ? '' : 's'} land${sp}` : 'Nothing lands';
+  if (r.outcome === 'collect') return 'Collects every coin';
   return `${fs}Reels spin and stop${r.extraWilds ? ` · ${r.extraWilds} wild${r.extraWilds === 1 ? '' : 's'}` : ''}`;
 }
 
@@ -912,6 +1031,66 @@ function reelChips(id, selected, onToggle) {
   return wrap;
 }
 
+// Special coin chips: tap to add one of that type, tap a chip to remove it.
+function specialPicker(r, max) {
+  const P = state.project;
+  const hs = holdSpinConfig(P);
+  const list = r.specials || [];
+  const chips = h('div', { class: 'mults' });
+  list.forEach((id, k) =>
+    chips.append(
+      button(hs.coins.find((c) => c.id === id)?.name || id, () => {
+        r.specials.splice(k, 1);
+        changed('timeline');
+        refreshList();
+        renderInspector();
+      }, { class: 'chip on', icon: 'x', id: `ri-special-${k}`, title: 'Remove this special coin' })
+    )
+  );
+  const add = h('div', { class: 'add-row' });
+  for (const ct of hs.coins.slice(1)) {
+    add.append(
+      button(`+ ${ct.name}`, () => {
+        r.specials = [...list, ct.id];
+        changed('timeline');
+        refreshList();
+        renderInspector();
+      }, { class: 'chip', id: `ri-add-special-${ct.id}`, disabled: list.length >= max })
+    );
+  }
+  return h('div', { class: 'field' }, h('span', { class: 'label' }, 'Special coins among them'), chips, hs.coins.length > 1 ? add : h('p', { class: 'hint' }, 'Add special coin types in Assets.'));
+}
+
+function holdInspector(r, set) {
+  const P = state.project;
+  const hs = holdSpinConfig(P);
+  const cells = P.grid.reels * P.grid.rows;
+  const R = state.scene?.tl.rounds[state.sel];
+  const parts = [];
+  if (r.outcome === 'hstrigger') {
+    parts.push(
+      rangeField({ id: 'ri-hs-coins', label: 'Coins landing', value: Math.min(cells - 1, r.coinsIn || 6), min: 1, max: cells - 1, step: 1, onInput: set('coinsIn') }),
+      specialPicker(r, r.coinsIn || 6),
+      h('p', { class: 'hint' }, `The coins land among ordinary symbols, then the board turns into the Hold & Spin board keeping them, with ${hs.respins} respins. Add Respin rounds after this one and end with Collect.`)
+    );
+  } else if (r.outcome === 'respin') {
+    const hsp = R?.pres.holdspin;
+    const free = hsp ? cells - (hsp.coins - hsp.hits) : cells;
+    parts.push(toggleField({ id: 'ri-hs-fill', label: 'Fill the board (every empty cell lands a coin)', checked: !!r.fill, onChange: set('fill', true) }));
+    if (!r.fill) parts.push(rangeField({ id: 'ri-hs-coins', label: 'Coins landing', value: Math.min(free, r.coinsIn || 0), min: 0, max: Math.max(1, free), step: 1, onInput: set('coinsIn'), hint: r.coinsIn ? null : 'Every cell spins and stops empty.' }));
+    parts.push(specialPicker(r, r.fill ? free : r.coinsIn || 0));
+    if (hsp) {
+      const lines = [`Respins left: ${hsp.before} → ${hsp.after}`, `coins on the board: ${hsp.coins}/${cells}`];
+      parts.push(h('p', { class: hsp.before === 0 ? 'hint warn' : 'hint' }, hsp.before === 0 ? 'The counter already ran out before this respin. In a real game the feature would have ended: remove an empty respin before this one.' : `${lines.join(' · ')}.`));
+    }
+  } else if (r.outcome === 'collect') {
+    const C = R?.pres.collect;
+    const cur = P.machine.currency || '';
+    parts.push(h('p', { class: 'hint' }, C ? `Collects ${C.items.length} coin${C.items.length === 1 ? '' : 's'}${R.pres.grand ? ' and the grand' : ''}: ${cur}${C.total.toFixed(P.machine.decimals | 0)} in all. Then the total win counts through your tiers.` : 'There are no coins to collect here. Put this round after the respins.'));
+  }
+  return parts;
+}
+
 function renderInspector() {
   if (!el.inspector) return;
   const P = state.project;
@@ -935,7 +1114,7 @@ function renderInspector() {
       id: 'ri-outcome',
       label: 'Outcome',
       value: r.outcome,
-      options: OUTCOMES.map((o) => ({ value: o.id, label: o.label })),
+      options: OUTCOMES.filter((o) => (GAME_OUTCOMES[gameOf()] || GAME_OUTCOMES.slot).includes(o.id) || o.id === r.outcome).map((o) => ({ value: o.id, label: o.label })),
       onChange: (v) => {
         const fresh = newRound(v);
         r.outcome = v;
@@ -944,7 +1123,8 @@ function renderInspector() {
           r.count = Math.max(r.count || 0, chainCount(v === 'small' ? 0 : 1));
           r.wildAssist = fresh.wildAssist;
         }
-        if (v === 'freespins' || v === 'fstotal') r.free = false;
+        if (v === 'freespins' || v === 'fstotal' || HS_OUTCOMES.includes(v)) r.free = false;
+        if (v === 'hstrigger' || v === 'respin') r.coinsIn = fresh.coinsIn;
         changed(kind);
         refreshList();
         renderInspector();
@@ -954,7 +1134,8 @@ function renderInspector() {
   const ctx2 = makeContext(P, state.scene?.tl.paylines || generatePaylines(reels, rows, P.machine.maxLines));
   const cur = P.machine.currency || '';
   const dec = P.machine.decimals | 0;
-  const canFree = r.outcome !== 'freespins' && r.outcome !== 'fstotal';
+  const isHS = HS_OUTCOMES.includes(r.outcome);
+  const canFree = gameOf() === 'slot' && r.outcome !== 'freespins' && r.outcome !== 'fstotal' && !isHS;
   if (canFree) parts.push(toggleField({ id: 'ri-free', label: 'Free spin (counts toward the free spins total)', checked: !!r.free, onChange: set('free', true), hint: r.free && !P.rounds.slice(0, state.sel).some((x) => x.outcome === 'freespins') ? 'Add a Free spins trigger round before this one to start the counter.' : null }));
   if (LINE_WINS.includes(r.outcome)) {
     const mode = P.machine.payMode;
@@ -1127,7 +1308,8 @@ function renderInspector() {
     );
     if (pattern === 'lines' || pattern === 'ways' || pattern === 'cells') parts.push(toggleField({ id: 'ri-expand', label: 'Expanding wild (fills its reel)', checked: !!r.expandWild, onChange: set('expandWild', true) }));
   }
-  if (r.outcome !== 'wheel' && r.outcome !== 'fstotal') {
+  if (isHS) parts.push(...holdInspector(r, set));
+  if (r.outcome !== 'wheel' && r.outcome !== 'fstotal' && !isHS && gameOf() === 'slot') {
     parts.push(rangeField({ id: 'ri-extra-wilds', label: 'Extra wilds on the grid', value: r.extraWilds || 0, min: 0, max: Math.min(8, reels * rows - 3), step: 1, onInput: set('extraWilds') }));
     if (r.free) parts.push(toggleField({ id: 'ri-sticky', label: 'Wilds stick for the rest of the free spins', checked: !!r.sticky, onChange: set('sticky') }));
   }
@@ -1193,25 +1375,27 @@ function renderInspector() {
     );
   }
 
-  // Spin timing and order for this round.
+  // Spin timing and order for this round (nothing spins in a collect, or in
+  // the wheel game's machine).
+  const spins = r.outcome !== 'collect' && gameOf() !== 'wheel' && !(gameOf() === 'holdspin' && r.outcome === 'wheel');
   const useDefault = r.midDuration == null || r.midDuration === '';
-  parts.push(
-    h('div', { class: 'divider' }),
+  parts.push(h('div', { class: 'divider' }));
+  if (spins) parts.push(
     toggleField({
       id: 'ri-mid-default',
       label: 'Use the default spin length',
       checked: useDefault,
       onChange: (v) => {
-        r.midDuration = v ? null : P.spin.midDuration;
+        r.midDuration = v ? null : r.outcome === 'respin' ? holdSpinConfig(P).respinMid : P.spin.midDuration;
         changed(kind);
         renderInspector();
       },
     })
   );
-  if (!useDefault) parts.push(rangeField({ id: 'ri-mid', label: 'Spin length (mid phase)', unit: 's', value: r.midDuration, min: 0, max: 6, step: 0.05, onInput: set('midDuration') }));
+  if (spins && !useDefault) parts.push(rangeField({ id: 'ri-mid', label: 'Spin length (mid phase)', unit: 's', value: r.midDuration, min: 0, max: 6, step: 0.05, onInput: set('midDuration') }));
   const orderName = ORDERS.find((o) => o.id === (P.spin.stopOrder || 'ltr'))?.label || 'Left to right';
-  parts.push(
-    rangeField({ id: 'ri-hold', label: 'Pause after this round', unit: 's', value: r.hold || 0, min: 0, max: 4, step: 0.05, onInput: set('hold') }),
+  parts.push(rangeField({ id: 'ri-hold', label: 'Pause after this round', unit: 's', value: r.hold || 0, min: 0, max: 4, step: 0.05, onInput: set('hold') }));
+  if (spins) parts.push(
     selectField({
       id: 'ri-stop-order',
       label: 'Stop order',
@@ -1220,8 +1404,11 @@ function renderInspector() {
       onChange: (v) => set('stopOrder')(v === 'default' ? null : v),
     })
   );
+  // Respins tease on their own: the last cells when the board is about to
+  // fill, and the last cell on a last-chance respin.
   const manual = Array.isArray(r.antic);
-  parts.push(
+  const teases = spins && r.outcome !== 'respin';
+  if (teases) parts.push(
     segmented({
       id: 'ri-antic',
       label: 'Anticipation',
@@ -1233,7 +1420,7 @@ function renderInspector() {
       onChange: (v) => set('antic', true)(v === 'pick' ? [] : 'auto'),
     })
   );
-  if (manual) {
+  if (teases && manual) {
     parts.push(
       reelChips('ri-antic-reel', r.antic, (c) => {
         r.antic = r.antic.includes(c) ? r.antic.filter((x) => x !== c) : [...r.antic, c].sort((a, b) => a - b);
@@ -1242,17 +1429,17 @@ function renderInspector() {
       }),
       h('p', { class: 'hint' }, r.antic.length ? 'These reels slow down with the glow, in stop order. Set the stop order so the teased reel lands last.' : 'No reel is teased in this round.')
     );
-  } else {
+  } else if (teases) {
     parts.push(toggleField({ id: 'ri-tease', label: 'Also tease the last reel to stop', checked: !!r.tease, onChange: set('tease') }));
   }
   parts.push(
     h(
       'div',
       { class: 'row' },
-      button('New symbols', () => {
+      button(isHS ? 'New coins' : 'New symbols', () => {
         r.seed = Math.floor(Math.random() * 1e6);
         changed(kind);
-      }, { class: 'btn small', icon: 'dice', id: 'ri-reroll', title: 'Re-roll the filler symbols for this round' }),
+      }, { class: 'btn small', icon: 'dice', id: 'ri-reroll', title: isHS ? 'Re-roll where the coins land and their values' : 'Re-roll the filler symbols for this round' }),
       button('Preview this round', () => {
         state.solo = true;
         renderTransport();
@@ -1340,12 +1527,58 @@ function loadProject(p, msg) {
   toast(msg);
 }
 
+// Switching games keeps the rounds that fit the new game; the others are
+// kept aside and come back when you switch back.
+function setGame(g) {
+  const P = state.project;
+  const from = gameOf();
+  if (from === g) return;
+  state.stash = state.stash || {};
+  state.stash[from] = P.rounds;
+  P.game = g;
+  let rounds = state.stash[g] || P.rounds.filter((r) => GAME_OUTCOMES[g].includes(r.outcome));
+  if (!rounds.length) {
+    if (g === 'wheel') rounds = [newRound('wheel', { wheelSegment: 2 }), newRound('wheel', { wheelSegment: 5 }), newRound('wheel', { wheelSegment: 3 })];
+    else if (g === 'holdspin') rounds = holdRounds(P, { start: holdSpinConfig(P).startCoins, finale: 'fill', specials: 1 });
+  }
+  P.rounds = rounds;
+  state.sel = 0;
+  state.t = 0;
+  changed('all');
+  renderAll();
+  toast(`${GAMES.find((x) => x.id === g).label}: ${rounds.length} round${rounds.length === 1 ? '' : 's'}. Switch back to get your ${GAMES.find((x) => x.id === from).label.toLowerCase()} rounds again.`, 'info', 5000);
+}
+
+function holdSettings() {
+  const P = state.project;
+  const hs = holdSpinConfig(P);
+  P.holdspin = { ...hs, ...(P.holdspin || {}) };
+  const H = P.holdspin;
+  const cells = P.grid.reels * P.grid.rows;
+  return section(
+    'Hold & Spin',
+    rangeField({ id: 'm-hs-respins', label: 'Respins counter', value: hs.respins, min: 1, max: 9, step: 1, onInput: num(H, 'respins', 'timeline', () => renderInspector()) }),
+    toggleField({ id: 'm-hs-reset', label: 'A coin landing resets the counter', checked: hs.reset, onChange: num(H, 'reset', 'timeline', () => renderInspector()) }),
+    gameOf() === 'holdspin' ? rangeField({ id: 'm-hs-start', label: 'Coins on the board at the start', value: hs.startCoins, min: 0, max: cells - 2, step: 1, onInput: num(H, 'startCoins', 'timeline', () => renderInspector()), hint: 'They pop in during the intro. 0 starts with an empty board.' }) : null,
+    rangeField({ id: 'm-hs-mid', label: 'Respin length (mid phase)', unit: 's', value: hs.respinMid, min: 0, max: 3, step: 0.05, onInput: num(H, 'respinMid') }),
+    toggleField({ id: 'm-hs-grand', label: 'Grand prize when the board fills', checked: hs.grand.enabled, onChange: (v) => { H.grand = { ...hs.grand, enabled: v }; changed('timeline'); renderPanel(); } }),
+    hs.grand.enabled ? textField({ id: 'm-hs-grand-v', label: 'Grand prize (× bet)', type: 'number', value: hs.grand.value, onChange: (v) => { H.grand = { ...hs.grand, value: Math.max(0, Number(v) || 0) }; changed('timeline'); } }) : null,
+    h('p', { class: 'hint' }, 'Coins and their values are set in Assets → Hold & Spin coins.')
+  );
+}
+
 function panelMachine() {
   const P = state.project;
   const fmt = `${P.canvas.width}x${P.canvas.height}`;
   let preset = PRESETS[0].id;
   const pm = P.machine.payMode;
+  const game = gameOf();
   return [
+    section(
+      'Game',
+      segmented({ id: 'm-game', value: game, options: GAMES.map((g) => ({ value: g.id, label: g.label, hint: g.hint })), onChange: setGame }),
+      h('p', { class: 'hint' }, GAMES.find((g) => g.id === game).hint)
+    ),
     section(
       'Start from a preset',
       selectField({ id: 'm-preset', value: preset, options: PRESETS.map((p) => ({ value: p.id, label: p.label })), onChange: (v) => (preset = v) }),
@@ -1372,7 +1605,7 @@ function panelMachine() {
       }),
       segmented({ id: 'm-fps', label: 'Frame rate', value: P.canvas.fps, options: [24, 25, 30, 50, 60].map((f) => ({ value: f, label: `${f}` })), onChange: (v) => num(P.canvas, 'fps', 'timeline')(Number(v)) })
     ),
-    section(
+    game === 'wheel' ? null : section(
       'Reels',
       rangeField({ id: 'm-reels', label: 'Reels', value: P.grid.reels, min: 3, max: 8, step: 1, onInput: num(P.grid, 'reels', 'all', () => renderInspector()) }),
       rangeField({ id: 'm-rows', label: 'Rows', value: P.grid.rows, min: 1, max: 7, step: 1, onInput: num(P.grid, 'rows', 'all', () => renderInspector()) }),
@@ -1380,7 +1613,7 @@ function panelMachine() {
       rangeField({ id: 'm-peek', label: 'Partial symbols above and below', value: P.grid.peek, min: 0, max: 0.5, step: 0.01, onInput: num(P.grid, 'peek', 'all') }),
       rangeField({ id: 'm-curve', label: 'Reel curvature', value: P.grid.curvature, min: 0, max: 1, step: 0.01, onInput: num(P.grid, 'curvature', 'all'), hint: 'Bends the strip like a drum. Preview and MP4 only; the After Effects reels stay flat.' })
     ),
-    section(
+    game !== 'slot' ? null : section(
       'How it pays',
       segmented({
         id: 'm-pay',
@@ -1401,6 +1634,7 @@ function panelMachine() {
       pm === 'cluster' ? rangeField({ id: 'm-min-cluster', label: 'Smallest paying cluster', value: P.machine.minCluster, min: 3, max: 12, step: 1, onInput: num(P.machine, 'minCluster', 'timeline', () => renderInspector()) }) : null,
       rangeField({ id: 'm-scatter', label: 'Scatters to trigger a feature', value: P.machine.scatterTrigger, min: 2, max: 6, step: 1, onInput: num(P.machine, 'scatterTrigger', 'timeline', () => renderInspector()) })
     ),
+    game === 'wheel' ? null : holdSettings(),
     section(
       'Look',
       selectField({ id: 'm-theme', label: 'Theme', value: P.machine.theme, options: Object.entries(THEMES).map(([k, t]) => ({ value: k, label: t.name })), onChange: (v) => num(P.machine, 'theme', 'all')(v) }),
@@ -1428,9 +1662,101 @@ function panelMachine() {
   ];
 }
 
+function coinTile(ct, i) {
+  const P = state.project;
+  const lay = symbolLayout(P);
+  const coins = P.holdspin.coins;
+  const asText = (v) => (Array.isArray(v) ? v.join(', ') : String(v ?? ''));
+  return h(
+    'div',
+    { class: 'sym' },
+    thumbCanvas(lay.coinBase + i),
+    h(
+      'div',
+      { class: 'sym-fields' },
+      h('input', { type: 'text', id: `coin-name-${ct.id}`, value: ct.name, 'aria-label': 'Coin name', oninput: (e) => { ct.name = e.target.value; save(); refreshList(); } }),
+      h(
+        'div',
+        { class: 'sym-row' },
+        h('input', { type: 'text', id: `coin-label-${ct.id}`, value: ct.label || '', placeholder: 'No label', 'aria-label': 'Label on the coin', onchange: (e) => { ct.label = e.target.value.toUpperCase().slice(0, 10); e.target.value = ct.label; changed('all'); } }),
+        h('select', { id: `coin-pal-${ct.id}`, 'aria-label': 'Coin colour', onchange: (e) => { ct.palette = e.target.value; changed('all'); } }, COIN_PALETTES.map((pl) => h('option', { value: pl, selected: ct.palette === pl }, pl[0].toUpperCase() + pl.slice(1))))
+      ),
+      h('label', { class: 'sym-weight', for: `coin-vals-${ct.id}` }, h('span', null, '× bet'), h('input', { type: 'text', id: `coin-vals-${ct.id}`, value: asText(ct.values), 'aria-label': `${ct.name} values in bets`, onchange: (e) => {
+        const v = e.target.value.split(/[,\s]+/).map(Number).filter((x) => x > 0);
+        ct.values = v.length ? v : [1];
+        e.target.value = ct.values.join(', ');
+        changed('timeline');
+      } }))
+    ),
+    h(
+      'div',
+      { class: 'sym-actions' },
+      button('', async () => {
+        const [f] = await pickFiles('image/*');
+        if (!f) return;
+        ct.src = await readFileAsDataURL(f);
+        changed('all');
+        renderPanel();
+      }, { class: 'icon-btn tiny', icon: 'upload', title: ct.src ? 'Replace art' : 'Upload coin art', id: `coin-up-${ct.id}` }),
+      ct.src
+        ? button('', () => { ct.src = null; changed('all'); renderPanel(); }, { class: 'icon-btn tiny', icon: 'dice', title: 'Back to the painted coin', id: `coin-paint-${ct.id}` })
+        : null,
+      i > 0
+        ? button('', () => {
+            coins.splice(i, 1);
+            P.rounds.forEach((r) => (r.specials = (r.specials || []).filter((id) => id !== ct.id)));
+            changed('all');
+            renderPanel();
+            renderInspector();
+          }, { class: 'icon-btn tiny', icon: 'x', title: 'Remove this coin type', id: `coin-del-${ct.id}` })
+        : null
+    )
+  );
+}
+
+function coinSection() {
+  const P = state.project;
+  P.holdspin = { ...holdSpinConfig(P), ...(P.holdspin || {}) };
+  const H = P.holdspin;
+  const lay = symbolLayout(P);
+  const tiles = h('div', { class: 'symbols' });
+  H.coins.forEach((ct, i) => tiles.append(coinTile(ct, i)));
+  return section(
+    'Hold & Spin coins',
+    h('p', { class: 'hint' }, 'Their own set, separate from the machine symbols. The first is the regular coin; the others are specials you place in respins. Values are in bets and are shown on the coin (5 shows $5 at a $1 bet). A label is painted on the built-in coin art; uploaded art is used as it is. In After Effects each coin is its own comp.'),
+    tiles,
+    H.coins.length < 8
+      ? button('Add a coin type', () => {
+          H.coins.push({ id: `coin${Date.now().toString(36)}`, name: 'Bonus coin', label: 'BONUS', palette: COIN_PALETTES[H.coins.length % COIN_PALETTES.length], values: [25], src: null });
+          changed('all');
+          renderPanel();
+        }, { class: 'btn small', icon: 'plus', id: 'coin-add' })
+      : null,
+    h(
+      'div',
+      { class: 'asset-row' },
+      h('div', { class: 'asset-thumb' }, thumbCanvas(lay.blankSym)),
+      h('div', { class: 'asset-text' }, h('strong', null, 'Empty cell'), h('span', { class: 'hint' }, 'What an empty cell shows. Built-in: a dark socket.')),
+      h(
+        'div',
+        { class: 'asset-actions' },
+        button(H.emptySrc ? 'Replace' : 'Upload', async () => {
+          const [f] = await pickFiles('image/*');
+          if (!f) return;
+          H.emptySrc = await readFileAsDataURL(f);
+          changed('all');
+          renderPanel();
+        }, { class: 'btn small', id: 'coin-empty-up' }),
+        H.emptySrc ? button('Clear', () => { H.emptySrc = null; changed('all'); renderPanel(); }, { class: 'btn small ghost', id: 'coin-empty-clear' }) : null
+      )
+    )
+  );
+}
+
 function panelAssets() {
   const P = state.project;
   el.thumbs = [];
+  const game = gameOf();
   const tiles = h('div', { class: 'symbols' });
   P.symbols.forEach((s, i) => tiles.append(symbolTile(s, i)));
   const useSet = (set, name) =>
@@ -1442,12 +1768,13 @@ function panelAssets() {
       renderInspector();
     }, { class: 'btn ghost small', id: `a-set-${set === CANDY_SYMBOLS ? 'candy' : 'classic'}` });
   return [
-    section(
+    game !== 'slot' ? null : section(
       'Symbols',
       h('p', { class: 'hint' }, 'PNGs with transparent backgrounds work best; each symbol is fitted to its cell. Give one symbol each the Wild, Scatter and Multiplier roles. Weight sets how often it shows up as filler. In After Effects every symbol becomes its own comp.'),
       tiles,
       h('div', { class: 'row' }, button('Add symbol images', addSymbols, { class: 'btn', icon: 'upload', id: 'a-add' }), useSet(BUILTIN_SYMBOLS, 'Classic set'), useSet(CANDY_SYMBOLS, 'Candy set'))
     ),
+    game === 'wheel' ? null : coinSection(),
     section(
       'Scene art',
       assetRow('Background', 'background', 'Full-screen image behind the machine.'),
@@ -1459,15 +1786,15 @@ function panelAssets() {
   ];
 }
 
-function thumbCanvas() {
+function thumbCanvas(idx) {
   const c = h('canvas', { class: 'thumb', width: 96, height: 96 });
-  el.thumbs.push(c);
+  el.thumbs.push([c, idx]);
   return c;
 }
 
 function refreshThumbs() {
   if (!el.thumbs || !state.images) return;
-  el.thumbs.forEach((c, i) => {
+  el.thumbs.forEach(([c, i]) => {
     const img = state.images.symbols[i];
     const g = c.getContext('2d');
     g.clearRect(0, 0, 96, 96);
@@ -1534,7 +1861,7 @@ function symbolTile(s, i) {
   return h(
     'div',
     { class: 'sym' },
-    thumbCanvas(),
+    thumbCanvas(i),
     h(
       'div',
       { class: 'sym-fields' },
@@ -1675,9 +2002,18 @@ function panelSpin() {
       } });
     delays.append(h('div', { class: 'delay' }, h('span', { class: 'seg-n' }, c + 1), inp('start'), inp('stop')));
   }
+  if (gameOf() === 'wheel') return [section('Spin', h('p', { class: 'hint' }, 'The wheel game has no reels. Turns and landing are in the Wheel tab; each round picks its segment.'))];
+  const hsGame = gameOf() === 'holdspin';
   return [
-    section('Spin type', typeCards, segmented({ id: 'spin-dir', label: 'Direction', value: sp.direction, options: [{ value: 'down', label: 'Spin down' }, { value: 'up', label: 'Spin up' }], onChange: num(sp, 'direction') })),
-    section(
+    hsGame
+      ? section(
+          'Respins',
+          h('p', { class: 'hint' }, 'Every empty cell spins on its own and stops in the cell order. The start, mid and end phases below shape each cell; the respin length is in Machine → Hold & Spin.'),
+          segmented({ id: 'spin-dir', label: 'Direction', value: sp.direction, options: [{ value: 'down', label: 'Spin down' }, { value: 'up', label: 'Spin up' }], onChange: num(sp, 'direction') }),
+          selectField({ id: 'spin-cell-order', label: 'Cell order', value: sp.cellOrder || 'columns', options: CELL_ORDERS.map((o) => ({ value: o.id, label: o.label })), onChange: num(sp, 'cellOrder') })
+        )
+      : section('Spin type', typeCards, segmented({ id: 'spin-dir', label: 'Direction', value: sp.direction, options: [{ value: 'down', label: 'Spin down' }, { value: 'up', label: 'Spin up' }], onChange: num(sp, 'direction') })),
+    hsGame ? null : section(
       'Reel order',
       selectField({ id: 'spin-start-order', label: 'Start order', value: sp.startOrder || 'ltr', options: orderOpts, onChange: (v) => { sp.startOrder = v; changed('timeline'); renderPanel(); } }),
       sp.startOrder === 'custom' ? orderPicker('spin-custom-start', 'customStart') : null,
@@ -1729,23 +2065,27 @@ function drawMotionGraph() {
   const muted = css.getPropertyValue('--muted').trim() || '#999';
   const line = css.getPropertyValue('--line').trim() || '#333';
   g.font = '600 26px "Instrument Sans", system-ui, sans-serif';
-  if (!R || tl.cascade || R.noSpin) {
+  const hsp = R && R.pres.holdspin;
+  if (!R || (tl.cascade && !hsp) || (R.noSpin && !(hsp && hsp.cells.length))) {
     g.fillStyle = muted;
     g.fillText(tl.cascade ? 'Cascade drops have no reel speed curve.' : R ? 'This round does not spin.' : 'Select a round to see its curve.', 16, H / 2);
     return;
   }
-  // Per-cell spins: plot the top cell of each reel.
-  const keysOf = (k) => (tl.mode === 'cells' ? tl.stripKeys[k * tl.rows] : tl.stripKeys[k]);
+  // One curve per reel; per-cell spins plot the top cell of each reel, and a
+  // respin plots the cells that spin (up to eight).
+  const tracks = hsp
+    ? hsp.cells.slice(0, 8).map((ci) => tl.hold.keys[ci.k])
+    : Array.from({ length: tl.reels }, (_, k) => (tl.mode === 'cells' ? tl.stripKeys[k * tl.rows] : tl.stripKeys[k]));
   const a = R.t0 - 0.1;
   const b = R.spinEnd + 0.15;
   const N = 220;
   let vmax = 1;
   const series = [];
-  for (let k = 0; k < tl.reels; k++) {
+  for (const keys of tracks) {
     const pts = [];
     for (let i = 0; i <= N; i++) {
       const t = a + ((b - a) * i) / N;
-      const v = evalVelocity(keysOf(k), t);
+      const v = evalVelocity(keys, t);
       vmax = Math.max(vmax, Math.abs(v));
       pts.push([t, v]);
     }
@@ -1755,8 +2095,8 @@ function drawMotionGraph() {
   const X = (t) => pad.l + ((t - a) / (b - a)) * (W - pad.l - pad.r);
   const zeroY = pad.t + (H - pad.t - pad.b) * 0.82;
   const Y = (v) => zeroY - (v / vmax) * (zeroY - pad.t);
-  const first = R.stopOrder?.[0] ?? 0;
-  const r0 = R.reels[first] || R.reels[0];
+  const first = hsp ? 0 : R.stopOrder?.[0] ?? 0;
+  const r0 = hsp ? hsp.cells[0] : R.reels[first] || R.reels[0];
   const sp = project.spin;
   const phases = [
     ['START', r0.start, r0.start + sp.startDuration, 'rgba(120,180,255,0.12)'],
@@ -1783,7 +2123,7 @@ function drawMotionGraph() {
   g.fillText('0', 24, zeroY + 5);
   g.fillText(`${(b - a).toFixed(2)} s`, W - 86, H - 6);
   series.forEach((pts, k) => {
-    const mix = tl.reels > 1 ? k / (tl.reels - 1) : 0;
+    const mix = series.length > 1 ? k / (series.length - 1) : 0;
     g.strokeStyle = `hsl(${42 - mix * 70}, 90%, ${62 - mix * 6}%)`;
     g.lineWidth = k === first ? 3 : 2;
     g.globalAlpha = k === first ? 1 : 0.75;
@@ -1863,6 +2203,8 @@ function panelEffects() {
           ['bonus', 'Bonus'],
           ['wheel', 'Wheel title'],
           ['nearmiss', 'Near miss'],
+          ['holdspin', 'Hold & Spin'],
+          ['grand', 'Grand (full board)'],
         ].map(([k, l]) => textField({ id: `fx-t-${k}`, label: l, value: titles[k], onChange: num(titles, k, 'all') }))
       )
     ),
@@ -1891,6 +2233,7 @@ function panelEffects() {
       rangeField({ id: 'tm-tfall', label: 'Tumble fall', unit: 's', value: tm.tumbleFall, min: 0.15, max: 1, step: 0.01, onInput: num(tm, 'tumbleFall') }),
       rangeField({ id: 'tm-mult', label: 'Each multiplier collect', unit: 's', value: tm.multEach, min: 0.2, max: 1.5, step: 0.05, onInput: num(tm, 'multEach') }),
       rangeField({ id: 'tm-expand', label: 'Wild expand', unit: 's', value: tm.expand, min: 0.3, max: 2, step: 0.05, onInput: num(tm, 'expand') }),
+      rangeField({ id: 'tm-collect', label: 'Each coin collected', unit: 's', value: tm.collectEach ?? 0.22, min: 0.11, max: 0.6, step: 0.01, onInput: num(tm, 'collectEach') }),
       rangeField({ id: 'tm-cel', label: 'Scatter celebration', unit: 's', value: tm.celebrate, min: 0.5, max: 4, step: 0.05, onInput: num(tm, 'celebrate') }),
       rangeField({ id: 'tm-banner', label: 'Bonus banner', unit: 's', value: tm.banner, min: 1, max: 6, step: 0.05, onInput: num(tm, 'banner') }),
       rangeField({ id: 'tm-wheel', label: 'Wheel spin', unit: 's', value: tm.wheelSpin, min: 2, max: 12, step: 0.1, onInput: num(tm, 'wheelSpin') }),
