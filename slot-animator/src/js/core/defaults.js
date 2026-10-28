@@ -193,7 +193,8 @@ export const TITLE_PALETTE_NAMES = ['gold', 'fire', 'violet', 'aqua', 'rose', 's
 export const COIN_PALETTES = ['gold', 'fire', 'violet', 'aqua', 'emerald', 'rose', 'silver'];
 
 // The Hold & Spin coin set: its own symbols, separate from the machine's.
-// Values are in bets; a coin shows value × bet.
+// Values are in bets; a coin shows value × bet. After the plain coin come
+// the jackpot coins, Mini, Minor and Major; filling the board wins the Grand.
 export function defaultHoldSpin() {
   return {
     respins: 3,
@@ -202,9 +203,9 @@ export function defaultHoldSpin() {
     respinMid: 0.45,
     coins: [
       { id: 'coin', name: 'Coin', label: '', palette: 'gold', values: [1, 2, 3, 5, 8, 10, 15, 20], src: null },
-      { id: 'mega', name: 'Mega coin', label: 'MEGA', palette: 'fire', values: [50], src: null },
-      { id: 'super', name: 'Super coin', label: 'SUPER', palette: 'violet', values: [100], src: null },
-      { id: 'ultra', name: 'Ultra coin', label: 'ULTRA', palette: 'aqua', values: [250], src: null },
+      { id: 'mini', name: 'Mini jackpot', label: 'MINI', palette: 'aqua', values: [50], src: null },
+      { id: 'minor', name: 'Minor jackpot', label: 'MINOR', palette: 'violet', values: [100], src: null },
+      { id: 'major', name: 'Major jackpot', label: 'MAJOR', palette: 'fire', values: [250], src: null },
     ],
     emptySrc: null,
     grand: { enabled: true, value: 1000 },
@@ -517,7 +518,7 @@ export function holdSpinProject() {
   p.holdspin.startCoins = 4;
   p.particles.ambient = { fx: 'fountain', asset: 'ember' };
   const r = (coinsIn, extra = {}) => newRound('respin', { coinsIn, ...extra });
-  p.rounds = [r(2, { seed: 71 }), r(0, { seed: 72 }), r(1, { seed: 73 }), r(0, { seed: 74 }), r(0, { seed: 75 }), r(2, { seed: 76, specials: ['mega'] }), r(1, { seed: 77 }), r(0, { seed: 78 }), r(0, { seed: 79 }), r(1, { seed: 80, specials: ['super'] }), r(0, { seed: 81, fill: true, specials: ['ultra'] }), newRound('collect', { seed: 82 })];
+  p.rounds = [r(2, { seed: 71 }), r(0, { seed: 72 }), r(1, { seed: 73 }), r(0, { seed: 74 }), r(0, { seed: 75 }), r(2, { seed: 76, specials: ['mini'] }), r(1, { seed: 77 }), r(0, { seed: 78 }), r(0, { seed: 79 }), r(1, { seed: 80, specials: ['minor'] }), r(0, { seed: 81, fill: true, specials: ['major'] }), newRound('collect', { seed: 82 })];
   return p;
 }
 
@@ -705,7 +706,7 @@ export function slotHoldSpinProject() {
     newRound('hstrigger', { seed: 253, coinsIn: 6 }),
     newRound('respin', { seed: 254, coinsIn: 1 }),
     newRound('respin', { seed: 255, coinsIn: 0 }),
-    newRound('respin', { seed: 256, coinsIn: 2, specials: ['mega'] }),
+    newRound('respin', { seed: 256, coinsIn: 2, specials: ['mini'] }),
     newRound('respin', { seed: 257, coinsIn: 0 }),
     newRound('collect', { seed: 258 }),
   ];

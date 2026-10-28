@@ -212,7 +212,7 @@ export const FEATURES = [
   T('Classic and candy symbol sets', 'Asset Bank › Symbols', 'built in sample', { bank: 'symbols', id: 'a-set-classic' }),
   T('Symbol roles: wild, scatter, multiplier, bonus', 'Asset Bank › Symbols', 'role wild scatter multiplier bonus special', { bank: 'symbols', section: 'symbols' }),
   T('How often a symbol shows up', 'Asset Bank › Symbols', 'weight frequency filler common rare', { bank: 'symbols', section: 'symbols' }),
-  T('Hold & Spin coins', 'Asset Bank › Coins', 'mega super ultra coin values', { bank: 'coins', section: 'hold-spin-coins' }),
+  T('Hold & Spin coins', 'Asset Bank › Coins', 'jackpot coins mini minor major grand coin values', { bank: 'coins', section: 'hold-spin-coins' }),
   T('Particle art', 'Asset Bank › Win particles', 'upload confetti coin star sprite', { bank: 'particles', id: 'pa-add' }),
   T('Background image', 'Asset Bank › Scene art', 'backdrop wallpaper', { bank: 'scene', id: 'asset-up-background' }),
   T('Frame overlay', 'Asset Bank › Scene art', 'border machine cabinet', { bank: 'scene', id: 'asset-up-frame' }),

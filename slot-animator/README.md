@@ -12,8 +12,10 @@ the result as an editable **After Effects project**.
   every coin is collected), and the Wheel of Fortune on its own. A slot game
   can trigger Hold & Spin from a spin that lands coins.
 - Hold & Spin has its own coin set: a regular coin with a list of values and
-  special coins (Mega, Super, Ultra or your own) with their own values,
-  colours, labels or uploaded art, plus the empty cell.
+  the jackpot coins (Mini, Minor, Major, or your own) with their own values,
+  colours, labels or uploaded art, plus the empty cell. Filling the board
+  wins the Grand. Projects saved with the old Mega, Super and Ultra coins
+  get the jackpot names when they open.
 - Pay modes: paylines, ways, pay anywhere (Sweet Bonanza style) and clusters.
 - Spin types: classic, staggered, turbo, tease, cascade drops and per-cell
   spins (hold and spin style). Start and stop order per project (left to

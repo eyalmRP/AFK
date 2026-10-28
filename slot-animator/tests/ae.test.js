@@ -273,7 +273,7 @@ test('AE hold & spin board: every cell lands the preview coin, with its value', 
   const p = defaultProject();
   p.game = 'holdspin';
   p.holdspin.startCoins = 2;
-  p.rounds = [newRound('respin', { seed: 1, coinsIn: 2 }), newRound('respin', { seed: 2, coinsIn: 0 }), newRound('respin', { seed: 3, fill: true, specials: ['mega'] }), newRound('collect', { seed: 4 })];
+  p.rounds = [newRound('respin', { seed: 1, coinsIn: 2 }), newRound('respin', { seed: 2, coinsIn: 0 }), newRound('respin', { seed: 3, fill: true, specials: ['mini'] }), newRound('collect', { seed: 4 })];
   const { tl, list, log } = run(p);
   assert.deepEqual(log.alerts, [], log.alerts.join('\n'));
   const { L } = list[0];

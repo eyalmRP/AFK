@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { defaultProject, candyProject, cellsProject, newRound, PRESETS } from '../src/js/core/defaults.js';
+import { defaultProject, candyProject, cellsProject, holdSpinProject, newRound, PRESETS } from '../src/js/core/defaults.js';
+import { upgradeJackpotCoins } from '../src/js/core/coins.js';
 import { buildTimeline, holdAlpha } from '../src/js/core/timeline.js';
 import { evalKeys, key } from '../src/js/core/keys.js';
 import { generatePaylines } from '../src/js/core/paylines.js';
@@ -260,7 +261,7 @@ function holdGame(rounds, extra = {}) {
 }
 
 test('hold & spin: coins lock, empty cells respin, the counter resets on a hit', () => {
-  const p = holdGame([newRound('respin', { seed: 1, coinsIn: 2 }), newRound('respin', { seed: 2, coinsIn: 0 }), newRound('respin', { seed: 3, coinsIn: 1, specials: ['mega'] }), newRound('respin', { seed: 4, coinsIn: 0 })], { startCoins: 3 });
+  const p = holdGame([newRound('respin', { seed: 1, coinsIn: 2 }), newRound('respin', { seed: 2, coinsIn: 0 }), newRound('respin', { seed: 3, coinsIn: 1, specials: ['mini'] }), newRound('respin', { seed: 4, coinsIn: 0 })], { startCoins: 3 });
   const tl = buildTimeline(p);
   const { lay } = tl;
   for (const R of tl.rounds) {
@@ -300,7 +301,7 @@ test('hold & spin trigger lands coins on the machine and carries them onto the b
   for (const type of ['classic', 'cells', 'cascade']) {
     const p = defaultProject();
     p.spin.type = type;
-    p.rounds = [newRound('hstrigger', { seed: 4, coinsIn: 6, specials: ['ultra'] }), newRound('respin', { seed: 5, coinsIn: 0 }), newRound('collect', { seed: 6 }), newRound('none', { seed: 7 })];
+    p.rounds = [newRound('hstrigger', { seed: 4, coinsIn: 6, specials: ['major'] }), newRound('respin', { seed: 5, coinsIn: 0 }), newRound('collect', { seed: 6 }), newRound('none', { seed: 7 })];
     const tl = buildTimeline(p);
     const [trig, respin, collect, after] = tl.rounds;
     assert.equal(trig.win.coins.length, 6);
@@ -392,4 +393,28 @@ test('presets: every one builds, and between them they show the newer features',
   const classic = made[PRESETS.findIndex((pr) => pr.id === 'classic')];
   assert.ok(classic.effects.landShake && classic.wheel.segments.every((s) => s.icon));
   assert.ok(!defaultProject().effects.landShake && !defaultProject().wheel.segments.some((s) => s.icon || s.kind));
+});
+
+test('Hold & Spin jackpots: Mini, Minor and Major coins, and old projects get those names', () => {
+  const hs = holdSpinProject();
+  assert.deepEqual(hs.holdspin.coins.map((c) => [c.id, c.label]), [['coin', ''], ['mini', 'MINI'], ['minor', 'MINOR'], ['major', 'MAJOR']]);
+  // A project saved with Mega, Super and Ultra: renamed, rounds follow, own edits stay.
+  const old = holdSpinProject();
+  old.holdspin.coins = [
+    { id: 'coin', name: 'Coin', label: '', palette: 'gold', values: [1, 2], src: null },
+    { id: 'mega', name: 'Mega coin', label: 'MEGA', palette: 'fire', values: [40], src: null },
+    { id: 'super', name: 'My big one', label: 'SUPER', palette: 'violet', values: [90], src: 'data:x' },
+    { id: 'ultra', name: 'Ultra coin', label: 'BOOM', palette: 'aqua', values: [300], src: null },
+  ];
+  old.rounds = [newRound('respin', { coinsIn: 2, specials: ['mega', 'ultra'] }), newRound('collect')];
+  upgradeJackpotCoins(old);
+  assert.deepEqual(old.holdspin.coins.map((c) => [c.id, c.name, c.label, c.values[0]]), [
+    ['coin', 'Coin', '', 1],
+    ['mini', 'Mini jackpot', 'MINI', 40],
+    ['minor', 'My big one', 'MINOR', 90],
+    ['major', 'Major jackpot', 'BOOM', 300],
+  ]);
+  assert.deepEqual(old.rounds[0].specials, ['mini', 'major']);
+  const tl = buildTimeline(old);
+  assert.ok(tl.rounds[0].pres.holdspin.cells.some((x) => x.special), 'the renamed specials still land');
 });

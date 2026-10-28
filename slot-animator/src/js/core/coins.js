@@ -44,6 +44,30 @@ export function pickCoinValue(type, rng) {
   return pickWeighted(rng, vals, (v) => Math.pow(0.7, vals.indexOf(v)));
 }
 
+// The jackpot coins used to be called Mega, Super and Ultra. A project that
+// still has them under those names gets the jackpot names; its values,
+// colours and art stay, and so do any names it gave them itself.
+const OLD_JACKPOTS = {
+  mega: { id: 'mini', name: ['Mega coin', 'Mini jackpot'], label: ['MEGA', 'MINI'] },
+  super: { id: 'minor', name: ['Super coin', 'Minor jackpot'], label: ['SUPER', 'MINOR'] },
+  ultra: { id: 'major', name: ['Ultra coin', 'Major jackpot'], label: ['ULTRA', 'MAJOR'] },
+};
+export function upgradeJackpotCoins(project) {
+  const coins = project.holdspin?.coins;
+  if (!Array.isArray(coins)) return project;
+  const renamed = {};
+  for (const ct of coins) {
+    const to = OLD_JACKPOTS[ct.id];
+    if (!to || coins.some((x) => x.id === to.id)) continue;
+    renamed[ct.id] = to.id;
+    ct.id = to.id;
+    if (ct.name === to.name[0]) ct.name = to.name[1];
+    if (ct.label === to.label[0]) ct.label = to.label[1];
+  }
+  if (Object.keys(renamed).length) for (const r of project.rounds || []) if (Array.isArray(r.specials)) r.specials = r.specials.map((id) => renamed[id] || id);
+  return project;
+}
+
 export function coinTypeIndex(project, id) {
   const i = holdSpinConfig(project).coins.findIndex((c) => c.id === id);
   return i < 0 ? 0 : i;

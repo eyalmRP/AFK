@@ -28,7 +28,7 @@ import {
   HS_OUTCOMES,
   COIN_PALETTES,
 } from '../core/defaults.js';
-import { holdSpinConfig, symbolLayout } from '../core/coins.js';
+import { holdSpinConfig, symbolLayout, upgradeJackpotCoins } from '../core/coins.js';
 import { buildTimeline, roundIndexAt } from '../core/timeline.js';
 import { computeLayout } from '../core/layout.js';
 import { evalVelocity } from '../core/keys.js';
@@ -1108,6 +1108,7 @@ function migrate(p) {
   if (!Array.isArray(out.wheel.segments) || out.wheel.segments.length < 2) out.wheel.segments = DEFAULT_SEGMENTS.map((s) => ({ ...s }));
   if (!Array.isArray(out.output.formats) || !out.output.formats.length) out.output.formats = [`${out.canvas.width}x${out.canvas.height}`];
   out.rounds = out.rounds.map((r) => ({ ...newRound(OUTCOME_BY_ID[r.outcome] ? r.outcome : 'none'), ...r, outcome: OUTCOME_BY_ID[r.outcome] ? r.outcome : 'none' }));
+  upgradeJackpotCoins(out);
   out.version = 2;
   return out;
 }
