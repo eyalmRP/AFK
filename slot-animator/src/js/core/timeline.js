@@ -17,7 +17,7 @@ import { holdSpinConfig, pickCoinValue, coinTypeIndex } from './coins.js';
 import { scheduleParticles } from './particles.js';
 import { winFxConfig, winStyleOf, scheduleWinFx } from './winfx.js';
 import { scheduleCamera } from './camera.js';
-import { wheelConfig, SLIP } from './wheel.js';
+import { wheelConfig, wheelLandings, segmentKind, SLIP } from './wheel.js';
 
 export const STRIP_PAD = 4;
 
@@ -417,7 +417,9 @@ export function buildTimeline(project) {
         let first = Infinity;
         let last = 0;
         for (let r = 0; r < rows; r++) {
-          const outS = t0 + startRank[c] * sp.startStagger + (rows - 1 - r) * 0.035 + delays[c].start;
+          // A column held back by a tease keeps its old symbols until just
+          // before its new ones drop, instead of standing empty.
+          const outS = t0 + startRank[c] * sp.startStagger + (rows - 1 - r) * 0.035 + delays[c].start + shift;
           actors.push({ id: ++actorId, c, sym: prevGrid[c][r], mult: prevMult[c][r], tIn: t0, tOut: outS + 0.36, keys: exitKeys(outS, r, rows + 1 + peek * 2, 0.36), old: true });
           const inS = inBase + stopRank[c] * sp.stopStagger + (rows - 1 - r) * 0.05 + shift + delays[c].stop;
           const dropDur = 0.3 + 0.02 * (rows - r);
@@ -438,6 +440,18 @@ export function buildTimeline(project) {
     if (!noSpin && mode !== 'cascade') {
       sfx.push({ t: t0, type: 'spinStart' });
       sfx.push({ t: t0, type: 'spinLoop', dur: Math.max(0.2, Math.max(...reelInfo.map((r) => r.stop)) - t0) });
+    }
+
+    // ---- landing build-up: every reel (or cell) that brings a winner
+    // lands with a bump that grows, and a cue that climbs ----
+    if (!noSpin && project.effects?.landShake && o !== 'nearmiss' && win.cells?.length) {
+      const lands = mode === 'cells' ? win.cells.map(([c, r]) => cellInfo[K(c, r)]?.stop) : [...new Set(win.cells.map(([c]) => c))].map((c) => reelInfo[c]?.stop);
+      const times = lands.filter((t) => t != null).sort((a, b) => a - b);
+      times.forEach((t, k) => {
+        const u = times.length > 1 ? k / (times.length - 1) : 1;
+        shakes.push({ t, amp: LAND_SHAKE[0] + (LAND_SHAKE[1] - LAND_SHAKE[0]) * u, dur: 0.22 + 0.12 * u });
+        sfx.push({ t, type: 'winLand', step: k });
+      });
     }
 
     for (const cn of win.coins || []) {
@@ -738,80 +752,112 @@ export function buildTimeline(project) {
       if (cel > 0) pres.celebrate = { start: tcur, end: tcur + cel };
       const segs = project.wheel.segments;
       const N = Math.max(2, segs.length);
-      const segment = Math.min(N - 1, Math.max(0, round.wheelSegment | 0));
+      // Where it lands, spin after spin: a "spin again" segment spins it again.
+      const landings = wheelLandings(project, round);
+      const segment = landings[landings.length - 1];
+      const noWin = segmentKind(segs[segment]) === 'none';
       const inStart = cont ? tcur - 2 : tcur + Math.max(0, cel - 0.2);
       const inEnd = inStart + 0.9;
       const spinStart = cont ? tcur + 0.35 : inEnd + 0.15;
       const spinDur = Math.max(2, num(tm.wheelSpin, 5.8));
       const segDeg = 360 / N;
       const landing = round.wheelLanding || project.wheel.landing || 'tease';
-      const slip = landing === 'slip';
-      // Almost slips: the wheel creeps into the next peg, the pointer
-      // strains, then the wheel rolls back into the winning segment.
-      const spinEnd2 = spinStart + spinDur + (slip ? SLIP.creep + SLIP.roll : 0);
-      let off = 0;
-      if (landing === 'tease') off = rng() < 0.5 ? -0.42 : 0.42;
-      else if (landing === 'random') off = (rng() - 0.5) * 0.7;
-      else if (slip) off = 0.5 - SLIP.peak;
       // The pointer reads the segment under it, at the top or at the bottom.
       const P = wheelConfig(project).pointer === 'bottom' ? 180 : 0;
-      const targetLocal = (segment + 0.5 + off) * segDeg;
       const turns = Math.max(1, num(project.wheel.turns, 5));
-      const delta = (((P - targetLocal - wheelAngle) % 360) + 360) % 360;
-      const total = turns * 360 + delta;
-      const creepDeg = slip ? (SLIP.peak - SLIP.creepFrom) * segDeg : 0;
-      const rollDeg = slip ? (SLIP.peak - SLIP.rest) * segDeg : 0;
-      const windup = 12;
-      const accel = 0.6;
-      const decel = spinDur - 0.45 - accel;
-      const Y = (total - creepDeg + windup) / (1 + (0.3 * 2.2) / decel);
-      const vmax = (2.2 * Y) / decel;
-      const a0 = wheelAngle;
-      const mainEnd = spinStart + spinDur;
-      const vc = slip ? (2 * creepDeg) / SLIP.creep : 0;
-      const wk = [
-        key(spinStart, a0, { outInf: 0.5 }),
-        key(spinStart + 0.45, a0 - windup, { inInf: 0.5, outInf: 0.5 }),
-        key(spinStart + 0.45 + accel, a0 - windup + 0.3 * vmax, { inSpeed: vmax, outSpeed: vmax, outInf: 0.16 }),
-        key(mainEnd, a0 + total - creepDeg, { inInf: 0.62, inSpeed: vc, outSpeed: vc, outInf: 0.3 }),
-      ];
-      if (slip) wk.push(key(mainEnd + SLIP.creep, a0 + total, { inInf: 0.6, outInf: 0.45 }), key(spinEnd2, a0 + total - rollDeg, { inInf: 0.55 }));
-      pushKeys(wheelKeys, wk);
-      // A tick every time a peg passes the pointer.
-      let lastSeg = Math.floor((a0 - windup - P) / segDeg);
-      for (let t = spinStart + 0.45; t <= spinEnd2; t += 1 / 240) {
-        const s2 = Math.floor((evalKeys(wheelKeys, t) - P) / segDeg);
-        if (s2 !== lastSeg) {
-          sfx.push({ t, type: 'wheelTick' });
-          lastSeg = s2;
-        }
-      }
-      // The peg lets go of the pointer as the wheel rolls back: it springs
-      // past straight (a tick as it snaps free).
-      let kick = null;
-      if (slip) {
-        for (let t = mainEnd + SLIP.creep; t <= spinEnd2; t += 1 / 240) {
-          const u = ((((evalKeys(wheelKeys, t) - P) / segDeg) % 1) + 1) % 1;
-          if (u < 0.78) {
-            kick = { t, amp: SLIP.kick };
+      // One spin from `from` to segment `seg`, landing `how`; returns when it
+      // ends (and, for an almost-slip, the pointer's release).
+      const spinTo = (from, seg, how, dur, nTurns) => {
+        const slip = how === 'slip';
+        // Almost slips: the wheel creeps into the next peg, the pointer
+        // strains, then the wheel rolls back into the winning segment.
+        const stopAt = from + dur + (slip ? SLIP.creep + SLIP.roll : 0);
+        let off = 0;
+        if (how === 'tease') off = rng() < 0.5 ? -0.42 : 0.42;
+        else if (how === 'random') off = (rng() - 0.5) * 0.7;
+        else if (slip) off = 0.5 - SLIP.peak;
+        const targetLocal = (seg + 0.5 + off) * segDeg;
+        const delta = (((P - targetLocal - wheelAngle) % 360) + 360) % 360;
+        const total = nTurns * 360 + delta;
+        const creepDeg = slip ? (SLIP.peak - SLIP.creepFrom) * segDeg : 0;
+        const rollDeg = slip ? (SLIP.peak - SLIP.rest) * segDeg : 0;
+        const windup = 12;
+        const accel = 0.6;
+        const decel = dur - 0.45 - accel;
+        const Y = (total - creepDeg + windup) / (1 + (0.3 * 2.2) / decel);
+        const vmax = (2.2 * Y) / decel;
+        const a0 = wheelAngle;
+        const mainEnd = from + dur;
+        const vc = slip ? (2 * creepDeg) / SLIP.creep : 0;
+        const wk = [
+          key(from, a0, { outInf: 0.5 }),
+          key(from + 0.45, a0 - windup, { inInf: 0.5, outInf: 0.5 }),
+          key(from + 0.45 + accel, a0 - windup + 0.3 * vmax, { inSpeed: vmax, outSpeed: vmax, outInf: 0.16 }),
+          key(mainEnd, a0 + total - creepDeg, { inInf: 0.62, inSpeed: vc, outSpeed: vc, outInf: 0.3 }),
+        ];
+        if (slip) wk.push(key(mainEnd + SLIP.creep, a0 + total, { inInf: 0.6, outInf: 0.45 }), key(stopAt, a0 + total - rollDeg, { inInf: 0.55 }));
+        pushKeys(wheelKeys, wk);
+        // A tick every time a peg passes the pointer.
+        let lastSeg = Math.floor((a0 - windup - P) / segDeg);
+        for (let t = from + 0.45; t <= stopAt; t += 1 / 240) {
+          const s2 = Math.floor((evalKeys(wheelKeys, t) - P) / segDeg);
+          if (s2 !== lastSeg) {
             sfx.push({ t, type: 'wheelTick' });
-            break;
+            lastSeg = s2;
           }
         }
-      }
-      wheelAngle = a0 + total - rollDeg;
+        // The peg lets go of the pointer as the wheel rolls back: it springs
+        // past straight (a tick as it snaps free).
+        let kick = null;
+        if (slip) {
+          for (let t = mainEnd + SLIP.creep; t <= stopAt; t += 1 / 240) {
+            const u = ((((evalKeys(wheelKeys, t) - P) / segDeg) % 1) + 1) % 1;
+            if (u < 0.78) {
+              kick = { t, amp: SLIP.kick };
+              sfx.push({ t, type: 'wheelTick' });
+              break;
+            }
+          }
+        }
+        wheelAngle = a0 + total - rollDeg;
+        return { end: stopAt, mainEnd, kick, slip };
+      };
+      const agains = [];
+      let from = spinStart;
+      let last = null;
+      landings.forEach((seg, j) => {
+        const final = j === landings.length - 1;
+        // A spin again is quicker, and lands naturally; the round's landing
+        // style is for the last spin.
+        const r = spinTo(from, seg, final ? landing : 'random', j ? Math.max(2, spinDur * 0.8) : spinDur, j ? Math.max(1, turns - 2) : turns);
+        if (final) last = r;
+        else {
+          agains.push({ segment: seg, at: r.end + 0.2, until: r.end + WHEEL_AGAIN });
+          flashes.push({ t: r.end + 0.2, amp: 0.35, dur: 0.3 });
+          sfx.push({ t: r.end + 0.15, type: 'wheelAgain' });
+          from = r.end + WHEEL_AGAIN + 0.15;
+        }
+      });
+      const spinEnd2 = last.end;
       const countStart = spinEnd2 + 0.65;
       const countEnd = countStart + 2.2;
       const outStart = keepOn ? countEnd + 1000 : countEnd + 1.3;
-      pres.wheel = { inStart, inEnd, spinStart, spinEnd: spinEnd2, prizeStart: spinEnd2 + 0.25, countStart, countEnd, outStart, outEnd: outStart + 0.8, segment, amount: win.amount, cont, titleIn: tcur, plaqueEnd: keepOn ? countEnd + 1.3 : outStart + 0.8, landing, slowFrom: slip ? mainEnd - 1.2 : spinEnd2 - 1.6, kick };
+      pres.wheel = { inStart, inEnd, spinStart, spinEnd: spinEnd2, prizeStart: spinEnd2 + 0.25, countStart, countEnd, outStart, outEnd: outStart + 0.8, segment, amount: win.amount, cont, titleIn: tcur, plaqueEnd: keepOn ? countEnd + 1.3 : outStart + 0.8, landing, slowFrom: last.slip ? last.mainEnd - 1.2 : spinEnd2 - 1.6, kick: last.kick, agains, noWin };
       wheelShown = wheelGame;
-      pres.meter = { start: countStart, end: countEnd };
-      pushKeys(meterKeys, [key(countStart, 0, { outSpeed: (win.amount / 2.2) * 1.25 }), key(countEnd, win.amount, { inInf: 0.6, hold: true })]);
-      flashes.push({ t: inStart + 0.1, amp: 0.4, dur: 0.35 }, { t: spinEnd2 + 0.25, amp: 0.5, dur: 0.35 });
-      shakes.push({ t: spinEnd2 + 0.25, amp: 0.8, dur: 0.5 });
       if (!cont) sfx.push({ t: inStart, type: 'whoosh' });
       if (!keepOn) sfx.push({ t: outStart, type: 'whoosh' });
-      sfx.push({ t: spinEnd2 + 0.2, type: 'wheelLand' }, { t: countStart, type: 'count', dur: 2.2 }, { t: spinEnd2 + 0.25, type: 'coins', dur: 1.5 }, { t: countEnd, type: 'countEnd' });
+      flashes.push({ t: inStart + 0.1, amp: 0.4, dur: 0.35 });
+      if (noWin) {
+        // No win: the label shows, nothing counts, a let-down cue.
+        shakes.push({ t: spinEnd2 + 0.25, amp: 0.25, dur: 0.3 });
+        sfx.push({ t: spinEnd2 + 0.2, type: 'nearMiss' });
+      } else {
+        pres.meter = { start: countStart, end: countEnd };
+        pushKeys(meterKeys, [key(countStart, 0, { outSpeed: (win.amount / 2.2) * 1.25 }), key(countEnd, win.amount, { inInf: 0.6, hold: true })]);
+        flashes.push({ t: spinEnd2 + 0.25, amp: 0.5, dur: 0.35 });
+        shakes.push({ t: spinEnd2 + 0.25, amp: 0.8, dur: 0.5 });
+        sfx.push({ t: spinEnd2 + 0.2, type: 'wheelLand' }, { t: countStart, type: 'count', dur: 2.2 }, { t: spinEnd2 + 0.25, type: 'coins', dur: 1.5 }, { t: countEnd, type: 'countEnd' });
+      }
       end = keepOn ? pres.wheel.plaqueEnd : pres.wheel.outEnd;
     } else if (o === 'fstotal') {
       pres.overlay = overlay(t0 + 0.2, win.amount, ['total']);
@@ -1037,3 +1083,10 @@ export const STICKY_COVER = 0.45;
 export function heldCells(tl, t) {
   return (tl.stickies || []).filter((s) => t >= s.from + STICKY_COVER && t < s.to);
 }
+
+// The landing build-up's shake, from the first winning reel to the last.
+export const LAND_SHAKE = [0.18, 0.68];
+
+// A spin again: how long after the wheel stops it spins again (the plaque
+// says SPIN AGAIN in between).
+export const WHEEL_AGAIN = 1.5;

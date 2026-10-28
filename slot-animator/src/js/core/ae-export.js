@@ -290,6 +290,9 @@ export function buildAEData(project, tl, L, extras = {}) {
         cont: w.cont ? 1 : 0,
         keys: exportKeys(tl.wheelKeys, w.spinStart, w.spinEnd),
         kick: w.kick ? [r4(w.kick.t), w.kick.amp] : null,
+        // Spin again: the segment, when the plaque says so, and its label.
+        agains: (w.agains || []).map((g) => ({ segment: g.segment, at: r4(g.at), until: r4(g.until), label: clean(project.wheel.segments[g.segment]?.label || 'SPIN AGAIN') })),
+        noWin: w.noWin ? 1 : 0,
       };
     }
     return out;
@@ -1917,23 +1920,31 @@ export const AE_SCRIPT = String.raw`// Slot animation rebuilt for After Effects 
     var part = function (key, rel2, xy) { return inst(comp, imagePH(key, "Wheel", rel2), key, xy || [cx, cy]); };
     var disc = inst(comp, wheelDiscPH(), "Wheel Disc", [cx, cy]);
     var kids = [];
+    // A glowing wedge on a segment of the disc, turning with it.
+    var wedgeOn = function (segIdx, name, opExpr) {
+      var seg = WH.segDeg, a0 = -90 + segIdx * seg + w.angle0, pts = [[cx, cy]], ang;
+      for (s = 0; s <= 12; s++) {
+        ang = (a0 + seg * s / 12) * Math.PI / 180;
+        pts.push([cx + Math.cos(ang) * Rr, cy + Math.sin(ang) * Rr]);
+      }
+      var wedge = shapeLayer(comp, name);
+      var wg = group(wedge);
+      path(wg, pts, true);
+      fill(wg, [1, 1, 1], 100);
+      wedge.blendingMode = BlendingMode.ADD;
+      P(wedge, "ADBE Opacity").expression = opExpr;
+      wedge.parent = disc;
+    };
     if (disc) {
       var rot = P(disc, "ADBE Rotate Z");
       rot.setValue(w.angle0);
       setKeys(rot, w.keys, -R.start);
       kids.push(disc);
-      var seg = WH.segDeg, a0 = -90 + w.segment * seg + w.angle0, pts = [[cx, cy]];
-      for (s = 0; s <= 12; s++) {
-        var ang = (a0 + seg * s / 12) * Math.PI / 180;
-        pts.push([cx + Math.cos(ang) * Rr, cy + Math.sin(ang) * Rr]);
+      wedgeOn(w.segment, w.noWin ? "No Win Segment" : "Winning Segment", "var a = time - " + rel(w.spinEnd) + "; a < 0 ? 0 : Math.min(1, a / 0.3) * (30 + 25 * Math.sin(time * 10));");
+      for (i = 0; i < w.agains.length; i++) {
+        var ag = w.agains[i];
+        wedgeOn(ag.segment, "Spin Again Segment " + (i + 1), "var a = time - " + rel(ag.at - 0.2) + "; (a < 0 || time > " + rel(ag.until) + ") ? 0 : Math.min(1, a / 0.3) * (30 + 25 * Math.sin(time * 10));");
       }
-      var wedge = shapeLayer(comp, "Winning Segment");
-      var wg = group(wedge);
-      path(wg, pts, true);
-      fill(wg, [1, 1, 1], 100);
-      wedge.blendingMode = BlendingMode.ADD;
-      P(wedge, "ADBE Opacity").expression = "var a = time - " + rel(w.spinEnd) + "; a < 0 ? 0 : Math.min(1, a / 0.3) * (30 + 25 * Math.sin(time * 10));";
-      wedge.parent = disc;
     }
     // A hub that stays still sits over the turning disc.
     if (!WH.hubSpins) {
@@ -1972,22 +1983,38 @@ export const AE_SCRIPT = String.raw`// Slot animation rebuilt for After Effects 
     var title = titleLayer(comp, "wheel", WH.title, inA, rel(w.spinStart) + 1.1, W * 0.9);
     if (title) fadeKeys(title, inA, rel(w.spinStart) + 1.1, 0.3, 0.5);
     var pa = rel(w.prizeStart), PL = WH.plaque, Rp = PL[2];
-    emitters(comp, R, "under", ["wheel"]);
-    ring(comp, [PL[0], PL[1]], pa, Rp * 1.6, DATA.accent);
+    var plaqueSrc = plaquePH("Prize Plaque", Rp * 1.5, Rp * 0.62, Rp * 0.15, 96, [0.91, 0.73, 0.29], Math.max(2, Rp * 0.03));
+    // Spin again: the plaque says so between the spins.
+    for (i = 0; i < w.agains.length; i++) {
+      var g2 = w.agains[i], ga = rel(g2.at), gb = rel(g2.until);
+      var apl = inst(comp, plaqueSrc, "Spin Again Plaque " + (i + 1), [PL[0], PL[1]], ga, gb);
+      var aPop = EASE_LIB + "var k = outBack(c01((time - " + ga + ") / 0.4)) * 100 * c01((" + gb + " - time) / 0.3); [k, k];";
+      P(apl, "ADBE Scale").expression = aPop;
+      var albl = text(comp, "Spin Again Label " + (i + 1), g2.label, Math.round(Rp * 0.2), [PL[0], PL[1]]);
+      P(albl, "ADBE Scale").expression = aPop;
+      trim(albl, ga, gb);
+      ring(comp, [PL[0], PL[1]], ga, Rp * 1.3, DATA.accent);
+    }
+    if (!w.noWin) {
+      emitters(comp, R, "under", ["wheel"]);
+      ring(comp, [PL[0], PL[1]], pa, Rp * 1.6, DATA.accent);
+    }
     // The plaque leaves before the next spin in the wheel game.
     var pEnd = Math.min(outB, rel(w.plaqueEnd));
-    var pl = inst(comp, plaquePH("Prize Plaque", Rp * 1.5, Rp * 0.62, Rp * 0.15, 96, [0.91, 0.73, 0.29], Math.max(2, Rp * 0.03)), "Prize Plaque", [PL[0], PL[1]], pa, pEnd);
+    var pl = inst(comp, plaqueSrc, "Prize Plaque", [PL[0], PL[1]], pa, pEnd);
     var popE = EASE_LIB + "var k = outBack(c01((time - " + pa + ") / 0.5)) * 100; [k, k];";
     P(pl, "ADBE Scale").expression = popE;
-    var lbl = text(comp, "Prize Label", w.label, Math.round(Rp * 0.2), [PL[0], PL[1] - Rp * 0.1]);
+    // No win: the label sits in the middle and nothing counts.
+    var lbl = text(comp, w.noWin ? "No Win Label" : "Prize Label", w.label, Math.round(Rp * 0.2), [PL[0], PL[1] - (w.noWin ? 0 : Rp * 0.1)]);
     P(lbl, "ADBE Scale").expression = popE;
     trim(lbl, pa, pEnd);
-    winCtrl(comp, countKeys(rel(w.countStart), rel(w.countEnd), R.amount));
-    var od = counters(comp, [PL[0], PL[1] + Rp * 0.12], Math.round(Rp * 0.14), R.amount);
-    trim(od, pa, pEnd);
     var fadeOut = envExpr + "env * 100 * c01((" + pEnd + " - time) / 0.35);";
     P(pl, "ADBE Opacity").expression = fadeOut;
     P(lbl, "ADBE Opacity").expression = fadeOut;
+    if (w.noWin) return;
+    winCtrl(comp, countKeys(rel(w.countStart), rel(w.countEnd), R.amount));
+    var od = counters(comp, [PL[0], PL[1] + Rp * 0.12], Math.round(Rp * 0.14), R.amount);
+    trim(od, pa, pEnd);
     P(od, "ADBE Opacity").expression = fadeOut;
   }
 

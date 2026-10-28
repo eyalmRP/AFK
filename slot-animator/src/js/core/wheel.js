@@ -210,3 +210,26 @@ export function autoIcons(segments) {
     return `builtin:${LADDER[Math.round(r * (LADDER.length - 1))]}`;
   });
 }
+
+// Segment kinds: a prize pays its value; "again" spins the wheel again
+// within the round; "none" pays nothing.
+export const SEGMENT_KINDS = [
+  { id: 'prize', label: 'Prize' },
+  { id: 'again', label: 'Spin again', word: 'SPIN AGAIN' },
+  { id: 'none', label: 'No win', word: 'NO WIN' },
+];
+export const segmentKind = (s) => (s && (s.kind === 'again' || s.kind === 'none') ? s.kind : 'prize');
+
+// Where a wheel round lands, spin after spin: its segment, and when that
+// says spin again, the segment it lands on next (the round's "then", or
+// the first prize).
+export function wheelLandings(project, round) {
+  const segs = project.wheel?.segments || [];
+  const n = segs.length;
+  const clampSeg = (i) => Math.min(n - 1, Math.max(0, Number(i) | 0));
+  const first = clampSeg(round.wheelSegment);
+  if (segmentKind(segs[first]) !== 'again') return [first];
+  const fallback = segs.findIndex((s) => segmentKind(s) === 'prize');
+  const then = round.wheelThen != null && segmentKind(segs[clampSeg(round.wheelThen)]) !== 'again' ? clampSeg(round.wheelThen) : fallback;
+  return then >= 0 ? [first, then] : [first];
+}

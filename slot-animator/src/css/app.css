@@ -823,7 +823,7 @@ body.dragging * {
 
 .segment {
   display: grid;
-  grid-template-columns: 20px 34px 34px minmax(0, 1fr) 64px 28px;
+  grid-template-columns: 20px 34px 34px minmax(0, 1fr) 56px 24px 24px;
   gap: 6px;
   align-items: center;
 }
@@ -2640,4 +2640,30 @@ body.dragging .bank-head {
   .brand {
     display: none;
   }
+}
+
+/* Wheel segment kinds: prize, spin again, no win. */
+.seg-kind-chip {
+  display: grid;
+  place-items: center;
+  height: 30px;
+  border-radius: 7px;
+  font-size: 11px;
+  font-weight: 600;
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+}
+
+.seg-kind-chip.again,
+.seg-kind.again {
+  color: var(--good);
+}
+
+.seg-kind-chip.none,
+.seg-kind.none {
+  color: var(--bad);
+}
+
+.seg-kind.prize {
+  color: var(--gold);
 }

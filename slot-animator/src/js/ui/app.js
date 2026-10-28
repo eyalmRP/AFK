@@ -41,7 +41,7 @@ import { loadParticleSprites, drawParticleList } from '../render/particles.js';
 import { PARTICLE_TEMPLATES, TEMPLATE_BY_ID, BUILTIN_PARTICLES, PARTICLE_MOTIONS, PARTICLE_MOMENTS, PARTICLE_LENGTHS, tierParticles, spawnParticles, particleAssetInfo } from '../core/particles.js';
 import { WIN_STYLES, JUMP_TARGETS, MERGE_POINTS, FLIGHT_PATHS, winFxConfig, jumpTarget, mergeTarget } from '../core/winfx.js';
 import { searchFeatures, buildIndex } from './search.js';
-import { WHEEL_FRAMINGS, WHEEL_LANDINGS, POINTER_SIDES, LABEL_PALETTES, WHEEL_ICONS, wheelConfig, iconName, autoIcons, autoHeights } from '../core/wheel.js';
+import { WHEEL_FRAMINGS, WHEEL_LANDINGS, POINTER_SIDES, LABEL_PALETTES, WHEEL_ICONS, SEGMENT_KINDS, wheelConfig, iconName, autoIcons, autoHeights, segmentKind, wheelLandings } from '../core/wheel.js';
 import { projectFonts, parseFontNames } from '../core/fonts.js';
 import { renderFrame } from '../render/renderer.js';
 import { decodeCustomSounds, renderSoundtrack, audioBufferToWav } from '../render/audio.js';
@@ -1905,7 +1905,10 @@ function wheelBuilder() {
     rangeField({ id: 'qb-wheel-spins', label: 'Spins', value: b.wheelSpins, min: 1, max: 8, step: 1, onInput: (v) => (b.wheelSpins = v) }),
     selectField({ id: 'qb-wheel-last', label: 'The last spin lands on', value: b.wheelLast, options: segs.map((sg, i) => ({ value: i, label: `${i + 1}. ${sg.label}` })), onChange: (v) => (b.wheelLast = Number(v)) }),
     button('Build sequence', () => {
-      P.rounds = Array.from({ length: b.wheelSpins }, (_, i) => newRound('wheel', { wheelSegment: i === b.wheelSpins - 1 ? b.wheelLast : Math.floor(Math.random() * segs.length) }));
+      // The other spins land on prizes at random.
+      const prizes = segs.map((sg, i) => i).filter((i) => segmentKind(segs[i]) === 'prize');
+      const anyPrize = () => (prizes.length ? prizes[Math.floor(Math.random() * prizes.length)] : Math.floor(Math.random() * segs.length));
+      P.rounds = Array.from({ length: b.wheelSpins }, (_, i) => newRound('wheel', { wheelSegment: i === b.wheelSpins - 1 ? b.wheelLast : anyPrize() }));
       state.sel = 0;
       changed('timeline');
       renderSequence();
@@ -1942,7 +1945,11 @@ function describe(r) {
     if (r.outcome === 'big') text = `To ${tierTitle(r.tier)} · ${text}`;
     return fs + text;
   }
-  if (r.outcome === 'wheel') return `Lands on ${P.wheel.segments[r.wheelSegment]?.label ?? '?'}`;
+  if (r.outcome === 'wheel') {
+    const segs = P.wheel.segments;
+    const ls = wheelLandings(P, r);
+    return ls.length > 1 ? `Spin again, then ${segs[ls[1]]?.label ?? '?'}` : `Lands on ${segs[ls[0]]?.label ?? '?'}`;
+  }
   if (r.outcome === 'freespins') return `${r.freeSpins} free spins${r.sticky ? ' · sticky wilds' : ''}`;
   if (r.outcome === 'bonus') return 'Scatter trigger';
   if (r.outcome === 'nearmiss') return `${fs}Scatters short by one, the last one slides past`;
@@ -2365,13 +2372,29 @@ function renderInspector() {
         id: 'ri-seg',
         label: 'Wheel lands on',
         value: r.wheelSegment,
-        options: P.wheel.segments.map((s, i) => ({ value: i, label: `${i + 1}. ${s.label} (${cur}${s.value})` })),
+        options: P.wheel.segments.map((s, i) => ({ value: i, label: segmentOption(s, i, cur) })),
         onChange: (v) => {
           r.wheelSegment = Number(v);
           changed(kind);
           refreshList();
+          renderInspector();
         },
       }),
+      // A spin again lands somewhere next.
+      segmentKind(P.wheel.segments[r.wheelSegment]) === 'again'
+        ? selectField({
+            id: 'ri-seg-then',
+            label: 'Then lands on',
+            value: wheelLandings(P, r)[1] ?? '',
+            options: P.wheel.segments.map((s, i) => ({ value: i, label: segmentOption(s, i, cur) })).filter((o) => segmentKind(P.wheel.segments[o.value]) !== 'again'),
+            onChange: (v) => {
+              r.wheelThen = Number(v);
+              changed(kind);
+              refreshList();
+            },
+            hint: 'The wheel says SPIN AGAIN, spins once more and lands here.',
+          })
+        : null,
       segmented({
         id: 'ri-landing',
         label: 'Landing',
@@ -2670,7 +2693,8 @@ function panelMachine() {
       rangeField({ id: 'm-rows', label: 'Rows', value: P.grid.rows, min: 1, max: 7, step: 1, onInput: num(P.grid, 'rows', 'all', () => renderInspector()) }),
       rangeField({ id: 'm-aspect', label: 'Cell height', unit: '× width', value: P.grid.cellAspect, min: 0.6, max: 1.4, step: 0.02, onInput: num(P.grid, 'cellAspect', 'all') }),
       rangeField({ id: 'm-peek', label: 'Partial symbols above and below', value: P.grid.peek, min: 0, max: 0.5, step: 0.01, onInput: num(P.grid, 'peek', 'all') }),
-      rangeField({ id: 'm-curve', label: 'Reel curvature', value: P.grid.curvature, min: 0, max: 1, step: 0.01, onInput: num(P.grid, 'curvature', 'all'), hint: 'Bends the strip like a drum. Preview and MP4 only; the After Effects reels stay flat.' })
+      rangeField({ id: 'm-curve', label: 'Reel curvature', value: P.grid.curvature, min: 0, max: 1, step: 0.01, onInput: num(P.grid, 'curvature', 'all'), hint: 'Bends the strip like a drum. Preview and MP4 only; the After Effects reels stay flat.' }),
+      toggleField({ id: 'm-row-lines', label: 'Row lines', checked: !!P.machine.rowLines, onChange: num(P.machine, 'rowLines', 'all'), hint: 'Thin lines between the rows across the reels. Per-cell spins always have them.' })
     ),
     game !== 'slot' ? null : section(
       'How it pays',
@@ -3622,6 +3646,7 @@ function panelEffects() {
       rangeField({ id: 'fx-spark', label: 'Sparkles', value: fx.sparkles, min: 0, max: 2, step: 0.01, onInput: num(fx, 'sparkles') }),
       rangeField({ id: 'fx-rays', label: 'Light rays', value: fx.rays, min: 0, max: 1.5, step: 0.01, onInput: num(fx, 'rays') }),
       rangeField({ id: 'fx-shake', label: 'Screen shake', value: fx.shake, min: 0, max: 2, step: 0.01, onInput: num(fx, 'shake') }),
+      toggleField({ id: 'fx-land-shake', label: 'Build-up shake on winning reels', checked: !!fx.landShake, onChange: num(fx, 'landShake'), hint: 'Every reel or cell that brings a winner lands with a bump that grows, and a note that climbs.' }),
       rangeField({ id: 'fx-flash', label: 'Flashes', value: fx.flash, min: 0, max: 1.5, step: 0.01, onInput: num(fx, 'flash') }),
       rangeField({ id: 'fx-bloom', label: 'Bloom glow', value: fx.bloom, min: 0, max: 1.2, step: 0.01, onInput: num(fx, 'bloom'), hint: 'Preview and MP4 only.' }),
       rangeField({ id: 'fx-bokeh', label: 'Background lights', value: fx.bokeh, min: 0, max: 2, step: 0.01, onInput: num(fx, 'bokeh') })
@@ -3772,7 +3797,14 @@ function previewAWin() {
 
 // One segment row: number, colour (or none, to show the wheel face), icon,
 // label, value, remove.
+// A segment as a choice in a list: its number, label and what it gives.
+function segmentOption(s, i, cur) {
+  const k = segmentKind(s);
+  return `${i + 1}. ${s.label}${k === 'prize' ? ` (${cur}${s.value})` : k === 'again' ? ' (spin again)' : ' (no win)'}`;
+}
+
 function segmentRow(P, W, s, i) {
+  const kindOf = segmentKind(s);
   const colour = s.color
     ? h(
         'div',
@@ -3806,7 +3838,23 @@ function segmentRow(P, W, s, i) {
     colour,
     iconCell,
     h('input', { type: 'text', id: `seg-l-${i}`, value: s.label, 'aria-label': `Segment ${i + 1} label`, onchange: (e) => { s.label = e.target.value; changed('all'); refreshList(); } }),
-    h('input', { type: 'number', id: `seg-v-${i}`, value: s.value, 'aria-label': `Segment ${i + 1} value`, onchange: (e) => { s.value = Number(e.target.value) || 0; changed('timeline'); } }),
+    kindOf === 'prize'
+      ? h('input', { type: 'number', id: `seg-v-${i}`, value: s.value, 'aria-label': `Segment ${i + 1} value`, onchange: (e) => { s.value = Number(e.target.value) || 0; changed('timeline'); } })
+      : h('span', { class: `seg-kind-chip ${kindOf}`, id: `seg-v-${i}`, title: kindOf === 'again' ? 'Lands here: the wheel spins again' : 'Lands here: no win' }, kindOf === 'again' ? 'Again' : 'No win'),
+    button('', () => {
+      // Prize, then spin again, then no win. A label still showing the
+      // value (or the old kind's word) follows the kind.
+      const order = ['prize', 'again', 'none'];
+      const next = order[(order.indexOf(kindOf) + 1) % order.length];
+      const words = SEGMENT_KINDS.map((k) => k.word).filter(Boolean);
+      const auto = String(s.label) === String(s.value) || words.includes(String(s.label).toUpperCase());
+      s.kind = next;
+      if (auto) s.label = SEGMENT_KINDS.find((k) => k.id === next).word || String(s.value);
+      changed('all');
+      renderPanel();
+      renderInspector();
+      refreshList();
+    }, { class: `icon-btn tiny seg-kind ${kindOf}`, icon: kindOf === 'prize' ? 'coin' : kindOf === 'again' ? 'loop' : 'block', title: `${SEGMENT_KINDS.find((k) => k.id === kindOf).label}: click for ${kindOf === 'prize' ? 'Spin again' : kindOf === 'again' ? 'No win' : 'Prize'}`, id: `seg-k-${i}` }),
     button('', () => {
       if (W.segments.length <= 3) return toast('A wheel needs at least three segments.', 'warn');
       W.segments.splice(i, 1);
@@ -3842,7 +3890,7 @@ function panelWheel() {
     section(
       'Segments',
       h('p', { class: 'hint' }, 'Clockwise from the top. Each wheel round picks its landing segment in the round settings. Clear a colour (×) to let the wheel face show through. Click an icon to pick a built-in one or upload your own.'),
-      h('div', { class: 'segment head' }, h('span', null, '#'), h('span', null, 'Fill'), h('span', null, 'Icon'), h('span', null, 'Label'), h('span', null, 'Value'), h('span', null, '')),
+      h('div', { class: 'segment head' }, h('span', null, '#'), h('span', null, 'Fill'), h('span', null, 'Icon'), h('span', null, 'Label'), h('span', null, 'Value'), h('span', { title: 'Prize, spin again or no win' }, 'Kind'), h('span', null, '')),
       list,
       h(
         'div',

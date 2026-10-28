@@ -1392,13 +1392,15 @@ function drawWheel(ctx, scene, R, t) {
   };
   draw(theta, 1);
   for (let i = 1; i <= ghosts; i++) draw(theta - (Math.sign(omega) * shutter * i) / ghosts, 1 / (i + 1));
-  // Winning segment glow once the wheel has landed.
-  if (t > w.spinEnd) {
-    const k = clamp01((t - w.spinEnd) / 0.3);
+  // Segment glow once the wheel has landed: the winner, or a spin again
+  // while it says so.
+  const again = (w.agains || []).find((g) => t > g.at - 0.2 && t < g.until);
+  if (t > w.spinEnd || again) {
+    const k = again ? clamp01((t - again.at + 0.2) / 0.3) : clamp01((t - w.spinEnd) / 0.3);
     const seg = (Math.PI * 2) / N;
     ctx.save();
     ctx.rotate((theta * Math.PI) / 180);
-    const a0 = -Math.PI / 2 + w.segment * seg;
+    const a0 = -Math.PI / 2 + (again ? again.segment : w.segment) * seg;
     ctx.globalCompositeOperation = 'lighter';
     ctx.globalAlpha = a * k * (0.3 + 0.25 * Math.sin(t * 10));
     ctx.fillStyle = '#ffffff';
@@ -1443,37 +1445,53 @@ function drawWheel(ctx, scene, R, t) {
   const titleIn = w.cont ? clamp01((t - w.titleIn) / 0.3) : 1;
   const titleA = a * titleIn * (1 - clamp01((t - w.spinStart - 0.6) / 0.5));
   drawCentered(ctx, res.titles.wheel, G.title.x, cy + (G.title.y - cy) * sc, 0.5 + 0.5 * ease.outBack(tIn), titleA);
-  if (t > w.prizeStart) {
-    const pl = G.plaque;
-    drawRoundParticles(ctx, scene, R, t, ['wheel']);
-    drawRing(ctx, pl.x, pl.y, (t - w.prizeStart) / 0.8, pl.R * 1.6, res.theme.accent, pl.R * 0.05);
-    const k = ease.outBack(clamp01((t - w.prizeStart) / 0.5)) * clamp01((w.plaqueEnd - t) / 0.35);
-    const pw = pl.R * 1.5;
-    const ph = pl.R * 0.62;
-    ctx.save();
-    ctx.globalAlpha = a;
-    ctx.translate(pl.x, pl.y);
-    ctx.scale(k * sc, k * sc);
-    drawGlow(ctx, res, res.theme.accent, 0, 0, pw * 1.8, 0.6);
-    roundRect(ctx, -pw / 2, -ph / 2, pw, ph, ph * 0.25);
-    const g = ctx.createLinearGradient(0, -ph / 2, 0, ph / 2);
-    g.addColorStop(0, 'rgba(46,20,70,0.96)');
-    g.addColorStop(1, 'rgba(8,2,16,0.97)');
-    ctx.fillStyle = g;
-    ctx.fill();
-    ctx.lineWidth = ph * 0.05;
-    ctx.strokeStyle = '#e9b949';
-    ctx.stroke();
-    ctx.restore();
-    const seg = project.wheel.segments[w.segment] || { label: '' };
-    const lbl = cachedTitle(res, 'prize', String(seg.label), Math.round(pl.R * 0.2), 'gold');
-    drawCentered(ctx, lbl, pl.x, pl.y - ph * 0.16 * k * sc, k * sc * Math.min(1, (pw * 0.92) / lbl.width), a);
-    const v = evalKeys(tl.meterKeys, t);
-    ctx.save();
-    ctx.globalAlpha = a;
-    drawOdometer(ctx, res, v, pl.x, pl.y + ph * 0.2 * k * sc, Math.round(pl.R * 0.14), { currency: project.machine.currency || '', decimals: project.machine.decimals | 0, rate: evalVelocity(tl.meterKeys, t), scale: k * sc });
-    ctx.restore();
+  const pl = G.plaque;
+  // Spin again: the plaque says so, then the wheel turns once more.
+  if (again) {
+    const k = ease.outBack(clamp01((t - again.at) / 0.4)) * clamp01((again.until - t) / 0.3);
+    drawRing(ctx, pl.x, pl.y, (t - again.at) / 0.7, pl.R * 1.3, res.theme.accent, pl.R * 0.04);
+    const seg = project.wheel.segments[again.segment] || {};
+    drawWheelPlaque(ctx, scene, pl, k * sc, a, String(seg.label || 'SPIN AGAIN'), null);
   }
+  if (t > w.prizeStart) {
+    if (!w.noWin) {
+      drawRoundParticles(ctx, scene, R, t, ['wheel']);
+      drawRing(ctx, pl.x, pl.y, (t - w.prizeStart) / 0.8, pl.R * 1.6, res.theme.accent, pl.R * 0.05);
+    }
+    const k = ease.outBack(clamp01((t - w.prizeStart) / 0.5)) * clamp01((w.plaqueEnd - t) / 0.35);
+    const seg = project.wheel.segments[w.segment] || { label: '' };
+    drawWheelPlaque(ctx, scene, pl, k * sc, a, String(seg.label), w.noWin ? null : evalKeys(tl.meterKeys, t), evalVelocity(tl.meterKeys, t));
+  }
+}
+
+// The wheel's prize plaque: a label, and the counting amount (none for a
+// spin again or no win, where the label sits in the middle).
+function drawWheelPlaque(ctx, scene, pl, k, a, label, value, rate = 0) {
+  const { res, project } = scene;
+  const pw = pl.R * 1.5;
+  const ph = pl.R * 0.62;
+  ctx.save();
+  ctx.globalAlpha = a;
+  ctx.translate(pl.x, pl.y);
+  ctx.scale(k, k);
+  drawGlow(ctx, res, res.theme.accent, 0, 0, pw * 1.8, value == null ? 0.4 : 0.6);
+  roundRect(ctx, -pw / 2, -ph / 2, pw, ph, ph * 0.25);
+  const g = ctx.createLinearGradient(0, -ph / 2, 0, ph / 2);
+  g.addColorStop(0, 'rgba(46,20,70,0.96)');
+  g.addColorStop(1, 'rgba(8,2,16,0.97)');
+  ctx.fillStyle = g;
+  ctx.fill();
+  ctx.lineWidth = ph * 0.05;
+  ctx.strokeStyle = '#e9b949';
+  ctx.stroke();
+  ctx.restore();
+  const lbl = cachedTitle(res, 'prize', label, Math.round(pl.R * 0.2), 'gold');
+  drawCentered(ctx, lbl, pl.x, pl.y - (value == null ? 0 : ph * 0.16 * k), k * Math.min(1, (pw * 0.92) / lbl.width), a);
+  if (value == null) return;
+  ctx.save();
+  ctx.globalAlpha = a;
+  drawOdometer(ctx, res, value, pl.x, pl.y + ph * 0.2 * k, Math.round(pl.R * 0.14), { currency: project.machine.currency || '', decimals: project.machine.decimals | 0, rate, scale: k });
+  ctx.restore();
 }
 
 // ---- Hold & Spin effects ----

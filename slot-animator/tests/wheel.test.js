@@ -6,7 +6,7 @@ import { computeLayout } from '../src/js/core/layout.js';
 import { evalKeys } from '../src/js/core/keys.js';
 import { cameraAt } from '../src/js/core/camera.js';
 import { buildAEData, buildAEScript } from '../src/js/core/ae-export.js';
-import { WHEEL_FRAMINGS, WHEEL_LANDINGS, WHEEL_ICONS, SLIP, POINTER_MAX, wheelConfig, pointerAt, pointerDeflection, autoIcons, iconName, segmentLayout } from '../src/js/core/wheel.js';
+import { WHEEL_FRAMINGS, WHEEL_LANDINGS, WHEEL_ICONS, SLIP, POINTER_MAX, wheelConfig, pointerAt, pointerDeflection, autoIcons, iconName, segmentLayout, wheelLandings, segmentKind } from '../src/js/core/wheel.js';
 import { parseFontNames, fontPostScript, projectFonts } from '../src/js/core/fonts.js';
 import { createAE, runScript } from './ae-mock.js';
 
@@ -269,4 +269,49 @@ test('wheel icon and text height: automatic by default, placed by hand, sizes fi
   const data = buildAEData(p, buildTimeline(p), L, { titleKeys: [] });
   assert.ok(data.wheel.labels.every((l) => Math.abs(l.r - 0.82 * R) < 1e-3));
   assert.ok(data.wheel.icons.every((i) => Math.abs(i.r - 0.5 * R) < 1e-3));
+});
+
+test('wheel segments: spin again spins once more to the next segment, no win pays nothing', () => {
+  const p = spins();
+  p.wheel.segments[1].kind = 'again';
+  p.wheel.segments[4].kind = 'none';
+  p.rounds = [newRound('wheel', { seed: 1, wheelSegment: 1, wheelThen: 3 }), newRound('wheel', { seed: 2, wheelSegment: 4 }), newRound('wheel', { seed: 3, wheelSegment: 1 })];
+  assert.deepEqual(wheelLandings(p, p.rounds[0]), [1, 3]);
+  assert.deepEqual(wheelLandings(p, p.rounds[1]), [4]);
+  assert.deepEqual(wheelLandings(p, p.rounds[2]), [1, 0], 'no "then": the first prize');
+  const tl = buildTimeline(p);
+  const seg = segDegOf(p);
+  const [R0, R1, R2] = tl.rounds;
+  // Spin again: it stops on the spin-again segment, says so, then lands on segment 3 and pays it.
+  const w0 = R0.pres.wheel;
+  assert.equal(w0.agains.length, 1);
+  const g = w0.agains[0];
+  assert.equal(under(p, evalKeys(tl.wheelKeys, g.at), 0), 1);
+  assert.equal(under(p, evalKeys(tl.wheelKeys, w0.spinEnd + 0.3), 0), 3);
+  assert.ok(evalKeys(tl.wheelKeys, g.until + 1.5) > evalKeys(tl.wheelKeys, g.at) + 360, 'it turns again');
+  assert.equal(R0.win.amount, p.wheel.segments[3].value * p.machine.bet);
+  assert.ok(tl.sfx.some((e) => e.type === 'wheelAgain' && e.t > g.at - 0.3 && e.t < g.at));
+  // No win: nothing to count.
+  const w1 = R1.pres.wheel;
+  assert.equal(w1.noWin, true);
+  assert.equal(R1.win.amount, 0);
+  assert.ok(!tl.sfx.some((e) => e.type === 'count' && e.t >= w1.spinEnd && e.t <= w1.countEnd + 0.1));
+  assert.ok(tl.sfx.some((e) => e.type === 'nearMiss' && e.t > w1.spinEnd));
+  assert.ok(!R1.pres.particles.some((e) => e.moment === 'wheel'), 'no prize particles');
+  assert.equal(R2.win.amount, p.wheel.segments[0].value * p.machine.bet);
+  void seg;
+  // After Effects: a glow and a plaque for the spin again, a no-win label without a counter.
+  const L = computeLayout(p);
+  const data = buildAEData(p, tl, L, { titleKeys: [] });
+  assert.equal(data.rounds[0].wheel.agains.length, 1);
+  assert.equal(data.rounds[1].wheel.noWin, 1);
+  const files = new Set([data.assets.wheelSegments, data.assets.wheelHub, data.assets.wheelCenter, data.assets.wheelRing, data.assets.wheelPointer].map((f) => `/pkg/${f}`));
+  const { env, log } = createAE({ files });
+  runScript(buildAEScript([data]), env);
+  assert.deepEqual(log.alerts.filter((a) => /error/i.test(a)), []);
+  const c0 = log.comps.find((c) => /^R01 /.test(c.name)).layers.list.map((l) => l.name);
+  assert.ok(c0.includes('Spin Again Segment 1') && c0.includes('Spin Again Plaque 1') && c0.includes('Spin Again Label 1'));
+  const c1 = log.comps.find((c) => /^R02 /.test(c.name)).layers.list.map((l) => l.name);
+  assert.ok(c1.includes('No Win Label') && !c1.includes('WIN CTRL'), 'no counter on a no win');
+  assert.equal(segmentKind({ kind: 'weird' }), 'prize');
 });

@@ -225,6 +225,7 @@ export const SOUND_EVENTS = [
   { id: 'reelStop', label: 'Reel stop', group: 'reels' },
   { id: 'anticipation', label: 'Anticipation riser', group: 'reels' },
   { id: 'scatter', label: 'Scatter lands', group: 'wins' },
+  { id: 'nearMiss', label: 'Near miss or no win', group: 'wins' },
   { id: 'win', label: 'Line or cluster win', group: 'wins' },
   { id: 'pop', label: 'Tumble pop', group: 'wins' },
   { id: 'drop', label: 'Tumble drop', group: 'reels' },
@@ -237,6 +238,8 @@ export const SOUND_EVENTS = [
   { id: 'expand', label: 'Wild expands', group: 'wins' },
   { id: 'sticky', label: 'Wild sticks', group: 'wins' },
   { id: 'fsTrigger', label: 'Free spins fanfare', group: 'bigwin' },
+  { id: 'winLand', label: 'Winning reel lands (climbs)', group: 'wins' },
+  { id: 'wheelAgain', label: 'Wheel: spin again', group: 'bigwin' },
   { id: 'wheelTick', label: 'Wheel peg tick', group: 'reels' },
   { id: 'wheelLand', label: 'Wheel lands', group: 'bigwin' },
   { id: 'whoosh', label: 'Whoosh', group: 'ui' },
@@ -343,6 +346,8 @@ function baseProject() {
       coins: 1,
       rays: 1,
       shake: 1,
+      // Every reel or cell that brings a winner lands with a growing bump.
+      landShake: false,
       flash: 1,
       bloom: 0.5,
       bokeh: 1,
@@ -545,6 +550,7 @@ export function waysProject() {
   Object.assign(p.spin, { type: 'stagger', ...SPIN_PRESETS.stagger });
   p.effects.font = 'Russo One';
   p.winfx.style = 'jump';
+  p.effects.landShake = true;
   p.rounds = [
     newRound('none', { seed: 131 }),
     newRound('small', { seed: 132, count: 3 }),
@@ -617,6 +623,7 @@ export function teaseProject() {
   p.seed = 201;
   Object.assign(p.machine, { theme: 'neon', title: 'NEON TEASE' });
   Object.assign(p.spin, { type: 'tease', ...SPIN_PRESETS.tease, zoom: 0.28 });
+  p.effects.landShake = true;
   p.rounds = [
     newRound('nearmiss', { seed: 211 }),
     newRound('none', { seed: 212, antic: [3, 4] }),
@@ -633,6 +640,7 @@ export function ladderProject() {
   p.name = 'Big Win Ladder';
   p.seed = 221;
   Object.assign(p.machine, { title: 'BIG WIN LADDER' });
+  p.effects.landShake = true;
   p.rounds = [
     newRound('small', { seed: 231, lines: [0], count: 3 }),
     newRound('medium', { seed: 232, lines: [1, 2], count: 4 }),

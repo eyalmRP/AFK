@@ -5,6 +5,7 @@
 // pays by accident.
 
 import { pickWeighted, shuffle } from './rng.js';
+import { wheelLandings, segmentKind } from './wheel.js';
 import { LINE_WINS, SCATTER_WINS } from './defaults.js';
 import { keyOf, cloneGrid, lineRuns, waysWins, anywhereWins, clusterWins, componentAt, collapse, countSymbols } from './grid.js';
 import { symbolLayout, holdSpinConfig, pickCoinValue, coinTypeIndex } from './coins.js';
@@ -178,9 +179,11 @@ export const AUTO_MULTIPLIER = { small: 2, medium: 8 };
 
 export function autoAmount(ctx, project, round) {
   if (round.outcome === 'wheel') {
+    // The segment the wheel ends on (after any spin again); no win pays 0.
     const segs = project.wheel.segments;
-    const seg = segs[Math.min(segs.length - 1, Math.max(0, round.wheelSegment | 0))];
-    const v = seg ? Number(seg.value) || 0 : 0;
+    const landings = wheelLandings(project, round);
+    const seg = segs[landings[landings.length - 1]];
+    const v = seg && segmentKind(seg) === 'prize' ? Number(seg.value) || 0 : 0;
     return project.wheel.multiplyByBet ? v * ctx.bet : v;
   }
   if (round.outcome === 'big') {

@@ -307,6 +307,20 @@ function renderChunk(list, offset, length, sound, custom) {
     respinReset(e, o) {
       [880, 1175, 1760].forEach((f, i) => tone('triangle', f, e.t + i * 0.06, 0.22, o, 0.11));
     },
+    // Spin again: a bright rising run and a whoosh.
+    wheelAgain(e, o) {
+      [523, 659, 784, 1046, 1318].forEach((f, i) => tone('triangle', f, e.t + i * 0.055, 0.28, o, 0.11));
+      noise(e.t + 0.2, 0.5, o, 0.12, { f0: 500, f1: 3500 });
+    },
+    // A winning reel lands: a thump and a note that climbs a step each time.
+    winLand(e, o) {
+      const k = e.step || 0;
+      const f = semis(330, [0, 2, 4, 7, 9, 12, 14, 16, 19, 21, 24][Math.min(10, k)] ?? 24);
+      tone('sine', 95, e.t, 0.22, o, 0.34 + 0.04 * Math.min(6, k), { f1: 48 });
+      noise(e.t, 0.06, o, 0.12 + 0.02 * Math.min(6, k), { f0: 900, f1: 300 });
+      tone('triangle', f, e.t + 0.01, 0.3, o, 0.1 + 0.015 * Math.min(6, k));
+      tone('sine', f * 2, e.t + 0.02, 0.22, o, 0.05);
+    },
     scoreHit(e, o) {
       const f = 880 * Math.pow(2, ((e.i || 0) / Math.max(1, e.n || 1)) * 1.2);
       tone('triangle', f, e.t, 0.14, o, 0.13);

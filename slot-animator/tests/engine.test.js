@@ -314,3 +314,44 @@ test('wheel game keeps the wheel on screen and lands every spin', () => {
     assert.equal(Math.floor(local / (360 / p.wheel.segments.length)), [2, 5, 9][i]);
   });
 });
+
+test('landing build-up: each reel that brings a winner lands with a bigger bump and a climbing cue', async () => {
+  const { LAND_SHAKE } = await import('../src/js/core/timeline.js');
+  const p = defaultProject();
+  p.rounds = [newRound('big', { seed: 3, lines: [0], count: 5, tier: 0 }), newRound('nearmiss', { seed: 4 }), newRound('none', { seed: 5 })];
+  assert.equal(buildTimeline(p).sfx.filter((e) => e.type === 'winLand').length, 0, 'off by default');
+  p.effects.landShake = true;
+  const tl = buildTimeline(p);
+  const R = tl.rounds[0];
+  const cols = [...new Set(R.win.cells.map(([c]) => c))];
+  const lands = tl.sfx.filter((e) => e.type === 'winLand');
+  assert.equal(lands.length, cols.length, 'one per winning reel, none for the near miss or the blank spin');
+  assert.deepEqual(lands.map((e) => e.t), cols.map((c) => R.reels[c].stop).sort((a, b) => a - b));
+  assert.deepEqual(lands.map((e) => e.step), cols.map((_, k) => k));
+  const amps = lands.map((e) => tl.shakes.find((s) => s.t === e.t).amp);
+  for (let k = 1; k < amps.length; k++) assert.ok(amps[k] > amps[k - 1], 'grows');
+  assert.ok(Math.abs(amps[0] - LAND_SHAKE[0]) < 1e-9 && Math.abs(amps[amps.length - 1] - LAND_SHAKE[1]) < 1e-9);
+  // Per-cell spins bump on every winning cell.
+  const q = cellsProject();
+  q.effects.landShake = true;
+  q.rounds = [newRound('medium', { seed: 52, lines: [3], count: 4 })];
+  const tq = buildTimeline(q);
+  assert.equal(tq.sfx.filter((e) => e.type === 'winLand').length, tq.rounds[0].win.cells.length);
+});
+
+test('tumble spins: a column held back by a tease keeps its old symbols until just before the new drop', () => {
+  const p = candyProject();
+  p.rounds = [newRound('nearmiss', { seed: 33 }), newRound('none', { seed: 1, antic: [2, 4] })];
+  const tl = buildTimeline(p);
+  for (const R of tl.rounds) {
+    for (let c = 0; c < tl.reels; c++) {
+      const old = R.actors.filter((a) => a.c === c && a.old);
+      const neu = R.actors.filter((a) => a.c === c && !a.old);
+      if (!old.length || !neu.length) continue;
+      const gone = Math.max(...old.map((a) => a.tOut));
+      const arrive = Math.min(...neu.map((a) => a.tIn));
+      assert.ok(arrive - gone < 0.6, `round ${R.index} column ${c}: empty for ${(arrive - gone).toFixed(2)} s`);
+    }
+  }
+  assert.ok(tl.rounds.some((R) => R.reels.some((ri) => ri.antic)), 'the case has a tease');
+});

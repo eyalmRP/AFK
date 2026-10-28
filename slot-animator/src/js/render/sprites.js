@@ -251,7 +251,7 @@ function paintVignette(W, H) {
   return c;
 }
 
-function paintMachine(L, theme, frameImg, builtinFrame, cellsMode) {
+function paintMachine(L, theme, frameImg, builtinFrame, cellsMode, rowLines) {
   const back = canvas(L.W, L.H);
   const front = canvas(L.W, L.H);
   const b = back.getContext('2d');
@@ -310,6 +310,27 @@ function paintMachine(L, theme, frameImg, builtinFrame, cellsMode) {
         f.fillRect(L.winX, y - Math.max(2, L.gap * 0.35), L.winW, Math.max(4, L.gap * 0.7));
       }
     }
+  }
+  // Row lines across spinning reels: thin bars on the row boundaries,
+  // following the reel curve.
+  if (rowLines && !cellsMode) {
+    const s = METALS[metal];
+    const th = Math.max(2, L.gap * 0.45);
+    for (let r = 0; r <= L.rows; r++) {
+      if ((r === 0 || r === L.rows) && L.peek < 0.02) continue;
+      const y = L.mapY(L.rowsTop + r * L.cellH).y;
+      if (y < L.winTop + 1 || y > L.winTop + L.winH - 1) continue;
+      const g = f.createLinearGradient(0, y - th / 2, 0, y + th / 2);
+      g.addColorStop(0, s[5]);
+      g.addColorStop(0.5, s[1]);
+      g.addColorStop(1, s[5]);
+      f.fillStyle = g;
+      f.globalAlpha = 0.9;
+      for (const x of L.reelX) f.fillRect(x, y - th / 2, L.cellW, th);
+      f.globalAlpha = 1;
+    }
+  }
+  if (builtinFrame) {
     // Frame ring (outer rounded rect minus window).
     f.save();
     f.shadowColor = 'rgba(0,0,0,0.75)';
@@ -820,7 +841,7 @@ export function buildResources(project, L, images) {
   const theme = THEMES[project.machine.theme] || THEMES.royal;
   const font = fontStack(project.effects.font);
   const sym = images.symbols.map((img) => symbolSprites(img, L.cellW, L.cellH));
-  const { back, front } = paintMachine(L, theme, images.frame, project.machine.builtinFrame !== false, project.spin.type === 'cells');
+  const { back, front } = paintMachine(L, theme, images.frame, project.machine.builtinFrame !== false, project.spin.type === 'cells', !!project.machine.rowLines);
   const winAnim = (images.winAnims || []).map((a) => (a ? { frames: a.frames.slice(0, 240).map((f) => fitFrame(f, L.cellW, L.cellH)), fps: a.fps } : null));
   const titlePx = Math.round(Math.min(L.W * 0.11, L.H * 0.16));
   const titles = {};

@@ -236,6 +236,11 @@ export async function buildAEPackage(scene, images, onProgress) {
     const p = projectForFormat(project, fmt);
     const L = computeLayout(p);
     const res = buildResources(p, L, images);
+    // The After Effects reels are flat: row lines are painted flat for them.
+    if (p.machine.rowLines && Number(p.grid.curvature) > 0) {
+      const flat = { ...p, grid: { ...p.grid, curvature: 0 } };
+      res.front = buildResources(flat, computeLayout(flat), images).front;
+    }
     const sc = { project: p, tl, L, res };
     const assetDir = `assets/${fmt[0]}x${fmt[1]}`;
     const A = AE_ASSETS.format(assetDir);
