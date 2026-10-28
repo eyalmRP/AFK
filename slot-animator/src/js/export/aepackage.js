@@ -198,6 +198,16 @@ export async function buildAEPackage(scene, images, onProgress) {
     winFrames[i] = frames;
     winFps[i] = anim.fps;
   }
+  // The pots above the machine: each art fitted in a square, standing on
+  // its bottom edge (as the preview draws it).
+  for (const [i, img] of (images.pots || []).entries()) {
+    const c = canvas(512, 512);
+    const w = img.naturalWidth || img.width;
+    const h = img.naturalHeight || img.height;
+    const k = Math.min(512 / w, 512 / h);
+    c.getContext('2d').drawImage(img, (512 - w * k) / 2, 512 - h * k, w * k, h * k);
+    await png(AE_ASSETS.shared.pot(i), c);
+  }
   // Particle art: one PNG per variant or animation frame, shared by every
   // format (the emitters scale it).
   for (const a of usedParticleAssets(tl, project)) {

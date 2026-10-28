@@ -9,6 +9,7 @@ import { wheelLandings, segmentKind } from './wheel.js';
 import { LINE_WINS, SCATTER_WINS } from './defaults.js';
 import { keyOf, cloneGrid, lineRuns, waysWins, anywhereWins, clusterWins, componentAt, collapse, countSymbols } from './grid.js';
 import { symbolLayout, holdSpinConfig, pickCoinValue, coinTypeIndex, isCoinSym } from './coins.js';
+import { potsConfig, BOOST_KINDS } from './pots.js';
 
 const SPECIAL_ROLES = ['wild', 'scatter', 'bonus', 'multiplier', 'mystery', 'collector'];
 
@@ -228,13 +229,17 @@ export function resolveRound(ctx, project, round, rng, carry = {}) {
   const held = new Set(ctx.wildSym == null ? [] : carry.sticky || []);
   for (const k of held) place(Math.floor(k / rows), k % rows, ctx.wildSym);
   const placeWin = (c, r, s) => held.has(K(c, r)) || place(c, r, s);
-  const win = { kind: 'none', symbol: -1, lines: [], cells: [], scatters: [], nearMiss: null, amount: 0, base: 0, multSum: 0, expand: [], wilds: [], wildMults: [], mystery: null, cash: [], collector: null, collected: 0 };
+  const win = { kind: 'none', symbol: -1, lines: [], cells: [], scatters: [], nearMiss: null, amount: 0, base: 0, multSum: 0, expand: [], wilds: [], wildMults: [], mystery: null, cash: [], collector: null, collected: 0, boosts: [] };
   const steps = [];
   const randomFreeCells = (n, extra = () => true) => shuffle(rng, allCells(ctx).filter(([c, r]) => isFree(c, r) && extra(c, r))).slice(0, n);
 
   const amountTotal = round.amount != null && round.amount !== '' && !Number.isNaN(Number(round.amount)) ? Number(round.amount) : autoAmount(ctx, project, round);
   const multValues = (round.multipliers || []).map(Number).filter((v) => v > 0);
   const mysteryN = Math.max(0, Math.round(Number(round.mystery)) || 0);
+  // Boosters need the pots above the machine to fire them.
+  const boostList = potsConfig(project).on ? (round.boosts || []).map((b) => (typeof b === 'string' ? { kind: b } : b)).filter((b) => b && BOOST_KINDS.some((k) => k.id === b.kind)).slice(0, 12) : [];
+  const boostKeys = new Set();
+  const boostMults = [];
 
   if (LINE_WINS.includes(outcome)) {
     const pattern = round.pattern || defaultPattern(ctx.payMode);
@@ -311,6 +316,12 @@ export function resolveRound(ctx, project, round, rng, carry = {}) {
         win.wildMults.push({ c, r, value: v });
       });
     }
+    if (boostList.length) {
+      const seen = new Set();
+      const base = winPlaced.length ? winPlaced : [...locked].map((k) => [Math.floor(k / rows), k % rows]);
+      const cand = base.filter(([c, r]) => grid[c][r] === s0 && !held.has(K(c, r)) && !seen.has(K(c, r)) && seen.add(K(c, r)));
+      placeBoosts(cand, s0, tumble);
+    }
     // Pre-seed the next tumble's symbol in cells that will survive.
     if (tumble && specs.length > 1) preseed(syms[1], counts[1], n0, (c, r) => isFree(c, r));
     placeExtras();
@@ -323,7 +334,7 @@ export function resolveRound(ctx, project, round, rng, carry = {}) {
     }
     steps.push({ grid: cloneGrid(grid), mult: cloneGrid(mult), ...first });
     // Mystery blocks land on winners and reveal the winning symbol.
-    if (mysteryN > 0) win.mystery = { cells: shuffle(rng, first.cells.filter(([c, r]) => grid[c][r] === s0)).slice(0, mysteryN), sym: s0 };
+    if (mysteryN > 0) win.mystery = { cells: shuffle(rng, first.cells.filter(([c, r]) => grid[c][r] === s0 && !boostKeys.has(K(c, r)))).slice(0, mysteryN), sym: s0 };
 
     if (tumble) {
       let cur = grid;
@@ -384,7 +395,7 @@ export function resolveRound(ctx, project, round, rng, carry = {}) {
     const paying = steps.filter((s) => s.cells.length);
     const weights = paying.map((_, i) => Math.pow(0.8, i));
     const wsum = weights.reduce((a, b) => a + b, 0) || 1;
-    win.multSum = [...multValues, ...win.wildMults.map((m) => m.value)].reduce((a, b) => a + b, 0);
+    win.multSum = [...multValues, ...win.wildMults.map((m) => m.value), ...boostMults].reduce((a, b) => a + b, 0);
     win.amount = amountTotal;
     win.base = win.multSum > 0 ? amountTotal / win.multSum : amountTotal;
     paying.forEach((s, i) => (s.amount = (win.base * weights[i]) / wsum));
@@ -415,6 +426,7 @@ export function resolveRound(ctx, project, round, rng, carry = {}) {
       place(c, r, scatter);
       win.scatters.push([c, r]);
     }
+    placeBoosts([], -1, false);
     placeExtras();
     sanitize(grid, ctx, rng, { locked, wildAt });
     win.kind = 'scatter';
@@ -442,6 +454,7 @@ export function resolveRound(ctx, project, round, rng, carry = {}) {
     win.amount = round.amount != null && round.amount !== '' ? Number(round.amount) : carry.fsTotal || 0;
   } else {
     placeMystery();
+    placeBoosts([], -1, false);
     placeExtras();
     sanitize(grid, ctx, rng, { locked, wildAt });
   }
@@ -498,6 +511,57 @@ export function resolveRound(ctx, project, round, rng, carry = {}) {
         win.collector = cell;
       }
     }
+  }
+
+  // Boosters: after the spin lands the pots fire at cells that upgrade. A
+  // boosted cell lands as a low symbol (`from`) and turns into `to`: wild,
+  // the winning symbol, a wild with an x value, or cash. On a win they
+  // upgrade the win's own cells (the win needs them); cash takes a free
+  // cell, and so does a multiplier in a tumble (as an orb: the win's cells
+  // burst). Without a win they upgrade free cells to something that does
+  // not pay.
+  function placeBoosts(winCand, s0, tumble) {
+    if (!boostList.length) return;
+    const lows = ctx.roles.low.length ? ctx.roles.low : ctx.roles.normal;
+    const lowBut = (ex) => {
+      const pool = lows.filter((x) => !ex.has(x));
+      return pool.length ? pool[Math.floor(rng() * pool.length)] : fillSymbol(ctx, rng, ex);
+    };
+    const cand = shuffle(rng, winCand.slice());
+    for (const b of boostList) {
+      const v = Math.max(0, Number(b.value) || 0);
+      if (b.kind === 'cash' || (b.kind === 'mult' && tumble)) {
+        const [cell] = randomFreeCells(1);
+        if (!cell) continue;
+        const [c, r] = cell;
+        const cash = b.kind === 'cash';
+        const to = cash ? ctx.lay.coinBase : ctx.orbSym;
+        const value = cash ? (v || 5) * ctx.bet : v || 2;
+        place(c, r, to);
+        mult[c][r] = value;
+        if (cash) win.cash.push({ c, r, value });
+        else boostMults.push(value);
+        boostKeys.add(K(c, r));
+        win.boosts.push({ c, r, kind: b.kind, from: lowBut(new Set()), to, value });
+        continue;
+      }
+      if (b.kind !== 'upgrade' && ctx.wildSym == null) continue;
+      const cell = winCand.length ? cand.shift() : randomFreeCells(1)[0];
+      if (!cell) continue;
+      const [c, r] = cell;
+      const to = b.kind === 'upgrade' ? (s0 >= 0 ? s0 : pickSymbol(ctx, rng, 'auto', 'high')) : ctx.wildSym;
+      const value = b.kind === 'mult' ? v || 2 : null;
+      if (winCand.length) grid[c][r] = to;
+      else place(c, r, to);
+      if (value != null) {
+        mult[c][r] = value;
+        win.wildMults.push({ c, r, value });
+      }
+      boostKeys.add(K(c, r));
+      win.boosts.push({ c, r, kind: b.kind, from: lowBut(new Set([to, s0])), to, value });
+    }
+    // The beams sweep across the machine.
+    win.boosts.sort((a, b) => a.c - b.c || a.r - b.r);
   }
 
   // Mystery blocks on a spin that does not win: they reveal one symbol,

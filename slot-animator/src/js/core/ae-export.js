@@ -17,7 +17,8 @@
 // The script is ES3 so every After Effects version's ExtendScript runs it.
 
 import { normInf, evalKeys } from './keys.js';
-import { STICKY_COVER, WILD_WALK, WALK_HOP } from './timeline.js';
+import { STICKY_COVER, WILD_WALK, WALK_HOP, BOOST } from './timeline.js';
+import { potsConfig, beamCurve, beamPoints, beamSide, POT_BOX, POT_CATCH, POT_FIRE, BEAM_PASSES, BEAM_HOLD, BEAM_FADE } from './pots.js';
 import { lineColor } from './paylines.js';
 import { OUTCOME_BY_ID } from './defaults.js';
 import { holdSpinConfig, isCoinSym, formatPrize, COIN_GLOW } from './coins.js';
@@ -35,6 +36,7 @@ export const AE_ASSETS = {
     winFrame: (i, k) => `assets/symbols/win_${String(i + 1).padStart(2, '0')}_${String(k + 1).padStart(3, '0')}.png`,
     sfx: (type, n) => `assets/sfx/${type}_${String(n).padStart(2, '0')}.wav`,
     particle: (id, k) => `assets/particles/${String(id).replace(/[^a-z0-9_-]/gi, '_')}_${String(k + 1).padStart(2, '0')}.png`,
+    pot: (i) => `assets/pots/pot_${i + 1}.png`,
   },
   format: (dir) => ({
     background: `${dir}/background.png`,
@@ -156,6 +158,7 @@ export function buildAEData(project, tl, L, extras = {}) {
   const bigScale = r4(Number(winFxConfig(project).bigScale) || 2.2);
   const winFxData = (st) => {
     const f = st.fx;
+    if (f.style === 'collect') return { style: f.style, launch: f.launch.map(r4), arrive: f.arrive.map(r4), until: f.until.map(r4), pots: f.pots };
     const goal = f.style === 'jump' ? jumpTarget(project, L, st) : mergeTarget(project, L, st);
     const out = {
       style: f.style,
@@ -190,6 +193,17 @@ export function buildAEData(project, tl, L, extras = {}) {
     };
   };
   const keepLit = !!project.spin?.scatterLit;
+  // Pots above the machine (core/pots.js) and the beams between them and
+  // the cells, laid out on the flat rows After Effects uses.
+  const pcfg = potsConfig(project);
+  const potColor = (p) => rgb(pcfg.items[p]?.color || '#ffd25a');
+  const beamOf = (bm) => {
+    const pt = L.pots[bm.pot] || L.pots[0];
+    const cell = { x: cellX(bm.c), y: cellY(bm.r) };
+    const out = beamSide(cell.x, pt.x, bm.c, L.cellW);
+    const b = bm.up ? beamCurve(cell, pt.mouth, pcfg.beam, out) : beamCurve(pt.mouth, cell, pcfg.beam, out);
+    return { pot: bm.pot, up: bm.up ? 1 : 0, fire: r4(bm.fire), travel: r4(bm.travel), bez: b.map(r4), pts: beamPoints(b, 24).map((q) => q.map(r4)), color: potColor(bm.pot) };
+  };
   const rounds = tl.rounds.map((R) => {
     const p = R.pres;
     const o = OUTCOME_BY_ID[R.outcome] || { label: R.outcome };
@@ -272,6 +286,15 @@ export function buildAEData(project, tl, L, extras = {}) {
       out.overlay = { start: r4(ov.start), countStart: r4(ov.countStart), countEnd: r4(ov.countEnd), end: r4(ov.end), tiers: ov.tiers, tierTimes: ov.tierTimes.map(r4), keys: exportKeys(ov.keys), amount: ov.amount };
     }
     if (p.banner) out.banner = { start: r4(p.banner.start), end: r4(p.banner.end), kind: p.banner.kind, freeSpins: p.banner.freeSpins };
+    if (p.boost && L.pots) {
+      const bo = p.boost;
+      out.boost = {
+        start: r4(bo.start),
+        end: r4(bo.end),
+        items: bo.items.map((it) => ({ x: cellX(it.c), y: cellY(it.r), pot: it.pot, color: potColor(it.pot), fire: r4(it.fire), hit: r4(it.hit), from: it.from, to: it.to, lab: it.value != null ? label(it.to, it.value) : null })),
+      };
+    }
+    if (p.beams && L.pots) out.beams = p.beams.map(beamOf);
     if (p.mystery) {
       const my = p.mystery;
       out.mystery = { start: r4(my.start), flipAt: r4(my.flipAt), mid: r4(my.mid), flipEnd: r4(my.flipEnd), end: r4(my.end), from: my.from, sym: my.sym, cells: my.cells.map(([c, r]) => ({ x: cellX(c), y: cellY(r) })) };
@@ -436,7 +459,33 @@ export function buildAEData(project, tl, L, extras = {}) {
     rowsTop: r4(L.rowsTop),
     reelX: L.reelX,
     logo: [r4(L.logo.cx), r4(L.logo.cy)],
-    ribbon: [r4(L.W / 2), r4(Math.min(L.frame.y - L.H * 0.025, L.logo.cy + L.logo.h * 0.42))],
+    ribbon: [r4(L.W / 2), r4(L.ribbonY)],
+    pots:
+      L.pots && tl.pots
+        ? {
+            items: L.pots.map((pt, i) => ({
+              name: clean(pcfg.items[i].name) || `Pot ${i + 1}`,
+              file: AE_ASSETS.shared.pot(i),
+              x: r4(pt.x),
+              bottom: r4(pt.bottom),
+              size: r4(pt.size),
+              mouth: [r4(pt.mouth.x), r4(pt.mouth.y)],
+              plate: [r4(pt.plate.x), r4(pt.plate.y), r4(pt.plate.w), r4(pt.plate.h)],
+              color: potColor(i),
+              keys: exportKeys(tl.pots.valueKeys[i]),
+              max: r4(Math.max(0, ...tl.pots.valueKeys[i].map((k) => k.v))),
+            })),
+            hits: tl.pots.hits.map(([t, p, k]) => [r4(t), p, k]),
+            charges: tl.pots.charges.map(([a, b, p]) => [r4(a), r4(b), p]),
+            show: tl.pots.show.map(([a, b, p]) => [r4(a), r4(b), p]),
+            plates: pcfg.plates ? 1 : 0,
+            box: POT_BOX.bottom,
+            times: [POT_CATCH, POT_FIRE],
+          }
+        : null,
+    // Beams: their passes (width in px, opacity, white core) and timing.
+    beam: { passes: BEAM_PASSES.map(([w, a, core]) => [r4(w * pcfg.beam.width * L.cellW), a, core]), hold: BEAM_HOLD, fade: BEAM_FADE, head: r4(pcfg.beam.width * L.cellW * 0.75) },
+    boostT: [BOOST.lead, BOOST.pop],
     hud,
     symbols,
     wildSym: project.symbols.findIndex((s) => s.role === 'wild'),
@@ -1473,6 +1522,8 @@ export const AE_SCRIPT = String.raw`// Slot animation rebuilt for After Effects 
     setKeys(slider(slotCtrl, "FS Total"), DATA.fsTotalKeys);
     if (DATA.hold) setKeys(slider(slotCtrl, "Collect"), DATA.hold.collectKeys);
     var k;
+    // What each pot above the machine has caught (its nameplate).
+    if (DATA.pots) for (k = 0; k < DATA.pots.items.length; k++) setKeys(slider(slotCtrl, "Pot " + (k + 1)), DATA.pots.items[k].keys);
     for (k = 0; k < AE_CONTROLS.length; k++) slider(slotCtrl, AE_CONTROLS[k]).setValue(100);
     fx(slotCtrl, "ADBE Checkbox Control", "FX Colour").property(1).setValue(1);
   }
@@ -1499,6 +1550,7 @@ export const AE_SCRIPT = String.raw`// Slot animation rebuilt for After Effects 
     }
     // The wheel game has no machine: background, wheel rounds, effects.
     if (DATA.game !== "wheel") {
+    buildPots(kids);
     var back = machineArt("Machine Back", DATA.assets.back);
     if (back) kids.push(back);
     var reels = buildReels();
@@ -1648,6 +1700,7 @@ export const AE_SCRIPT = String.raw`// Slot animation rebuilt for After Effects 
       P(mo, "ADBE Opacity").expression = "thisComp.layer(\"SLOT CONTROL\").effect(\"Meter\")(1).value > 0.0001 ? 100 : 0;";
       kids.push(mo);
     }
+    buildPotsOver(kids);
     }
     for (r = 0; r < DATA.rounds.length; r++) {
       var fxL = buildRound(DATA.rounds[r]);
@@ -1711,7 +1764,7 @@ export const AE_SCRIPT = String.raw`// Slot animation rebuilt for After Effects 
   function buildRound(R) {
     var P0 = R.start, len = Math.max(0.6, (R.fxEnd !== null && R.fxEnd !== undefined ? R.fxEnd : R.next + 0.6) - P0), i, k;
     var hs = R.holdspin && (R.holdspin.hits.length || R.holdspin.tease.length);
-    var hasFx = R.steps.length || R.overlay || R.banner || R.wheel || R.celebrate || R.nearmiss || R.expand || R.mult || R.mystery || R.collector || R.pops.length || hs || R.collect || R.grand || R.particles.length;
+    var hasFx = R.steps.length || R.overlay || R.banner || R.wheel || R.celebrate || R.nearmiss || R.expand || R.mult || R.mystery || R.collector || R.pops.length || hs || R.collect || R.grand || R.particles.length || R.boost || R.beams;
     if (!hasFx) return null;
     RBASE = "R" + pad2(R.index + 1) + " " + R.label;
     var comp = addComp(RBASE + SUFFIX, W, H, len, fRounds);
@@ -1726,6 +1779,7 @@ export const AE_SCRIPT = String.raw`// Slot animation rebuilt for After Effects 
       var dim = solid(comp, [0, 0, 0], "Dim Reels", DATA.winW, DATA.winH, winC);
       P(dim, "ADBE Opacity").expression = windowsExpr("D", dimW) + "var a = 0; for (var i = 0; i < D.length; i++) { var x = Math.min((time - D[i][0]) / 0.2, (D[i][1] - time) / 0.35); a = Math.max(a, Math.max(0, Math.min(1, x))); }\na * " + (DATA.dim * 100) + " * " + ctrl("Dim %") + " / 100;";
     }
+    if (R.boost) buildBoost(comp, R, rel);
     if (R.mystery) buildMystery(comp, R, rel);
     if (R.expand) {
       for (i = 0; i < R.expand.reels.length; i++) {
@@ -1745,8 +1799,9 @@ export const AE_SCRIPT = String.raw`// Slot animation rebuilt for After Effects 
       var st = R.steps[i];
       var la = rel(st.start), lb = rel(st.end);
       if (st.lines.length && DATA.showLines) linesFor(comp, st.lines, la, lb);
-      if (st.fx) flyCells(comp, st, la, lb, rel);
+      if (st.fx && st.fx.style !== "collect") flyCells(comp, st, la, lb, rel);
       else popCells(comp, st.cells, la, lb, false, true);
+      if (st.fx && st.fx.style === "collect") drainCells(comp, st, rel);
       if (st.amount > 0) {
         var cx = 0, cy = 0;
         for (k = 0; k < st.cells.length; k++) { cx += st.cells[k].x; cy += st.cells[k].y; }
@@ -1773,6 +1828,7 @@ export const AE_SCRIPT = String.raw`// Slot animation rebuilt for After Effects 
     }
     if (R.mult) buildMult(comp, R, rel);
     if (R.collector) buildCollector(comp, R, rel);
+    if (R.beams) buildBeams(comp, R, rel);
     if (R.celebrate) popCells(comp, R.scatters, rel(R.celebrate.start), rel(R.celebrate.end) + 0.4, true, false);
     if (R.nearmiss) {
       popCells(comp, R.scatters, rel(R.nearmiss.start), rel(R.nearmiss.end), false, false);
@@ -1794,6 +1850,154 @@ export const AE_SCRIPT = String.raw`// Slot animation rebuilt for After Effects 
     L.startTime = P0;
     L.name = RBASE;
     return L;
+  }
+
+  // ---------- pots above the machine (core/pots.js) ----------
+  // Pot i's reactions at time: b = squash or kick, bc = squash from catches
+  // only, fl = flash, ch = charge (core/pots.js potBump, potCharge).
+  function potExpr(i) {
+    var Pd = DATA.pots, k, n1 = 0, n2 = 0, h = "var PH = [", c = "var PC = [";
+    for (k = 0; k < Pd.hits.length; k++) if (Pd.hits[k][1] === i) h += (n1++ ? "," : "") + "[" + Pd.hits[k][0] + "," + Pd.hits[k][2] + "]";
+    for (k = 0; k < Pd.charges.length; k++) if (Pd.charges[k][2] === i) c += (n2++ ? "," : "") + "[" + Pd.charges[k][0] + "," + Pd.charges[k][1] + "]";
+    return h + "];\n" + c + "];\n" +
+      "function c01(x){return x<0?0:(x>1?1:x);}\n" +
+      "var b = 0, bc = 0, fl = 0, ch = 0;\n" +
+      "for (var i = 0; i < PH.length; i++) { var a = time - PH[i][0]; if (a < 0) continue; var d = PH[i][1] ? " + Pd.times[1] + " : " + Pd.times[0] + ";\n" +
+      "  if (a < d) { var bb = (PH[i][1] ? 0.55 : 1) * Math.pow(1 - a / d, 2); b = Math.max(b, bb); if (!PH[i][1]) bc = Math.max(bc, bb); }\n" +
+      "  if (a < 0.4) fl = Math.max(fl, (PH[i][1] ? 0.7 : 1) * (1 - a / 0.4)); }\n" +
+      "for (var j = 0; j < PC.length; j++) { if (time < PC[j][0] || time > PC[j][1] + 0.3) continue; ch = Math.max(ch, Math.min(c01((time - PC[j][0]) / 0.25), c01((PC[j][1] + 0.3 - time) / 0.3))); }\n";
+  }
+  // The pots stand on the frame's top edge, behind the frame. A catch
+  // squashes a pot, a shot kicks it; it trembles and lights up while it
+  // charges (an Add copy of it).
+  function buildPots(kids) {
+    var Pd = DATA.pots, i, k;
+    if (!Pd) return;
+    for (i = 0; i < Pd.items.length; i++) {
+      var it = Pd.items[i];
+      var src = imagePH("Pot " + (i + 1) + " " + it.name, "Pots", it.file);
+      if (!src) continue;
+      var s = r4(100 * it.size / src.width), ex = potExpr(i);
+      var two = [inst(main, src, it.name, [it.x, it.bottom]), inst(main, src, it.name + " Charge Light", [it.x, it.bottom])];
+      for (k = 0; k < 2; k++) {
+        P(two[k], "ADBE Anchor Point").setValue([src.width / 2, src.height * (0.5 + Pd.box)]);
+        P(two[k], "ADBE Position").expression = ex + "value + [ch * Math.sin(time * 71 + " + (i * 2) + ") * " + r4(it.size * 0.008) + ", 0];";
+        P(two[k], "ADBE Scale").expression = ex + "[" + s + " * (1 + 0.08 * b + 0.02 * ch), " + s + " * (1 - 0.08 * b + 0.03 * ch)];";
+        kids.push(two[k]);
+      }
+      two[1].blendingMode = BlendingMode.ADD;
+      P(two[1], "ADBE Opacity").expression = ex + "100 * ch * (0.22 + 0.12 * Math.sin(time * 13 + " + i + "));";
+    }
+  }
+  // Over the frame: each pot's glow (charging, firing, catching) and its
+  // nameplate with what it caught this round (the "Pot n" slider).
+  function buildPotsOver(kids) {
+    var Pd = DATA.pots, i, k;
+    if (!Pd) return;
+    for (i = 0; i < Pd.items.length; i++) {
+      var it = Pd.items[i], ex = potExpr(i);
+      var G = frameAt(main, "FX Pot Glow", it.size * 0.5, it.size * 0.5, { round: 0.5, fill: [1, 1, 1], fillOp: 80, glow: 0.8, glowI: 2 }, it.name + " Glow", it.mouth, 0, DUR);
+      G.blendingMode = BlendingMode.ADD;
+      tint(G, it.color);
+      P(G, "ADBE Opacity").expression = ex + "Math.min(100, 100 * (ch * (0.75 + 0.25 * Math.sin(time * 13 + " + i + ")) + fl * 0.8));";
+      P(G, "ADBE Scale").expression = ex + "var s = 100 * (1 + 0.35 * ch + 0.35 * fl); [s, s];";
+      kids.push(G);
+      if (!Pd.plates || !(it.max > 0)) continue;
+      var n = 0, sh = "var S = [";
+      for (k = 0; k < Pd.show.length; k++) if (Pd.show[k][2] === i) sh += (n++ ? "," : "") + "[" + Pd.show[k][0] + "," + Pd.show[k][1] + "]";
+      sh += "]; var sa = 0; for (var q = 0; q < S.length; q++) sa = Math.max(sa, Math.min(c01((time - S[q][0]) / 0.2), c01((S[q][1] + 0.3 - time) / 0.3)));\n" +
+        "if (!(" + ctrl("Pot " + (i + 1)) + ".valueAtTime(time) > 0.0001)) sa = 0;\n";
+      var pl = it.plate;
+      var PL = inst(main, plaquePH("Pot Plate " + (i + 1), pl[2], pl[3], pl[3] * 0.45, 92, it.color, Math.max(2, pl[3] * 0.08)), it.name + " Plate", [pl[0], pl[1]]);
+      P(PL, "ADBE Opacity").expression = ex + sh + "100 * sa;";
+      P(PL, "ADBE Scale").expression = ex + "var s = 100 * (1 + 0.3 * bc); [s, s];";
+      kids.push(PL);
+      var CO = rollCounter(main, it.name, ctrl("Pot " + (i + 1)) + ".valueAtTime(time)", it.max, Math.round(pl[3] * 0.56), [pl[0], pl[1]]);
+      P(CO, "ADBE Opacity").expression = ex + sh + "100 * sa;";
+      P(CO, "ADBE Scale").expression = ex + "value * (1 + 0.3 * bc);";
+      kids.push(CO);
+    }
+  }
+  // Boosters (core/timeline.js BOOST): each target cell is marked in its
+  // pot's colour while the pots charge; the old symbol trembles as the beam
+  // comes, then bursts into the new one. A Reveal mask cuts the cell out of
+  // its reel meanwhile.
+  function buildBoost(comp, R, rel) {
+    var B = R.boost, i, lead = DATA.boostT[0], popT = DATA.boostT[1];
+    var a = rel(B.start);
+    for (i = 0; i < B.items.length; i++) {
+      var it = B.items[i], h = rel(it.hit);
+      var mk = frameAt(comp, "FX Boost Target", DATA.cellW * 0.94, DATA.cellH * 0.94, { stroke: 0.035, round: 0.12, glow: 0.2, glowI: 1.5 }, "Boost Target " + (i + 1), [it.x, it.y], a, h + 0.05);
+      tint(mk, it.color);
+      P(mk, "ADBE Opacity").expression = "function c01(x){return x<0?0:(x>1?1:x);}\nvar e = Math.min(c01((time - " + a + ") / 0.3), c01((" + (h + 0.05) + " - time) / 0.05));\n100 * e * (0.65 + 0.35 * Math.sin(time * 10 + " + i + "));";
+      var A = inst(comp, symComps[it.from], "Boost From " + DATA.symbols[it.from].name, [it.x, it.y], Math.max(0, h - lead), h);
+      if (A) P(A, "ADBE Position").expression = "value + [Math.sin(time * 90) * " + r4(DATA.cellW * 0.02) + ", 0];";
+      var T = inst(comp, symComps[it.to], "Boost " + DATA.symbols[it.to].name, [it.x, it.y], h, h + popT);
+      if (T) {
+        P(T, "ADBE Scale").expression = EASE_LIB + "var s = 100 * (0.55 + 0.45 * outBack(c01((time - " + h + ") / " + popT + "))); [s, s];";
+        if (it.lab) valueOn(comp, T, it, h, h + popT);
+      }
+      var fl = frameAt(comp, "FX Boost Flash", DATA.cellW * 0.8, DATA.cellW * 0.8, { round: 0.5, fill: [1, 1, 1], fillOp: 90, glow: 0.5, glowI: 2 }, "Boost Flash " + (i + 1), [it.x, it.y], h, h + 0.6);
+      fl.blendingMode = BlendingMode.ADD;
+      P(fl, "ADBE Opacity").expression = "var f = Math.min(1, Math.max(0, (time - " + h + ") / 0.6)); 80 * (1 - f);";
+      P(fl, "ADBE Scale").expression = "var f = Math.min(1, Math.max(0, (time - " + h + ") / 0.6)); var s = 100 * (1.2 + f); [s, s];";
+      ring(comp, [it.x, it.y], h, DATA.cellW * 0.95, it.color);
+    }
+  }
+  // Saber beams between the pots and the cells: a Bezier path drawn on by
+  // Trim Paths (start = the tail, end = the head; core/pots.js beamState),
+  // stroked in soft passes of the pot's colour round a white core, with a
+  // glow riding on the head.
+  function buildBeams(comp, R, rel) {
+    var i, k, BM = DATA.beam;
+    for (i = 0; i < R.beams.length; i++) {
+      var bm = R.beams[i], f0 = rel(bm.fire), dur = bm.travel + BM.hold + BM.fade, z = bm.bez;
+      var pre = "function c01(x){return x<0?0:(x>1?1:x);}\nvar f = time - " + f0 + "; var tr = " + bm.travel + ";\n" +
+        "var u = c01(f / tr); var head = u < 0.5 ? 2 * u * u : 1 - Math.pow(-2 * u + 2, 2) / 2;\n" +
+        "var tail = Math.min(head, c01((f - tr * 0.6) / (tr * 0.4 + " + BM.hold + " + " + (BM.fade * 0.5) + ")));\n";
+      var fade = "(1 - c01((f - tr - " + BM.hold + ") / " + BM.fade + "))";
+      var L = shapeLayer(comp, (bm.up ? "Beam Up " : "Beam Down ") + (i + 1) + " " + DATA.pots.items[bm.pot].name);
+      var g = group(L);
+      var p = g.addProperty("ADBE Vector Shape - Group");
+      var sh = new Shape();
+      sh.vertices = [[z[0], z[1]], [z[6], z[7]]];
+      sh.outTangents = [[z[2] - z[0], z[3] - z[1]], [0, 0]];
+      sh.inTangents = [[0, 0], [z[4] - z[6], z[5] - z[7]]];
+      sh.closed = false;
+      p.property("ADBE Vector Shape").setValue(sh);
+      var tp = g.addProperty("ADBE Vector Filter - Trim");
+      tp.property("ADBE Vector Trim Start").expression = pre + "tail * 100;";
+      tp.property("ADBE Vector Trim End").expression = pre + "head * 100;";
+      // The white core first: it sits in front.
+      for (k = BM.passes.length - 1; k >= 0; k--) {
+        var ps = BM.passes[k];
+        var st = stroke(g, ps[2] ? [1, 1, 1] : bm.color, ps[0]);
+        st.property("ADBE Vector Stroke Opacity").setValue(ps[1] * 100);
+        if (ps[2]) continue;
+        var fk = "(0.85 + 0.15 * Math.sin(time * 61) * Math.sin(time * 37 + 1))";
+        st.property("ADBE Vector Stroke Width").expression = "value * " + fk + ";";
+        st.property("ADBE Vector Stroke Opacity").expression = "value * " + fk + ";";
+      }
+      L.blendingMode = BlendingMode.ADD;
+      P(L, "ADBE Opacity").expression = pre + "100 * " + fade + ";";
+      trim(L, f0, f0 + dur);
+      var hd = frameAt(comp, "FX Beam Head", BM.head * 0.5, BM.head * 0.5, { round: 0.5, fill: [1, 1, 1], fillOp: 90, glow: 0.35, glowI: 2 }, "Beam Head " + (i + 1), null, f0, f0 + dur);
+      hd.blendingMode = BlendingMode.ADD;
+      tint(hd, bm.color);
+      P(hd, "ADBE Position").expression = pre + rowsExpr("Q", bm.pts) + "var n = Q.length - 1; var x = head * n; var j = Math.min(n - 1, Math.floor(x)); var kk = x - j;\n[Q[j][0] + (Q[j + 1][0] - Q[j][0]) * kk, Q[j][1] + (Q[j + 1][1] - Q[j][1]) * kk];";
+      P(hd, "ADBE Opacity").expression = pre + "90 * " + fade + ";";
+    }
+  }
+  // Beaming to the pots: each winner fires (a ring in its pot's colour) and
+  // darkens as its light goes up the beam.
+  function drainCells(comp, st, rel) {
+    var F = st.fx, i, e = rel(st.end);
+    for (i = 0; i < st.cells.length; i++) {
+      var cl = st.cells[i], l0 = rel(F.launch[i]);
+      ring(comp, [cl.x, cl.y], l0, DATA.cellW * 0.75, DATA.pots.items[F.pots[i]].color);
+      var dk = frameAt(comp, "FX Cell Shade", DATA.cellW * 0.94, DATA.cellH * 0.94, { round: 0.1, fill: [0.02, 0.01, 0.05], fillOp: 100 }, "Drained " + (i + 1), [cl.x, cl.y], l0, e);
+      P(dk, "ADBE Opacity").expression = "var d = Math.min(1, Math.max(0, (time - " + (l0 + 0.05) + ") / 0.3)); var o = Math.min(1, Math.max(0, (" + e + " - time) / 0.3)); 45 * d * o;";
+    }
   }
 
   // Mystery blocks turn over together (core/timeline.js MYSTERY): the block

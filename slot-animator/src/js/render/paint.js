@@ -885,6 +885,165 @@ export function paintBuiltin(key, size = 512, font = 'Bungee, "Arial Black", Imp
   return c;
 }
 
+// ---- Pots above the machine ----
+// A pot heaped with treasure, on a square canvas centred on the pot (see
+// core/pots.js POT_BOX: rim at -0.06, bottom at 0.49, the heap's top at
+// -0.44 of the size). Gold: a black cauldron of coins; gems: a deep blue
+// pot of jewels; fruits: a copper pot of fruit.
+const POT_STYLES = {
+  gold: { body: ['#6b7080', '#2c2f3a', '#101118', '#050508'], rim: 'gold', inside: '#120b02', band: 'gold' },
+  gems: { body: ['#7fa4ff', '#2a3fa8', '#101d5c', '#050a24'], rim: 'chrome', inside: '#050a20', band: 'violet' },
+  fruit: { body: ['#ffb27a', '#c2551d', '#6e2508', '#2a0c02'], rim: 'gold', inside: '#1c0802', band: 'gold' },
+};
+
+function seeded(n) {
+  let x = n * 9301 + 49297;
+  return () => {
+    x = (x * 9301 + 49297) % 233280;
+    return x / 233280;
+  };
+}
+
+export function paintPot(art, size = 512) {
+  const c = document.createElement('canvas');
+  c.width = size;
+  c.height = size;
+  const ctx = c.getContext('2d');
+  ctx.translate(size / 2, size / 2);
+  ctx.scale(size / 512, size / 512);
+  const st = POT_STYLES[art] || POT_STYLES.gold;
+  const rimY = -31;
+  const body = () => {
+    ctx.beginPath();
+    ctx.moveTo(-200, rimY + 6);
+    ctx.bezierCurveTo(-262, 40, -262, 170, -160, 236);
+    ctx.quadraticCurveTo(0, 262, 160, 236);
+    ctx.bezierCurveTo(262, 170, 262, 40, 200, rimY + 6);
+    ctx.closePath();
+  };
+  // Feet, then the body.
+  for (const fx of [-150, 150]) {
+    ctx.beginPath();
+    ctx.moveTo(fx - 34, 222);
+    ctx.lineTo(fx + 34, 222);
+    ctx.lineTo(fx + 22, 252);
+    ctx.lineTo(fx - 22, 252);
+    ctx.closePath();
+    ctx.fillStyle = '#0a0a0e';
+    ctx.fill();
+  }
+  layered(ctx, body, { fill: radial(ctx, -60, 60, 250, st.body), outline: '#05050a', outlineWidth: 22, shadow: false });
+  // A metal band round the belly.
+  ctx.save();
+  body();
+  ctx.clip();
+  ctx.fillStyle = metalGradient(ctx, 0, 92, 0, 128, st.band);
+  ctx.beginPath();
+  ctx.ellipse(0, 40, 300, 92, 0, 0.12, Math.PI - 0.12);
+  ctx.ellipse(0, 76, 300, 92, 0, Math.PI - 0.12, 0.12, true);
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+  shine(ctx, body, -120, 40, 46, 120, 0.25, 0.22);
+  // The rim's back half and the dark inside.
+  const ring = (y0, y1) => {
+    ctx.beginPath();
+    ctx.ellipse(0, rimY, 216, 44, 0, y0, y1);
+  };
+  ctx.lineWidth = 34;
+  ctx.strokeStyle = metalGradient(ctx, 0, rimY - 44, 0, rimY + 44, st.rim);
+  ring(Math.PI, Math.PI * 2);
+  ctx.stroke();
+  ctx.fillStyle = st.inside;
+  ctx.beginPath();
+  ctx.ellipse(0, rimY, 200, 34, 0, 0, Math.PI * 2);
+  ctx.fill();
+  // The heap: rows of treasure piled from the rim up.
+  const rnd = seeded(art === 'gems' ? 7 : art === 'fruit' ? 13 : 3);
+  if (art === 'gems') {
+    const gems = ['diamond', 'ruby', 'emerald', 'candyPurple', 'diamond', 'ruby', 'emerald', 'candyBlue', 'diamond'];
+    const spots = [[-150, -40, 0.3], [150, -42, 0.3], [-80, -70, 0.34], [80, -74, 0.34], [0, -60, 0.36], [-40, -138, 0.34], [52, -140, 0.33], [-110, -112, 0.28], [6, -190, 0.36]];
+    spots.forEach(([x, y, k], i) => {
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate((rnd() - 0.5) * 0.7);
+      ctx.scale(k, k);
+      PAINTERS[gems[i % gems.length]](ctx);
+      ctx.restore();
+    });
+  } else if (art === 'fruit') {
+    const spots = [['banana', -130, -52, 0.34, -0.4], ['apple', 128, -56, 0.34, 0.2], ['watermelon', 0, -66, 0.38, 0], ['grapes', -66, -128, 0.36, -0.2], ['cherry', 78, -134, 0.36, 0.25], ['apple', -8, -186, 0.32, 0.1]];
+    for (const [k, x, y, sc, rot] of spots) {
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(rot);
+      ctx.scale(sc, sc);
+      PAINTERS[k](ctx);
+      ctx.restore();
+    }
+  } else {
+    // Gold coins, flat ones in a mound with a few on their edge.
+    const coin = (x, y, rx, tilt) => {
+      const ry = rx * tilt;
+      ctx.beginPath();
+      ctx.ellipse(x, y + ry * 0.35, rx, ry, 0, 0, Math.PI * 2);
+      ctx.fillStyle = '#7a4a00';
+      ctx.fill();
+      ctx.beginPath();
+      ctx.ellipse(x, y, rx, ry, 0, 0, Math.PI * 2);
+      ctx.fillStyle = radial(ctx, x, y, rx, ['#fffbe0', '#ffd75e', '#e39a12', '#9a5a00']);
+      ctx.fill();
+      ctx.lineWidth = 4;
+      ctx.strokeStyle = '#5c3500';
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.ellipse(x, y, rx * 0.72, ry * 0.72, 0, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(255,255,255,0.45)';
+      ctx.lineWidth = 3;
+      ctx.stroke();
+    };
+    const rows = [[-36, 190, 7], [-70, 160, 6], [-104, 124, 5], [-136, 88, 4], [-166, 54, 3], [-192, 22, 2]];
+    for (const [y, half, n] of rows) {
+      for (let i = 0; i < n; i++) {
+        const x = -half + (n > 1 ? (i / (n - 1)) * half * 2 : half) + (rnd() - 0.5) * 18;
+        coin(x, y + (rnd() - 0.5) * 12, 40 + rnd() * 8, 0.42 + rnd() * 0.12);
+      }
+    }
+    // Coins standing on their edge.
+    for (const [x, y, rot] of [[-96, -150, -0.35], [104, -128, 0.4], [10, -206, 0.1]]) {
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(rot);
+      ctx.beginPath();
+      ctx.ellipse(0, 0, 18, 46, 0, 0, Math.PI * 2);
+      ctx.fillStyle = metalGradient(ctx, -18, 0, 18, 0, 'gold');
+      ctx.fill();
+      ctx.lineWidth = 4;
+      ctx.strokeStyle = '#5c3500';
+      ctx.stroke();
+      ctx.restore();
+    }
+  }
+  // The rim's front half over the heap.
+  ctx.lineWidth = 46;
+  ctx.strokeStyle = '#05050a';
+  ring(0, Math.PI);
+  ctx.stroke();
+  ctx.lineWidth = 32;
+  ctx.strokeStyle = metalGradient(ctx, 0, rimY - 10, 0, rimY + 50, st.rim);
+  ring(0.02, Math.PI - 0.02);
+  ctx.stroke();
+  ctx.lineWidth = 6;
+  ctx.strokeStyle = 'rgba(255,255,255,0.6)';
+  ctx.beginPath();
+  ctx.ellipse(0, rimY + 4, 216, 44, 0, 0.35, Math.PI - 0.35);
+  ctx.stroke();
+  sparkle(ctx, -120, -150, 46, 1);
+  sparkle(ctx, 140, -96, 34, 0.9);
+  sparkle(ctx, 30, -220, 26, 0.8);
+  return c;
+}
+
 // ---- Hold & Spin coins and the empty cell ----
 
 const COIN_COLORS = {

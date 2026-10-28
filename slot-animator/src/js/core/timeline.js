@@ -18,6 +18,7 @@ import { scheduleParticles } from './particles.js';
 import { winFxConfig, winStyleOf, scheduleWinFx } from './winfx.js';
 import { scheduleCamera } from './camera.js';
 import { wheelConfig, wheelLandings, segmentKind, SLIP } from './wheel.js';
+import { potsConfig, potFor } from './pots.js';
 
 export const STRIP_PAD = 4;
 
@@ -184,6 +185,13 @@ export function buildTimeline(project) {
   const stickies = [];
   const reveals = [];
   const fsBlocks = [];
+  // Pots above the machine: when each fires or catches a beam, when it
+  // charges, and the value on its nameplate.
+  const potCfg = potsConfig(project);
+  const potHits = [];
+  const potCharges = [];
+  const potShow = [];
+  const potValueKeys = Array.from({ length: potCfg.count }, () => [key(0, 0, { hold: true })]);
   const rounds = [];
   let prevGrid = initialGrid;
   let prevMult = initialGrid.map((col) => col.map(() => null));
@@ -388,7 +396,11 @@ export function buildTimeline(project) {
     // Mystery blocks land in place of the symbols they will reveal.
     const mysteryAt = new Set(win.mystery && !noSpin ? win.mystery.cells.map(([c, r]) => K(c, r)) : []);
     const mysteryActors = new Map();
-    const landCol = (c) => grid[c].map((sym, r) => (mysteryAt.has(K(c, r)) ? lay.mysterySym : sym));
+    // Boosted cells land as an ordinary symbol; a pot's beam upgrades them.
+    const boostAt = new Map(noSpin ? [] : (win.boosts || []).map((b) => [K(b.c, b.r), b]));
+    const boostActors = new Map();
+    const landCol = (c) => grid[c].map((sym, r) => (mysteryAt.has(K(c, r)) ? lay.mysterySym : boostAt.has(K(c, r)) ? boostAt.get(K(c, r)).from : sym));
+    const landMult = (c) => res.mult[c].map((v, r) => (boostAt.has(K(c, r)) ? null : v));
 
     if (!noSpin && mode === 'reels') {
       let shift = 0;
@@ -405,7 +417,7 @@ export function buildTimeline(project) {
         pushKeys(stripKeys[c], keys);
         const strip = strips[c];
         ensure(strip, T, ctx, rng);
-        placeColumn(strip, T, landCol(c), dir, rows, ctx, rng, stripValues[c], res.mult[c]);
+        placeColumn(strip, T, landCol(c), dir, rows, ctx, rng, stripValues[c], landMult(c));
         ensure(strip, T + rows + 4, ctx, rng);
         if (win.nearMiss && win.nearMiss.reel === c) strip[win.nearMiss.position === 'above' ? T + rows : T - 1] = win.nearMiss.symbol;
         tmp[c] = { start: ts, stop, settle, antic: a ? { start: a.tSlow, end: stop } : null, from: pos[c], to: T };
@@ -437,7 +449,7 @@ export function buildTimeline(project) {
         pushKeys(stripKeys[idx], keys);
         const strip = strips[idx];
         ensure(strip, T, ctx, rng);
-        placeColumn(strip, T, [landCol(c)[r]], dir, 1, ctx, rng, stripValues[idx], [res.mult[c][r]]);
+        placeColumn(strip, T, [landCol(c)[r]], dir, 1, ctx, rng, stripValues[idx], [landMult(c)[r]]);
         ensure(strip, T + 5, ctx, rng);
         if (win.nearMiss && rank === cellOrder.length - 1) strip[win.nearMiss.position === 'above' ? T + 1 : T - 1] = win.nearMiss.symbol;
         cellInfo[idx] = { c, r, rank, start: ts, stop, settle, antic: a ? { start: a.tSlow, end: stop } : null };
@@ -476,9 +488,10 @@ export function buildTimeline(project) {
           const inS = inBase + stopRank[c] * sp.stopStagger + (rows - 1 - r) * 0.05 + shift + delays[c].stop;
           const dropDur = 0.3 + 0.02 * (rows - r);
           const keys = fallKeys(inS, r - (rows + 0.6 + peek), r, dropDur);
-          const act = { id: ++actorId, c, sym: landCol(c)[r], mult: res.mult[c][r], tIn: inS, tOut: Infinity, keys, row: r };
+          const act = { id: ++actorId, c, sym: landCol(c)[r], mult: landMult(c)[r], tIn: inS, tOut: Infinity, keys, row: r };
           actors.push(act);
           if (mysteryAt.has(K(c, r))) mysteryActors.set(K(c, r), act);
+          if (boostAt.has(K(c, r))) boostActors.set(K(c, r), act);
           first = Math.min(first, inS + dropDur);
           last = Math.max(last, inS + dropDur + 0.18);
         }
@@ -585,6 +598,21 @@ export function buildTimeline(project) {
       hsInfo = { kind: 'respin', tSpin, cells: cellsI, before, after: hs.counter, hits: cellsI.filter((x) => x.hit).length, coins: hs.locked.size, full: hs.full };
     }
 
+    // ---- boosters: the pots charge, then fire a beam at each boosted cell,
+    // one after another; each cell upgrades as its beam hits ----
+    let boost = null;
+    if (boostAt.size) {
+      const start = spinEnd + 0.08;
+      const aim = round.potAim && round.potAim !== 'auto' ? String(round.potAim) : potCfg.aim;
+      const fireAt = start + BOOST.charge;
+      const items = win.boosts.map((b, j) => {
+        const fire = fireAt + j * Math.max(0.12, potCfg.beam.stagger);
+        return { ...b, pot: potFor(aim, potCfg.count, b.c, reels, j), fire, hit: fire + potCfg.beam.travel };
+      });
+      boost = { start, chargeEnd: fireAt, items, end: items[items.length - 1].hit + BOOST.after };
+    }
+    const boostHit = new Map(boost ? boost.items.map((it) => [K(it.c, it.r), it.hit]) : []);
+
     // ---- sticky wilds: held cells shown from the moment they land; once
     // the wild has popped in, its cell is cut out of the spinning strip ----
     if (fs && round.free && !noSpin && ctx.wildSym != null) {
@@ -592,7 +620,8 @@ export function buildTimeline(project) {
         const k = K(c, r);
         if (stickyOpen.has(k)) continue;
         if (!(round.sticky || fs.sticky || fs.walking)) continue;
-        const landT = mode === 'cells' ? cellInfo[k].stop : reelInfo[c].stop;
+        // A wild a beam brings sticks from when it hits.
+        const landT = boostHit.get(k) ?? (mode === 'cells' ? cellInfo[k].stop : reelInfo[c].stop);
         const s = { c, r, from: landT, to: Infinity, walking: !!fs.walking };
         stickyOpen.set(k, s);
         stickies.push(s);
@@ -606,6 +635,40 @@ export function buildTimeline(project) {
     // HUD win meter resets when a new spin starts (Hold & Spin rounds keep it
     // for the collect).
     if (o !== 'fstotal' && o !== 'respin' && o !== 'collect') pushKeys(meterKeys, [key(t0, 0, { hold: true })]);
+
+    if (boost) {
+      pres.boost = boost;
+      pres.beams = boost.items.map((it) => ({ pot: it.pot, c: it.c, r: it.r, up: false, fire: it.fire, travel: potCfg.beam.travel }));
+      for (let p = 0; p < potCfg.count; p++) {
+        const mine = boost.items.filter((it) => it.pot === p);
+        if (mine.length) potCharges.push([boost.start, mine[mine.length - 1].fire, p]);
+      }
+      sfx.push({ t: boost.start, type: 'potCharge', dur: BOOST.charge });
+      // What each reel shows as the beams land one by one (a mystery block
+      // or a cell not hit yet keeps its landing symbol).
+      const shown = range(reels).map((c) => landCol(c));
+      const shownMult = range(reels).map((c) => landMult(c));
+      for (const it of boost.items) {
+        shown[it.c][it.r] = grid[it.c][it.r];
+        shownMult[it.c][it.r] = res.mult[it.c][it.r];
+        potHits.push([it.fire, it.pot, 1]);
+        sfx.push({ t: it.fire, type: 'beam' }, { t: it.hit, type: 'upgrade', kind: it.kind });
+        flashes.push({ t: it.hit, amp: 0.12, dur: 0.2 });
+        // The cell is the beam's while it upgrades; under it the reel swaps.
+        reveals.push({ c: it.c, r: it.r, from: it.hit - BOOST.lead, cover: it.hit - BOOST.lead, to: it.hit + BOOST.pop, boost: true });
+        if (mode === 'reels') swapStrip(it.c, it.hit + 0.02, shown[it.c].slice(), shownMult[it.c].slice(), rng);
+        else if (mode === 'cells') swapStrip(K(it.c, it.r), it.hit + 0.02, [grid[it.c][it.r]], [res.mult[it.c][it.r]], rng);
+        else {
+          const a = boostActors.get(K(it.c, it.r));
+          if (a) {
+            a.tOut = it.hit;
+            a.row = null;
+            actors.push({ id: ++actorId, c: it.c, sym: grid[it.c][it.r], mult: res.mult[it.c][it.r], tIn: it.hit, tOut: Infinity, keys: [key(it.hit, it.r)], row: it.r });
+          }
+        }
+      }
+      tcur = boost.end;
+    }
 
     // ---- mystery blocks flip over together, revealing one symbol; under
     // the cards the reels swap to it ----
@@ -646,7 +709,7 @@ export function buildTimeline(project) {
     let actorGrid = null;
     const needActors = res.steps.some((s) => s.moves);
     if (needActors && mode !== 'cascade') {
-      const actorT = pres.mystery ? pres.mystery.end : spinEnd;
+      const actorT = Math.max(spinEnd, pres.mystery ? pres.mystery.end : 0, pres.boost ? pres.boost.end : 0);
       actorsFrom = actorT;
       actorGrid = grid.map((col, c) =>
         col.map((sym, r) => {
@@ -660,6 +723,8 @@ export function buildTimeline(project) {
     }
     const stepsT = [];
     let cum = 0;
+    // Pots that caught winners this round, and when they first did.
+    const potRound = new Map();
     const single = paying.length === 1 && res.steps.length === 1;
     const showFor = () => (single ? (o === 'big' ? num(tm.bigLines, 1.3) : num(tm[o], 2.2)) : num(tm.tumbleShow, 1));
     const popDur = num(tm.tumblePop, 0.36);
@@ -706,8 +771,9 @@ export function buildTimeline(project) {
         tcur = settle + 0.1;
       }
       if (!step.cells.length) return;
-      // Winning symbols: pop in place, jump into the score, or merge.
-      const wfx = scheduleWinFx(winStyleOf(project, round), tcur, step.cells.length, winFxConfig(project));
+      // Winning symbols: pop in place, jump into the score, merge, or beam
+      // up into the pots.
+      const wfx = scheduleWinFx(winStyleOf(project, round), tcur, step.cells.length, { ...winFxConfig(project), beamTravel: potCfg.beam.travel, beamStagger: potCfg.beam.stagger });
       const show = Math.max(showFor(), wfx.need);
       const amt = step.amount || 0;
       const before = cum;
@@ -717,7 +783,28 @@ export function buildTimeline(project) {
       const st = { start: tcur, end: tcur + show, cells: step.cells, cellSyms, lines: step.lines, amount: amt, cum, symbol: step.symbol, pattern: step.pattern, count: step.cells.length, index: stepsT.length, tumble: !!tumble, fx: wfx.style === 'pop' ? null : wfx };
       stepsT.push(st);
       sfx.push({ t: tcur, type: 'win', step: stepsT.length - 1, amount: amt });
-      if (wfx.style === 'jump') {
+      if (wfx.style === 'collect') {
+        // Every winner beams up into its pot: the pot catches it, its
+        // nameplate and the win meter count the winner's share in.
+        const aim = round.potAim && round.potAim !== 'auto' ? String(round.potAim) : potCfg.aim;
+        const n = wfx.arrive.length;
+        wfx.pots = step.cells.map(([c], j) => potFor(aim, potCfg.count, c, reels, j));
+        pres.beams = (pres.beams || []).concat(step.cells.map(([c, r], j) => ({ pot: wfx.pots[j], c, r, up: true, fire: wfx.launch[j], travel: wfx.travel })));
+        // Catches too close together count up in one sweep instead.
+        const gap = n > 1 ? wfx.arrive[1] - wfx.arrive[0] : 1;
+        if (amt > 0 && gap < 0.12) pushKeys(meterKeys, [key(wfx.arrive[0], before, { outSpeed: (amt / (wfx.arrive[n - 1] - wfx.arrive[0] + 0.12)) * 1.25 }), key(wfx.arrive[n - 1] + 0.12, cum, { inInf: 0.6, hold: true })]);
+        wfx.arrive.forEach((t, j) => {
+          const p = wfx.pots[j];
+          const share = amt / n;
+          if (amt > 0 && gap >= 0.12) pushKeys(meterKeys, [key(t, before + (amt * j) / n), key(t + 0.1, before + (amt * (j + 1)) / n, { hold: true })]);
+          const pv = potValueKeys[p];
+          const was = pv[pv.length - 1].v;
+          pushKeys(pv, [key(t, was), key(t + 0.1, was + share, { hold: true })]);
+          if (!potRound.has(p)) potRound.set(p, t);
+          potHits.push([t, p, 0]);
+          sfx.push({ t: wfx.launch[j], type: 'beam', i: j, n }, { t, type: 'scoreHit', i: j, n });
+        });
+      } else if (wfx.style === 'jump') {
         // Each landing adds its share; landings too close together count
         // up in one sweep instead.
         const n = wfx.arrive.length;
@@ -1039,6 +1126,11 @@ export function buildTimeline(project) {
     }
 
     const next = end + Math.max(0, num(round.hold, 0)) + num(tm.gap, 0.3);
+    // The pots' nameplates show what they caught until the round ends.
+    for (const [p, from] of potRound) {
+      potShow.push([from, end, p]);
+      pushKeys(potValueKeys[p], [key(next, 0, { hold: true })]);
+    }
     // After tumbles the reels show the final grid: jump the strips there while
     // the actors cover them, so the next spin starts from what is on screen.
     if (actorsFrom != null && mode !== 'cascade') {
@@ -1154,6 +1246,7 @@ export function buildTimeline(project) {
     reveals,
     fsBlocks,
     rounds,
+    pots: potCfg.on ? { count: potCfg.count, hits: potHits.sort((a, b) => a[0] - b[0]), charges: potCharges, show: potShow, valueKeys: potValueKeys } : null,
     initialGrid,
     tiers,
     orbSym: ctx.orbSym,
@@ -1228,6 +1321,10 @@ export function walkStep(st, t) {
 
 // Mystery reveal: the blocks glow, flip over together, then the win shows.
 export const MYSTERY = { build: 0.45, flip: 0.5, after: 0.3 };
+
+// Boosters: the pots charge up, then each beam fires; the cell is cut out
+// of its reel from just before the hit until the new symbol has popped.
+export const BOOST = { charge: 0.55, lead: 0.06, pop: 0.42, after: 0.4 };
 
 // The collector wakes, each cash value flies in, then the total holds.
 export const COLLECTOR = { wake: 0.5, each: 0.26, flight: 0.42, hold: 0.9 };

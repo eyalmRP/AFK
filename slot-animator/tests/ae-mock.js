@@ -11,7 +11,7 @@ const KNOWN_MATCH = new Set([
   'ADBE Vector Shape - Ellipse', 'ADBE Vector Ellipse Size', 'ADBE Vector Ellipse Position',
   'ADBE Vector Graphic - Stroke', 'ADBE Vector Stroke Color', 'ADBE Vector Stroke Width', 'ADBE Vector Stroke Line Cap', 'ADBE Vector Stroke Line Join',
   'ADBE Vector Graphic - Fill', 'ADBE Vector Fill Color', 'ADBE Vector Fill Opacity',
-  'ADBE Vector Filter - Trim', 'ADBE Vector Trim End',
+  'ADBE Vector Filter - Trim', 'ADBE Vector Trim Start', 'ADBE Vector Trim End', 'ADBE Vector Stroke Opacity',
   'ADBE Drop Shadow-0002', 'ADBE Drop Shadow-0004', 'ADBE Drop Shadow-0005',
   'ADBE Checkbox Control', 'ADBE Tint', 'ADBE Tint-0002', 'ADBE Tint-0003', 'ADBE Audio Group', 'ADBE Audio Levels',
   'ADBE Mask Parade', 'ADBE Mask Atom', 'ADBE Mask Shape', 'ADBE Mask Opacity',

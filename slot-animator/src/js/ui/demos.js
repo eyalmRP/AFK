@@ -159,6 +159,37 @@ export const DEMOS = {
       return [c.start - 0.6, c.end];
     },
   },
+  boost: {
+    make: () => slot(() => [newRound('medium', { seed: 52, lines: [1], count: 4, boosts: [{ kind: 'wild' }, { kind: 'upgrade' }] })], (p) => (p.pots.enabled = true)),
+    window: (tl) => {
+      const b = R0(tl).pres.boost;
+      return [b.start - 0.3, b.end + 0.6];
+    },
+  },
+  'beam-collect': {
+    make: () =>
+      slot(winRound, (p) => {
+        p.pots.enabled = true;
+        p.winfx.style = 'collect';
+      }),
+    window: stepWin,
+  },
+  's-curve': {
+    make: () =>
+      slot(winRound, (p) => {
+        p.pots.enabled = true;
+        p.pots.beam.curve = 's';
+        p.winfx.style = 'collect';
+      }),
+    window: stepWin,
+  },
+  pots: {
+    make: () => slot(() => [newRound('small', { seed: 12, lines: [0], count: 3, boosts: [{ kind: 'upgrade' }] })], (p) => Object.assign(p.pots, { enabled: true, size: 1.3, spacing: 0.9 })),
+    window: (tl) => {
+      const b = R0(tl).pres.boost;
+      return [b.start - 0.2, b.end + 0.4];
+    },
+  },
   holdspin: {
     make: () => {
       const p = small(holdSpinProject());

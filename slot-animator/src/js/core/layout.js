@@ -3,6 +3,7 @@
 // renderer and the After Effects exporter so both place things identically.
 
 import { wheelGeometry } from './wheel.js';
+import { potsConfig, placePots } from './pots.js';
 
 const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 
@@ -15,7 +16,9 @@ export function computeLayout(project) {
   const curvature = clamp(Number(project.grid.curvature) || 0, 0, 1);
   const portrait = H > W * 1.1;
   const hud = !!project.machine.showHud;
-  const topZone = H * (portrait ? 0.2 : 0.165);
+  // Pots above the machine take a taller band; the machine scales down.
+  const pots = potsConfig(project);
+  const topZone = pots.on ? H * pots.band : H * (portrait ? 0.2 : 0.165);
   const bottomZone = hud ? H * (portrait ? 0.15 : 0.15) : H * 0.06;
   const availW = W * (portrait ? 0.94 : 0.74);
   const availH = H - topZone - bottomZone;
@@ -88,6 +91,9 @@ export function computeLayout(project) {
 
   const logoH = topZone * 0.78;
   const hudH = bottomZone * 0.6;
+  const frame = { x: frameX, y: frameY, w: frameW, h: frameH, r: pad * 0.9 };
+  const logo = { cx: W / 2, cy: Math.max(logoH / 2 + H * 0.01, frameY / 2), w: Math.min(W * 0.9, frameW * 1.05), h: logoH };
+  const potList = pots.on ? placePots(pots, W, H, topZone, frame, pad) : null;
   return {
     W,
     H,
@@ -107,8 +113,11 @@ export function computeLayout(project) {
     winCY,
     rowsTop,
     reelX,
-    frame: { x: frameX, y: frameY, w: frameW, h: frameH, r: pad * 0.9 },
-    logo: { cx: W / 2, cy: Math.max(logoH / 2 + H * 0.01, frameY / 2), w: Math.min(W * 0.9, frameW * 1.05), h: logoH },
+    frame,
+    logo,
+    // The pots replace the title; the free spins ribbon goes above them.
+    pots: potList,
+    ribbonY: potList ? Math.max(H * 0.035, Math.min(...potList.map((p) => p.top)) * 0.5) : Math.min(frameY - H * 0.025, logo.cy + logo.h * 0.42),
     hud: hud
       ? { x: frameX + frameW * 0.18, y: frameY + frameH + (bottomZone - hudH) * 0.45, w: frameW * 0.64, h: hudH }
       : null,

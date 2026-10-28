@@ -5,7 +5,8 @@
 import { THEMES } from '../core/defaults.js';
 import { symbolLayout, holdSpinConfig } from '../core/coins.js';
 import { wheelConfig, segmentLayout, labelPalette, iconName } from '../core/wheel.js';
-import { paintBuiltin, paintCoinSymbol, paintEmptyCell, metalGradient, roundRect, starPath, sparkle, METALS } from './paint.js';
+import { paintBuiltin, paintCoinSymbol, paintEmptyCell, paintPot, metalGradient, roundRect, starPath, sparkle, METALS } from './paint.js';
+import { potsConfig } from '../core/pots.js';
 
 export function canvas(w, h) {
   const c = document.createElement('canvas');
@@ -58,7 +59,15 @@ export async function loadProjectImages(project) {
     frame: await opt(project.assets.frame),
     logo: await opt(project.assets.logo),
     wheel: await loadWheelArt(project, opt),
+    pots: await loadPotArt(project, opt),
   };
+}
+
+// The pots above the machine: uploaded art, or the painted pot.
+export async function loadPotArt(project, load) {
+  const cfg = potsConfig(project);
+  if (!cfg.on) return [];
+  return Promise.all(cfg.items.map(async (it) => (it.src && (await load(it.src).catch(() => null))) || paintPot(it.art, 512)));
 }
 
 // The wheel's uploaded parts, segment icons and the centre icon. Built-in
@@ -461,6 +470,8 @@ export function paintTitle(text, font, px, paletteName = 'gold') {
 
 function paintLogo(L, project, theme, img) {
   const { logo } = L;
+  // The pots stand where the title goes.
+  if (L.pots) return null;
   if (img) {
     const f = fit(img.width, img.height, logo.w, logo.h);
     const c = canvas(f.w, f.h);
@@ -885,6 +896,8 @@ export function buildResources(project, L, images) {
     rays: paintRays(1024, 18, 'rgba(255,220,140,0.75)'),
     raysSmall: paintRays(512, 12, 'rgba(255,240,200,0.8)'),
     wheel: paintWheel(L.wheel.R, segs, project, images.wheel || {}),
+    pots: L.pots ? L.pots.map((_, i) => (images.pots || [])[i] || paintPot(potsConfig(project).items[i].art, 512)) : [],
+    potColors: potsConfig(project).items.map((it) => it.color || '#ffd25a'),
     digitCache: new Map(),
     titleCache: new Map(),
   };

@@ -36,11 +36,12 @@ import { lineColor, generatePaylines } from '../core/paylines.js';
 import { autoAmount, makeContext, defaultPattern, tumbleEnabled } from '../core/outcomes.js';
 import { orderList } from '../core/order.js';
 import { FORMAT_CHOICES } from '../core/ae-export.js';
-import { loadImage, loadWinAnim, buildResources, fontStack, extraSymbolImages, loadWheelArt, paintWheelIcon } from '../render/sprites.js';
-import { paintBuiltin } from '../render/paint.js';
+import { loadImage, loadWinAnim, buildResources, fontStack, extraSymbolImages, loadWheelArt, loadPotArt, paintWheelIcon } from '../render/sprites.js';
+import { paintBuiltin, paintPot } from '../render/paint.js';
 import { loadParticleSprites, drawParticleList } from '../render/particles.js';
 import { PARTICLE_TEMPLATES, TEMPLATE_BY_ID, BUILTIN_PARTICLES, PARTICLE_MOTIONS, PARTICLE_MOMENTS, PARTICLE_LENGTHS, tierParticles, spawnParticles, particleAssetInfo } from '../core/particles.js';
 import { WIN_STYLES, JUMP_TARGETS, MERGE_POINTS, FLIGHT_PATHS, winFxConfig, jumpTarget, mergeTarget } from '../core/winfx.js';
+import { POT_ARTS, POT_AIMS, BOOST_KINDS, BEAM_CURVES, defaultPots, potsConfig } from '../core/pots.js';
 import { searchFeatures, buildIndex } from './search.js';
 import { APPLIES, notApplying } from './applies.js';
 import { TIPS, tipEntries } from './tips.js';
@@ -67,6 +68,8 @@ const MULT_VALUES = [2, 3, 5, 10, 15, 20, 25, 50, 100, 250, 500];
 const WILD_MULT_VALUES = [2, 3, 4, 5, 10];
 // Cash symbol values, in bets.
 const CASH_VALUES = [0.5, 1, 2, 3, 5, 10, 15, 20, 25, 50, 100];
+// Boosters a round can add: [kind, value].
+const BOOST_CHOICES = [['wild'], ['upgrade'], ['mult', 2], ['mult', 3], ['mult', 5], ['mult', 10], ['cash', 2], ['cash', 5], ['cash', 10], ['cash', 25], ['cash', 50]];
 const ROLES = [
   ['normal', 'Normal'],
   ['wild', 'Wild'],
@@ -1205,6 +1208,7 @@ async function loadImages(project) {
     logo: await optImage(project.assets.logo),
     particles: await loadParticleSprites(project, (src) => optImage(src).then((i) => i || Promise.reject(new Error('bad image')))),
     wheel: await loadWheelArt(project, optImage),
+    pots: await loadPotArt(project, optImage),
   };
 }
 
@@ -1964,6 +1968,7 @@ function extrasText(r) {
   if (r.mystery > 0) t += ` · ${r.mystery} mystery`;
   if (r.cash?.length) t += ` · cash ${r.cash.map((v) => `${cur}${v}`).join(' ')}`;
   if (r.collector) t += ' · collector';
+  if (r.boosts?.length && potsConfig(state.project).on) t += ` · ${r.boosts.length} booster${r.boosts.length === 1 ? '' : 's'}`;
   return t;
 }
 
@@ -2092,6 +2097,65 @@ function countField(id, pattern, value, onInput) {
 }
 
 // A list of values as removable chips, with a picker to add one.
+// A round's boosters: chips to remove, a picker to add, and which pot fires.
+function boostField(r, set, cur, tumbles) {
+  const P = state.project;
+  const cfg = potsConfig(P);
+  if (!cfg.on) {
+    return [
+      h('div', { class: 'field', id: 'ri-boost' }, h('span', { class: 'label' }, 'Boosters'), h('p', { class: 'hint' }, 'Pots above the machine fire beams that upgrade cells. Turn the pots on to add them.'), button('Turn on the pots', () => turnOnPots(), { class: 'btn small', icon: 'plus', id: 'ri-boost-pots' })),
+    ];
+  }
+  const list = (r.boosts || []).map((b) => (typeof b === 'string' ? { kind: b } : b));
+  const name = (b) => (b.kind === 'mult' ? `x${b.value || 2} wild` : b.kind === 'cash' ? `${cur}${b.value || 5}` : BOOST_KINDS.find((k) => k.id === b.kind)?.label || b.kind);
+  const sel = h('select', { id: 'ri-boost-value', 'aria-label': 'Booster to add' }, BOOST_CHOICES.map(([k, v], i) => h('option', { value: i }, name({ kind: k, value: v }))));
+  const setList = (l) => set('boosts', true)(l);
+  const out = [
+    h(
+      'div',
+      { class: 'field', id: 'ri-boost' },
+      h('span', { class: 'label' }, 'Boosters'),
+      h('div', { class: 'mults' }, list.map((b, k) => button(name(b), () => setList(list.filter((_, j) => j !== k)), { class: 'chip on', icon: 'x', id: `ri-boost-${k}`, title: 'Remove' }))),
+      list.length < 8
+        ? h('div', { class: 'add-row' }, sel, button('Add', () => {
+            const [kind, value] = BOOST_CHOICES[Number(sel.value)];
+            setList([...list, value != null ? { kind, value } : { kind }]);
+          }, { class: 'btn small', icon: 'plus', id: 'ri-boost-add' }))
+        : null,
+      h('p', { class: 'hint' }, LINE_WINS.includes(r.outcome) ? `After the spin the pots fire at cells of the win: they land as a low symbol and turn into what you add here.${tumbles ? ' In a tumble a multiplier lands as a bomb.' : ''} Cash goes to a free cell.` : 'After the spin the pots fire at free cells; nothing they make pays here. Cash goes to a collector if one lands.')
+    ),
+  ];
+  if (list.length || winStyleIsCollect(r)) {
+    out.push(
+      selectField({
+        id: 'ri-pot-aim',
+        label: 'Which pot fires or catches',
+        value: r.potAim || 'auto',
+        options: [{ value: 'auto', label: `Machine default (${POT_AIMS.find((a) => a.id === cfg.aim)?.label})` }, ...potAims(cfg.count)],
+        onChange: (v) => set('potAim')(v === 'auto' ? null : v),
+      })
+    );
+  }
+  return out;
+}
+
+function winStyleIsCollect(r) {
+  const own = r.winStyle && r.winStyle !== 'auto' ? r.winStyle : winFxConfig(state.project).style;
+  return own === 'collect' && LINE_WINS.includes(r.outcome);
+}
+
+function potAims(n) {
+  return POT_AIMS.filter((a) => !/^\d$/.test(a.id) || Number(a.id) < n).map((a) => ({ value: a.id, label: /^\d$/.test(a.id) ? `${potsConfig(state.project).items[Number(a.id)].name} only` : a.label }));
+}
+
+function turnOnPots() {
+  const P = state.project;
+  P.pots = { ...defaultPots(), ...(P.pots || {}), enabled: true };
+  changed('all');
+  renderPanel();
+  renderInspector();
+}
+
 function valueChips({ id, label, list, values, fmt, max, set, hint }) {
   const cur = list || [];
   const sel = h('select', { id: `${id}-value`, 'aria-label': `${label}: value to add` }, values.map((v) => h('option', { value: v }, fmt(v))));
@@ -2438,6 +2502,8 @@ function renderInspector() {
         toggleField({ id: 'ri-collector', label: 'A collector lands and takes the cash', checked: !!r.collector, onChange: set('collector', true), hint: r.collector && !(r.cash || []).length ? 'Add cash symbols for it to collect.' : null })
       );
     }
+    // Boosters: the pots above the machine fire at cells that upgrade.
+    if (LINE_WINS.includes(r.outcome) || ['none', 'nearmiss', 'freespins', 'bonus', 'wheel'].includes(r.outcome)) parts.push(h('div', { class: 'divider' }), ...boostField(r, set, cur, LINE_WINS.includes(r.outcome) && tumbleEnabled(ctx2, r)));
   }
   if (SCATTER_WINS.includes(r.outcome)) {
     const trig = P.machine.scatterTrigger || 3;
@@ -2914,6 +2980,84 @@ function holdSettings() {
   );
 }
 
+// The pots above the machine: how many, where, their art and colours, and
+// the beams between them and the cells.
+function potsSettings() {
+  const P = state.project;
+  const d = defaultPots();
+  P.pots = { ...d, ...(P.pots || {}) };
+  const T = P.pots;
+  T.items = d.items.map((it, i) => ({ ...it, ...((T.items || [])[i] || {}) }));
+  T.beam = { ...d.beam, ...(T.beam || {}) };
+  const cfg = potsConfig(P);
+  const all = (k, obj = T) => (v) => {
+    obj[k] = v;
+    changed('all');
+    renderPanel();
+    renderInspector();
+  };
+  const on = toggleField({ id: 'm-pots', label: 'Pots above the machine', checked: !!T.enabled, onChange: all('enabled'), hint: 'A pot of gold, a pot of gems and a pot of fruits stand on the frame. They fire beams that upgrade cells (Boosters in the round inspector) and catch the win when winners beam up into them (Wins → Beam to the pots). They take the title\'s place.' });
+  if (!T.enabled) return section('Pots above the machine', on);
+  return section(
+    'Pots above the machine',
+    on,
+    segmented({ id: 'm-pots-count', label: 'Pots', value: cfg.count, options: [1, 2, 3].map((n) => ({ value: n, label: String(n) })), onChange: (v) => all('count')(Number(v)) }),
+    ...T.items.slice(0, cfg.count).map((it, i) => potRow(it, i)),
+    rangeField({ id: 'm-pots-band', label: 'Room above the machine', unit: '× height', value: cfg.band, min: 0.15, max: 0.45, step: 0.01, onInput: num(T, 'band', 'all'), hint: 'The machine scales down to make room.' }),
+    rangeField({ id: 'm-pots-size', label: 'Pot size', value: cfg.size, min: 0.5, max: 1.8, step: 0.05, onInput: num(T, 'size', 'all') }),
+    rangeField({ id: 'm-pots-spacing', label: 'Spacing', value: cfg.spacing, min: 0.6, max: 2.5, step: 0.05, onInput: num(T, 'spacing', 'all'), hint: '1 stands them side by side; less overlaps them.' }),
+    rangeField({ id: 'm-pots-overlap', label: 'Hidden behind the frame', value: cfg.overlap, min: 0, max: 0.8, step: 0.01, onInput: num(T, 'overlap', 'all') }),
+    toggleField({ id: 'm-pots-plates', label: 'Nameplates show what each pot caught', checked: cfg.plates, onChange: num(T, 'plates', 'timeline') }),
+    cfg.count > 1 ? selectField({ id: 'm-pots-aim', label: 'Which pot fires or catches', value: cfg.aim, options: potAims(cfg.count), onChange: num(T, 'aim', 'timeline'), hint: 'Nearest: each cell goes to the pot above its reels.' }) : null,
+    h('h4', { class: 'insp-sub' }, 'Beams'),
+    segmented({ id: 'm-beam-curve', label: 'Curve', value: cfg.beam.curve, options: BEAM_CURVES.map((c) => ({ value: c.id, label: c.label })), onChange: num(T.beam, 'curve', 'timeline') }),
+    rangeField({ id: 'm-beam-bend', label: 'Bend', value: cfg.beam.bend, min: 0, max: 1.5, step: 0.05, onInput: num(T.beam, 'bend') }),
+    rangeField({ id: 'm-beam-width', label: 'Thickness', value: cfg.beam.width, min: 0.3, max: 3, step: 0.05, onInput: num(T.beam, 'width') }),
+    rangeField({ id: 'm-beam-travel', label: 'Travel time', unit: 's', value: cfg.beam.travel, min: 0.12, max: 1.2, step: 0.01, onInput: num(T.beam, 'travel') }),
+    rangeField({ id: 'm-beam-stagger', label: 'Time between beams', unit: 's', value: cfg.beam.stagger, min: 0, max: 0.8, step: 0.01, onInput: num(T.beam, 'stagger') })
+  );
+}
+
+// One pot: its art (painted or uploaded) and its colour (beams, glow and
+// nameplate).
+function potRow(it, i) {
+  const thumb = h('canvas', { class: 'thumb', width: 96, height: 96 });
+  const g = thumb.getContext('2d');
+  const paint = (img) => {
+    g.clearRect(0, 0, 96, 96);
+    const k = Math.min(96 / (img.naturalWidth || img.width), 96 / (img.naturalHeight || img.height));
+    const w = (img.naturalWidth || img.width) * k;
+    const hh = (img.naturalHeight || img.height) * k;
+    g.drawImage(img, (96 - w) / 2, 96 - hh, w, hh);
+  };
+  if (it.src) optImage(it.src).then((img) => img && paint(img));
+  else paint(paintPot(it.art, 192));
+  return h(
+    'div',
+    { class: 'asset-row pot-row', id: `m-pot-${i}` },
+    h('div', { class: 'asset-thumb' }, thumb),
+    h(
+      'div',
+      { class: 'pot-fields' },
+      h('select', { id: `m-pot-art-${i}`, 'aria-label': `Pot ${i + 1}: gold, gems or fruits`, onchange: (e) => {
+        const a = POT_ARTS.find((x) => x.id === e.target.value);
+        Object.assign(it, { art: a.id, name: a.label, color: a.color });
+        changed('all');
+        renderPanel();
+      } }, POT_ARTS.map((a) => h('option', { value: a.id, selected: it.art === a.id }, a.label))),
+      h('input', { type: 'color', id: `m-pot-color-${i}`, value: it.color, 'aria-label': `${it.name}: beam colour`, title: 'Beam, glow and nameplate colour', onchange: (e) => { it.color = e.target.value; changed('all'); } }),
+      button('', async () => {
+        const [f] = await pickFiles('image/*');
+        if (!f) return;
+        it.src = await readFileAsDataURL(f);
+        changed('all');
+        renderPanel();
+      }, { class: 'icon-btn tiny', icon: 'upload', title: it.src ? 'Replace the art' : 'Upload your own pot art', id: `m-pot-up-${i}` }),
+      it.src ? button('', () => { it.src = null; changed('all'); renderPanel(); }, { class: 'icon-btn tiny', icon: 'dice', title: 'Back to the painted pot', id: `m-pot-paint-${i}` }) : null
+    )
+  );
+}
+
 function panelMachine() {
   const P = state.project;
   const fmt = `${P.canvas.width}x${P.canvas.height}`;
@@ -2973,6 +3117,7 @@ function panelMachine() {
       rangeField({ id: 'm-scatter', label: 'Scatters to trigger a feature', value: P.machine.scatterTrigger, min: 2, max: 6, step: 1, onInput: num(P.machine, 'scatterTrigger', 'timeline', () => renderInspector()) })
     ),
     holdSettings(),
+    potsSettings(),
     section(
       'Look',
       selectField({ id: 'm-theme', label: 'Theme', value: P.machine.theme, options: Object.entries(THEMES).map(([k, t]) => ({ value: k, label: t.name })), onChange: (v) => num(P.machine, 'theme', 'all')(v) }),
@@ -4020,6 +4165,12 @@ function winSymbolsSection() {
       segmented({ id: 'wf-jpath', label: 'Flight path', value: W.jumpPath, options: FLIGHT_PATHS.map((x) => ({ value: x.id, label: x.label })), onChange: set('jumpPath') }),
       rangeField({ id: 'wf-flight', label: 'Flight time', unit: 's', value: W.flight, min: 0.25, max: 1.5, step: 0.05, onInput: set('flight') }),
       rangeField({ id: 'wf-stagger', label: 'Delay between symbols', unit: 's', value: W.stagger, min: 0, max: 0.25, step: 0.01, onInput: set('stagger') })
+    );
+  } else if (W.style === 'collect') {
+    parts.push(
+      potsConfig(P).on
+        ? h('p', { class: 'hint' }, 'The beams\' curve, thickness and timing are in Machine → Pots above the machine.')
+        : h('div', { class: 'field' }, h('p', { class: 'hint' }, 'The pots are off, so winners pop in place.'), button('Turn on the pots', () => turnOnPots(), { class: 'btn small', icon: 'plus', id: 'wf-pots-on' }))
     );
   } else if (W.style === 'merge') {
     parts.push(

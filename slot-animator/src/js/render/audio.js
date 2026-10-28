@@ -44,7 +44,7 @@ function noiseData() {
 }
 
 // How long each synth cue rings after its start (plus its own duration).
-const TAIL = { reveal: 1.2, merge: 1.1, bigWin: 2.9, fsTrigger: 2.2, scatter: 1.2, wheelLand: 1.2, countEnd: 1.0, tierUp: 0.9, expand: 0.9, mult: 0.9, nearMiss: 0.8, coinLand: 0.8, respinReset: 0.6 };
+const TAIL = { upgrade: 0.8, reveal: 1.2, merge: 1.1, bigWin: 2.9, fsTrigger: 2.2, scatter: 1.2, wheelLand: 1.2, countEnd: 1.0, tierUp: 0.9, expand: 0.9, mult: 0.9, nearMiss: 0.8, coinLand: 0.8, respinReset: 0.6 };
 
 function tailOf(e, custom) {
   const buf = custom.get(e.type);
@@ -317,6 +317,26 @@ function renderChunk(list, offset, length, sound, custom) {
       noise(e.t, 0.5, o, 0.1, { f0: 1200, f1: 6000, attack: 0.3 });
       [0, 4, 7, 12].forEach((n, i) => tone('triangle', semis(523, n), e.t + 0.42 + i * 0.03, 0.5, o, 0.09));
       tone('sine', semis(523, 24), e.t + 0.5, 0.6, o, 0.05);
+    },
+    // The pots charge up: a rising hum with a shimmer.
+    potCharge(e, o) {
+      const d = Math.max(0.2, e.dur || 0.5);
+      tone('sawtooth', 110, e.t, d + 0.1, o, 0.07, { f1: 330, attack: d * 0.9 });
+      tone('sine', 220, e.t, d + 0.1, o, 0.12, { f1: 660, attack: d * 0.9 });
+      noise(e.t, d, o, 0.06, { f0: 2000, f1: 7000, attack: d * 0.9 });
+    },
+    // A beam fires: a saber zap that sweeps down.
+    beam(e, o) {
+      const k = Math.pow(2, ((e.i || 0) / Math.max(1, e.n || 1)) * 0.6);
+      tone('sawtooth', 1400 * k, e.t, 0.22, o, 0.06, { f1: 380 * k });
+      tone('sine', 2200 * k, e.t, 0.18, o, 0.07, { f1: 900 * k });
+      noise(e.t, 0.16, o, 0.07, { type: 'highpass', f0: 4000 });
+    },
+    // A beam upgrades a cell: a bright hit and a sparkle.
+    upgrade(e, o) {
+      tone('sine', 90, e.t, 0.3, o, 0.3, { f1: 45 });
+      [0, 7, 12, 19].forEach((n, i) => tone('triangle', semis(659, n), e.t + i * 0.025, 0.35, o, 0.08));
+      noise(e.t, 0.2, o, 0.1, { type: 'highpass', f0: 5000 });
     },
     // Walking wilds: a soft hop.
     wildWalk(e, o) {

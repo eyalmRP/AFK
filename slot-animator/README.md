@@ -57,6 +57,25 @@ the result as an editable **After Effects project**.
   - Cash symbols and a collector (Big Bass style): coins land with values
     (in bets); a collector, landing on the last reel to stop when it can,
     takes them one by one on top of the win, the meter counting each in.
+  - Pots above the machine (Machine tab): a pot of gold, a pot of gems
+    and a pot of fruits stand on the frame's top edge, peeking over it,
+    where the title was. 1 to 3 pots; their size, spacing, how much hides
+    behind the frame and how much room they get above the machine (the
+    machine scales down) are settings, and each pot takes painted or
+    uploaded art and a colour for its beams, glow and nameplate. Beams are
+    saber beams: a simple arc by default or an S-curve, with bend,
+    thickness, travel time and the time between beams. Each cell goes to
+    the nearest pot (the pot above its reels) unless the pots take turns
+    or one pot does it all (per project, with a per-round override).
+  - Boosters (round inspector, with the pots on): after the spin lands
+    the pots charge up and fire beams at cells one by one, sweeping across
+    the machine; each cell lands as a low symbol and, as its beam hits,
+    bursts into a wild, the winning symbol (an upgrade), a wild with an x
+    value, or cash. On a win they upgrade the win's own cells, so the win
+    needs them; in a tumble a multiplier lands as a bomb. On a spin that
+    does not win they upgrade free cells to things that do not pay; cash
+    goes to a collector if one lands. While a cell upgrades it is cut out
+    of its reel and the reel swaps underneath.
   The mystery block and the collector are built-in symbols unless the
   project has a symbol with the Mystery or Collector role, whose art is
   used instead.
@@ -64,8 +83,11 @@ the result as an editable **After Effects project**.
   to the win meter, the win amount, above the reels, the screen centre or
   any spot you click on the preview; each landing counts up the win), or
   magnet merge (they pull together and fuse into one big symbol, all at
-  once or one by one with a slider in between). Both fly a straight, arc or
-  wind-up path (a pull back before the flight). Per project, with a
+  once or one by one with a slider in between), or beam to the pots (with
+  the pots on: each winner fires a beam up into its pot one by one and
+  darkens; every catch squashes the pot and counts up the win and the
+  pot's nameplate). Jump and merge fly a straight, arc or wind-up path (a
+  pull back before the flight). Per project, with a
   per-round override. The payline drawn through a line win can be switched
   off.
 - Win particles: 14 explosion templates, short (small, medium and big
@@ -117,10 +139,11 @@ the result as an editable **After Effects project**.
     framings and spin again). Options that do not apply to the game type
     or spin style stay in view, greyed out and locked, saying why. Section
     headers have icons. Search also reads the tooltip texts.
-  - Presets (top bar, or P): a gallery of 18 ready-made animations with a
+  - Presets (top bar, or P): a gallery of 19 ready-made animations with a
     frame of each: classic, fruit 3×3, 243 ways, tumbles, clusters 7×7,
     per-cell spins, mobile portrait, free spins with sticky wilds and a
-    retrigger, a cash collector, mystery and walking wilds, teases,
+    retrigger, a cash collector, mystery and walking wilds, pots and
+    beams (boosters and winners beaming to the pots), teases,
     the big win ladder, slot into Hold & Spin, Hold & Spin, a slot wheel
     bonus and three wheel-only framings. It opens by itself on the first
     visit. Between them they show the newer options, each where it fits:
@@ -190,7 +213,8 @@ Everything is a pure function of time, built from one JSON project:
 | `src/js/core/wheel.js` | The wheel's framing and screen geometry, pointer side, how pegs bend the pointer and its spring back, the almost-slip landing, and where labels and icons sit on the disc. |
 | `src/js/core/tease.js` | The tease: when the other reels dim, and how a landed scatter's lit copy pops, fades or stays lit. The preview draws with it and the After Effects expressions mirror it. |
 | `src/js/core/fonts.js` | Built-in and uploaded fonts, and the PostScript names After Effects asks for (read from the font file). |
-| `src/js/core/winfx.js` | Winning symbols that jump into the score or merge into one: landing spots and the flight curves the preview and After Effects share. |
+| `src/js/core/winfx.js` | Winning symbols that jump into the score, merge into one or beam to the pots: landing spots and the flight curves the preview and After Effects share. |
+| `src/js/core/pots.js` | Pots above the machine: their settings, where they stand, which pot serves a cell, the beam curves (arc or S, sampled evenly along their length like Trim Paths) and timing, and how a pot squashes, kicks and charges. |
 | `src/js/core/particles.js` | Explosion templates and the win emitters: which moment throws which particles, and every particle's flight as a closed form (gravity, air drag, flutter) that the preview and After Effects both evaluate. |
 | `src/js/core/sfx.js` | The sound cues as separate clips for the After Effects SFX comp (identical cues share a clip). |
 | `src/js/core/ae-export.js` | Builds the ES3 `.jsx` for After Effects. |
@@ -244,7 +268,14 @@ comp, the round comps place them in time, and a few controls sit on
   multiplier wild's x rides on its win comp), mystery cards turning over
   (`Mystery Block` narrowing, `Mystery Reveal` opening, while `Reveal n`
   masks cut their cells out of the reels), the collector with each cash
-  value flying in and its running total, titles, counters driven by
+  value flying in and its running total, boosters (a `Boost Target`
+  frame in the pot's colour, `Boost From` trembling until the hit, the new
+  symbol popping, a flash and a shockwave; `Reveal n` masks cut the cell
+  out of its reel), beams (`Beam Down n` / `Beam Up n`: a shape layer with
+  the Bézier path drawn on by Trim Paths, soft strokes in the pot's colour
+  round a white core, and a `Beam Head n` glow riding on the head; edit
+  the path to reshape a beam), winners beaming to the pots (`Drained n`
+  shades), titles, counters driven by
   `WIN CTRL > Amount`, the wheel rig. `Rounds/Particles/`
   holds every win explosion as its own comp: one layer per particle, a use
   of its particle placeholder, with expressions that reproduce the
@@ -261,12 +292,15 @@ comp, the round comps place them in time, and a few controls sit on
   the reel it left, on the same path as the preview),
   the tease (a `Tease Dim Rn` solid per reel, scaled by `Dim %`, and a
   `Scatter Lands Rxx` copy with a shockwave for every scatter or trigger
-  coin that lands, lit by expression), coin lock frames, marquee, logo, free spins ribbon and HUD texts, win
+  coin that lands, lit by expression), the pots (each a `Pot n` art
+  placeholder behind the frame with a `Charge Light` copy, squashing and
+  kicking by expression, then over the frame its `Glow` and its nameplate
+  counter reading the `Pot n` slider), coin lock frames, marquee, logo, free spins ribbon and HUD texts, win
   meter, the round comps, particles that run to the end (`Rxx <template>`),
   a `SCREEN SHAKE` parent null, the flash, vignette, the SFX comp and a
   marker per round. With anticipation zoom on, a `CAMERA` null parents the
   shake null and the background and pushes in on the teased reels.
-  `SLOT CONTROL` holds `Meter`, `FS Total`, `Collect` and the After Effects
+  `SLOT CONTROL` holds `Meter`, `FS Total`, `Collect`, `Pot 1`-`Pot 3` and the After Effects
   side controls: `Shake %`, `Flash %`, `Dim %`, `Particles %`, `Spin Blur %`,
   `Win Pop %`, `Zoom %` and `FX Colour`. With "Transparent
   background" the background and vignette start switched off; render

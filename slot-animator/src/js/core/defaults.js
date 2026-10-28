@@ -5,6 +5,7 @@
 import { defaultParticles } from './particles.js';
 import { defaultWinFx } from './winfx.js';
 import { autoIcons } from './wheel.js';
+import { defaultPots } from './pots.js';
 
 export const OUTCOMES = [
   { id: 'none', label: 'No win', list: 'No win', short: 'No win', color: '#56607a' },
@@ -242,6 +243,9 @@ export const SOUND_EVENTS = [
   { id: 'winLand', label: 'Winning reel lands (climbs)', group: 'wins' },
   { id: 'reveal', label: 'Mystery symbols reveal', group: 'wins' },
   { id: 'wildWalk', label: 'Walking wilds step', group: 'wins' },
+  { id: 'potCharge', label: 'Pots charge up', group: 'wins' },
+  { id: 'beam', label: 'Beam fires', group: 'wins' },
+  { id: 'upgrade', label: 'Beam upgrades a cell', group: 'wins' },
   { id: 'wheelAgain', label: 'Wheel: spin again', group: 'bigwin' },
   { id: 'wheelTick', label: 'Wheel peg tick', group: 'reels' },
   { id: 'wheelLand', label: 'Wheel lands', group: 'bigwin' },
@@ -428,6 +432,7 @@ function baseProject() {
     holdspin: defaultHoldSpin(),
     particles: defaultParticles(),
     winfx: defaultWinFx(),
+    pots: defaultPots(),
     symbols: BUILTIN_SYMBOLS.map((s, i) => ({ id: `s${i}`, src: null, winAnim: null, ...s })),
     assets: { background: null, frame: null, logo: null },
     rounds: [],
@@ -710,6 +715,28 @@ export function mysteryWalkProject() {
   return p;
 }
 
+// Three pots above the machine, gold, gems and fruits: after a spin they
+// fire beams that upgrade cells into a win, and winners beam back up into
+// them, one by one.
+export function potsProject() {
+  const p = baseProject();
+  p.name = 'Pots of Plenty';
+  p.seed = 341;
+  Object.assign(p.machine, { theme: 'royal', title: 'POTS OF PLENTY' });
+  p.pots.enabled = true;
+  p.winfx.style = 'collect';
+  p.effects.landShake = true;
+  p.spin.scatterLit = true;
+  p.rounds = [
+    newRound('none', { seed: 351 }),
+    newRound('small', { seed: 352, lines: [0], count: 3 }),
+    newRound('none', { seed: 353, boosts: [{ kind: 'upgrade' }, { kind: 'wild' }] }),
+    newRound('medium', { seed: 354, lines: [1, 2], count: 4, boosts: [{ kind: 'wild' }, { kind: 'upgrade' }] }),
+    newRound('big', { seed: 355, lines: [0, 3], count: 5, tier: 1, boosts: [{ kind: 'upgrade' }, { kind: 'mult', value: 3 }, { kind: 'wild' }] }),
+  ];
+  return p;
+}
+
 // Suspense: the last reels tease, the camera pushes in, then it pays off.
 export function teaseProject() {
   const p = baseProject();
@@ -821,6 +848,7 @@ export const PRESETS = [
   { id: 'freespins', group: 'Features', label: 'Free spins with sticky wilds', desc: 'Scatters trigger, wilds stick while their reels spin on, a retrigger adds spins, the total counts up.', make: freeSpinsProject },
   { id: 'cash', group: 'Features', label: 'Cash collector', desc: 'Cash coins land with values; in free spins a collector takes them all, and a retrigger adds spins.', make: cashCollectorProject },
   { id: 'mystery', group: 'Features', label: 'Mystery and walking wilds', desc: 'Mystery blocks reveal wins, wilds carry multipliers, and in free spins wilds walk off reel by reel.', make: mysteryWalkProject },
+  { id: 'pots', group: 'Features', label: 'Pots and beams', desc: 'Pots of gold, gems and fruits fire beams that upgrade cells into a win; winners beam back up into them.', make: potsProject },
   { id: 'tease', group: 'Features', label: 'Near misses and teases', desc: 'Reels tease with the camera pushing in, then a big win.', make: teaseProject },
   { id: 'ladder', group: 'Features', label: 'Big win ladder', desc: 'Small, medium, then every big win title; the fireworks run to the end.', make: ladderProject },
   { id: 'slot-hs', group: 'Hold & Spin', label: 'Slot into Hold & Spin', desc: 'Coins land on the reels and carry onto the board.', make: slotHoldSpinProject },

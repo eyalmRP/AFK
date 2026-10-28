@@ -15,6 +15,8 @@ import { cameraAt, zoomConfig } from '../core/camera.js';
 import { heldCells, walkStep, WALK_HOP } from '../core/timeline.js';
 import { pointerAt } from '../core/wheel.js';
 import { teaseWindows, teaseEnv, teaseDim, landLit, landScale, landings, LAND_POP } from '../core/tease.js';
+import { potsConfig, potBump, potCharge, beamCurve, beamPoints, pointAlong, beamState, beamSide, beamFlicker, BEAM_PASSES, POT_BOX } from '../core/pots.js';
+import { BOOST } from '../core/timeline.js';
 
 const clamp01 = (x) => (x < 0 ? 0 : x > 1 ? 1 : x);
 const prog = (t, a, b) => clamp01((t - a) / Math.max(1e-6, b - a));
@@ -737,7 +739,7 @@ function drawFsRibbon(ctx, scene, t) {
   const a = Math.min(clamp01((t - st.block.start) / 0.4), clamp01((st.block.end - t) / 0.4));
   const text = st.total ? 'FREE SPINS COMPLETE' : `FREE SPIN ${Math.max(1, st.index)} OF ${Math.max(st.n, st.index)}`;
   const img = cachedTitle(res, 'fsribbon', text, Math.round(L.H * 0.04), 'aqua');
-  const y = Math.min(L.frame.y - img.height * 0.32, L.logo.cy + L.logo.h * 0.42);
+  const y = L.pots ? L.ribbonY : Math.min(L.frame.y - img.height * 0.32, L.logo.cy + L.logo.h * 0.42);
   drawCentered(ctx, img, L.W / 2, y, Math.min(1, (L.frame.w * 0.8) / img.width), a);
 }
 
@@ -862,7 +864,9 @@ function drawWinCells(ctx, scene, R, t, cells, start, end, opts = {}) {
   const sym = (c, r, i) => (opts.syms ? opts.syms[i] : R.grid[c][r]);
   // Jumping or merging winners leave their cells (core/winfx.js).
   const wfx = opts.step && opts.step.fx;
-  const goal = wfx ? (wfx.style === 'jump' ? jumpTarget(project, L, opts.step) : mergeTarget(project, L, opts.step)) : null;
+  // Beaming to the pots: winners stay; each fires and its light drains.
+  const beam = wfx && wfx.style === 'collect';
+  const goal = wfx && !beam ? (wfx.style === 'jump' ? jumpTarget(project, L, opts.step) : mergeTarget(project, L, opts.step)) : null;
   cells.forEach(([c, r], i) => {
     const m0 = L.cellCenter(c, r);
     const col = opts.color || (opts.step && stepCellColor(opts.step, c, r)) || res.theme.accent;
@@ -870,7 +874,13 @@ function drawWinCells(ctx, scene, R, t, cells, start, end, opts = {}) {
     let m = m0;
     let fa = 1;
     let stay = 1;
-    if (wfx) {
+    let drain = 0;
+    if (beam) {
+      const f = t - wfx.launch[i];
+      if (f >= 0 && f < 0.25) s *= 1 + 0.14 * Math.sin((f / 0.25) * Math.PI);
+      drain = clamp01((f - 0.05) / 0.3);
+      if (f >= 0 && f < 0.5) drawRing(ctx, m0.x, m0.y, f / 0.5, L.cellW * 0.75, potColor(scene, wfx.pots[i]), L.cellW * 0.045);
+    } else if (wfx) {
       const f = flightAt(flightPath(wfx.style, m0, goal, L, wfx.path), wfx.launch[i], wfx.arrive[i], t, wfx.until[i]);
       if (f.flying) m = { x: f.x, y: f.y, s: m0.s };
       s *= f.s;
@@ -902,6 +912,14 @@ function drawWinCells(ctx, scene, R, t, cells, start, end, opts = {}) {
     // Values ride along: a coin's prize, a multiplier wild's x.
     const val = opts.values ? opts.values[i] : opts.mults?.[c]?.[r];
     if (val != null) drawValueLabel(ctx, scene, si, val, m.x, m.y, s, fa);
+    if (drain > 0) {
+      ctx.save();
+      ctx.globalAlpha = 0.45 * drain * a;
+      ctx.fillStyle = '#05020c';
+      roundRect(ctx, m0.x - L.cellW * 0.47, m0.y - L.cellH * 0.47 * m0.s, L.cellW * 0.94, L.cellH * 0.94 * m0.s, L.cellW * 0.1);
+      ctx.fill();
+      ctx.restore();
+    }
     if (stay <= 0) return;
     // Cell frame with a chasing light (it stays with the cell).
     ctx.save();
@@ -939,7 +957,7 @@ function drawWinCells(ctx, scene, R, t, cells, start, end, opts = {}) {
 // After the winners: rings where jumpers land, or the merged big symbol.
 function drawWinFxGoal(ctx, scene, R, st, t) {
   const wfx = st.fx;
-  if (!wfx || t < st.start || t > st.end) return;
+  if (!wfx || wfx.style === 'collect' || t < st.start || t > st.end) return;
   const { L, res, project } = scene;
   const accent = res.theme.accent;
   if (wfx.style === 'jump') {
@@ -1305,6 +1323,202 @@ function drawCollector(ctx, scene, R, t) {
     const img = cachedTitle(res, 'collected', formatPrize(got, cur, dec), Math.round(L.cellH * 0.3), 'gold');
     const done = clamp01((t - cl.done) / 0.3);
     drawCentered(ctx, img, target.x, target.y + L.cellH * 0.3, Math.min(1.3, (L.cellW * 1.2) / img.width) * (1 + 0.2 * bump + 0.15 * done), a);
+  }
+}
+
+// ---- pots above the machine (core/pots.js) ----
+
+function potColor(scene, p) {
+  return scene.res.potColors[p] || scene.res.theme.accent;
+}
+
+// Fit a pot's art in its S x S box, standing on the box's bottom.
+function potArtSize(img, S) {
+  const k = Math.min(S / img.width, S / img.height);
+  return [img.width * k, img.height * k];
+}
+
+// The pots stand on the frame's top edge. They are drawn before the
+// machine, so the frame hides their lower part. A catch squashes a pot, a
+// shot kicks it, and it trembles while it charges.
+function drawPots(ctx, scene, t) {
+  const { L, res, tl } = scene;
+  if (!L.pots || !tl.pots) return;
+  for (const pt of L.pots) {
+    const img = res.pots[pt.i];
+    if (!img) continue;
+    const { bump } = potBump(tl.pots.hits, pt.i, t);
+    const ch = potCharge(tl.pots.charges, pt.i, t);
+    const S = pt.size;
+    const [w, h] = potArtSize(img, S);
+    ctx.save();
+    ctx.translate(pt.x + ch * Math.sin(t * 71 + pt.i * 2) * S * 0.008, pt.bottom);
+    ctx.scale(1 + 0.08 * bump + 0.02 * ch, 1 - 0.08 * bump + 0.03 * ch);
+    ctx.drawImage(img, -w / 2, (0.5 - POT_BOX.bottom) * S - h, w, h);
+    // Charging, the pot lights up from inside.
+    if (ch > 0.01) {
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.globalAlpha = ch * (0.22 + 0.12 * Math.sin(t * 13 + pt.i));
+      ctx.drawImage(img, -w / 2, (0.5 - POT_BOX.bottom) * S - h, w, h);
+    }
+    ctx.restore();
+  }
+}
+
+// Over the frame: a pot glows while it charges and flashes as it fires or
+// catches; its nameplate shows what it caught this round.
+function drawPotsOver(ctx, scene, t) {
+  const { L, res, tl, project } = scene;
+  if (!L.pots || !tl.pots) return;
+  const plates = project.pots?.plates !== false;
+  for (const pt of L.pots) {
+    const col = potColor(scene, pt.i);
+    const { bump, flash } = potBump(tl.pots.hits, pt.i, t);
+    const ch = potCharge(tl.pots.charges, pt.i, t);
+    const g = ch * (0.75 + 0.25 * Math.sin(t * 13 + pt.i)) + flash * 0.8;
+    if (g > 0.01) drawGlow(ctx, res, col, pt.mouth.x, pt.mouth.y, pt.size * (1 + 0.35 * ch + 0.35 * flash), Math.min(1, g));
+    if (ch > 0.02) {
+      // Sparks spiral into the mouth.
+      for (let k = 0; k < 9; k++) {
+        const ph = (t * 1.7 + k / 9) % 1;
+        const ang = k * 2.4 + t * 3;
+        const rr = pt.size * (0.62 - 0.5 * ph);
+        sparkle(ctx, pt.mouth.x + Math.cos(ang) * rr, pt.mouth.y + Math.sin(ang) * rr * 0.6, pt.size * 0.07 * (1 - ph * 0.5), ch * Math.sin(ph * Math.PI));
+      }
+    }
+    if (!plates) continue;
+    let a = 0;
+    for (const [from, to, p] of tl.pots.show) if (p === pt.i) a = Math.max(a, Math.min(clamp01((t - from) / 0.2), clamp01((to + 0.3 - t) / 0.3)));
+    if (a <= 0) continue;
+    const v = evalKeys(tl.pots.valueKeys[pt.i], t);
+    if (!(v > 0)) continue;
+    const pl = pt.plate;
+    const k = 1 + 0.3 * (potBump(tl.pots.hits.filter((h) => !h[2]), pt.i, t).bump);
+    ctx.save();
+    ctx.globalAlpha = a;
+    ctx.translate(pl.x, pl.y);
+    ctx.scale(k, k);
+    drawGlow(ctx, res, col, 0, 0, pl.w * 1.3, 0.35 + 0.3 * flash);
+    roundRect(ctx, -pl.w / 2, -pl.h / 2, pl.w, pl.h, pl.h * 0.45);
+    ctx.fillStyle = 'rgba(14,6,28,0.92)';
+    ctx.fill();
+    ctx.lineWidth = Math.max(2, pl.h * 0.08);
+    ctx.strokeStyle = col;
+    ctx.shadowColor = col;
+    ctx.shadowBlur = pl.h * 0.35;
+    ctx.stroke();
+    ctx.restore();
+    ctx.save();
+    ctx.globalAlpha = a;
+    drawOdometer(ctx, res, v, pl.x, pl.y, Math.round(pl.h * 0.56), { currency: project.machine.currency || '', decimals: project.machine.decimals | 0, rate: evalVelocity(tl.pots.valueKeys[pt.i], t), scale: k });
+    ctx.restore();
+  }
+}
+
+// Each beam's path for the current layout (pots and cells don't move).
+const beamCache = new WeakMap();
+function beamPath(scene, bm) {
+  const { L } = scene;
+  let m = beamCache.get(L);
+  if (!m) beamCache.set(L, (m = new WeakMap()));
+  let pts = m.get(bm);
+  if (!pts) {
+    const pot = L.pots[bm.pot] || L.pots[0];
+    const cell = L.cellCenter(bm.c, bm.r);
+    const out = beamSide(cell.x, pot.x, bm.c, L.cellW);
+    const cfg = potsConfig(scene.project).beam;
+    pts = beamPoints(bm.up ? beamCurve(cell, pot.mouth, cfg, out) : beamCurve(pot.mouth, cell, cfg, out));
+    m.set(bm, pts);
+  }
+  return pts;
+}
+
+// A saber beam: wide soft passes in the pot's colour and a white core
+// (core/pots.js BEAM_PASSES), drawn from the tail to the head with a glow
+// on the head.
+function drawBeams(ctx, scene, R, t) {
+  const beams = R.pres.beams;
+  const { L, res } = scene;
+  if (!beams || !L.pots) return;
+  const width = potsConfig(scene.project).beam.width * L.cellW;
+  const flick = beamFlicker(t);
+  for (const bm of beams) {
+    const st = beamState(bm, t);
+    if (!st || st.head - st.tail < 1e-3) continue;
+    const pts = beamPath(scene, bm);
+    const n = pts.length - 1;
+    const seg = [pointAlong(pts, st.tail)];
+    for (let i = Math.ceil(st.tail * n); i < st.head * n; i++) seg.push(pts[i]);
+    seg.push(pointAlong(pts, st.head));
+    const col = potColor(scene, bm.pot);
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    for (const [w, a, core] of BEAM_PASSES) {
+      ctx.globalAlpha = a * st.alpha * (core ? 1 : flick);
+      ctx.strokeStyle = core ? '#ffffff' : col;
+      ctx.lineWidth = w * width * (core ? 1 : flick);
+      ctx.beginPath();
+      seg.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
+      ctx.stroke();
+    }
+    ctx.restore();
+    const [hx, hy] = seg[seg.length - 1];
+    drawGlow(ctx, res, col, hx, hy, width * 0.75, 0.9 * st.alpha);
+  }
+}
+
+// A boosted cell: marked while the pots charge; the old symbol trembles as
+// the beam comes, then bursts into the new one. Its reel is cut out from
+// just before the hit until the new symbol has popped (core/timeline.js).
+function drawBoost(ctx, scene, R, t) {
+  const bo = R.pres.boost;
+  if (!bo || t < bo.start || t > bo.end + 0.6) return;
+  const { L, res } = scene;
+  for (const it of bo.items) {
+    const m = L.cellCenter(it.c, it.r);
+    const col = potColor(scene, it.pot);
+    // Marked: a pulsing frame in the colour of the pot that will fire.
+    const pre = env(t, bo.start, it.hit + 0.05, 0.3, 0.05);
+    if (pre > 0) {
+      const pulse = 0.65 + 0.35 * Math.sin(t * 10 + it.c);
+      drawGlow(ctx, res, col, m.x, m.y, L.cellW * 1.6, 0.35 * pulse * pre);
+      ctx.save();
+      ctx.globalAlpha = pre * pulse;
+      const fw = L.cellW * 0.94;
+      const fh = L.cellH * 0.94 * m.s;
+      roundRect(ctx, m.x - fw / 2, m.y - fh / 2, fw, fh, L.cellW * 0.12);
+      ctx.lineWidth = L.cellW * 0.035;
+      ctx.strokeStyle = col;
+      ctx.shadowColor = col;
+      ctx.shadowBlur = L.cellW * 0.2;
+      ctx.stroke();
+      ctx.restore();
+    }
+    const cover = it.hit - BOOST.lead;
+    const until = it.hit + BOOST.pop;
+    if (t >= cover && t < until) {
+      const before = t < it.hit;
+      const sym = before ? it.from : it.to;
+      const sp = res.sym[sym];
+      const k = before ? 1 : 0.55 + 0.45 * ease.outBack(clamp01((t - it.hit) / BOOST.pop));
+      const jx = before ? Math.sin(t * 90) * L.cellW * 0.02 : 0;
+      if (sp) {
+        ctx.save();
+        ctx.translate(m.x + jx, m.y);
+        ctx.scale(k, k * m.s);
+        ctx.drawImage(sp.sharp, -L.cellW / 2, -L.cellH / 2, L.cellW, L.cellH);
+        ctx.restore();
+      }
+      if (!before && it.value != null) drawValueLabel(ctx, scene, sym, it.value, m.x, m.y, k);
+    }
+    if (t >= it.hit && t < it.hit + 0.6) {
+      const f = (t - it.hit) / 0.6;
+      drawGlow(ctx, res, '#ffffff', m.x, m.y, L.cellW * (1.2 + f), 0.8 * (1 - f));
+      drawGlow(ctx, res, col, m.x, m.y, L.cellW * 2, 0.7 * (1 - f));
+      drawRing(ctx, m.x, m.y, f, L.cellW * 0.95, col, L.cellW * 0.05);
+    }
   }
 }
 
@@ -1900,6 +2114,7 @@ export function renderFrame(ctx, scene, t, opts = {}) {
   drawOverParticles(ctx, scene, t, 'back');
   // The wheel game has no machine: just the background and the wheel.
   if (tl.game !== 'wheel') {
+    drawPots(ctx, scene, t);
     ctx.drawImage(res.back, 0, 0);
     drawReels(ctx, scene, R, t);
     drawInWindowFx(ctx, scene, R, t);
@@ -1912,8 +2127,10 @@ export function renderFrame(ctx, scene, t, opts = {}) {
     drawFsRibbon(ctx, scene, t);
     drawHoldBar(ctx, scene, R, t);
     drawHud(ctx, scene, R, t);
+    drawPotsOver(ctx, scene, t);
   }
   if (R) {
+    drawBoost(ctx, scene, R, t);
     drawMystery(ctx, scene, R, t);
     drawExpand(ctx, scene, R, t);
     drawScatterFx(ctx, scene, R, t);
@@ -1921,6 +2138,7 @@ export function renderFrame(ctx, scene, t, opts = {}) {
     drawSteps(ctx, scene, R, t);
     drawMultPhase(ctx, scene, R, t);
     drawCollector(ctx, scene, R, t);
+    drawBeams(ctx, scene, R, t);
     drawGrand(ctx, scene, R, t);
     drawBigWin(ctx, scene, R, t);
     drawBanner(ctx, scene, R, t);

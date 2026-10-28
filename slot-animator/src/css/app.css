@@ -782,6 +782,28 @@ body.dragging * {
   align-items: center;
 }
 
+.pot-fields {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.pot-fields select {
+  flex: 1;
+  min-width: 0;
+}
+
+.pot-fields input[type='color'] {
+  width: 30px;
+  height: 26px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: none;
+  flex: none;
+}
+
 .asset-thumb {
   width: 52px;
   height: 40px;

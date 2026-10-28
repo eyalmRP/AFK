@@ -12,6 +12,7 @@ export const APPLIES = {
   'm-row-lines': { games: SLOT, not: ['cells'] },
   'machine/how-it-pays': { games: SLOT },
   'machine/hold-spin': { games: REELS },
+  'machine/pots-above-the-machine': { games: SLOT },
   'm-marquee': { games: REELS },
   'm-hud': { games: REELS },
   // Spin

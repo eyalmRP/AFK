@@ -1,9 +1,13 @@
+import { potsConfig } from './pots.js';
+
 // Winning symbols: how the winners of a win step behave once they light up.
-//   pop   - they pop and pulse in their cells (the classic look),
-//   jump  - they pop, then fly one by one into the score; each landing
-//           counts up the win meter,
-//   merge - they pop, are pulled together like magnets and fuse into one
-//           big symbol.
+//   pop     - they pop and pulse in their cells (the classic look),
+//   jump    - they pop, then fly one by one into the score; each landing
+//             counts up the win meter,
+//   merge   - they pop, are pulled together like magnets and fuse into one
+//             big symbol,
+//   collect - they pop, then each fires a beam up into its pot above the
+//             machine (core/pots.js); each catch counts up the win.
 // The timeline schedules the times (layout free); the motion below turns
 // them into positions for a layout. The preview and the After Effects
 // expressions evaluate the same formulas.
@@ -12,6 +16,7 @@ export const WIN_STYLES = [
   { id: 'pop', label: 'Pop in place', short: 'Pop', hint: 'Winners pop and pulse in their cells.' },
   { id: 'jump', label: 'Jump into the score', short: 'Jump to score', hint: 'Winners pop, then fly one by one to the landing spot; every landing counts up the win.' },
   { id: 'merge', label: 'Magnet merge', short: 'Merge', hint: 'Winners pop, get pulled together and fuse into one big symbol.' },
+  { id: 'collect', label: 'Beam to the pots', short: 'Beam to pots', hint: 'Every winner fires a beam up into its pot above the machine, one by one; the pots collect the win. Needs the pots on.' },
 ];
 
 export const JUMP_TARGETS = [
@@ -60,11 +65,12 @@ export function winFxConfig(project) {
 }
 
 // The style a round uses: its own pick, or the project's.
+// Beaming to the pots needs the pots; without them winners pop.
 export function winStyleOf(project, round) {
   const own = round && round.winStyle;
-  if (own && own !== 'auto' && WIN_STYLES.some((s) => s.id === own)) return own;
-  const s = winFxConfig(project).style;
-  return WIN_STYLES.some((x) => x.id === s) ? s : 'pop';
+  let s = own && own !== 'auto' && WIN_STYLES.some((x) => x.id === own) ? own : winFxConfig(project).style;
+  if (!WIN_STYLES.some((x) => x.id === s)) s = 'pop';
+  return s === 'collect' && !potsConfig(project).on ? 'pop' : s;
 }
 
 const POP_HOLD = 0.32;
@@ -82,6 +88,14 @@ export function scheduleWinFx(style, start, n, cfg) {
     const launch = Array.from({ length: n }, (_, i) => start + POP_HOLD + i * stg);
     const arrive = launch.map((t) => t + flight);
     return { style, path: pathOf(cfg.jumpPath, 'arc'), launch, arrive, until: arrive, need: arrive[n - 1] + 0.35 - start };
+  }
+  if (style === 'collect' && n > 0) {
+    const travel = Math.max(0.12, Number(cfg.beamTravel) || 0.32);
+    const each = cfg.beamStagger == null ? 0.2 : Math.max(0, Number(cfg.beamStagger) || 0);
+    const stg = n > 1 ? Math.min(each, 2.4 / (n - 1)) : 0;
+    const launch = Array.from({ length: n }, (_, i) => start + POP_HOLD + i * stg);
+    const arrive = launch.map((t) => t + travel);
+    return { style, launch, arrive, until: arrive, travel, need: arrive[n - 1] + 0.55 - start };
   }
   if (style === 'merge' && n > 0) {
     const seq = clamp01(Number(cfg.mergeSeq) || 0);
