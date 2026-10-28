@@ -23,6 +23,7 @@ import { holdSpinConfig, isCoinSym, formatPrize, COIN_GLOW } from './coins.js';
 import { sfxCues, SFX_GROUPS, toDb } from './sfx.js';
 import { particleAssetInfo, spawnParticles, TEMPLATE_BY_ID } from './particles.js';
 import { jumpTarget, mergeTarget, flightPath, winFxConfig } from './winfx.js';
+import { zoomConfig, focusPoint, ZOOM_IN, ZOOM_HOLD, ZOOM_OUT, PAN } from './camera.js';
 
 export const AE_ASSETS = {
   shared: {
@@ -148,16 +149,35 @@ export function buildAEData(project, tl, L, extras = {}) {
     const goal = f.style === 'jump' ? jumpTarget(project, L, st) : mergeTarget(project, L, st);
     const out = {
       style: f.style,
+      kind: f.path,
       launch: f.launch.map(r4),
       arrive: f.arrive.map(r4),
+      until: f.until.map(r4),
       goal: [r4(goal.x), r4(goal.y)],
       paths: st.cells.map(([c, r]) => {
-        const q = flightPath(f.style, { x: cellX(c), y: cellY(r) }, goal, L);
+        const q = flightPath(f.style, { x: cellX(c), y: cellY(r) }, goal, L, f.path);
         return [q.x0, q.y0, q.cx, q.cy, q.x1, q.y1].map(r4);
       }),
     };
     if (f.style === 'merge') Object.assign(out, { mergeAt: r4(f.mergeAt), big: bigScale, sym: st.symbol >= 0 ? st.symbol : st.cellSyms[0] });
     return out;
+  };
+  // One emitter with its baked particles. loop: seconds of the repeating cycle.
+  const emitterData = (em) => {
+    const info = particleAssetInfo(project, em.asset);
+    const tpl = TEMPLATE_BY_ID[em.fx];
+    return {
+      // Emitters of several rounds share the main comp: say whose they are.
+      name: clean(`${em.main && em.round >= 0 ? `R${String(em.round + 1).padStart(2, '0')} ` : ''}${em.moment === 'tier' ? `${em.label} ${tpl.name}` : em.moment === 'ambient' ? `Ambient ${tpl.name}` : tpl.name}`),
+      moment: em.moment,
+      layer: em.layer,
+      a: particleIndex(em.asset),
+      start: r4(em.start),
+      cut: r4(em.cut),
+      loop: em.loop || 0,
+      end: em.cut >= tl.duration - 1e-6 ? 1 : 0,
+      ps: spawnParticles(em, L, info.motion, amount).map((q) => [q.b, q.l, q.x, q.y, q.vx, q.vy, q.g, q.k, q.s, q.r0, q.rv, q.f, q.ph, q.sw, q.sf, q.v, q.fo, q.tw].map(r4)),
+    };
   };
   const rounds = tl.rounds.map((R) => {
     const p = R.pres;
@@ -195,19 +215,8 @@ export function buildAEData(project, tl, L, extras = {}) {
     } else {
       R.reels.forEach((ri, c) => ri.antic && out.antic.push({ x: cellX(c), y: r4(L.winTop + L.winH / 2), w: r4(L.cellW * 1.06), h: r4(L.winH * 1.02), start: r4(ri.antic.start), end: r4(ri.antic.end) }));
     }
-    out.particles = (p.particles || []).map((em) => {
-      const info = particleAssetInfo(project, em.asset);
-      const tpl = TEMPLATE_BY_ID[em.fx];
-      return {
-        name: clean(em.moment === 'tier' ? `${em.label} ${tpl.name}` : tpl.name),
-        moment: em.moment,
-        layer: em.layer,
-        a: particleIndex(em.asset),
-        start: r4(em.start),
-        cut: r4(em.cut),
-        ps: spawnParticles(em, L, info.motion, amount).map((q) => [q.b, q.l, q.x, q.y, q.vx, q.vy, q.g, q.k, q.s, q.r0, q.rv, q.f, q.ph, q.sw, q.sf, q.v, q.fo, q.tw].map(r4)),
-      };
-    });
+    // Emitters that run to the end live in the main comp (see mainParticles).
+    out.particles = (p.particles || []).filter((em) => !em.main).map(emitterData);
     if (p.expand) {
       out.expand = {
         start: r4(p.expand.start),
@@ -392,6 +401,22 @@ export function buildAEData(project, tl, L, extras = {}) {
         }
       : null,
     sfx: extras.sfx ? sfxData(tl, project, extras.sfxHeadroom || 0) : null,
+    showLines: project.effects.showLines === false ? 0 : 1,
+    // Emitters that run to the end of the animation (and the ambient layer),
+    // placed in the main comp.
+    mainParticles: (tl.emitters || []).filter((em) => em.main).map(emitterData),
+    // Anticipation zoom: windows of [start, end, [[t, x, y]...]] for the
+    // CAMERA null. Cells use the flat rows After Effects lays out.
+    camera: (tl.camera || []).length
+      ? {
+          amount: r4(zoomConfig(project).amount),
+          times: [ZOOM_IN, ZOOM_HOLD, ZOOM_OUT, PAN],
+          windows: tl.camera.map((w) => [r4(w.start), r4(w.end), w.foci.map((f) => {
+            const p = f.r == null ? focusPoint(L, f) : { x: cellX(f.c), y: cellY(f.r) };
+            return [r4(f.t), r4(p.x), r4(p.y)];
+          })]),
+        }
+      : null,
     particles: { assets: partAssets.map((a) => ({ name: clean(a.name), files: a.files, count: a.count, anim: a.anim ? 1 : 0, fps: a.fps, motion: a.motion, blend: a.motion === 'glow' ? 'add' : 'normal' })) },
     assets: {
       background: A.background,
@@ -1048,7 +1073,8 @@ export const AE_SCRIPT = String.raw`// Slot animation rebuilt for After Effects 
     var F = A.anim ? A.fps : FPS, N = Math.max(1, A.count);
     for (i = 0; i < em.ps.length; i++) {
       var q = em.ps[i];
-      var pre = "var a = time - " + r4(q[0] - em.start) + ";\n";
+      // A looping emitter brings every particle back each cycle.
+      var pre = "var a = time - " + r4(q[0] - em.start) + ";\n" + (em.loop ? "if (a > 0) a = a % " + em.loop + ";\n" : "");
       var L = ec.layers.add(src);
       L.name = em.name + " " + (i + 1);
       L.timeRemapEnabled = true;
@@ -1067,7 +1093,7 @@ export const AE_SCRIPT = String.raw`// Slot animation rebuilt for After Effects 
     EL.name = em.name;
     EL.startTime = em.start - P0;
     if (EL.startTime < 0) EL.inPoint = 0;
-    P(EL, "ADBE Opacity").expression = "100 * Math.max(0, Math.min(1, (" + r4(em.cut - P0) + " - time) / 0.3));";
+    if (!em.end) P(EL, "ADBE Opacity").expression = "100 * Math.max(0, Math.min(1, (" + r4(em.cut - P0) + " - time) / 0.3));";
     return EL;
   }
   function r4(x) { return Math.round(x * 10000) / 10000; }
@@ -1221,28 +1247,20 @@ export const AE_SCRIPT = String.raw`// Slot animation rebuilt for After Effects 
   // (core/winfx.js). Jumpers ring the landing spot; a merge grows the big
   // symbol where they fuse.
   function flightExprs(F, i, rel) {
-    var q = F.paths[i], L0 = r4(rel(F.launch[i])), D = r4(Math.max(0.01, F.arrive[i] - F.launch[i]));
-    var pre = "var u = Math.max(0, Math.min(1, (time - " + L0 + ") / " + D + "));\n";
-    if (F.style === "jump") {
-      pre += "var e = u * u * (3 - 2 * u); var q = 1 - e;\n";
-      return {
-        pos: pre + "[q * q * " + q[0] + " + 2 * q * e * " + q[2] + " + e * e * " + q[4] + ", q * q * " + q[1] + " + 2 * q * e * " + q[3] + " + e * e * " + q[5] + "];",
-        scale: pre + "var s = 100 * (1 - 0.55 * e); [s, s];",
-        opacity: pre + "time >= " + r4(L0 + D) + " ? 0 : (time <= " + L0 + " ? 100 : Math.min(100, (1 - u) / 0.15 * 100));"
-      };
-    }
-    pre += "var e = Math.pow(u, 2.4);\n";
+    var q = F.paths[i], L0 = r4(rel(F.launch[i])), D = r4(Math.max(0.01, F.arrive[i] - F.launch[i])), U = r4(rel(F.until[i]));
+    var pre = "var u = Math.max(0, Math.min(1, (time - " + L0 + ") / " + D + "));\n" +
+      (F.kind === "back" ? "var e = 2.9 * u * u * u - 1.9 * u * u;" : F.style === "jump" ? "var e = u * u * (3 - 2 * u);" : "var e = Math.pow(u, 2.4);") + " var q = 1 - e;\n";
     return {
-      pos: pre + "[" + q[0] + " + " + r4(q[4] - q[0]) + " * e, " + q[1] + " + " + r4(q[5] - q[1]) + " * e];",
-      scale: pre + "var s = 100 * (1 - 0.3 * e); [s, s];",
-      opacity: "time >= " + r4(L0 + D) + " ? 0 : 100;"
+      pos: pre + "[q * q * " + q[0] + " + 2 * q * e * " + q[2] + " + e * e * " + q[4] + ", q * q * " + q[1] + " + 2 * q * e * " + q[3] + " + e * e * " + q[5] + "];",
+      scale: pre + "var s = 100 * (1 - " + (F.style === "jump" ? 0.55 : 0.3) + " * e); [s, s];",
+      opacity: F.style === "jump" ? pre + "time >= " + U + " ? 0 : (time <= " + L0 + " ? 100 : Math.min(100, (1 - u) / 0.15 * 100));" : "time >= " + U + " ? 0 : 100;"
     };
   }
   function flyCells(comp, st, la, lb, rel) {
     var F = st.fx, i;
     for (i = 0; i < st.cells.length; i++) {
       var cl = st.cells[i];
-      var L0 = rel(F.launch[i]), L1 = rel(F.arrive[i]);
+      var L0 = rel(F.launch[i]), L1 = rel(F.until[i]);
       var wl = winLayer(comp, cl.s, [cl.x, cl.y], la + i * 0.05, Math.max(la + i * 0.05 + 0.1, L1 + 0.02), (F.style === "jump" ? "Jump " : "Pull ") + DATA.symbols[cl.s].name);
       var ex = flightExprs(F, i, rel);
       P(wl, "ADBE Position").expression = ex.pos;
@@ -1310,7 +1328,7 @@ export const AE_SCRIPT = String.raw`// Slot animation rebuilt for After Effects 
   // ---------- main comp ----------
   // The main comp and SLOT CONTROL come first: expressions everywhere read
   // the After Effects side controls on it.
-  var AE_CONTROLS = ["Shake %", "Flash %", "Dim %", "Particles %", "Spin Blur %", "Win Pop %"];
+  var AE_CONTROLS = ["Shake %", "Flash %", "Dim %", "Particles %", "Spin Blur %", "Win Pop %", "Zoom %"];
   function createMain() {
     main = proj.items.addComp(mainName, W, H, 1, DUR, FPS);
     main.parentFolder = top;
@@ -1338,6 +1356,13 @@ export const AE_SCRIPT = String.raw`// Slot animation rebuilt for After Effects 
     shake = main.layers.addNull(DUR);
     shake.name = "SCREEN SHAKE";
     var kids = [], i, r;
+    // Ambient particles float behind the machine.
+    RBASE = "Main";
+    for (i = 0; i < DATA.mainParticles.length; i++) {
+      if (DATA.mainParticles[i].layer !== "back") continue;
+      var amb = emitter(main, DATA.mainParticles[i], 0);
+      if (amb) kids.push(amb);
+    }
     // The wheel game has no machine: background, wheel rounds, effects.
     if (DATA.game !== "wheel") {
     var back = machineArt("Machine Back", DATA.assets.back);
@@ -1480,7 +1505,37 @@ export const AE_SCRIPT = String.raw`// Slot animation rebuilt for After Effects 
       var fxL = buildRound(DATA.rounds[r]);
       if (fxL) kids.push(fxL);
     }
+    // Particles that keep going to the end of the animation.
+    RBASE = "Main";
+    for (i = 0; i < DATA.mainParticles.length; i++) {
+      if (DATA.mainParticles[i].layer === "back") continue;
+      var mp = emitter(main, DATA.mainParticles[i], 0);
+      if (mp) kids.push(mp);
+    }
     for (i = 0; i < kids.length; i++) kids[i].parent = shake;
+    // CAMERA: the whole scene hangs from it; it pushes in on anticipation.
+    if (DATA.camera) {
+      var cam = main.layers.addNull(DUR);
+      cam.name = "CAMERA";
+      pos(cam, [W / 2, H / 2]);
+      shake.parent = cam;
+      if (bg) bg.parent = cam;
+      var C = DATA.camera, cw = "var CW = [", ci;
+      for (ci = 0; ci < C.windows.length; ci++) {
+        var wd = C.windows[ci], fs = "[", fj;
+        for (fj = 0; fj < wd[2].length; fj++) fs += (fj ? "," : "") + "[" + wd[2][fj].join(",") + "]";
+        cw += (ci ? "," : "") + "[" + wd[0] + "," + wd[1] + "," + fs + "]]";
+      }
+      var camE = cw + "];\nfunction sm(x) { x = x < 0 ? 0 : (x > 1 ? 1 : x); return x * x * (3 - 2 * x); }\n" +
+        "var z = 1, fx = " + W / 2 + ", fy = " + H / 2 + ";\n" +
+        "for (var i = 0; i < CW.length; i++) { var w = CW[i]; if (time < w[0] || time > w[1] + " + (C.times[1] + C.times[2]) + ") continue;\n" +
+        "  var k = sm((time - w[0]) / " + C.times[0] + ") * (1 - sm((time - w[1] - " + C.times[1] + ") / " + C.times[2] + "));\n" +
+        "  var F = w[2]; fx = F[0][1]; fy = F[0][2];\n" +
+        "  for (var j = 1; j < F.length; j++) { var b = sm((time - F[j][0]) / " + C.times[3] + "); if (b <= 0) continue; fx += (F[j][1] - fx) * b; fy += (F[j][2] - fy) * b; }\n" +
+        "  z = 1 + " + C.amount + " * k * " + ctrl("Zoom %") + " / 100; break; }\n";
+      P(cam, "ADBE Position").expression = camE + "[fx * (1 - z) + " + W / 2 + " * z, fy * (1 - z) + " + H / 2 + " * z];";
+      P(cam, "ADBE Scale").expression = camE + "[z * 100, z * 100];";
+    }
     var sh = "var S = [";
     for (i = 0; i < DATA.shakes.length; i++) sh += (i ? "," : "") + "[" + DATA.shakes[i].join(",") + "]";
     sh += "]; var x = 0, y = 0, amt = " + ctrl("Shake %") + " / 100;\nfor (var i = 0; i < S.length; i++) { var a = time - S[i][0]; if (a >= 0 && a < S[i][2]) { var k = 1 - a / S[i][2]; var m = S[i][1] * k * k * amt; x += Math.sin(a * 93 + S[i][0] * 7) * m; y += Math.cos(a * 79 + S[i][0] * 3) * m; } }\nvalue + [x, y];";
@@ -1540,7 +1595,7 @@ export const AE_SCRIPT = String.raw`// Slot animation rebuilt for After Effects 
     for (i = 0; i < R.steps.length; i++) {
       var st = R.steps[i];
       var la = rel(st.start), lb = rel(st.end);
-      if (st.lines.length) linesFor(comp, st.lines, la, lb);
+      if (st.lines.length && DATA.showLines) linesFor(comp, st.lines, la, lb);
       if (st.fx) flyCells(comp, st, la, lb, rel);
       else popCells(comp, st.cells, la, lb, false, true);
       if (st.amount > 0) {

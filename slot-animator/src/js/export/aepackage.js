@@ -120,6 +120,8 @@ timing lives in the round comps, and a few controls sit on SLOT CONTROL.
     particle: a use of its Particle placeholder whose position, rotation,
     scale and opacity expressions hold the exact flight it has in Reel
     Studio (gravity, air drag, flutter). Slide the comp to retime it.
+    Long running emitters loop a 5 second cycle seamlessly: each particle's
+    age wraps by the cycle, so extending the comp keeps them going.
 - Counter Rigs/: the rolling money counters (win meter, big win amounts,
   the hold & spin collect, the grand). Each COUNTER CTRL > Value reads its
   source slider (WIN CTRL > Amount in a round comp, SLOT CONTROL in the
@@ -130,12 +132,17 @@ timing lives in the round comps, and a few controls sit on SLOT CONTROL.
 - Main comp: the machine, reels, sticky wilds, coin lock frames, logo, free
   spins ribbon, HUD texts, the win meter, the round comps, the flash and
   the SFX comp, with a marker where each round starts. SCREEN SHAKE is a
-  parent null whose position expression holds the shake events.
+  parent null whose position expression holds the shake events. Ambient
+  particles ("Ambient <template>") sit right above the background, and
+  particles set to run to the end ("Rxx <template>") above the round
+  comps. With the anticipation zoom on, a CAMERA null parents SCREEN SHAKE
+  and the background: its position and scale expressions push in on the
+  teased reel and ease back out.
 - SLOT CONTROL (main comp):
   - "Meter", "FS Total" (and "Collect" with Hold & Spin) drive the counters.
   - "Shake %", "Flash %", "Dim %", "Particles %" (thins every explosion
-    out), "Spin Blur %" and "Win Pop %" scale those effects; 100 is what
-    Reel Studio showed.
+    out), "Spin Blur %", "Win Pop %" and "Zoom %" (the anticipation
+    zoom) scale those effects; 100 is what Reel Studio showed.
   - "FX Colour": tints the effect placeholders (see above).
 - The wheel game has no machine layers: just the background, the wheel and
   its prizes, one round comp per spin handing the wheel to the next.

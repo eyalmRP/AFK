@@ -19,7 +19,9 @@ the result as an editable **After Effects project**.
   spins (hold and spin style). Start and stop order per project (left to
   right, right to left, centre out, outside in, random or custom) and per
   round, with extra delays per reel. The anticipation tease follows the stop
-  order, or you pick the teased reels yourself.
+  order, or you pick the teased reels yourself. The camera can push in on
+  the teased reel (or cell), follow the tease from reel to reel and ease
+  back out after it lands (Spin › Anticipation, with the zoom amount).
 - Round outcomes: no win, near miss, small, medium, big win (counts through
   your own tiers: titles, thresholds in bets, colours), free spins trigger,
   bonus, wheel of fortune and the free spins total.
@@ -30,15 +32,21 @@ the result as an editable **After Effects project**.
 - Winning symbols: pop in place, jump into the score (they fly one by one
   to the win meter, the win amount, above the reels, the screen centre or
   any spot you click on the preview; each landing counts up the win), or
-  magnet merge (they pull together and fuse into one big symbol). Per
-  project, with a per-round override.
+  magnet merge (they pull together and fuse into one big symbol, all at
+  once or one by one with a slider in between). Both fly a straight, arc or
+  wind-up path (a pull back before the flight). Per project, with a
+  per-round override. The payline drawn through a line win can be switched
+  off.
 - Win particles: 14 explosion templates, short (small, medium and big
   bursts, ring blast, confetti cannons, party popper, magnet) or continuous
   (fountain from below, geyser, rain, side streams, fireworks, spiral,
   shimmer). Each win moment and each big win tier picks a template and a
   particle (gold coin, stars, sparkle, gems, confetti, embers, casino chips,
   or your own still or animated art); any round can override both. Big win
-  tiers stack as the count climbs.
+  tiers stack as the count climbs. Continuous templates run while the win
+  shows, until the next round, or to the end of the animation, looping
+  seamlessly (a 5 s cycle) once they run long. Ambient particles float
+  behind the machine for the whole animation.
 - Sound: every cue (reel stops, anticipation, pops, count-up ticks, stings,
   coins, wheel pegs) is synthesised in sync with the animation; any cue can
   be replaced with your own file. It plays with the preview.
@@ -146,19 +154,23 @@ comp, the round comps place them in time, and a few controls sit on
   counters driven by `WIN CTRL > Amount`, the wheel rig. `Rounds/Particles/`
   holds every win explosion as its own comp: one layer per particle, a use
   of its particle placeholder, with expressions that reproduce the
-  preview's flight exactly.
+  preview's flight exactly. Looping emitters wrap each particle's age by
+  the cycle, so they run as long as the comp does.
 - `Counter Rigs/`: rolling-digit money counters made of plain layers; each
   `COUNTER CTRL > Value` reads its source slider. Each column turns as the
   one below it wraps, like the Odometer plugin, so no plugin is needed.
 - `Sound/SFX`: one audio layer per cue at its time, named after the cue and
   round and coloured by group. The `SFX MIX` null holds Master and per-group
   levels in dB (Master includes headroom: After Effects has no compressor).
-- Main comp: background, machine, reels, sticky wilds, coin lock frames,
-  marquee, logo, free spins ribbon and HUD texts, win meter, the round
-  comps, a `SCREEN SHAKE` parent null, the flash, vignette, the SFX comp and
-  a marker per round. `SLOT CONTROL` holds `Meter`, `FS Total`, `Collect`
-  and the After Effects side controls: `Shake %`, `Flash %`, `Dim %`,
-  `Particles %`, `Spin Blur %`, `Win Pop %` and `FX Colour`. With "Transparent
+- Main comp: background, ambient particles, machine, reels, sticky wilds,
+  coin lock frames, marquee, logo, free spins ribbon and HUD texts, win
+  meter, the round comps, particles that run to the end (`Rxx <template>`),
+  a `SCREEN SHAKE` parent null, the flash, vignette, the SFX comp and a
+  marker per round. With anticipation zoom on, a `CAMERA` null parents the
+  shake null and the background and pushes in on the teased reels.
+  `SLOT CONTROL` holds `Meter`, `FS Total`, `Collect` and the After Effects
+  side controls: `Shake %`, `Flash %`, `Dim %`, `Particles %`, `Spin Blur %`,
+  `Win Pop %`, `Zoom %` and `FX Colour`. With "Transparent
   background" the background and vignette start switched off; render
   ProRes 4444 with alpha from After Effects.
 

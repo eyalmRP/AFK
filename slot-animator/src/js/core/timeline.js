@@ -16,6 +16,7 @@ import { LINE_WINS, BIG_WINS, SCATTER_WINS, GAME_OUTCOMES } from './defaults.js'
 import { holdSpinConfig, pickCoinValue, coinTypeIndex } from './coins.js';
 import { scheduleParticles } from './particles.js';
 import { winFxConfig, winStyleOf, scheduleWinFx } from './winfx.js';
+import { scheduleCamera } from './camera.js';
 
 export const STRIP_PAD = 4;
 
@@ -634,6 +635,8 @@ export function buildTimeline(project) {
       } else if (wfx.style === 'merge') {
         sfx.push({ t: wfx.launch[0], type: 'magnet', dur: wfx.mergeAt - wfx.launch[0] });
         sfx.push({ t: wfx.mergeAt, type: 'merge' });
+        // One by one: each winner ticks as it joins the pile.
+        if (wfx.seq > 0.3) wfx.arrive.forEach((t, i) => sfx.push({ t, type: 'scoreHit', i, n: wfx.arrive.length }));
         flashes.push({ t: wfx.mergeAt, amp: 0.3, dur: 0.28 });
         shakes.push({ t: wfx.mergeAt, amp: 0.45, dur: 0.3 });
         if (amt > 0) {
@@ -962,6 +965,8 @@ export function buildTimeline(project) {
   };
   // Win particles for every round (R.pres.particles), all in tl.emitters.
   tl.emitters = scheduleParticles(tl, project);
+  // The camera pushes in on anticipation (core/camera.js).
+  tl.camera = scheduleCamera(tl, project);
   return tl;
 }
 

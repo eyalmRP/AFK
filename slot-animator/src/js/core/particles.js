@@ -13,6 +13,10 @@ import { mulberry32, hashSeed } from './rng.js';
 const TAU = Math.PI * 2;
 const lerp = (a, b, x) => a + (b - a) * x;
 const MAX_PARTICLES = 140;
+// Emitters that run long repeat a cycle of this many seconds, seamlessly:
+// every particle lives less than a cycle and is born again each cycle.
+export const LOOP = 5;
+const LOOP_AFTER = 6;
 
 // Built-in particle art. "variants" are still images picked at random
 // (confetti colours); uploaded art can also be an animation.
@@ -63,6 +67,14 @@ export const PARTICLE_MOMENTS = [
   { id: 'wheel', label: 'Wheel prize' },
   { id: 'total', label: 'Totals', hint: 'Free spins total and the Hold & Spin collect' },
   { id: 'grand', label: 'Grand (full board)' },
+  { id: 'ambient', label: 'Ambient (always on)', hint: 'Behind the machine for the whole animation' },
+];
+
+// How long a continuous template runs once its moment starts.
+export const PARTICLE_LENGTHS = [
+  { id: 'moment', label: 'Runs during the win', hint: 'Keeps going while the win shows' },
+  { id: 'round', label: 'Runs to next round', hint: 'Keeps going until the next round starts' },
+  { id: 'always', label: 'Runs to the end ↻', hint: 'Keeps going to the last frame, looping seamlessly' },
 ];
 
 export function defaultParticles() {
@@ -74,6 +86,7 @@ export function defaultParticles() {
     wheel: { fx: 'fountain', asset: 'coin' },
     total: { fx: 'fountain', asset: 'coin' },
     grand: { fx: 'rain', asset: 'coin' },
+    ambient: { fx: 'none', asset: 'sparkle' },
   };
 }
 
@@ -139,6 +152,20 @@ export function scheduleParticles(tl, project) {
       const sel = pick(c, over, assetOver);
       if (!sel) return;
       const short = TEMPLATE_BY_ID[sel.fx].kind === 'short';
+      // Continuous templates can keep going past their moment: until the
+      // next round, or to the end of the animation (drawn over everything).
+      const len = short ? 'moment' : c?.length || 'moment';
+      let endAt = short ? start : Math.max(start + 0.3, end);
+      let cutTo = Math.max(start + 0.3, cut(cutAt));
+      if (len === 'round') {
+        endAt = Math.max(endAt, R.next);
+        cutTo = Math.max(cutTo, R.next + 0.4);
+        layer = 'over';
+      } else if (len === 'always') {
+        endAt = tl.duration;
+        cutTo = tl.duration;
+        layer = 'over';
+      }
       list.push({
         id: `${R.index}-${list.length}`,
         round: R.index,
@@ -147,10 +174,12 @@ export function scheduleParticles(tl, project) {
         fx: sel.fx,
         asset: sel.asset,
         start,
-        end: short ? start : Math.max(start + 0.3, end),
-        cut: Math.max(start + 0.3, cut(cutAt)),
+        end: endAt,
+        cut: cutTo,
         focus,
         layer,
+        main: len === 'always',
+        loop: !short && endAt - start > LOOP_AFTER ? LOOP : 0,
         seed: hashSeed('particles', round.seed ?? R.index, R.index, list.length),
       });
     };
@@ -181,6 +210,12 @@ export function scheduleParticles(tl, project) {
     }
     p.particles = list;
     all.push(...list);
+  }
+  // Ambient: behind the machine, from the first frame to the last, looping.
+  // It starts one cycle early so the first frame is already full.
+  const amb = cfg.ambient;
+  if (amb && amb.fx !== 'none' && TEMPLATE_BY_ID[amb.fx]) {
+    all.push({ id: 'ambient', round: -1, moment: 'ambient', label: 'Ambient', fx: amb.fx, asset: amb.asset || 'sparkle', start: -LOOP, end: tl.duration, cut: tl.duration, focus: { kind: 'screen' }, layer: 'back', main: true, loop: LOOP, seed: hashSeed('particles', 'ambient', project.seed ?? 0) });
   }
   return all;
 }
@@ -329,7 +364,8 @@ function stream(i, n, r, E) {
 export function particleCount(em, amount = 1) {
   const shape = SHAPES[em.fx];
   if (!shape) return 0;
-  const base = shape.n || Math.max(12, Math.round(shape.rate * Math.max(0.3, em.end - em.start)));
+  const span = em.loop || em.end - em.start;
+  const base = shape.n || Math.max(12, Math.round(shape.rate * Math.max(0.3, span)));
   return Math.max(0, Math.min(MAX_PARTICLES, Math.round(base * Math.max(0, amount))));
 }
 
@@ -344,13 +380,14 @@ export function spawnParticles(em, L, motion = 'spin', amount = 1) {
   const r = mulberry32(em.seed);
   const f = focusOf(em, L);
   const flutter = motion === 'flutter';
-  const E = { start: em.start, end: em.end, x: f.x, y: f.y, w: f.w, h: f.h, W: L.W, H: L.H, u: L.cellW, seed: em.seed };
+  // A looping emitter lays out one cycle; particles live less than a cycle.
+  const E = { start: em.start, end: em.loop ? em.start + em.loop * 0.98 : em.end, x: f.x, y: f.y, w: f.w, h: f.h, W: L.W, H: L.H, u: L.cellW, seed: em.seed };
   const out = [];
   for (let i = 0; i < n; i++) {
     const p = shape.spawn(i, n, r, E);
     const q = {
       b: p.b,
-      l: p.l * (flutter && p.k < 1.6 && !p.tw ? 1.25 : 1),
+      l: Math.min(em.loop ? em.loop - 0.05 : Infinity, p.l * (flutter && p.k < 1.6 && !p.tw ? 1.25 : 1)),
       x: p.x,
       y: p.y,
       vx: p.vx,
@@ -371,6 +408,12 @@ export function spawnParticles(em, L, motion = 'spin', amount = 1) {
     out.push(q);
   }
   return out;
+}
+
+// A particle of a looping emitter is born again every `loop` seconds.
+export function particleTime(p, t, loop) {
+  if (!loop || t < p.b) return t;
+  return p.b + ((t - p.b) % loop);
 }
 
 // One particle at time t: position, rotation (deg), scale x/y, alpha, or

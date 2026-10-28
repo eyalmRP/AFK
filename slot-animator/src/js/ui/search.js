@@ -55,6 +55,11 @@ export const SYNONYMS = [
   ['search', 'find', 'help', 'shortcuts', 'keys', 'hotkeys', 'keyboard'],
   ['round', 'rounds', 'spin', 'outcome', 'result'],
   ['random', 'seed', 'reroll', 'shuffle', 'luck'],
+  ['zoom', 'camera', 'closeup', 'close up', 'push', 'focus', 'magnify', 'enlarge', 'dolly'],
+  ['continuous', 'continually', 'continuously', 'constant', 'always', 'loop', 'loops', 'looping', 'forever', 'endless', 'nonstop', 'ambient', 'persistent'],
+  ['once', 'together', 'simultaneous', 'simultaneously', 'one by one', 'sequential', 'sequence', 'each', 'staggered', 'stagger'],
+  ['off', 'hide', 'hidden', 'disable', 'disabled', 'toggle', 'show', 'visible', 'turn'],
+  ['path', 'paths', 'trajectory', 'arc', 'curve', 'straight', 'linear', 'direct', 'route', 'windup', 'wind up'],
 ];
 
 const T = (title, where, keys, go, when) => ({ title, where, keys, go, when });
@@ -120,8 +125,8 @@ export const FEATURES = [
   T('Overshoot', 'Spin › End', 'bounce', { tab: 'spin', id: 'spin-over' }),
   T('Start stagger', 'Spin › Reel timing', 'delay', { tab: 'spin', id: 'spin-ss' }),
   T('Stop stagger', 'Spin › Reel timing', 'delay', { tab: 'spin', id: 'spin-st' }),
-  T('Anticipation extra time', 'Spin › Reel timing', 'tease suspense slow', { tab: 'spin', id: 'spin-ant' }),
-  T('Anticipation crawl speed', 'Spin › Reel timing', 'tease slow', { tab: 'spin', id: 'spin-ant-v' }),
+  T('Anticipation extra time', 'Spin › Anticipation', 'tease suspense slow', { tab: 'spin', id: 'spin-ant' }),
+  T('Anticipation crawl speed', 'Spin › Anticipation', 'tease slow', { tab: 'spin', id: 'spin-ant-v' }),
   T('Gap between rounds', 'Spin › Between rounds', 'pause wait', { tab: 'spin', id: 'tm-gap' }),
   T('Intro and outro hold', 'Spin › Between rounds', 'start end pause', { tab: 'spin', id: 'tm-intro' }),
   // Wins
@@ -137,6 +142,14 @@ export const FEATURES = [
   T('Dim other symbols', 'Wins › Winning symbols', 'darken losing', { tab: 'wins', id: 'fx-dim' }),
   T('Win particles', 'Wins › Win particles', 'confetti coins fountain fireworks explosion', { tab: 'wins', section: 'win-particles' }),
   T('Particle amount', 'Wins › Win particles', 'count density how many', { tab: 'wins', id: 'fx-coins' }),
+  T('Particles that keep going', 'Wins › Win particles', 'continuous continually always loop looping forever until the next round to the end length how long nonstop', { tab: 'wins', section: 'win-particles' }, 'Pick a continuous explosion (fountain, rain, fireworks…), then set how long it runs in the select next to it.'),
+  T('Ambient particles', 'Wins › Win particles', 'always behind background floating loop continuous whole animation', { tab: 'wins', id: 'pfx-ambient-fx' }),
+  T('Merge all at once or one by one', 'Wins › Winning symbols', 'together one by one each sequence staggered simultaneous slider', { tab: 'wins', id: 'wf-seq' }, 'Shown when Winning symbols is set to Magnet merge.'),
+  T('Jump flight path', 'Wins › Winning symbols', 'arc straight linear wind-up windup back anticipation trajectory curve motion', { tab: 'wins', id: 'wf-jpath' }, 'Shown when Winning symbols is set to Jump into the score.'),
+  T('Merge flight path', 'Wins › Winning symbols', 'arc straight linear wind-up windup back anticipation trajectory curve motion', { tab: 'wins', id: 'wf-mpath' }, 'Shown when Winning symbols is set to Magnet merge.'),
+  T('Draw the winning lines', 'Wins › Winning symbols', 'paylines payline hide show off turn off disable drawing', { tab: 'wins', id: 'fx-lines-on' }),
+  T('Zoom in on the anticipation reel', 'Spin › Anticipation', 'camera push in close up closeup focus tease', { tab: 'spin', id: 'spin-zoom-on' }),
+  T('Anticipation zoom amount', 'Spin › Anticipation', 'camera how much close', { tab: 'spin', id: 'spin-zoom' }, 'Shown when the anticipation zoom is on.'),
   T('Explosion templates', 'Wins › Explosion templates', 'burst cannons popper rain spiral shimmer gallery', { tab: 'wins', section: 'explosion-templates' }),
   T('Display font', 'Wins › Titles and font', 'typeface typography', { tab: 'wins', id: 'fx-font' }),
   T('Feature titles', 'Wins › Titles and font', 'free spins bonus wheel near miss grand text words', { tab: 'wins', section: 'titles-and-font' }),
@@ -350,7 +363,8 @@ export function searchFeatures(query, list = FEATURES, limit = 12) {
       const c = wordScore(q, p.where);
       const s = Math.max(a.s * 30, b.s * 20, c.s * 8);
       if (s > 0) hit++;
-      total += s;
+      // A word found in several places (title and keys) edges ahead of a tie.
+      total += s > 0 ? s + a.s + b.s + c.s : 0;
       const v = a.s * 30 >= b.s * 20 ? a.via || (a.s ? null : b.via) : b.via;
       if (!via && v && s > 0) via = v;
     }

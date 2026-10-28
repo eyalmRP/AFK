@@ -38,8 +38,8 @@ import { FORMAT_CHOICES } from '../core/ae-export.js';
 import { loadImage, loadWinAnim, buildResources, fontStack, extraSymbolImages } from '../render/sprites.js';
 import { paintBuiltin } from '../render/paint.js';
 import { loadParticleSprites, drawParticleList } from '../render/particles.js';
-import { PARTICLE_TEMPLATES, TEMPLATE_BY_ID, BUILTIN_PARTICLES, PARTICLE_MOTIONS, PARTICLE_MOMENTS, tierParticles, spawnParticles, particleAssetInfo } from '../core/particles.js';
-import { WIN_STYLES, JUMP_TARGETS, MERGE_POINTS, winFxConfig, jumpTarget, mergeTarget } from '../core/winfx.js';
+import { PARTICLE_TEMPLATES, TEMPLATE_BY_ID, BUILTIN_PARTICLES, PARTICLE_MOTIONS, PARTICLE_MOMENTS, PARTICLE_LENGTHS, tierParticles, spawnParticles, particleAssetInfo } from '../core/particles.js';
+import { WIN_STYLES, JUMP_TARGETS, MERGE_POINTS, FLIGHT_PATHS, winFxConfig, jumpTarget, mergeTarget } from '../core/winfx.js';
 import { searchFeatures, buildIndex } from './search.js';
 import { renderFrame } from '../render/renderer.js';
 import { decodeCustomSounds, renderSoundtrack, audioBufferToWav } from '../render/audio.js';
@@ -386,7 +386,7 @@ function renderAssets() {
 
 const SECTION_OPEN = {
   machine: ['game', 'reels', 'how-it-pays'],
-  spin: ['spin-type', 'motion-curve'],
+  spin: ['spin-type', 'motion-curve', 'anticipation'],
   wins: ['win-tiers', 'winning-symbols', 'win-particles'],
   effects: ['intensity'],
   wheel: ['segments', 'spin'],
@@ -2922,9 +2922,14 @@ function particleAssetChoices() {
   return [...BUILTIN_PARTICLES.map((b) => ({ value: b.id, label: b.name })), ...P.particles.assets.map((a) => ({ value: a.id, label: a.name }))];
 }
 
-function particleRow(id, label, hint, get, set) {
+function particleRow(id, label, hint, get, set, opts = {}) {
   const cur = get() || { fx: 'none', asset: 'coin' };
   const assets = particleAssetChoices();
+  // Continuous templates choose how long they keep going.
+  const continuous = TEMPLATE_BY_ID[cur.fx]?.kind === 'continuous' && !opts.always;
+  const lengthSel = continuous
+    ? h('select', { id: `${id}-len`, class: 'pfx-len', 'aria-label': `${label}: how long it runs`, title: 'How long the particles keep going', onchange: (e) => set({ ...get(), length: e.target.value }) }, PARTICLE_LENGTHS.map((x) => h('option', { value: x.id, title: x.hint, selected: (cur.length || 'moment') === x.id }, x.label)))
+    : null;
   return h(
     'div',
     { class: 'pfx-row' },
@@ -2937,16 +2942,17 @@ function particleRow(id, label, hint, get, set) {
         'div',
         { class: 'pfx-selects' },
         h('select', { id: `${id}-fx`, 'aria-label': `${label}: explosion`, onchange: (e) => { set({ ...cur, fx: e.target.value }); renderPanel(); } }, templateOptions(cur.fx)),
-        h('select', { id: `${id}-asset`, 'aria-label': `${label}: particle`, disabled: cur.fx === 'none', onchange: (e) => set({ ...get(), asset: e.target.value }) }, assets.map((o) => h('option', { value: o.value, selected: cur.asset === o.value }, o.label)))
+        h('select', { id: `${id}-asset`, 'aria-label': `${label}: particle`, disabled: cur.fx === 'none', onchange: (e) => set({ ...get(), asset: e.target.value }) }, assets.map((o) => h('option', { value: o.value, selected: cur.asset === o.value }, o.label))),
+        lengthSel
       )
     )
   );
 }
 
 const MOMENTS_BY_GAME = {
-  slot: ['small', 'medium', 'feature', 'wheel', 'total', 'grand'],
-  holdspin: ['feature', 'total', 'grand', 'wheel'],
-  wheel: ['wheel'],
+  slot: ['small', 'medium', 'feature', 'wheel', 'total', 'grand', 'ambient'],
+  holdspin: ['feature', 'total', 'grand', 'wheel', 'ambient'],
+  wheel: ['wheel', 'ambient'],
 };
 
 function particleSettings() {
@@ -2963,16 +2969,16 @@ function particleSettings() {
     );
   }
   for (const m of PARTICLE_MOMENTS.filter((x) => (MOMENTS_BY_GAME[game] || MOMENTS_BY_GAME.slot).includes(x.id))) {
-    rows.push(particleRow(`pfx-${m.id}`, m.label, m.hint, () => P.particles[m.id], (v) => {
+    rows.push(particleRow(`pfx-${m.id}`, m.label, m.hint, () => P.particles[m.id] || { fx: 'none', asset: 'sparkle' }, (v) => {
       P.particles[m.id] = v;
       changed('timeline');
-    }));
+    }, { always: m.id === 'ambient' }));
   }
   return h(
     'section',
     { class: 'group', id: 'fx-particles' },
     h('h3', null, 'Win particles'),
-    h('p', { class: 'hint' }, 'Pick an explosion and a particle for every win moment. Short explosions fire once; continuous ones keep going until the moment ends. A round can use its own in the round inspector. Particle art lives in the Asset Bank.'),
+    h('p', { class: 'hint' }, 'Pick an explosion and a particle for every win moment. Short explosions fire once. Continuous ones keep going while the win shows, until the next round, or to the end of the animation (they loop seamlessly). Ambient particles float behind the machine the whole time. A round can use its own in the round inspector. Particle art lives in the Asset Bank.'),
     h('div', { class: 'pfx-rows' }, rows),
     rangeField({ id: 'fx-coins', label: 'Particle amount', value: fx.coins, min: 0, max: 2, step: 0.01, onInput: num(fx, 'coins') }),
     button('Open the Asset Bank', () => openBank('particles'), { class: 'btn small ghost', icon: 'grid', id: 'pfx-bank' })
@@ -3260,9 +3266,14 @@ function panelSpin() {
       'Reel timing',
       rangeField({ id: 'spin-ss', label: 'Start stagger', unit: 's', value: sp.startStagger, min: 0, max: 0.5, step: 0.01, onInput: num(sp, 'startStagger') }),
       rangeField({ id: 'spin-st', label: 'Stop stagger', unit: 's', value: sp.stopStagger, min: 0, max: 0.8, step: 0.01, onInput: num(sp, 'stopStagger') }),
+      h('div', { class: 'field' }, h('span', { class: 'label' }, 'Extra delay per reel'), delays, h('p', { class: 'hint' }, 'Added on top of the stagger: hold one reel back, or make it start late.'))
+    ),
+    section(
+      'Anticipation',
       rangeField({ id: 'spin-ant', label: 'Anticipation extra time', unit: 's', value: sp.anticipation, min: 0, max: 4, step: 0.05, onInput: num(sp, 'anticipation') }),
       rangeField({ id: 'spin-ant-v', label: 'Anticipation crawl speed', unit: 'symbols/s', value: sp.anticipationSpeed, min: 2, max: 20, step: 0.5, onInput: num(sp, 'anticipationSpeed') }),
-      h('div', { class: 'field' }, h('span', { class: 'label' }, 'Extra delay per reel'), delays, h('p', { class: 'hint' }, 'Added on top of the stagger: hold one reel back, or make it start late.'))
+      toggleField({ id: 'spin-zoom-on', label: 'Zoom in on the anticipation reel', checked: sp.zoomOn !== false, onChange: (v) => { sp.zoomOn = v; changed('timeline'); renderPanel(); }, hint: 'The camera pushes in on the teased reel, follows the tease from reel to reel and eases out after it lands.' }),
+      sp.zoomOn !== false ? rangeField({ id: 'spin-zoom', label: 'Zoom amount', unit: '%', value: Math.round((sp.zoom ?? 0.2) * 100), min: 5, max: 80, step: 1, onInput: (v) => { sp.zoom = v / 100; changed('timeline'); } }) : null
     ),
     section(
       'Between rounds',
@@ -3575,6 +3586,7 @@ function winSymbolsSection() {
     parts.push(
       selectField({ id: 'wf-target', label: 'They land on', value: W.target, options: JUMP_TARGETS.map((x) => ({ value: x.id, label: x.label })), onChange: set('target', 'timeline', true) }),
       W.target === 'custom' ? custom('jx', 'jy', 'jump') : null,
+      segmented({ id: 'wf-jpath', label: 'Flight path', value: W.jumpPath, options: FLIGHT_PATHS.map((x) => ({ value: x.id, label: x.label })), onChange: set('jumpPath') }),
       rangeField({ id: 'wf-flight', label: 'Flight time', unit: 's', value: W.flight, min: 0.25, max: 1.5, step: 0.05, onInput: set('flight') }),
       rangeField({ id: 'wf-stagger', label: 'Delay between symbols', unit: 's', value: W.stagger, min: 0, max: 0.25, step: 0.01, onInput: set('stagger') })
     );
@@ -3582,10 +3594,13 @@ function winSymbolsSection() {
     parts.push(
       selectField({ id: 'wf-point', label: 'They merge at', value: W.point, options: MERGE_POINTS.map((x) => ({ value: x.id, label: x.label })), onChange: set('point', 'timeline', true) }),
       W.point === 'custom' ? custom('mx', 'my', 'merge') : null,
+      rangeField({ id: 'wf-seq', label: 'All at once → one by one', unit: '%', value: Math.round((W.mergeSeq || 0) * 100), min: 0, max: 100, step: 1, onInput: (v) => set('mergeSeq')(v / 100), hint: '0 pulls every winner in together; 100 brings them in one by one, each waiting at the merge point.' }),
+      segmented({ id: 'wf-mpath', label: 'Flight path', value: W.mergePath, options: FLIGHT_PATHS.map((x) => ({ value: x.id, label: x.label })), onChange: set('mergePath') }),
       rangeField({ id: 'wf-big', label: 'Big symbol size', unit: '× cell', value: W.bigScale, min: 1.2, max: 4, step: 0.1, onInput: set('bigScale') })
     );
   }
   parts.push(
+    toggleField({ id: 'fx-lines-on', label: 'Draw the winning lines', checked: fx.showLines !== false, onChange: (v) => { fx.showLines = v; changed('timeline'); }, hint: 'The payline drawn through each line win. The winners still light up without it.' }),
     rangeField({ id: 'fx-pop', label: 'Winning symbol pop', value: fx.popScale, min: 0, max: 0.4, step: 0.01, onInput: num(fx, 'popScale') }),
     rangeField({ id: 'fx-dim', label: 'Dim other symbols', value: fx.dim, min: 0, max: 0.9, step: 0.01, onInput: num(fx, 'dim') }),
     h('div', { class: 'row' }, button('Preview a win', previewAWin, { class: 'btn small', icon: 'eye', id: 'wf-preview' })),

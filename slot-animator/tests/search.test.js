@@ -21,6 +21,17 @@ test('feature search finds features by name, by synonym and despite typos', () =
   assert.equal(top('shak')[0], 'Screen shake');
   assert.ok(top('magent').includes('Winning symbols merge into one big symbol'));
   assert.ok(top('backgrund').includes('Background image'));
+  // The newer controls, in the words people used for them.
+  assert.ok(top('zoom', 2).includes('Zoom in on the anticipation reel'));
+  assert.ok(top('camera push in').includes('Zoom in on the anticipation reel'));
+  assert.equal(top('one by one')[0], 'Merge all at once or one by one');
+  assert.ok(top('all at once').includes('Merge all at once or one by one'));
+  assert.ok(top('continues particles').includes('Particles that keep going'));
+  assert.ok(top('particles continually').includes('Particles that keep going'));
+  assert.ok(top('hide lines').includes('Draw the winning lines'));
+  assert.ok(top('turn off winning lines').includes('Draw the winning lines'));
+  assert.ok(top('wind up').some((t) => /flight path/.test(t)));
+  assert.ok(top('ambient').includes('Ambient particles'));
   // Filler words do not get in the way.
   assert.equal(top('i want to save my work')[0], 'Save project file');
   assert.equal(top('where they jump to')[0], 'Winning symbols jump into the score');
@@ -37,7 +48,7 @@ test('feature search index points at controls that exist in the editor', () => {
   const app = readFileSync(new URL('../src/js/ui/app.js', import.meta.url), 'utf8');
   const ids = new Set([...app.matchAll(/id: '([a-z0-9-]+)'/g)].map((m) => m[1]));
   // Ids built from a prefix and a value.
-  for (const m of app.matchAll(/id: `([a-z-]+)\$\{/g)) ids.add(`${m[1]}*`);
+  for (const m of app.matchAll(/(?:id: |particleRow\()`([a-z-]+)\$\{/g)) ids.add(`${m[1]}*`);
   const known = (id) => ids.has(id) || [...ids].some((x) => x.endsWith('*') && id.startsWith(x.slice(0, -1)));
   for (const f of FEATURES) {
     const id = f.go.id || f.go.top;

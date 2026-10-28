@@ -11,6 +11,7 @@ import { sparkle, roundRect } from './paint.js';
 import { canvas, paintTitle } from './sprites.js';
 import { drawEmitter } from './particles.js';
 import { jumpTarget, mergeTarget, flightPath, flightAt, bigScaleAt, winFxConfig } from '../core/winfx.js';
+import { cameraAt, zoomConfig } from '../core/camera.js';
 
 const clamp01 = (x) => (x < 0 ? 0 : x > 1 ? 1 : x);
 const prog = (t, a, b) => clamp01((t - a) / Math.max(1e-6, b - a));
@@ -849,7 +850,7 @@ function drawWinCells(ctx, scene, R, t, cells, start, end, opts = {}) {
     let fa = 1;
     let stay = 1;
     if (wfx) {
-      const f = flightAt(flightPath(wfx.style, m0, goal, L), wfx.launch[i], wfx.arrive[i], t);
+      const f = flightAt(flightPath(wfx.style, m0, goal, L, wfx.path), wfx.launch[i], wfx.arrive[i], t, wfx.until[i]);
       if (f.flying) m = { x: f.x, y: f.y, s: m0.s };
       s *= f.s;
       fa = f.a;
@@ -930,9 +931,12 @@ function drawWinFxGoal(ctx, scene, R, st, t) {
   }
   const g = mergeTarget(project, L, st);
   const big = bigScaleAt(wfx.mergeAt, st.end, Number(winFxConfig(project).bigScale) || 2.2, t);
-  // The pull: a glow gathering where they fuse.
+  // The pull: a glow gathering where they fuse; each arrival pulses it.
   const pull = clamp01((t - wfx.launch[0]) / (wfx.mergeAt - wfx.launch[0]));
-  if (t < wfx.mergeAt) drawGlow(ctx, res, accent, g.x, g.y, L.cellW * (1 + 1.5 * pull), 0.5 * pull);
+  if (t < wfx.mergeAt) {
+    drawGlow(ctx, res, accent, g.x, g.y, L.cellW * (1 + 1.5 * pull), 0.5 * pull);
+    if (wfx.seq > 0.05) for (const at of wfx.arrive) drawRing(ctx, g.x, g.y, (t - at) / 0.35, L.cellW * 0.7, accent, L.cellW * 0.04);
+  }
   if (big <= 0) return;
   const a = env(t, wfx.mergeAt, st.end, 0.05, 0.3);
   drawRing(ctx, g.x, g.y, (t - wfx.mergeAt) / 0.7, L.cellW * 2.6, accent, L.cellW * 0.07);
@@ -973,8 +977,8 @@ function drawRoundParticles(ctx, scene, R, t, moments) {
   for (const em of R.pres.particles || []) if (em.layer === 'under' && moments.includes(em.moment)) drawEmitter(ctx, scene, em, t);
 }
 
-function drawOverParticles(ctx, scene, t) {
-  for (const em of scene.tl.emitters || []) if (em.layer === 'over' && t >= em.start && t <= em.cut) drawEmitter(ctx, scene, em, t);
+function drawOverParticles(ctx, scene, t, layer = 'over') {
+  for (const em of scene.tl.emitters || []) if (em.layer === layer && t >= em.start && t <= em.cut) drawEmitter(ctx, scene, em, t);
 }
 
 function drawSparkleField(ctx, scene, t, o) {
@@ -999,7 +1003,7 @@ function drawSteps(ctx, scene, R, t) {
   const { L, res, project } = scene;
   for (const st of p.steps || []) {
     if (t < st.start || t > st.end) continue;
-    if (st.lines && st.lines.length) drawWinLines(ctx, scene, R, t, st);
+    if (st.lines && st.lines.length && project.effects.showLines !== false) drawWinLines(ctx, scene, R, t, st);
     drawWinCells(ctx, scene, R, t, st.cells, st.start, st.end, { stagger: true, step: st, syms: st.cellSyms });
     drawWinFxGoal(ctx, scene, R, st, t);
     // A merged win shows its amount under the big symbol once it forms.
@@ -1734,6 +1738,13 @@ export function renderFrame(ctx, scene, t, opts = {}) {
   ctx.setTransform(base, 0, 0, base, 0, 0);
   ctx.globalAlpha = 1;
   ctx.globalCompositeOperation = 'source-over';
+  // Camera: push in on anticipation. Flashes and the vignette stay put.
+  const cam = cameraAt(tl.camera, t, L, zoomConfig(project).amount);
+  if (cam.z > 1.0001) {
+    ctx.translate(cam.x, cam.y);
+    ctx.scale(cam.z, cam.z);
+    ctx.translate(-cam.x, -cam.y);
+  }
   ctx.drawImage(res.bg, 0, 0);
   if (Number(fx.bokeh) > 0) drawBokeh(ctx, scene, t);
   drawFsTint(ctx, scene, t);
@@ -1752,6 +1763,8 @@ export function renderFrame(ctx, scene, t, opts = {}) {
     }
   }
   ctx.translate(sx, sy);
+  // Ambient particles float behind the machine.
+  drawOverParticles(ctx, scene, t, 'back');
   // The wheel game has no machine: just the background and the wheel.
   if (tl.game !== 'wheel') {
     ctx.drawImage(res.back, 0, 0);

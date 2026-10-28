@@ -3,7 +3,7 @@
 // particle art can be a still image, a PNG sequence or a sprite sheet.
 // Emitters come from core/particles.js; this file only draws them.
 
-import { BUILTIN_PARTICLES, particleAssetInfo, spawnParticles, particleAt } from '../core/particles.js';
+import { BUILTIN_PARTICLES, particleAssetInfo, spawnParticles, particleAt, particleTime } from '../core/particles.js';
 import { canvas, loadImage, loadWinAnim, paintCoin } from './sprites.js';
 import { starPath, roundRect } from './paint.js';
 
@@ -258,11 +258,12 @@ export function particleFrame(sprite, p, t) {
   return sprite.frames[(Math.floor(Math.max(0, t - p.b) * sprite.fps) + p.v) % n];
 }
 
-export function drawParticleList(ctx, sprite, list, t, alphaMul = 1) {
+export function drawParticleList(ctx, sprite, list, t0, alphaMul = 1, loop = 0) {
   if (!sprite || !list.length || alphaMul <= 0) return;
   ctx.save();
   if (sprite.blend === 'add') ctx.globalCompositeOperation = 'lighter';
   for (const p of list) {
+    const t = particleTime(p, t0, loop);
     const st = particleAt(p, t, sprite.motion);
     if (!st || st.alpha <= 0.003) continue;
     const img = particleFrame(sprite, p, t);
@@ -296,5 +297,5 @@ export function drawEmitter(ctx, scene, em, t) {
   if (t < em.start || t > em.cut) return;
   const sprite = scene.res.particles?.get(em.asset) || scene.res.particles?.get('coin');
   if (!sprite) return;
-  drawParticleList(ctx, sprite, emitterParticles(scene, em), t, Math.min(1, (em.cut - t) / 0.3));
+  drawParticleList(ctx, sprite, emitterParticles(scene, em), t, em.cut >= scene.tl.duration - 1e-6 ? 1 : Math.min(1, (em.cut - t) / 0.3), em.loop);
 }

@@ -3,7 +3,9 @@ import assert from 'node:assert/strict';
 import { defaultProject, candyProject, holdSpinProject, wheelProject, newRound } from '../src/js/core/defaults.js';
 import { buildTimeline } from '../src/js/core/timeline.js';
 import { computeLayout } from '../src/js/core/layout.js';
-import { PARTICLE_TEMPLATES, BUILTIN_PARTICLES, PARTICLE_MOTIONS, spawnParticles, particleAt, particleCount, particleAssetInfo } from '../src/js/core/particles.js';
+import { PARTICLE_TEMPLATES, BUILTIN_PARTICLES, PARTICLE_MOTIONS, LOOP, spawnParticles, particleAt, particleCount, particleAssetInfo, particleTime } from '../src/js/core/particles.js';
+import { buildAEData, buildAEScript } from '../src/js/core/ae-export.js';
+import { createAE, runScript } from './ae-mock.js';
 
 function project() {
   const p = defaultProject();
@@ -124,4 +126,96 @@ test('particles: asset info for built-ins and uploads', () => {
   assert.deepEqual([particleAssetInfo(p, 'u1').anim, particleAssetInfo(p, 'u1').count, particleAssetInfo(p, 'u1').fps], [true, 8, 30]);
   assert.deepEqual([particleAssetInfo(p, 'u2').anim, particleAssetInfo(p, 'u2').motion], [false, 'flutter']);
   assert.equal(particleAssetInfo(p, 'missing').id, 'coin');
+});
+
+test('particles: continuous templates can run until the next round or to the end, looping', () => {
+  const p = project();
+  p.particles.medium = { fx: 'rain', asset: 'coin', length: 'round' };
+  p.tiers[0].particles = { fx: 'fountain', asset: 'coin', length: 'always' };
+  const tl = buildTimeline(p);
+  const med = tl.rounds.find((R) => R.outcome === 'medium');
+  const [m] = med.pres.particles;
+  assert.ok(m.end >= med.next && m.cut >= med.next + 0.4 - 1e-9, 'rains until the next round');
+  assert.equal(m.layer, 'over');
+  assert.equal(m.main, false);
+  const big = tl.rounds.find((R) => R.outcome === 'big');
+  const all = big.pres.particles[0];
+  assert.deepEqual([all.end, all.cut, all.layer, all.main, all.loop], [tl.duration, tl.duration, 'over', true, LOOP]);
+  // Short templates ignore the length: they fire once.
+  p.particles.small = { fx: 'burst-s', asset: 'coin', length: 'always' };
+  const s = buildTimeline(p).rounds[0].pres.particles[0];
+  assert.deepEqual([s.end, s.main, s.loop], [s.start, false, 0]);
+});
+
+test('particles: a looping emitter repeats one seamless cycle, and the ambient layer fills the first frame', () => {
+  const p = project();
+  p.particles.ambient = { fx: 'shimmer', asset: 'sparkle' };
+  const tl = buildTimeline(p);
+  const amb = tl.emitters.find((e) => e.moment === 'ambient');
+  assert.deepEqual([amb.layer, amb.main, amb.loop, amb.end, amb.cut], ['back', true, LOOP, tl.duration, tl.duration]);
+  assert.ok(amb.start < 0, 'pre-rolled');
+  assert.ok(!tl.rounds.some((R) => R.pres.particles.includes(amb)), 'not tied to a round');
+  const L = computeLayout(p);
+  const ps = spawnParticles(amb, L, 'glow');
+  assert.equal(ps.length, particleCount(amb));
+  // Every particle lives less than a cycle and is born inside the first one.
+  for (const q of ps) assert.ok(q.l < LOOP && q.b >= amb.start - 1e-9 && q.b < amb.start + LOOP);
+  // Cycle k looks exactly like cycle 0.
+  const alive = (t) => ps.map((q) => particleAt(q, particleTime(q, t, amb.loop), 'glow'));
+  for (const t of [0.4, 2.2, 3.7]) {
+    const a = alive(t);
+    alive(t + LOOP * 3).forEach((st, i) => {
+      assert.equal(!st, !a[i]);
+      if (st) for (const k of ['x', 'y', 'rot', 'sx', 'alpha']) assert.ok(Math.abs(st[k] - a[i][k]) < 1e-6, `cycle ${k}`);
+    });
+  }
+  // The screen is never empty: some particles show on the first and last frames.
+  for (const t of [0, tl.duration - 0.01]) assert.ok(alive(t).filter((st) => st && st.alpha > 0.05).length > 5, `alive at ${t}`);
+  // A long fountain loops too, a short burst does not.
+  assert.equal(particleTime({ b: 2 }, 13.5, 5), 3.5);
+  assert.equal(particleTime({ b: 2 }, 1, 5), 1);
+  assert.equal(particleTime({ b: 2 }, 13.5, 0), 13.5);
+});
+
+test('particles: After Effects puts the looping and ambient emitters in the main comp', () => {
+  const p = project();
+  p.particles.ambient = { fx: 'rain', asset: 'star' };
+  p.tiers[0].particles = { fx: 'fountain', asset: 'coin', length: 'always' };
+  const tl = buildTimeline(p);
+  const L = computeLayout(p);
+  const data = buildAEData(p, tl, L, { titleKeys: [] });
+  assert.deepEqual(data.mainParticles.map((e) => e.layer).sort(), ['back', 'over']);
+  assert.ok(data.rounds.every((R) => (R.particles || []).every((e) => !/Ambient/.test(e.name))), 'main emitters stay out of the rounds');
+  const files = new Set(data.particles.assets.flatMap((a) => a.files.map((f) => `/pkg/${f}`)));
+  const { env, log } = createAE({ files });
+  runScript(buildAEScript([data]), env);
+  const main = log.comps.find((c) => c.name === p.name);
+  const names = main.layers.list.map((l) => l.name);
+  const ambName = data.mainParticles.find((e) => e.layer === 'back').name;
+  const fountName = data.mainParticles.find((e) => e.layer === 'over').name;
+  assert.ok(/^R03 /.test(fountName), fountName);
+  // AE adds layers on top: the ambient emitter sits under the machine, the fountain over it.
+  const iAmb = names.indexOf(ambName);
+  const iFount = names.indexOf(fountName);
+  const iShake = names.indexOf('SCREEN SHAKE');
+  assert.ok(iAmb > 0 && iFount >= 0 && iFount < iAmb, names.join(' | '));
+  const ambL = main.layers.list[iAmb];
+  assert.equal(ambL.parent, main.layers.list[iShake]);
+  assert.ok(ambL.startTime < 0 && ambL.inPoint === 0);
+  // The particle expressions wrap the age by the cycle, like particleTime.
+  const ec = log.comps.find((c) => c.name.startsWith(`Main ${ambName}`));
+  const em = data.mainParticles.find((e) => e.layer === 'back');
+  const Ly = ec.layers.list[ec.layers.list.length - 1];
+  const expr = Ly.property('ADBE Transform Group').property('ADBE Position').expression;
+  assert.ok(expr.includes(`a % ${LOOP}`));
+  const q = em.ps[0];
+  const part = { b: q[0], l: q[1], x: q[2], y: q[3], vx: q[4], vy: q[5], g: q[6], k: q[7], sw: q[13], sf: q[14], ph: q[12] };
+  const ev = (time) => new Function('time', `return eval(${JSON.stringify(expr)})`)(time);
+  for (const t of [q[0] + 0.3, q[0] + 0.3 + LOOP, q[0] + 0.3 + LOOP * 4]) {
+    const want = particleAt(part, particleTime(part, t, LOOP), 'none');
+    const got = ev(t - em.start);
+    assert.ok(Math.hypot(got[0] - want.x, got[1] - want.y) < 0.05, `cycle at ${t}`);
+  }
+  // No fade at the end: it runs to the last frame.
+  assert.ok(!ambL.property('ADBE Transform Group').property('ADBE Opacity').expression);
 });

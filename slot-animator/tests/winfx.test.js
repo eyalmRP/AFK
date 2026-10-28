@@ -72,6 +72,37 @@ test('winning symbols: merge pulls the winners together, then one big symbol cou
   assert.ok(ct.rounds.flatMap((R) => R.pres.steps).every((st) => st.fx && st.fx.style === 'merge'));
 });
 
+test('winning symbols: merge from all at once to one by one, and the three flight paths', () => {
+  const p = project('merge', { mergeSeq: 1 });
+  const tl = buildTimeline(p);
+  const st = tl.rounds[0].pres.steps[0];
+  const f = st.fx;
+  // One by one: each arrives on its own, then waits at the point until the merge.
+  for (let i = 1; i < f.arrive.length; i++) assert.ok(f.arrive[i] - f.arrive[i - 1] > 0.15, 'arrivals spread out');
+  assert.ok(f.until.every((u) => u === f.mergeAt));
+  assert.ok(f.mergeAt > f.arrive[f.arrive.length - 1]);
+  assert.equal(tl.sfx.filter((e) => e.type === 'scoreHit' && e.t >= st.start && e.t <= st.end).length, st.cells.length, 'a tick as each joins');
+  const L = computeLayout(p);
+  const goal = mergeTarget(p, L, st);
+  const p0 = L.cellCenter(...st.cells[0]);
+  const waiting = flightAt(flightPath('merge', p0, goal, L, 'line'), f.launch[0], f.arrive[0], (f.arrive[0] + f.mergeAt) / 2, f.until[0]);
+  assert.ok(Math.hypot(waiting.x - goal.x, waiting.y - goal.y) < 1 && waiting.a === 1, 'waits on the pile');
+  // Paths: the wind-up first moves away from the target, the arc rises above both ends.
+  const back = flightPath('jump', p0, goal, L, 'back');
+  const early = flightAt(back, 0, 1, 0.35);
+  const away = Math.hypot(early.x - goal.x, early.y - goal.y) > Math.hypot(p0.x - goal.x, p0.y - goal.y);
+  assert.ok(away, 'wind-up pulls back first');
+  const arc = flightPath('merge', p0, goal, L, 'arc');
+  assert.ok(flightAt(arc, 0, 1, 0.6).y < Math.min(p0.y, goal.y), 'arc rises');
+  const line = flightPath('jump', p0, goal, L, 'line');
+  const mid = flightAt(line, 0, 1, 0.5);
+  const cross = (goal.x - p0.x) * (mid.y - p0.y) - (goal.y - p0.y) * (mid.x - p0.x);
+  assert.ok(Math.abs(cross) < 1e-6 * Math.hypot(goal.x - p0.x, goal.y - p0.y) ** 2 + 1e-6, 'line stays on the line');
+  // The project setting picks the path for the timeline.
+  const q = project('jump', { jumpPath: 'back' });
+  assert.equal(buildTimeline(q).rounds[0].pres.steps[0].fx.path, 'back');
+});
+
 test('winning symbols: rounds can pick their own style; pop keeps the classic timing', () => {
   const p = project('pop');
   const tlPop = buildTimeline(p);
@@ -87,8 +118,8 @@ test('winning symbols: rounds can pick their own style; pop keeps the classic ti
 });
 
 test('winning symbols: After Effects flies the same paths and grows the merged symbol', () => {
-  for (const style of ['jump', 'merge']) {
-    const p = project(style);
+  for (const [style, extra] of [['jump', {}], ['merge', {}], ['jump', { jumpPath: 'back' }], ['jump', { jumpPath: 'line' }], ['merge', { mergePath: 'arc', mergeSeq: 1 }], ['merge', { mergePath: 'back', mergeSeq: 0.5 }]]) {
+    const p = project(style, extra);
     const tl = buildTimeline(p);
     const L = computeLayout(p);
     const data = buildAEData(p, tl, L, { titleKeys: [] });
@@ -102,10 +133,10 @@ test('winning symbols: After Effects flies the same paths and grows the merged s
     const ev = (expr, time) => new Function('time', `return eval(${JSON.stringify(expr)})`)(time);
     movers.forEach((Ly, i) => {
       const q = st.fx.paths[i];
-      const path = { style, x0: q[0], y0: q[1], cx: q[2], cy: q[3], x1: q[4], y1: q[5] };
-      for (const f of [0.2, 0.5, 0.8]) {
+      const path = { style, kind: st.fx.kind, x0: q[0], y0: q[1], cx: q[2], cy: q[3], x1: q[4], y1: q[5] };
+      for (const f of [0.2, 0.5, 0.8, 1.3]) {
         const t = st.fx.launch[i] + (st.fx.arrive[i] - st.fx.launch[i]) * f;
-        const want = flightAt(path, st.fx.launch[i], st.fx.arrive[i], t);
+        const want = flightAt(path, st.fx.launch[i], st.fx.arrive[i], t, st.fx.until[i]);
         const tr = Ly.property('ADBE Transform Group');
         const xy = ev(tr.property('ADBE Position').expression, t - R.start);
         assert.ok(Math.hypot(xy[0] - want.x, xy[1] - want.y) < 0.05, `${style} #${i} position`);
