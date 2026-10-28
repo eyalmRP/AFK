@@ -232,6 +232,33 @@ export function resolveRound(ctx, project, round, rng, carry = {}) {
   const win = { kind: 'none', symbol: -1, lines: [], cells: [], scatters: [], nearMiss: null, amount: 0, base: 0, multSum: 0, expand: [], wilds: [], wildMults: [], mystery: null, cash: [], collector: null, collected: 0, boosts: [] };
   const steps = [];
   const randomFreeCells = (n, extra = () => true) => shuffle(rng, allCells(ctx).filter(([c, r]) => isFree(c, r) && extra(c, r))).slice(0, n);
+  // Whether the cells placed on purpose pay by themselves (filler cannot
+  // fix that), and placing a symbol on a free cell where it does not make
+  // them pay. A spin that is not meant to win uses it for its wilds and
+  // boosters; a win round takes the first free cell.
+  const noWin = !LINE_WINS.includes(outcome);
+  const lockedPays = () => {
+    const g = grid.map((col, c) => col.map((x, r) => (locked.has(K(c, r)) ? x : null)));
+    const w = (c, r) => g[c][r] != null && (ctx.wildSet.has(g[c][r]) || wildMask.has(K(c, r)));
+    const m = ctx.payMode;
+    const wins = m === 'lines' ? lineRuns(g, ctx, w) : m === 'ways' ? waysWins(g, ctx, w) : m === 'anywhere' ? anywhereWins(g, ctx, ctx.minAnywhere) : clusterWins(g, ctx, ctx.minCluster, w);
+    return wins.length > 0;
+  };
+  // Filler can make it pay nothing: try the clean-up on a copy.
+  const canClean = () => {
+    const g = cloneGrid(grid);
+    return sanitize(g, ctx, rng, { locked, wildAt: (c, r) => ctx.wildSet.has(g[c][r]) || wildMask.has(K(c, r)) });
+  };
+  const placeSafe = (sym) => {
+    for (const [c, r] of randomFreeCells(noWin ? reels * rows : 1)) {
+      const was = grid[c][r];
+      place(c, r, sym);
+      if (!noWin || (!lockedPays() && canClean())) return [c, r];
+      grid[c][r] = was;
+      locked.delete(K(c, r));
+    }
+    return null;
+  };
 
   const amountTotal = round.amount != null && round.amount !== '' && !Number.isNaN(Number(round.amount)) ? Number(round.amount) : autoAmount(ctx, project, round);
   const multValues = (round.multipliers || []).map(Number).filter((v) => v > 0);
@@ -493,7 +520,10 @@ export function resolveRound(ctx, project, round, rng, carry = {}) {
       mult[cell[0]][cell[1]] = v;
     }
     const extra = Math.max(0, Number(round.extraWilds) || 0);
-    if (extra && ctx.wildSym != null) for (const [c, r] of randomFreeCells(extra)) place(c, r, ctx.wildSym);
+    if (extra && ctx.wildSym != null) {
+      if (noWin) for (let k = 0; k < extra; k++) placeSafe(ctx.wildSym);
+      else for (const [c, r] of randomFreeCells(extra)) place(c, r, ctx.wildSym);
+    }
     // Cash symbols carry a value each (in bets); a collector, landing on
     // the last reel to stop when it can, takes them all.
     for (const v of (round.cash || []).map(Number).filter((x) => x > 0)) {
@@ -546,13 +576,12 @@ export function resolveRound(ctx, project, round, rng, carry = {}) {
         continue;
       }
       if (b.kind !== 'upgrade' && ctx.wildSym == null) continue;
-      const cell = winCand.length ? cand.shift() : randomFreeCells(1)[0];
+      const to = b.kind === 'upgrade' ? (s0 >= 0 ? s0 : pickSymbol(ctx, rng, 'auto', 'high')) : ctx.wildSym;
+      const cell = winCand.length ? cand.shift() : placeSafe(to);
       if (!cell) continue;
       const [c, r] = cell;
-      const to = b.kind === 'upgrade' ? (s0 >= 0 ? s0 : pickSymbol(ctx, rng, 'auto', 'high')) : ctx.wildSym;
       const value = b.kind === 'mult' ? v || 2 : null;
       if (winCand.length) grid[c][r] = to;
-      else place(c, r, to);
       if (value != null) {
         mult[c][r] = value;
         win.wildMults.push({ c, r, value });

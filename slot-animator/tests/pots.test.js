@@ -8,7 +8,7 @@ import { buildTimeline, heldCells, BOOST } from '../src/js/core/timeline.js';
 import { computeLayout } from '../src/js/core/layout.js';
 import { evalKeys } from '../src/js/core/keys.js';
 import { makeContext } from '../src/js/core/outcomes.js';
-import { lineRuns } from '../src/js/core/grid.js';
+import { lineRuns, waysWins, anywhereWins, clusterWins } from '../src/js/core/grid.js';
 import { potFor, potBump, potCharge, beamState, beamCurve, beamPoints, pointAlong, beamSide } from '../src/js/core/pots.js';
 import { buildAEData, buildAEScript } from '../src/js/core/ae-export.js';
 import { createAE, runScript } from './ae-mock.js';
@@ -141,6 +141,23 @@ test('boosters without a win upgrade free cells and nothing pays; boosted cash g
   const cash = R.pres.boost.items.find((it) => it.kind === 'cash');
   assert.equal(cash.value, 10);
   assert.ok(R.pres.collector.items.some((it) => it.c === cash.c && it.r === cash.r && it.value === 10));
+});
+
+test('a spin that is not meant to win never pays, whatever wilds, boosters and mystery blocks it lands', () => {
+  for (const mode of ['lines', 'ways', 'anywhere', 'cluster']) {
+    for (let seed = 1; seed <= 25; seed++) {
+      const p = withPots(defaultProject());
+      p.machine.payMode = mode;
+      p.rounds = [newRound('none', { seed, extraWilds: 3, mystery: 2, boosts: [{ kind: 'upgrade' }, { kind: 'wild' }, { kind: 'upgrade' }, { kind: 'mult', value: 2 }] })];
+      const tl = buildTimeline(p);
+      const ctx = makeContext(p, tl.paylines);
+      const g = tl.rounds[0].grid;
+      const wildAt = (c, r) => ctx.wildSet.has(g[c][r]);
+      const wins = mode === 'lines' ? lineRuns(g, ctx, wildAt) : mode === 'ways' ? waysWins(g, ctx, wildAt) : mode === 'anywhere' ? anywhereWins(g, ctx, ctx.minAnywhere) : clusterWins(g, ctx, ctx.minCluster, wildAt);
+      assert.deepEqual(wins, [], `${mode} seed ${seed}`);
+      assert.equal(tl.rounds[0].pres.boost.items.length, 4, `${mode} seed ${seed}: every booster found a cell`);
+    }
+  }
 });
 
 test('boosters need the pots, and tumbles, cells and drops all upgrade', () => {
