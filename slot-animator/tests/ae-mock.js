@@ -12,6 +12,7 @@ const KNOWN_MATCH = new Set([
   'ADBE Vector Graphic - Stroke', 'ADBE Vector Stroke Color', 'ADBE Vector Stroke Width', 'ADBE Vector Stroke Line Cap', 'ADBE Vector Stroke Line Join',
   'ADBE Vector Graphic - Fill', 'ADBE Vector Fill Color', 'ADBE Vector Fill Opacity',
   'ADBE Vector Filter - Trim', 'ADBE Vector Trim End',
+  'ADBE Drop Shadow-0002', 'ADBE Drop Shadow-0004', 'ADBE Drop Shadow-0005',
 ]);
 
 export function createAE({ files = new Set(), fileName = '/pkg/slot.jsx' } = {}) {
@@ -88,14 +89,39 @@ export function createAE({ files = new Set(), fileName = '/pkg/slot.jsx' } = {})
       this.comp = comp;
       this.name = name;
       this.source = source || null;
-      this.inPoint = 0;
-      this.outPoint = source && source.duration ? Math.min(comp.duration, source.duration) : comp.duration;
-      this.startTime = 0;
+      this._in = 0;
+      this._out = source && source.duration ? Math.min(comp.duration, source.duration) : comp.duration;
+      this._start = 0;
       this.props = new Prop('root', this);
       this.parent = null;
     }
     property(n) {
       return this.props.property(n);
+    }
+    // Like After Effects: in must stay before out, and moving the start time
+    // moves both.
+    get inPoint() {
+      return this._in;
+    }
+    set inPoint(v) {
+      if (!(v < this._out)) throw new Error(`inPoint ${v} not before outPoint ${this._out} on ${this.name}`);
+      this._in = v;
+    }
+    get outPoint() {
+      return this._out;
+    }
+    set outPoint(v) {
+      if (!(v > this._in)) throw new Error(`outPoint ${v} not after inPoint ${this._in} on ${this.name}`);
+      this._out = v;
+    }
+    get startTime() {
+      return this._start;
+    }
+    set startTime(v) {
+      const d = v - this._start;
+      this._start = v;
+      this._in += d;
+      this._out += d;
     }
     set timeRemapEnabled(v) {
       this._tr = v;

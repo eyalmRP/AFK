@@ -40,6 +40,7 @@ export async function loadProjectImages(project) {
       return paintBuiltin(s.builtin || 'seven', 512, font);
     })
   );
+  if (!project.symbols.some((s) => s.role === 'multiplier')) symbols.push(paintBuiltin('orb', 512, font));
   const opt = async (src) => {
     if (!src) return null;
     try {
@@ -50,10 +51,52 @@ export async function loadProjectImages(project) {
   };
   return {
     symbols,
+    winAnims: await Promise.all(project.symbols.map((s) => loadWinAnim(s.winAnim))),
     background: await opt(project.assets.background),
     frame: await opt(project.assets.frame),
     logo: await opt(project.assets.logo),
   };
+}
+
+// A symbol's win animation: a PNG sequence or a sprite sheet. Returns the
+// frames as images/canvases plus the playback rate.
+export async function loadWinAnim(anim, load = loadImage) {
+  if (!anim) return null;
+  try {
+    if (anim.kind === 'frames' && anim.srcs?.length) {
+      const frames = (await Promise.all(anim.srcs.map((src) => load(src).catch(() => null)))).filter(Boolean);
+      return frames.length ? { frames, fps: Number(anim.fps) || 24 } : null;
+    }
+    if (anim.kind === 'sheet' && anim.src) {
+      const img = await load(anim.src);
+      const cols = Math.max(1, anim.cols | 0);
+      const rows = Math.max(1, anim.rows | 0);
+      const count = Math.min(cols * rows, Math.max(1, anim.count | 0 || cols * rows));
+      const fw = (img.naturalWidth || img.width) / cols;
+      const fh = (img.naturalHeight || img.height) / rows;
+      const frames = [];
+      for (let i = 0; i < count; i++) {
+        const c = canvas(fw, fh);
+        c.getContext('2d').drawImage(img, (i % cols) * fw, Math.floor(i / cols) * fh, fw, fh, 0, 0, fw, fh);
+        frames.push(c);
+      }
+      return { frames, fps: Number(anim.fps) || 24 };
+    }
+  } catch {
+    return null;
+  }
+  return null;
+}
+
+function fitFrame(img, w, h) {
+  const c = canvas(w, h);
+  const sw = img.naturalWidth || img.width;
+  const sh = img.naturalHeight || img.height;
+  const f = fit(sw, sh, w * 0.88, h * 0.88);
+  const g = c.getContext('2d');
+  g.imageSmoothingQuality = 'high';
+  g.drawImage(img, (w - f.w) / 2, (h - f.h) / 2, f.w, f.h);
+  return c;
 }
 
 function fit(srcW, srcH, w, h) {
@@ -143,13 +186,13 @@ function paintVignette(W, H) {
   return c;
 }
 
-function paintMachine(L, theme, frameImg, builtinFrame) {
+function paintMachine(L, theme, frameImg, builtinFrame, cellsMode) {
   const back = canvas(L.W, L.H);
   const front = canvas(L.W, L.H);
   const b = back.getContext('2d');
   const f = front.getContext('2d');
   const { frame } = L;
-  const metal = theme.metal === 'neon' ? 'neon' : theme.metal === 'chrome' ? 'chrome' : 'gold';
+  const metal = ['neon', 'chrome', 'rose'].includes(theme.metal) ? theme.metal : 'gold';
 
   // Back: dark window and the reel faces.
   b.fillStyle = '#020104';
@@ -188,6 +231,19 @@ function paintMachine(L, theme, frameImg, builtinFrame) {
       g.addColorStop(1, s[5]);
       f.fillStyle = g;
       f.fillRect(x, L.winTop, L.gap, L.winH);
+    }
+    if (cellsMode) {
+      // Per-cell spins: a thin bar between rows so every cell reads as its own window.
+      const s = METALS[metal];
+      for (let r = 1; r < L.rows; r++) {
+        const y = L.rowsTop + r * L.cellH;
+        const g = f.createLinearGradient(0, y - L.gap / 2, 0, y + L.gap / 2);
+        g.addColorStop(0, s[5]);
+        g.addColorStop(0.5, s[1]);
+        g.addColorStop(1, s[5]);
+        f.fillStyle = g;
+        f.fillRect(L.winX, y - Math.max(2, L.gap * 0.35), L.winW, Math.max(4, L.gap * 0.7));
+      }
     }
     // Frame ring (outer rounded rect minus window).
     f.save();
@@ -258,6 +314,7 @@ export const TITLE_PALETTES = {
   violet: { fill: ['#ffffff', '#e9d4ff', '#b56bff', '#5a10d6', '#a05cff', '#f0e2ff'], metal: 'chrome', outline: '#1c0040', glow: 'rgba(170,80,255,0.95)' },
   aqua: { fill: ['#ffffff', '#d6fbff', '#45dcff', '#0a76d6', '#43c9ff', '#e2fbff'], metal: 'chrome', outline: '#00203f', glow: 'rgba(40,200,255,0.9)' },
   silver: { fill: ['#ffffff', '#f0f3f8', '#b9c3d1', '#6b7686', '#c9d1dc', '#ffffff'], metal: 'chrome', outline: '#141922', glow: 'rgba(200,220,255,0.6)' },
+  rose: { fill: ['#ffffff', '#ffe3f3', '#ff6fc1', '#c4177a', '#ff8fd0', '#fff0f8'], metal: 'gold', outline: '#4a0030', glow: 'rgba(255,90,180,0.9)' },
 };
 
 export function paintTitle(text, font, px, paletteName = 'gold') {
@@ -331,7 +388,7 @@ function paintLogo(L, project, theme, img) {
   probe.font = `${px}px ${font}`;
   const mw = probe.measureText(text).width;
   if (mw > logo.w * 0.82) px *= (logo.w * 0.82) / mw;
-  return paintTitle(text, font, px, theme.metal === 'neon' ? 'aqua' : theme.metal === 'chrome' ? 'silver' : 'gold');
+  return paintTitle(text, font, px, theme.metal === 'neon' ? 'aqua' : theme.metal === 'chrome' ? 'silver' : theme.metal === 'rose' ? 'rose' : 'gold');
 }
 
 function paintCoin(size) {
@@ -596,16 +653,20 @@ export function buildResources(project, L, images) {
   const theme = THEMES[project.machine.theme] || THEMES.royal;
   const font = fontStack(project.effects.font);
   const sym = images.symbols.map((img) => symbolSprites(img, L.cellW, L.cellH));
-  const { back, front } = paintMachine(L, theme, images.frame, project.machine.builtinFrame !== false);
+  const { back, front } = paintMachine(L, theme, images.frame, project.machine.builtinFrame !== false, project.spin.type === 'cells');
+  const winAnim = (images.winAnims || []).map((a) => (a ? { frames: a.frames.slice(0, 240).map((f) => fitFrame(f, L.cellW, L.cellH)), fps: a.fps } : null));
   const titlePx = Math.round(Math.min(L.W * 0.11, L.H * 0.16));
   const titles = {};
   const t = project.effects.titles || {};
   const make = (k, pal, scale = 1) => {
     titles[k] = paintTitle(t[k] || k.toUpperCase(), font, Math.round(titlePx * scale), pal);
   };
-  make('big', 'gold');
-  make('mega', 'fire');
-  make('epic', 'violet');
+  const tierPalette = { total: 'gold' };
+  for (const tier of project.tiers || []) {
+    titles[tier.id] = paintTitle(tier.title || 'BIG WIN', font, titlePx, tier.palette || 'gold');
+    tierPalette[tier.id] = tier.palette || 'gold';
+  }
+  make('total', 'gold', 0.85);
   make('bonus', 'gold');
   make('freespins', 'gold', 0.8);
   make('wheel', 'gold', 0.7);
@@ -622,6 +683,8 @@ export function buildResources(project, L, images) {
     front,
     logo: paintLogo(L, project, theme, images.logo),
     titles,
+    tierPalette,
+    winAnim,
     titlePx,
     coin: paintCoin(Math.round(L.cellW * 0.5)),
     glow: paintGlow(256),

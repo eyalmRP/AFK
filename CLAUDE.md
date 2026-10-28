@@ -11,6 +11,6 @@ A static web app (vanilla JS bundled with esbuild) published as a claude.ai arti
 
 ## Reel Studio (slot-animator/)
 
-- `slot-animator/` is a separate app: a slot machine win animator with MP4 and After Effects export. It shares only the root `package.json` and esbuild; see `slot-animator/README.md`.
+- `slot-animator/` is a separate app: a slot machine win animator. The After Effects project export is the main deliverable; MP4 is only a quick preview (no MOV export). It shares only the root `package.json` and esbuild; see `slot-animator/README.md`.
 - Before committing changes there run `npm run slots:test && npm run slots:build`.
 - `slot-animator/src/js/core/` is pure (no DOM) and shared by the browser and the tests. The generated After Effects script must stay ES3.

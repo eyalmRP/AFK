@@ -121,35 +121,81 @@ function drawSymbol(ctx, scene, symIdx, c, rowPos, blurAmt, scale = 1, alpha = 1
   ctx.globalAlpha = 1;
 }
 
+function actorsByCol(R, reels) {
+  if (!R._byCol) {
+    R._byCol = Array.from({ length: reels }, () => []);
+    for (const a of R.actors) R._byCol[a.c].push(a);
+  }
+  return R._byCol;
+}
+
+function drawMultLabel(ctx, scene, value, x, y, s = 1, alpha = 1) {
+  const { L, res } = scene;
+  const img = cachedTitle(res, 'mult', `x${value}`, Math.round(L.cellH * 0.3), 'fire');
+  drawCentered(ctx, img, x, y + L.cellH * 0.2 * s, s * Math.min(1, (L.cellW * 0.95) / img.width), alpha);
+}
+
+function drawActor(ctx, scene, a, t, blurK, popDur) {
+  const rowPos = evalKeys(a.keys, t);
+  const v = Math.abs(evalVelocity(a.keys, t));
+  let scale = 1;
+  let alpha = 1;
+  if (a.popAt != null && t >= a.popAt) {
+    const k = clamp01((t - a.popAt) / popDur);
+    scale = 1 + 0.38 * ease.outCubic(k);
+    alpha = 1 - k * k;
+  }
+  drawSymbol(ctx, scene, a.sym, a.c, rowPos, clamp01((v - 4) / 16) * blurK, scale, alpha);
+  if (a.mult != null) {
+    const m = scene.L.cellCenter(a.c, rowPos);
+    drawMultLabel(ctx, scene, a.mult, m.x, m.y, scale, alpha);
+  }
+}
+
 function drawReels(ctx, scene, R, t) {
   const { tl, L, project } = scene;
   const blurK = Number(project.spin.blur) || 0;
+  const popDur = Number(project.timing.tumblePop) || 0.36;
+  const useActors = R && R.actorsFrom != null && t >= R.actorsFrom;
+  const byCol = useActors ? actorsByCol(R, tl.reels) : null;
   for (let c = 0; c < tl.reels; c++) {
     ctx.save();
     ctx.beginPath();
     ctx.rect(L.reelX[c], L.winTop, L.cellW, L.winH);
     ctx.clip();
-    if (tl.cascade) {
-      const grid = R ? R.grid : tl.initialGrid;
+    if (useActors) {
+      for (const a of byCol[c]) if (t >= a.tIn && t < a.tOut) drawActor(ctx, scene, a, t, blurK, popDur);
+    } else if (tl.mode === 'cascade') {
+      const grid = R ? R.prevGrid : tl.initialGrid;
+      for (let r = 0; r < tl.rows; r++) drawSymbol(ctx, scene, grid[c][r], c, r, 0);
+    } else if (tl.mode === 'cells') {
       for (let r = 0; r < tl.rows; r++) {
-        if (!R || !R.cascade) {
-          drawSymbol(ctx, scene, grid[c][r], c, r, 0);
-          continue;
+        const si = c * tl.rows + r;
+        const keys = tl.stripKeys[si];
+        const P = evalKeys(keys, t);
+        const v = Math.abs(evalVelocity(keys, t));
+        const blur = clamp01((v - 3) / 14) * blurK;
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(L.reelX[c], L.rowsTop + r * L.cellH, L.cellW, L.cellH);
+        ctx.clip();
+        const base = Math.floor(P);
+        for (let j = base - 2; j <= base + 2; j++) {
+          const local = tl.dir > 0 ? -(j - P) : j - P;
+          if (Math.abs(local) > 1.3) continue;
+          const sym = tl.strips[si][j];
+          if (sym == null) continue;
+          drawSymbol(ctx, scene, sym, c, r + local, blur);
+          const mv = tl.stripMults[si].get(j);
+          if (mv != null) {
+            const m = L.cellCenter(c, r + local);
+            drawMultLabel(ctx, scene, mv, m.x, m.y);
+          }
         }
-        const ck = R.cascade[c][r];
-        if (t < ck.outEnd) {
-          const off = evalKeys(ck.outKeys, t);
-          const v = Math.abs(evalVelocity(ck.outKeys, t));
-          drawSymbol(ctx, scene, R.prevGrid[c][r], c, r + off, clamp01((v - 4) / 16) * blurK);
-        }
-        if (t >= ck.inStart) {
-          const off = evalKeys(ck.inKeys, t);
-          const v = Math.abs(evalVelocity(ck.inKeys, t));
-          drawSymbol(ctx, scene, R.grid[c][r], c, r + off, clamp01((v - 4) / 16) * blurK);
-        }
+        ctx.restore();
       }
     } else {
-      const keys = tl.reelKeys[c];
+      const keys = tl.stripKeys[c];
       const P = evalKeys(keys, t);
       const v = Math.abs(evalVelocity(keys, t));
       const blur = clamp01((v - 3) / 14) * blurK;
@@ -158,9 +204,14 @@ function drawReels(ctx, scene, R, t) {
       for (let j = base - 3; j <= base + tl.rows + 3; j++) {
         const rowPos = tl.dir > 0 ? tl.rows - 1 - (j - P) : j - P;
         if (rowPos < -1.6 - L.peek || rowPos > tl.rows + 0.6 + L.peek) continue;
-        const s = strip[j];
-        if (s == null) continue;
-        drawSymbol(ctx, scene, s, c, rowPos, blur);
+        const sym = strip[j];
+        if (sym == null) continue;
+        drawSymbol(ctx, scene, sym, c, rowPos, blur);
+        const mv = tl.stripMults[c].get(j);
+        if (mv != null) {
+          const m = L.cellCenter(c, rowPos);
+          drawMultLabel(ctx, scene, mv, m.x, m.y);
+        }
       }
     }
     ctx.restore();
@@ -171,7 +222,8 @@ function winDim(R, t) {
   if (!R) return 0;
   const p = R.pres;
   let d = 0;
-  if (p.lines) d = Math.max(d, env(t, p.lines.start, p.lines.end, 0.2, 0.35));
+  for (const st of p.steps || []) d = Math.max(d, env(t, st.start, st.end + (st.tumble ? 0.25 : 0), 0.2, 0.35));
+  if (p.mult) d = Math.max(d, env(t, p.mult.start, p.mult.end, 0.2, 0.4) * 0.8);
   if (p.celebrate) d = Math.max(d, env(t, p.celebrate.start, p.celebrate.end + 0.4, 0.2, 0.4));
   if (p.nearmiss) d = Math.max(d, env(t, p.nearmiss.start, p.nearmiss.end, 0.2, 0.3) * 0.6);
   return d;
@@ -244,6 +296,24 @@ function drawAnticFrames(ctx, scene, R, t) {
   const { L, res } = scene;
   const an = anticActive(R, t);
   if (!an) return;
+  if (R.cells) {
+    for (const ci of R.cells) {
+      if (!ci || !ci.antic) continue;
+      const a = env(t, ci.antic.start - 0.05, ci.antic.end + 0.3, 0.2, 0.3);
+      if (a <= 0) continue;
+      const x = L.reelX[ci.c];
+      const y = L.rowsTop + ci.r * L.cellH;
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.lineWidth = L.cellW * 0.045;
+      ctx.strokeStyle = `rgba(255,170,40,${0.9 * a})`;
+      ctx.shadowColor = 'rgba(255,120,0,1)';
+      ctx.shadowBlur = L.cellW * 0.3 * (0.6 + 0.4 * Math.sin(t * 18));
+      roundRect(ctx, x + 2, y + 2, L.cellW - 4, L.cellH - 4, L.cellW * 0.08);
+      ctx.stroke();
+      ctx.restore();
+    }
+  }
   an.forEach((a, c) => {
     if (a <= 0) return;
     const x = L.reelX[c];
@@ -329,7 +399,7 @@ function drawBulb(ctx, scene, p, b) {
 // Static layers for the After Effects package.
 export function paintHudLayer(scene) {
   const c = canvas(scene.L.W, scene.L.H);
-  drawHudPanel(c.getContext('2d'), scene);
+  drawHudPanel(c.getContext('2d'), scene, null, true);
   return c;
 }
 
@@ -477,7 +547,7 @@ function drawHud(ctx, scene, R, t) {
   const { L, res, project, tl } = scene;
   const h = L.hud;
   if (!h) return;
-  drawHudPanel(ctx, scene);
+  drawHudPanel(ctx, scene, t);
   const cur = project.machine.currency || '';
   const dec = project.machine.decimals | 0;
   const v = evalKeys(tl.meterKeys, t);
@@ -487,11 +557,23 @@ function drawHud(ctx, scene, R, t) {
   }
 }
 
-function drawHudPanel(ctx, scene) {
+function fsStateAt(tl, t) {
+  const block = tl.fsBlocks.find((b) => t >= b.start && t < b.end);
+  if (!block) return null;
+  let index = 0;
+  let total = false;
+  for (const r of block.rounds) if (r.t0 <= t) r.total ? (total = true) : (index = r.index);
+  return { block, index, total, n: block.n };
+}
+
+// panelOnly paints the bare panel: the After Effects build adds its labels
+// as live text layers.
+function drawHudPanel(ctx, scene, t = null, panelOnly = false) {
   const { L, res, project, tl } = scene;
   const h = L.hud;
   if (!h) return;
   const metal = res.theme.metal === 'neon' ? 'neon' : res.theme.metal === 'chrome' ? 'chrome' : 'gold';
+  const fsNow = t == null ? null : fsStateAt(tl, t);
   ctx.save();
   ctx.shadowColor = 'rgba(0,0,0,0.6)';
   ctx.shadowBlur = h.h * 0.3;
@@ -515,6 +597,7 @@ function drawHudPanel(ctx, scene) {
   })());
   ctx.stroke();
   ctx.restore();
+  if (panelOnly) return;
   const label = Math.round(h.h * 0.2);
   ctx.save();
   ctx.font = `${label}px ${res.font}`;
@@ -527,24 +610,54 @@ function drawHudPanel(ctx, scene) {
   ctx.fillStyle = 'rgba(255,255,255,0.75)';
   const cur = project.machine.currency || '';
   const dec = project.machine.decimals | 0;
-  ctx.fillText(`BET ${cur}${Number(project.machine.bet || 0).toFixed(dec)}`, h.x + h.w * 0.12, h.y + h.h * 0.55);
-  ctx.fillText(`LINES ${tl.paylines.length}`, h.x + h.w * 0.88, h.y + h.h * 0.55);
+  if (fsNow) {
+    ctx.fillStyle = res.theme.accent;
+    ctx.fillText(fsNow.total ? 'FREE SPINS DONE' : `FREE SPINS ${fsNow.index}/${Math.max(fsNow.n, fsNow.index)}`, h.x + h.w * 0.15, h.y + h.h * 0.55);
+    const tot = evalKeys(tl.fsTotalKeys, t);
+    ctx.fillText(`TOTAL ${cur}${tot.toFixed(dec)}`, h.x + h.w * 0.85, h.y + h.h * 0.55);
+  } else {
+    ctx.fillText(`BET ${cur}${Number(project.machine.bet || 0).toFixed(dec)}`, h.x + h.w * 0.12, h.y + h.h * 0.55);
+    const ways = project.machine.payMode === 'lines' ? `LINES ${tl.paylines.length}` : project.machine.payMode === 'ways' ? `${Math.pow(tl.rows, tl.reels)} WAYS` : project.machine.payMode === 'anywhere' ? `PAYS ${project.machine.minAnywhere}+` : `CLUSTER ${project.machine.minCluster}+`;
+    ctx.fillText(ways, h.x + h.w * 0.88, h.y + h.h * 0.55);
+  }
   ctx.restore();
 }
 
-function winCellColor(R, c, r) {
-  for (const l of R.win.lines) if (l.cells.some(([cc, rr]) => cc === c && rr === r)) return lineColor(l.index);
-  return null;
+function drawFsRibbon(ctx, scene, t) {
+  const { L, res, tl } = scene;
+  const st = fsStateAt(tl, t);
+  if (!st) return;
+  const a = Math.min(clamp01((t - st.block.start) / 0.4), clamp01((st.block.end - t) / 0.4));
+  const text = st.total ? 'FREE SPINS COMPLETE' : `FREE SPIN ${Math.max(1, st.index)} OF ${Math.max(st.n, st.index)}`;
+  const img = cachedTitle(res, 'fsribbon', text, Math.round(L.H * 0.04), 'aqua');
+  const y = Math.min(L.frame.y - img.height * 0.32, L.logo.cy + L.logo.h * 0.42);
+  drawCentered(ctx, img, L.W / 2, y, Math.min(1, (L.frame.w * 0.8) / img.width), a);
 }
 
-function drawWinLines(ctx, scene, R, t) {
+function drawFsTint(ctx, scene, t) {
+  const st = fsStateAt(scene.tl, t);
+  if (!st) return;
+  const a = Math.min(clamp01((t - st.block.start) / 0.6), clamp01((st.block.end - t) / 0.6));
+  ctx.save();
+  ctx.globalCompositeOperation = 'soft-light';
+  ctx.globalAlpha = 0.55 * a;
+  ctx.fillStyle = scene.res.theme.glow;
+  ctx.fillRect(0, 0, scene.L.W, scene.L.H);
+  ctx.restore();
+}
+
+function stepCellColor(st, c, r) {
+  for (const l of st.lines || []) if (l.cells.some(([cc, rr]) => cc === c && rr === r)) return lineColor(l.index);
+  return st.symbol >= 0 ? lineColor(st.symbol + 3) : null;
+}
+
+function drawWinLines(ctx, scene, R, t, p) {
   const { L, tl, project } = scene;
-  const p = R.pres.lines;
   const a = env(t, p.start, p.end, 0.15, 0.35);
   if (a <= 0) return;
   const cw = L.cellW;
   const glowK = Number(project.effects.lineGlow) || 0;
-  R.win.lines.forEach((l, li) => {
+  p.lines.forEach((l, li) => {
     const line = tl.paylines[l.index];
     if (!line) return;
     const pts = line.map((r, c) => L.cellCenter(c, r));
@@ -639,10 +752,10 @@ function drawWinCells(ctx, scene, R, t, cells, start, end, opts = {}) {
   const a = env(t, start, end, 0.12, 0.3);
   if (a <= 0) return;
   const k = (Number(fx.popScale) || 0) * (opts.popMul || 1);
-  const sym = (c, r) => R.grid[c][r];
+  const sym = (c, r, i) => (opts.syms ? opts.syms[i] : R.grid[c][r]);
   cells.forEach(([c, r], i) => {
     const m = L.cellCenter(c, r);
-    const col = opts.color || winCellColor(R, c, r) || res.theme.accent;
+    const col = opts.color || (opts.step && stepCellColor(opts.step, c, r)) || res.theme.accent;
     const s = popScale(t, start + (opts.stagger ? i * 0.05 : 0), end, k);
     if (opts.rays) {
       ctx.save();
@@ -654,8 +767,15 @@ function drawWinCells(ctx, scene, R, t, cells, start, end, opts = {}) {
     ctx.save();
     ctx.translate(m.x, m.y);
     ctx.scale(s, s * m.s);
-    const sp = res.sym[sym(c, r)] || res.sym[0];
-    ctx.drawImage(sp.sharp, -L.cellW / 2, -L.cellH / 2, L.cellW, L.cellH);
+    const si = sym(c, r, i);
+    const anim = res.winAnim && res.winAnim[si];
+    if (anim && anim.frames.length) {
+      const f = anim.frames[Math.floor(Math.max(0, t - start) * anim.fps) % anim.frames.length];
+      ctx.drawImage(f, -L.cellW / 2, -L.cellH / 2, L.cellW, L.cellH);
+    } else {
+      const sp = res.sym[si] || res.sym[0];
+      ctx.drawImage(sp.sharp, -L.cellW / 2, -L.cellH / 2, L.cellW, L.cellH);
+    }
     ctx.restore();
     // Cell frame with a chasing light.
     ctx.save();
@@ -763,24 +883,188 @@ function drawSparkleField(ctx, scene, t, o) {
   }
 }
 
-function drawLineWin(ctx, scene, R, t) {
+function drawSteps(ctx, scene, R, t) {
   const p = R.pres;
   const { L, res, project } = scene;
-  if (p.lines && t >= p.lines.start && t <= p.lines.end) {
-    drawWinLines(ctx, scene, R, t);
-    drawWinCells(ctx, scene, R, t, R.win.cells, p.lines.start, p.lines.end, { stagger: true });
-  }
-  if (p.floatText && t >= p.floatText.start && t <= p.floatText.end && R.win.amount > 0) {
-    const a = env(t, p.floatText.start, p.floatText.end, 0.2, 0.5);
-    const k = prog(t, p.floatText.start, p.floatText.end);
-    const cur = project.machine.currency || '';
-    const txt = `+${cur}${Number(R.win.amount).toFixed(project.machine.decimals | 0)}`;
-    const img = cachedTitle(res, 'float', txt, Math.round(res.titlePx * 0.5), 'gold');
-    const s = 0.4 + 0.6 * ease.outBack(clamp01((t - p.floatText.start) / 0.45));
-    drawCentered(ctx, img, L.W / 2, L.winCY - L.cellH * 0.15 - k * L.cellH * 0.5, s, a);
+  for (const st of p.steps || []) {
+    if (t < st.start || t > st.end) continue;
+    if (st.lines && st.lines.length) drawWinLines(ctx, scene, R, t, st);
+    drawWinCells(ctx, scene, R, t, st.cells, st.start, st.end, { stagger: true, step: st, syms: st.cellSyms });
+    if (st.amount > 0) {
+      const a = env(t, st.start + 0.15, st.end, 0.2, 0.4);
+      const k = prog(t, st.start, st.end);
+      let cx = 0;
+      let cy = 0;
+      for (const [c, r] of st.cells) {
+        const m = L.cellCenter(c, r);
+        cx += m.x;
+        cy += m.y;
+      }
+      cx /= st.cells.length;
+      cy /= st.cells.length;
+      if (st.lines && st.lines.length) {
+        cx = L.W / 2;
+        cy = L.winCY - L.cellH * 0.15;
+      }
+      const cur = project.machine.currency || '';
+      const txt = `+${cur}${Number(st.amount).toFixed(project.machine.decimals | 0)}`;
+      const img = cachedTitle(res, 'float', txt, Math.round(res.titlePx * (st.tumble ? 0.4 : 0.5)), 'gold');
+      const s2 = 0.4 + 0.6 * ease.outBack(clamp01((t - st.start - 0.15) / 0.45));
+      drawCentered(ctx, img, cx, cy - k * L.cellH * 0.5, s2, a);
+    }
   }
   if (p.coinBurst) {
     drawCoins(ctx, scene, t, { start: p.coinBurst.start, end: p.coinBurst.start + 0.5, n: p.coinBurst.count, x: L.W / 2, y: L.winCY, w: L.winW * 0.3, salt: 40 + R.index, spread: 0.7, vy0: 0.8, vy1: 0.5, life: 1.8 });
+  }
+}
+
+// Bursts where tumbling winners explode.
+function drawPops(ctx, scene, R, t) {
+  if (!R.actors.length) return;
+  const { L, res } = scene;
+  for (const a of R.actors) {
+    if (a.popAt == null) continue;
+    const k = (t - a.popAt) / 0.7;
+    if (k < 0 || k > 1) continue;
+    const m = L.cellCenter(a.c, evalKeys(a.keys, a.popAt));
+    const col = lineColor(a.sym + 3);
+    drawGlow(ctx, res, col, m.x, m.y, L.cellW * 1.4 * (0.6 + k), (1 - k) * 0.4);
+    drawRing(ctx, m.x, m.y, k, L.cellW * 0.8, col, L.cellW * 0.05);
+    for (let q = 0; q < 9; q++) {
+      const ang = (q / 9) * Math.PI * 2 + hash01(a.id, q) * 0.6;
+      const d = L.cellW * (0.2 + 0.7 * ease.outCubic(k)) * (0.7 + 0.5 * hash01(a.id, q + 20));
+      sparkle(ctx, m.x + Math.cos(ang) * d, m.y + Math.sin(ang) * d, L.cellW * 0.12 * (1 - k), 1 - k, q % 2 ? '#ffffff' : col);
+    }
+  }
+}
+
+function drawMultPhase(ctx, scene, R, t) {
+  const mp = R.pres.mult;
+  if (!mp || t < mp.start || t > mp.end + 0.3) return;
+  const { L, res, project } = scene;
+  const target = { x: L.W / 2, y: L.winTop + L.cellH * 0.55 };
+  const a = Math.min(clamp01((t - mp.start) / 0.25), clamp01((mp.end + 0.3 - t) / 0.4));
+  let sum = 0;
+  for (const it of mp.items) {
+    const tt = t - it.t;
+    const p0 = L.cellCenter(it.c, it.r);
+    if (tt > -0.25 && tt < 0.3) {
+      const k = clamp01((tt + 0.25) / 0.55);
+      drawGlow(ctx, res, '#ff9a2e', p0.x, p0.y, L.cellW * 2.2, Math.sin(k * Math.PI) * 0.9);
+      drawRing(ctx, p0.x, p0.y, k, L.cellW * 0.9, '#ffd25a', L.cellW * 0.05);
+    }
+    if (tt >= 0 && tt < 0.45) {
+      const k = ease.inOut(tt / 0.45);
+      const x = p0.x + (target.x - p0.x) * k;
+      const y = p0.y + (target.y - p0.y) * k - Math.sin(k * Math.PI) * L.cellH * 0.8;
+      drawGlow(ctx, res, '#ffb02e', x, y, L.cellW * 1.2, 0.8);
+      const img = cachedTitle(res, 'mult', `x${it.value}`, Math.round(L.cellH * 0.3), 'fire');
+      drawCentered(ctx, img, x, y, 1.2 - 0.3 * k);
+    }
+    if (tt >= 0.45) sum += it.value;
+  }
+  // Plaque collecting the multipliers, then the multiplied win.
+  const applied = t >= mp.applyAt;
+  const cur = project.machine.currency || '';
+  const dec = project.machine.decimals | 0;
+  const pw = L.cellW * 2.6;
+  const ph = L.cellH * 0.7;
+  ctx.save();
+  ctx.globalAlpha = a;
+  drawGlow(ctx, res, res.theme.glow, target.x, target.y, pw * 1.4, 0.5);
+  roundRect(ctx, target.x - pw / 2, target.y - ph / 2, pw, ph, ph * 0.3);
+  ctx.fillStyle = 'rgba(20,6,30,0.85)';
+  ctx.fill();
+  ctx.lineWidth = Math.max(2, L.cellW * 0.03);
+  ctx.strokeStyle = '#ffd25a';
+  ctx.stroke();
+  ctx.restore();
+  const txt = applied ? `${cur}${mp.total.toFixed(dec)}` : sum > 0 ? `${cur}${mp.base.toFixed(dec)} x${sum}` : `${cur}${mp.base.toFixed(dec)}`;
+  const img = cachedTitle(res, 'multplaque', txt, Math.round(ph * 0.5), applied ? 'gold' : 'fire');
+  const pop = applied ? 1 + 0.25 * Math.pow(1 - clamp01((t - mp.applyAt) / 0.4), 2) : 1;
+  drawCentered(ctx, img, target.x, target.y, Math.min(1, (pw * 0.92) / img.width) * pop, a);
+  if (applied) drawRing(ctx, target.x, target.y, (t - mp.applyAt) / 0.6, pw, '#ffd25a', L.cellW * 0.06);
+}
+
+function wildIndex(scene) {
+  if (scene.res.wildIdx === undefined) scene.res.wildIdx = scene.project.symbols.findIndex((x) => x.role === 'wild');
+  return scene.res.wildIdx;
+}
+
+function drawExpand(ctx, scene, R, t) {
+  const ex = R.pres.expand;
+  if (!ex || t < ex.start || t >= R.next) return;
+  const { L, res, tl } = scene;
+  const wi = wildIndex(scene);
+  const sp = res.sym[wi];
+  if (!sp) return;
+  for (const c of ex.reels) {
+    const origin = (ex.wilds.find(([cc]) => cc === c) || [c, Math.floor(tl.rows / 2)])[1];
+    const beam = env(t, ex.start, ex.end + 0.5, 0.15, 0.5);
+    if (beam > 0) {
+      const x = L.reelX[c];
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      const g = ctx.createLinearGradient(x, 0, x + L.cellW, 0);
+      g.addColorStop(0, 'rgba(255,200,80,0)');
+      g.addColorStop(0.5, `rgba(255,220,140,${0.35 * beam})`);
+      g.addColorStop(1, 'rgba(255,200,80,0)');
+      ctx.fillStyle = g;
+      ctx.fillRect(x, L.winTop - L.pad, L.cellW, L.winH + L.pad * 2);
+      ctx.lineWidth = L.cellW * 0.04;
+      ctx.strokeStyle = `rgba(255,214,90,${beam})`;
+      ctx.shadowColor = '#ffb21a';
+      ctx.shadowBlur = L.cellW * 0.25;
+      roundRect(ctx, x, L.winTop, L.cellW, L.winH, L.cellW * 0.06);
+      ctx.stroke();
+      ctx.restore();
+    }
+    for (let r = 0; r < tl.rows; r++) {
+      const k = clamp01((t - ex.start - Math.abs(r - origin) * 0.1) / 0.35);
+      if (k <= 0) continue;
+      const m = L.cellCenter(c, r);
+      const s = 0.3 + 0.7 * ease.outBack(k);
+      ctx.save();
+      ctx.translate(m.x, m.y);
+      ctx.scale(s, s * m.s);
+      ctx.drawImage(sp.sharp, -L.cellW / 2, -L.cellH / 2, L.cellW, L.cellH);
+      ctx.restore();
+    }
+  }
+}
+
+function drawStickies(ctx, scene, t) {
+  const { L, res, tl } = scene;
+  if (!tl.stickies.length) return;
+  const sp = res.sym[wildIndex(scene)];
+  if (!sp) return;
+  for (const st of tl.stickies) {
+    if (t < st.from || t >= st.to) continue;
+    const k = ease.outBack(clamp01((t - st.from) / 0.4));
+    const m = L.cellCenter(st.c, st.r);
+    drawGlow(ctx, res, '#ffcf45', m.x, m.y, L.cellW * 1.4, 0.35 + 0.1 * Math.sin(t * 4));
+    ctx.save();
+    ctx.translate(m.x, m.y);
+    ctx.scale(k, k * m.s);
+    ctx.drawImage(sp.sharp, -L.cellW / 2, -L.cellH / 2, L.cellW, L.cellH);
+    ctx.restore();
+    ctx.save();
+    const fw = L.cellW * 0.96;
+    const fh = L.cellH * 0.96 * m.s;
+    roundRect(ctx, m.x - fw / 2, m.y - fh / 2, fw, fh, L.cellW * 0.12);
+    ctx.lineWidth = L.cellW * 0.035;
+    ctx.strokeStyle = '#ffd25a';
+    ctx.shadowColor = '#ffb21a';
+    ctx.shadowBlur = L.cellW * 0.15;
+    ctx.stroke();
+    ctx.setLineDash([L.cellW * 0.08, L.cellW * 0.08]);
+    ctx.lineDashOffset = -t * L.cellW * 0.3;
+    ctx.lineWidth = L.cellW * 0.015;
+    ctx.strokeStyle = '#fff6d0';
+    ctx.stroke();
+    ctx.restore();
+    const tag = cachedTitle(res, 'sticky', 'STICKY', Math.round(L.cellH * 0.12), 'gold');
+    drawCentered(ctx, tag, m.x, m.y + fh * 0.42, Math.min(1, (L.cellW * 0.7) / tag.width), clamp01((t - st.from) / 0.3));
   }
 }
 
@@ -789,7 +1073,7 @@ function drawScatterFx(ctx, scene, R, t) {
   const p = R.pres;
   // Scatter landing pops while the reels are still stopping.
   for (const [c, r] of R.win.scatters) {
-    const a = t - R.reels[c].stop;
+    const a = t - (R.cells ? R.cells[c * scene.tl.rows + r].stop : R.reels[c].stop);
     if (a >= 0 && a < 0.7) {
       const m = L.cellCenter(c, r);
       drawRing(ctx, m.x, m.y, a / 0.7, L.cellW * 0.95, res.theme.accent, L.cellW * 0.05);
@@ -834,7 +1118,7 @@ function darken(ctx, L, a) {
   ctx.fillRect(-L.W * 0.1, -L.H * 0.1, L.W * 1.2, L.H * 1.2);
 }
 
-const TIER_COLORS = { big: '#ffb21a', mega: '#ff5a1f', epic: '#b44cff' };
+const TIER_COLORS = { gold: '#ffb21a', fire: '#ff5a1f', violet: '#b44cff', aqua: '#2fc8ff', rose: '#ff4fa8', silver: '#c8d4ff' };
 
 function drawBigWin(ctx, scene, R, t) {
   const ov = R.pres.overlay;
@@ -850,7 +1134,7 @@ function drawBigWin(ctx, scene, R, t) {
   });
   const name = ov.tiers[tier];
   const tStart = ov.tierTimes[tier];
-  const col = TIER_COLORS[name] || '#ffb21a';
+  const col = TIER_COLORS[res.tierPalette[name]] || '#ffb21a';
   const cx = L.W / 2;
   const cy = L.H * (L.portrait ? 0.4 : 0.42);
   const rays = Number(project.effects.rays) || 0;
@@ -879,8 +1163,9 @@ function drawBigWin(ctx, scene, R, t) {
   drawShimmer(ctx, res, title, cx, titleY, s * fitS, ((t - tStart) % 1.7) / 1.7 * 1.6 - 0.3, a);
   drawSparkleField(ctx, scene, t, { n: 26, start: ov.start, x: cx, y: titleY, w: title ? title.width * fitS : L.W * 0.5, h: res.titlePx * 1.4, size: L.cellW * 0.16, alpha: a, salt: 300 });
   // Counter.
-  const v = evalKeys(tl.meterKeys, t);
-  const rate = evalVelocity(tl.meterKeys, t);
+  void tl;
+  const v = evalKeys(ov.keys, t);
+  const rate = evalVelocity(ov.keys, t);
   const slam = t > ov.countEnd ? 1 + 0.2 * Math.pow(1 - clamp01((t - ov.countEnd) / 0.35), 2) : 1;
   const cIn = ease.outBack(clamp01((t - ov.start - 0.2) / 0.5));
   const px = Math.round(res.titlePx * 0.72);
@@ -1115,6 +1400,7 @@ export function renderFrame(ctx, scene, t, opts = {}) {
   ctx.globalCompositeOperation = 'source-over';
   ctx.drawImage(res.bg, 0, 0);
   if (Number(fx.bokeh) > 0) drawBokeh(ctx, scene, t);
+  drawFsTint(ctx, scene, t);
   let sx = 0;
   let sy = 0;
   const shakeK = Number(fx.shake) || 0;
@@ -1136,11 +1422,16 @@ export function renderFrame(ctx, scene, t, opts = {}) {
   ctx.drawImage(res.front, 0, 0);
   drawMarquee(ctx, scene, R, t);
   drawAnticFrames(ctx, scene, R, t);
+  drawStickies(ctx, scene, t);
   drawLogo(ctx, scene, t);
+  drawFsRibbon(ctx, scene, t);
   drawHud(ctx, scene, R, t);
   if (R) {
+    drawExpand(ctx, scene, R, t);
     drawScatterFx(ctx, scene, R, t);
-    drawLineWin(ctx, scene, R, t);
+    drawPops(ctx, scene, R, t);
+    drawSteps(ctx, scene, R, t);
+    drawMultPhase(ctx, scene, R, t);
     drawBigWin(ctx, scene, R, t);
     drawBanner(ctx, scene, R, t);
     drawWheel(ctx, scene, R, t);

@@ -1,20 +1,45 @@
-// Reel Studio editor: project state, live preview, the round sequencer and
-// the settings panels. Rendering and exports live in their own modules.
+// Reel Studio editor: project state, live preview with synced sound, the
+// round sequencer and the settings panels. Rendering and exports live in
+// their own modules.
 
-import { defaultProject, newRound, OUTCOMES, OUTCOME_BY_ID, SPIN_TYPES, SPIN_PRESETS, THEMES, BUILTIN_SYMBOLS, LINE_WINS, SCATTER_WINS, DEFAULT_SEGMENTS } from '../core/defaults.js';
+import {
+  defaultProject,
+  newRound,
+  OUTCOMES,
+  OUTCOME_BY_ID,
+  SPIN_TYPES,
+  SPIN_PRESETS,
+  THEMES,
+  BUILTIN_SYMBOLS,
+  CANDY_SYMBOLS,
+  LINE_WINS,
+  SCATTER_WINS,
+  DEFAULT_SEGMENTS,
+  PRESETS,
+  PAY_MODES,
+  ORDERS,
+  CELL_ORDERS,
+  TITLE_PALETTE_NAMES,
+  defaultTiers,
+  SOUND_EVENTS,
+} from '../core/defaults.js';
 import { buildTimeline, roundIndexAt } from '../core/timeline.js';
 import { computeLayout } from '../core/layout.js';
 import { evalVelocity } from '../core/keys.js';
 import { lineColor, generatePaylines } from '../core/paylines.js';
-import { autoAmount, makeContext } from '../core/outcomes.js';
-import { loadImage, buildResources, fontStack } from '../render/sprites.js';
+import { autoAmount, makeContext, defaultPattern, tumbleEnabled } from '../core/outcomes.js';
+import { orderList } from '../core/order.js';
+import { FORMAT_CHOICES } from '../core/ae-export.js';
+import { loadImage, loadWinAnim, buildResources, fontStack } from '../render/sprites.js';
 import { paintBuiltin } from '../render/paint.js';
 import { renderFrame } from '../render/renderer.js';
+import { decodeCustomSounds, renderSoundtrack, audioBufferToWav } from '../render/audio.js';
 import { exportMP4, frameToPNG, canEncodeVideo } from '../export/video.js';
 import { buildAEPackage } from '../export/aepackage.js';
 import { h, clear, rangeField, selectField, segmented, toggleField, textField, section, button, readFileAsDataURL, pickFiles } from './dom.js';
 
-const STORE_KEY = 'reel-studio-project-v1';
+const STORE_KEY = 'reel-studio-project-v2';
+const OLD_STORE_KEY = 'reel-studio-project-v1';
 const FONTS = ['Bungee', 'Lilita One', 'Russo One', 'Cinzel Decorative'];
 const FORMATS = [
   ['1920x1080', 'Landscape HD · 1920 × 1080'],
@@ -23,6 +48,14 @@ const FORMATS = [
   ['1080x1920', 'Portrait story · 1080 × 1920'],
   ['1080x1350', 'Portrait feed · 1080 × 1350'],
   ['1080x1080', 'Square · 1080 × 1080'],
+];
+const MULT_VALUES = [2, 3, 5, 10, 15, 20, 25, 50, 100, 250, 500];
+const ROLES = [
+  ['normal', 'Normal'],
+  ['wild', 'Wild'],
+  ['scatter', 'Scatter'],
+  ['multiplier', 'Multiplier'],
+  ['bonus', 'Bonus'],
 ];
 
 const state = {
@@ -33,19 +66,22 @@ const state = {
   loop: true,
   solo: false,
   speed: 1,
+  soundOn: true,
   tab: 'machine',
   scene: null,
   images: null,
   quality: 1,
   autoQuality: true,
   perf: [],
-  builder: { spins: 5, warm: 'mixed', finale: 'mega' },
+  builder: { spins: 5, warm: 'mixed', finale: 'big1', fsCount: 5 },
   busy: null,
   exportRange: 'all',
   bitrate: 16e6,
+  mp4Sound: true,
 };
 const el = {};
 const imageCache = new Map();
+const animCache = new WeakMap();
 let ctx = null;
 let downloadsP = null;
 
@@ -61,22 +97,45 @@ function deepMerge(a, b) {
   return b === undefined ? a : b;
 }
 
+// Version 1 projects had fixed Big / Mega / Epic outcomes; version 2 has one
+// Big win outcome that counts through the project's tiers.
+function upgradeV1(p) {
+  if (!p || p.version >= 2) return p;
+  const titles = p.effects?.titles || {};
+  const tiers = defaultTiers();
+  ['big', 'mega', 'epic'].forEach((k, i) => titles[k] && (tiers[i].title = titles[k]));
+  const tierOf = { big: 0, mega: 1, epic: 2 };
+  return {
+    ...p,
+    version: 2,
+    tiers: p.tiers || tiers,
+    rounds: (p.rounds || []).map((r) => (r.outcome in tierOf ? { ...r, outcome: 'big', tier: tierOf[r.outcome] } : r)),
+  };
+}
+
 function migrate(p) {
-  const out = deepMerge(defaultProject(), p || {});
+  const out = deepMerge(defaultProject(), upgradeV1(p) || {});
   if (!Array.isArray(out.symbols) || !out.symbols.length) out.symbols = defaultProject().symbols;
+  out.symbols = out.symbols.map((s) => ({ winAnim: null, ...s }));
+  if (!Array.isArray(out.tiers) || !out.tiers.length) out.tiers = defaultTiers();
   if (!Array.isArray(out.rounds)) out.rounds = [];
   if (!Array.isArray(out.wheel.segments) || out.wheel.segments.length < 2) out.wheel.segments = DEFAULT_SEGMENTS.map((s) => ({ ...s }));
-  out.rounds = out.rounds.map((r) => ({ ...newRound(r.outcome || 'none'), ...r }));
+  if (!Array.isArray(out.output.formats) || !out.output.formats.length) out.output.formats = [`${out.canvas.width}x${out.canvas.height}`];
+  out.rounds = out.rounds.map((r) => ({ ...newRound(OUTCOME_BY_ID[r.outcome] ? r.outcome : 'none'), ...r, outcome: OUTCOME_BY_ID[r.outcome] ? r.outcome : 'none' }));
+  out.version = 2;
   return out;
 }
 
 function loadSaved() {
-  try {
-    const s = localStorage.getItem(STORE_KEY);
-    return s ? migrate(JSON.parse(s)) : null;
-  } catch {
-    return null;
+  for (const k of [STORE_KEY, OLD_STORE_KEY]) {
+    try {
+      const s = localStorage.getItem(k);
+      if (s) return migrate(JSON.parse(s));
+    } catch {
+      // try the next key
+    }
   }
+  return null;
 }
 
 let saveTimer = null;
@@ -87,7 +146,7 @@ function save() {
       localStorage.setItem(STORE_KEY, JSON.stringify(state.project));
     } catch {
       if (!state.saveWarned) {
-        toast('This project is too large to keep in the browser automatically. Use Export → Save project file.', 'warn', 6000);
+        toast('This project is too large to keep in the browser automatically. Use Export → Save project.', 'warn', 6000);
         state.saveWarned = true;
       }
     }
@@ -126,6 +185,12 @@ async function optImage(src) {
   return imageCache.get(src);
 }
 
+function winAnimFor(anim) {
+  if (!anim) return Promise.resolve(null);
+  if (!animCache.has(anim)) animCache.set(anim, loadWinAnim(anim, (src) => optImage(src).then((i) => i || Promise.reject(new Error('bad frame')))));
+  return animCache.get(anim);
+}
+
 function withTimeout(p, ms) {
   return Promise.race([p, new Promise((r) => setTimeout(r, ms))]);
 }
@@ -134,8 +199,11 @@ async function loadImages(project) {
   const font = fontStack(project.effects.font);
   await withTimeout(document.fonts.load(`64px "${project.effects.font || 'Bungee'}"`).catch(() => null), 2500);
   const symbols = await Promise.all(project.symbols.map((s) => symbolImage(s, font)));
+  // Without a multiplier symbol the engine uses a built-in orb after the last symbol.
+  if (!project.symbols.some((s) => s.role === 'multiplier')) symbols.push(await symbolImage({ builtin: 'orb' }, font));
   return {
     symbols,
+    winAnims: await Promise.all(project.symbols.map((s) => winAnimFor(s.winAnim))),
     background: await optImage(project.assets.background),
     frame: await optImage(project.assets.frame),
     logo: await optImage(project.assets.logo),
@@ -165,6 +233,7 @@ async function rebuild(kind = 'all') {
     if (state.tab === 'spin') drawMotionGraph();
     if (state.tab === 'assets' && kind === 'all') refreshThumbs();
     draw();
+    scheduleSound();
   } catch (e) {
     console.error(e);
     toast(`Could not rebuild the animation: ${e.message}`, 'error', 6000);
@@ -234,12 +303,18 @@ function loop(now) {
   lastNow = now;
   if (state.playing && state.scene) {
     const [a, b] = playRange();
-    state.t += dt * state.speed;
+    // While the sound plays, its clock drives the playhead so picture and
+    // sound never drift apart.
+    if (audio.src && audio.ac?.state === 'running') state.t = audio.offset + (audio.ac.currentTime - audio.startedAt);
+    else state.t += dt * state.speed;
     if (state.t >= b) {
-      if (state.loop) state.t = a + ((state.t - a) % Math.max(0.01, b - a));
-      else {
+      if (state.loop) {
+        state.t = a + ((state.t - a) % Math.max(0.01, b - a));
+        startAudio();
+      } else {
         state.t = b;
         state.playing = false;
+        stopAudio();
         renderTransport();
       }
     }
@@ -258,6 +333,92 @@ function playRange() {
   return [0, tl.duration];
 }
 
+// ---------- sound preview ----------
+
+const audio = { ac: null, buffer: null, src: null, version: 0, timer: null, startedAt: 0, offset: 0 };
+let customKey = '';
+let customP = null;
+
+function customSounds(project) {
+  const c = project.sound?.custom || {};
+  const key = Object.keys(c)
+    .sort()
+    .map((k) => `${k}:${(c[k] || '').length}:${(c[k] || '').slice(-24)}`)
+    .join('|');
+  if (key !== customKey || !customP) {
+    customKey = key;
+    customP = decodeCustomSounds(project).catch(() => new Map());
+  }
+  return customP;
+}
+
+function scheduleSound() {
+  clearTimeout(audio.timer);
+  audio.timer = setTimeout(refreshSound, 350);
+}
+
+async function refreshSound() {
+  const sc = state.scene;
+  if (!sc || typeof OfflineAudioContext === 'undefined') return;
+  const v = ++audio.version;
+  if (sc.project.sound?.enabled === false) {
+    audio.buffer = null;
+    stopAudio();
+    return;
+  }
+  try {
+    const buf = await renderSoundtrack(sc.tl, sc.project, await customSounds(sc.project));
+    if (v !== audio.version) return;
+    audio.buffer = buf;
+    if (state.playing) startAudio();
+  } catch (e) {
+    console.warn('sound', e);
+  }
+}
+
+function ensureAudioContext() {
+  if (!audio.ac) {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return null;
+    audio.ac = new AC();
+  }
+  if (audio.ac.state === 'suspended') audio.ac.resume().catch(() => {});
+  return audio.ac;
+}
+
+function stopAudio() {
+  if (!audio.src) return;
+  try {
+    audio.src.stop();
+  } catch {
+    // already stopped
+  }
+  audio.src.disconnect();
+  audio.src = null;
+}
+
+function startAudio() {
+  stopAudio();
+  if (!state.playing || !state.soundOn || state.speed !== 1 || !audio.buffer || state.project.sound?.enabled === false) return;
+  const ac = ensureAudioContext();
+  if (!ac) return;
+  if (ac.state !== 'running') {
+    ac.resume()
+      .then(() => state.playing && !audio.src && startAudio())
+      .catch(() => {});
+    return;
+  }
+  const [, b] = playRange();
+  const from = Math.max(0, Math.min(state.t, audio.buffer.duration));
+  const src = ac.createBufferSource();
+  src.buffer = audio.buffer;
+  src.connect(ac.destination);
+  src.start(0, from, Math.max(0.01, b - from));
+  audio.src = src;
+  audio.startedAt = ac.currentTime;
+  audio.offset = from;
+}
+
 // ---------- shell ----------
 
 function buildShell() {
@@ -273,6 +434,12 @@ function buildShell() {
   el.panel = h('div', { class: 'panel-body', id: 'settings-panel' });
   el.sequence = h('div', { class: 'panel-body' });
   el.toasts = h('div', { class: 'toasts', 'aria-live': 'polite' });
+  const goExport = (fn) => () => {
+    state.tab = 'export';
+    renderTabs();
+    renderPanel();
+    fn();
+  };
   clear(
     app,
     h(
@@ -283,18 +450,8 @@ function buildShell() {
       h(
         'div',
         { class: 'top-actions' },
-        button('MP4', () => {
-          state.tab = 'export';
-          renderTabs();
-          renderPanel();
-          startMP4();
-        }, { class: 'btn', icon: 'film', id: 'top-mp4', title: 'Render the sequence to MP4' }),
-        button('After Effects', () => {
-          state.tab = 'export';
-          renderTabs();
-          renderPanel();
-          startAE();
-        }, { class: 'btn primary', icon: 'download', id: 'top-ae', title: 'Download the After Effects package' })
+        button('Preview MP4', goExport(startMP4), { class: 'btn', icon: 'film', id: 'top-mp4', title: 'Render a quick MP4 preview with sound' }),
+        button('After Effects', goExport(startAE), { class: 'btn primary', icon: 'download', id: 'top-ae', title: 'Download the After Effects project package' })
       )
     ),
     h(
@@ -310,6 +467,12 @@ function buildShell() {
   document.addEventListener('keydown', onKey);
 }
 
+function seek(t) {
+  state.t = Math.min(state.scene.tl.duration, Math.max(0, t));
+  if (state.playing) startAudio();
+  draw();
+}
+
 function onKey(e) {
   const tag = (e.target.tagName || '').toLowerCase();
   if (tag === 'input' || tag === 'select' || tag === 'textarea' || e.target.isContentEditable) return;
@@ -318,16 +481,9 @@ function onKey(e) {
   if (e.code === 'Space') {
     e.preventDefault();
     togglePlay();
-  } else if (e.key === 'ArrowRight') {
-    state.t = Math.min(state.scene.tl.duration, state.t + (e.shiftKey ? 1 : fd));
-    draw();
-  } else if (e.key === 'ArrowLeft') {
-    state.t = Math.max(0, state.t - (e.shiftKey ? 1 : fd));
-    draw();
-  } else if (e.key === 'Home') {
-    state.t = playRange()[0];
-    draw();
-  }
+  } else if (e.key === 'ArrowRight') seek(state.t + (e.shiftKey ? 1 : fd));
+  else if (e.key === 'ArrowLeft') seek(state.t - (e.shiftKey ? 1 : fd));
+  else if (e.key === 'Home') seek(playRange()[0]);
 }
 
 // ---------- transport & timeline ----------
@@ -340,9 +496,12 @@ function fmtTime(t) {
 
 function togglePlay() {
   if (!state.scene) return;
+  ensureAudioContext();
   const [a, b] = playRange();
   if (!state.playing && state.t >= b - 0.01) state.t = a;
   state.playing = !state.playing;
+  if (state.playing) startAudio();
+  else stopAudio();
   renderTransport();
 }
 
@@ -355,6 +514,7 @@ function jumpRound(d) {
 }
 
 function renderTransport() {
+  const soundOff = state.project?.sound?.enabled === false;
   clear(
     el.transport,
     button('', () => jumpRound(-1), { class: 'icon-btn', icon: 'prev', title: 'Previous round', id: 'tp-prev' }),
@@ -370,8 +530,16 @@ function renderTransport() {
       }, { class: `chip${state.loop ? ' on' : ''}`, icon: 'loop', id: 'tp-loop', title: 'Loop playback' }),
       button('Solo round', () => {
         state.solo = !state.solo;
+        if (state.playing) startAudio();
         renderTransport();
       }, { class: `chip${state.solo ? ' on' : ''}`, id: 'tp-solo', title: 'Play only the selected round' }),
+      button('Sound', () => {
+        state.soundOn = !state.soundOn;
+        ensureAudioContext();
+        if (state.soundOn) startAudio();
+        else stopAudio();
+        renderTransport();
+      }, { class: `chip${state.soundOn && !soundOff ? ' on' : ''}`, icon: state.soundOn && !soundOff ? 'sound' : 'mute', id: 'tp-sound', title: soundOff ? 'Sound is switched off in the Sound tab' : 'Play the sound track with the preview (1× speed)', disabled: soundOff }),
       selectField({
         id: 'tp-speed',
         value: state.speed,
@@ -380,7 +548,10 @@ function renderTransport() {
           { value: 0.5, label: '½×' },
           { value: 1, label: '1×' },
         ],
-        onChange: (v) => (state.speed = Number(v)),
+        onChange: (v) => {
+          state.speed = Number(v);
+          if (state.playing) startAudio();
+        },
       })
     )
   );
@@ -403,12 +574,16 @@ function renderTimeline() {
   const { tl } = state.scene;
   const D = tl.duration;
   el.track = h('div', { class: 'track', id: 'timeline-track', role: 'slider', 'aria-label': 'Playhead', 'aria-valuemin': 0, 'aria-valuemax': D.toFixed(2), tabindex: 0 });
+  for (const b of tl.fsBlocks) {
+    const end = Number.isFinite(b.end) ? b.end : D;
+    el.track.append(h('div', { class: 'fs-band', style: { left: `${(b.start / D) * 100}%`, width: `${((end - b.start) / D) * 100}%` }, title: `Free spins (${b.n})` }));
+  }
   tl.rounds.forEach((R, i) => {
     const o = OUTCOME_BY_ID[R.outcome];
     el.track.append(
       h(
         'div',
-        { class: `block${i === state.sel ? ' sel' : ''}`, style: { left: `${(R.t0 / D) * 100}%`, width: `${((R.next - R.t0) / D) * 100}%`, '--c': o.color }, title: `Round ${i + 1}: ${o.label}` },
+        { class: `block${i === state.sel ? ' sel' : ''}${R.free ? ' free' : ''}`, style: { left: `${(R.t0 / D) * 100}%`, width: `${((R.next - R.t0) / D) * 100}%`, '--c': o.color }, title: `Round ${i + 1}: ${o.label}${R.free ? ' (free spin)' : ''}` },
         h('span', null, `${i + 1} · ${o.short}`)
       )
     );
@@ -428,11 +603,13 @@ function renderTimeline() {
   };
   el.track.addEventListener('pointerdown', (ev) => {
     el.track.setPointerCapture(ev.pointerId);
+    stopAudio();
     scrub(ev);
     const move = (e2) => scrub(e2);
     const up = () => {
       el.track.removeEventListener('pointermove', move);
       el.track.removeEventListener('pointerup', up);
+      if (state.playing) startAudio();
     };
     el.track.addEventListener('pointermove', move);
     el.track.addEventListener('pointerup', up);
@@ -440,8 +617,7 @@ function renderTimeline() {
   el.track.addEventListener('keydown', (e) => {
     if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
       e.stopPropagation();
-      state.t = Math.min(D, Math.max(0, state.t + (e.key === 'ArrowRight' ? 0.5 : -0.5)));
-      draw();
+      seek(state.t + (e.key === 'ArrowRight' ? 0.5 : -0.5));
     }
   });
   clear(
@@ -461,12 +637,9 @@ function legend() {
 
 // ---------- sequence (right panel) ----------
 
-function selectRound(i, seek) {
+function selectRound(i, doSeek) {
   state.sel = i;
-  if (seek && state.scene?.tl.rounds[i]) {
-    state.t = Math.max(0, state.scene.tl.rounds[i].t0 - 0.05);
-    draw();
-  }
+  if (doSeek && state.scene?.tl.rounds[i]) seek(Math.max(0, state.scene.tl.rounds[i].t0 - 0.05));
   el.track?.querySelectorAll('.block').forEach((b, k) => b.classList.toggle('sel', k === i));
   refreshList();
   renderInspector();
@@ -497,8 +670,22 @@ function renderSequence() {
   renderInspector();
 }
 
+function tierTitle(i) {
+  const tiers = state.project.tiers || [];
+  return tiers[Math.min(tiers.length - 1, Math.max(0, i | 0))]?.title || 'BIG WIN';
+}
+
 function builderCard() {
   const b = state.builder;
+  const tiers = state.project.tiers || [];
+  const finales = [
+    ...tiers.map((t, i) => ({ value: `big${i}`, label: i === 0 ? `Big win: ${t.title}` : `Big win counting up to ${t.title}` })),
+    { value: 'tumble', label: 'Tumble chain into a big win, with multipliers' },
+    { value: 'freespins', label: 'Free spins feature: trigger, spins, total' },
+    { value: 'wheel', label: 'Wheel of Fortune bonus' },
+    { value: 'big+wheel', label: 'Big win, then the wheel' },
+  ];
+  if (!finales.some((f) => f.value === b.finale)) b.finale = finales[Math.min(1, finales.length - 1)].value;
   return h(
     'section',
     { class: 'group builder' },
@@ -520,32 +707,60 @@ function builderCard() {
       id: 'qb-finale',
       label: 'Finale',
       value: b.finale,
-      options: [
-        { value: 'big', label: 'Big win' },
-        { value: 'mega', label: 'Mega win (Big → Mega)' },
-        { value: 'epic', label: 'Epic win (Big → Mega → Epic)' },
-        { value: 'freespins', label: 'Free spins trigger' },
-        { value: 'wheel', label: 'Wheel of Fortune bonus' },
-        { value: 'mega+wheel', label: 'Mega win, then the wheel' },
-      ],
-      onChange: (v) => (b.finale = v),
+      options: finales,
+      onChange: (v) => {
+        b.finale = v;
+        renderSequence();
+      },
     }),
+    b.finale === 'freespins' ? rangeField({ id: 'qb-fs', label: 'Free spins to show', value: b.fsCount, min: 1, max: 15, step: 1, onInput: (v) => (b.fsCount = v) }) : null,
     button('Build sequence', buildSequence, { class: 'btn primary wide', id: 'qb-build' })
   );
 }
 
+function tumbleMode() {
+  const P = state.project;
+  return P.machine.payMode === 'anywhere' || P.machine.payMode === 'cluster' || P.spin.type === 'cascade';
+}
+
+function chainCount(k) {
+  const P = state.project;
+  const m = P.machine;
+  if (m.payMode === 'anywhere') return m.minAnywhere + k;
+  if (m.payMode === 'cluster') return m.minCluster + k;
+  return Math.min(P.grid.reels, 3 + k);
+}
+
 function buildSequence() {
-  const { spins, warm, finale } = state.builder;
+  const { spins, warm, finale, fsCount } = state.builder;
+  const P = state.project;
+  const lineWin = (o, extra = {}) => newRound(o, { lines: [Math.floor(Math.random() * Math.min(5, P.machine.maxLines))], count: chainCount(o === 'small' ? 0 : 1), ...extra });
   const rounds = [];
   for (let i = 0; i < spins; i++) {
     let o = 'none';
     if (warm === 'mixed' && i % 3 === 1) o = 'small';
     if (warm === 'tease') o = i === spins - 1 ? 'nearmiss' : i % 2 ? 'small' : 'none';
-    rounds.push(newRound(o, o === 'small' ? { lines: [Math.floor(Math.random() * 5)] } : {}));
+    rounds.push(o === 'small' ? lineWin('small') : newRound(o));
   }
-  if (finale === 'mega+wheel') rounds.push(newRound('mega', { lines: [0, 3] }), newRound('wheel'));
-  else rounds.push(newRound(finale, finale === 'epic' ? { lines: [0, 1, 2], pattern: 'lines' } : {}));
-  state.project.rounds = rounds;
+  const top = Math.max(0, (P.tiers || []).length - 1);
+  const big = (tier, extra = {}) => newRound('big', { tier, lines: [0, 3], count: Math.max(chainCount(2), Math.min(P.grid.reels, 5)), ...extra });
+  if (finale.startsWith('big') && finale !== 'big+wheel') rounds.push(big(Number(finale.slice(3)) || 0));
+  else if (finale === 'tumble') rounds.push(big(Math.min(1, top), { tumble: true, chain: [{ symbol: 'auto', count: chainCount(1) }, { symbol: 'auto', count: chainCount(0) }], multipliers: tumbleMode() ? [10, 25] : [] }));
+  else if (finale === 'freespins') {
+    rounds.push(newRound('freespins', { freeSpins: fsCount }));
+    const plan = ['small', 'none', 'medium', 'small', 'none', 'medium', 'small'];
+    for (let i = 0; i < fsCount; i++) {
+      const last = i === fsCount - 1;
+      const o = last ? 'big' : plan[i % plan.length];
+      const extra = { free: true };
+      if (o === 'medium' && tumbleMode()) Object.assign(extra, { multipliers: [2 + (i % 3) * 3], chain: [{ symbol: 'auto', count: chainCount(0) }] });
+      if (last) rounds.push(big(0, { ...extra, multipliers: tumbleMode() ? [5, 10] : [] }));
+      else rounds.push(o === 'none' ? newRound('none', extra) : lineWin(o, extra));
+    }
+    rounds.push(newRound('fstotal'));
+  } else if (finale === 'wheel') rounds.push(newRound('wheel'));
+  else if (finale === 'big+wheel') rounds.push(big(Math.min(1, top)), newRound('wheel'));
+  P.rounds = rounds;
   state.sel = spins;
   changed('timeline');
   renderSequence();
@@ -553,25 +768,39 @@ function buildSequence() {
 }
 
 function addRound(outcome) {
-  const r = newRound(outcome);
+  const prev = state.project.rounds[state.sel];
+  const r = newRound(outcome, prev?.free && outcome !== 'freespins' && outcome !== 'fstotal' ? { free: true } : {});
   state.project.rounds.splice(state.sel + 1, 0, r);
   state.sel = Math.min(state.project.rounds.length - 1, state.sel + 1);
   changed('timeline');
   renderSequence();
 }
 
+function patternLabel(p, r) {
+  const n = (r.lines || []).length;
+  return { lines: `${n} line${n === 1 ? '' : 's'}`, cells: 'custom cells', ways: 'ways', full: 'full screen', anywhere: 'anywhere', cluster: 'cluster' }[p] || p;
+}
+
 function describe(r) {
   const P = state.project;
+  const fs = r.free ? 'Free spin · ' : '';
   if (LINE_WINS.includes(r.outcome)) {
     const s = r.symbol === 'auto' ? 'Auto symbol' : P.symbols.find((x) => x.id === r.symbol)?.name || 'Auto symbol';
-    const pat = r.pattern === 'lines' ? `${(r.lines || []).length} line${(r.lines || []).length === 1 ? '' : 's'}` : r.pattern === 'cells' ? 'custom cells' : r.pattern === 'ways' ? 'ways' : 'full screen';
-    return `${s} ×${r.count} · ${pat}`;
+    const pat = r.pattern || defaultPattern(P.machine.payMode);
+    let text = `${s} ×${r.count} · ${patternLabel(pat, r)}`;
+    const ctx2 = makeContext(P, state.scene?.tl.paylines || []);
+    if (r.chain?.length && tumbleEnabled(ctx2, r)) text += ` · +${r.chain.length} tumble${r.chain.length === 1 ? '' : 's'}`;
+    if (r.multipliers?.length) text += ` · ${r.multipliers.map((m) => `x${m}`).join(' ')}`;
+    if (r.expandWild) text += ' · expanding wild';
+    if (r.outcome === 'big') text = `To ${tierTitle(r.tier)} · ${text}`;
+    return fs + text;
   }
   if (r.outcome === 'wheel') return `Lands on ${P.wheel.segments[r.wheelSegment]?.label ?? '?'}`;
-  if (r.outcome === 'freespins') return `${r.freeSpins} free spins`;
+  if (r.outcome === 'freespins') return `${r.freeSpins} free spins${r.sticky ? ' · sticky wilds' : ''}`;
   if (r.outcome === 'bonus') return 'Scatter trigger';
-  if (r.outcome === 'nearmiss') return '2 scatters, third slides past';
-  return 'Reels spin and stop';
+  if (r.outcome === 'nearmiss') return `${fs}Scatters short by one, the last one slides past`;
+  if (r.outcome === 'fstotal') return 'Free spins total win';
+  return `${fs}Reels spin and stop${r.extraWilds ? ` · ${r.extraWilds} wild${r.extraWilds === 1 ? '' : 's'}` : ''}`;
 }
 
 function refreshList() {
@@ -584,13 +813,13 @@ function refreshList() {
     const act = (ic, title, fn, dis) => button('', fn, { class: 'icon-btn tiny', icon: ic, title, disabled: dis, id: `r-${ic}-${r.id}` });
     return h(
       'li',
-      { class: `round${i === state.sel ? ' sel' : ''}` },
+      { class: `round${i === state.sel ? ' sel' : ''}${r.free ? ' free' : ''}` },
       h(
         'button',
         { type: 'button', class: 'round-main', id: `round-${r.id}`, onclick: () => selectRound(i, true), 'aria-current': i === state.sel ? 'true' : null },
         h('span', { class: 'round-n' }, String(i + 1).padStart(2, '0')),
         h('span', { class: 'dot', style: { '--c': o.color } }),
-        h('span', { class: 'round-text' }, h('span', { class: 'round-label' }, o.list || o.label), h('span', { class: 'round-meta' }, describe(r))),
+        h('span', { class: 'round-text' }, h('span', { class: 'round-label' }, o.list || o.label, r.free ? h('span', { class: 'fs-tag' }, 'FS') : null), h('span', { class: 'round-meta' }, describe(r))),
         h('span', { class: 'round-dur' }, dur)
       ),
       h(
@@ -599,7 +828,7 @@ function refreshList() {
         act('up', 'Move up', () => moveRound(i, -1), i === 0),
         act('down', 'Move down', () => moveRound(i, 1), i === state.project.rounds.length - 1),
         act('copy', 'Duplicate', () => {
-          const c = { ...JSON.parse(JSON.stringify(r)), id: newRound().id };
+          const c = { ...JSON.parse(JSON.stringify(r)), id: newRound().id, seed: Math.floor(Math.random() * 1e6) };
           state.project.rounds.splice(i + 1, 0, c);
           state.sel = i + 1;
           changed('timeline');
@@ -653,6 +882,36 @@ function lineSVG(line, rows, color) {
   return svg;
 }
 
+// Count field for a win pattern: symbols in a row, on the grid or in a cluster.
+function countField(id, pattern, value, onInput) {
+  const P = state.project;
+  const { reels, rows } = P.grid;
+  if (pattern === 'cells' || pattern === 'full') return null;
+  if (pattern === 'anywhere' || pattern === 'cluster') {
+    const min = pattern === 'anywhere' ? P.machine.minAnywhere : P.machine.minCluster;
+    const max = Math.max(min, reels * rows - 2);
+    return rangeField({ id, label: pattern === 'anywhere' ? 'Symbols on the grid' : 'Cluster size', value: Math.min(max, Math.max(min, value)), min, max, step: 1, onInput });
+  }
+  return rangeField({ id, label: 'Symbols in a row', value: Math.min(reels, Math.max(3, value)), min: Math.min(3, reels), max: reels, step: 1, onInput });
+}
+
+function symbolOptions(withAuto = true) {
+  const P = state.project;
+  return [...(withAuto ? [{ value: 'auto', label: 'Auto (picked for the win size)' }] : []), ...P.symbols.filter((s) => s.role === 'normal' || s.role === 'wild').map((s) => ({ value: s.id, label: `${s.name}${s.role !== 'normal' ? ` (${s.role})` : ''}` }))];
+}
+
+function reelChips(id, selected, onToggle) {
+  const P = state.project;
+  const wrap = h('div', { class: 'reel-chips', role: 'group' });
+  for (let c = 0; c < P.grid.reels; c++) {
+    const on = selected.includes(c);
+    const b = h('button', { type: 'button', class: `chip${on ? ' on' : ''}`, id: `${id}-${c}`, 'aria-pressed': String(on) }, `Reel ${c + 1}`);
+    b.addEventListener('click', () => onToggle(c));
+    wrap.append(b);
+  }
+  return wrap;
+}
+
 function renderInspector() {
   if (!el.inspector) return;
   const P = state.project;
@@ -682,9 +941,10 @@ function renderInspector() {
         r.outcome = v;
         if (LINE_WINS.includes(v)) {
           r.lines = fresh.lines;
-          r.count = fresh.count;
+          r.count = Math.max(r.count || 0, chainCount(v === 'small' ? 0 : 1));
           r.wildAssist = fresh.wildAssist;
         }
+        if (v === 'freespins' || v === 'fstotal') r.free = false;
         changed(kind);
         refreshList();
         renderInspector();
@@ -693,32 +953,35 @@ function renderInspector() {
   );
   const ctx2 = makeContext(P, state.scene?.tl.paylines || generatePaylines(reels, rows, P.machine.maxLines));
   const cur = P.machine.currency || '';
+  const dec = P.machine.decimals | 0;
+  const canFree = r.outcome !== 'freespins' && r.outcome !== 'fstotal';
+  if (canFree) parts.push(toggleField({ id: 'ri-free', label: 'Free spin (counts toward the free spins total)', checked: !!r.free, onChange: set('free', true), hint: r.free && !P.rounds.slice(0, state.sel).some((x) => x.outcome === 'freespins') ? 'Add a Free spins trigger round before this one to start the counter.' : null }));
   if (LINE_WINS.includes(r.outcome)) {
-    parts.push(
-      selectField({
-        id: 'ri-symbol',
-        label: 'Winning symbol',
-        value: r.symbol,
-        options: [{ value: 'auto', label: 'Auto (picked for the win size)' }, ...P.symbols.map((s) => ({ value: s.id, label: `${s.name}${s.role !== 'normal' ? ` (${s.role})` : ''}` }))],
-        onChange: set('symbol'),
-      }),
-      segmented({
-        id: 'ri-pattern',
-        label: 'Win pattern',
-        value: r.pattern || 'lines',
-        options: [
-          { value: 'lines', label: 'Paylines' },
-          { value: 'cells', label: 'Custom' },
-          { value: 'ways', label: 'Ways' },
-          { value: 'full', label: 'Full screen' },
-        ],
-        onChange: set('pattern', true),
-      })
-    );
-    if (r.pattern !== 'cells' && r.pattern !== 'full') {
-      parts.push(rangeField({ id: 'ri-count', label: 'Symbols in a row', value: Math.min(r.count, reels), min: 2, max: reels, step: 1, onInput: set('count') }));
+    const mode = P.machine.payMode;
+    const base = defaultPattern(mode);
+    const pattern = r.pattern || base;
+    const baseLabel = { lines: 'Paylines', ways: 'Ways', anywhere: 'Anywhere', cluster: 'Cluster' }[base];
+    const patOpts = [{ value: base, label: baseLabel }];
+    if (mode === 'lines') patOpts.push({ value: 'ways', label: 'Ways' });
+    patOpts.push({ value: 'cells', label: 'Custom' }, { value: 'full', label: 'Full screen' });
+    if (r.outcome === 'big' && P.tiers?.length) {
+      parts.push(
+        selectField({
+          id: 'ri-tier',
+          label: 'Count up to',
+          value: Math.min(P.tiers.length - 1, r.tier | 0),
+          options: P.tiers.map((t, i) => ({ value: i, label: `${t.title} (${t.x}× bet)` })),
+          onChange: (v) => set('tier')(Number(v)),
+          hint: 'The overlay climbs through every tier the amount crosses. Edit tiers in Effects.',
+        })
+      );
     }
-    if ((r.pattern || 'lines') === 'lines') {
+    parts.push(
+      selectField({ id: 'ri-symbol', label: 'Winning symbol', value: r.symbol, options: symbolOptions(), onChange: set('symbol') }),
+      segmented({ id: 'ri-pattern', label: 'Win pattern', value: patOpts.some((o) => o.value === pattern) ? pattern : base, options: patOpts, onChange: (v) => set('pattern', true)(v === base ? null : v) })
+    );
+    parts.push(countField('ri-count', pattern, r.count, set('count')));
+    if (pattern === 'lines') {
       const lines = state.scene?.tl.paylines || generatePaylines(reels, rows, P.machine.maxLines);
       const wrap = h('div', { class: 'lines', role: 'group', 'aria-label': 'Winning paylines' });
       lines.forEach((line, i) => {
@@ -738,7 +1001,7 @@ function renderInspector() {
       });
       parts.push(h('div', { class: 'field' }, h('span', { class: 'label' }, 'Winning lines'), wrap, h('p', { class: 'hint' }, 'Lines that cross the same symbols light up too, as on a real machine.')));
     }
-    if (r.pattern === 'cells') {
+    if (pattern === 'cells') {
       const grid = h('div', { class: 'cells', style: { gridTemplateColumns: `repeat(${reels}, 1fr)` }, role: 'group', 'aria-label': 'Winning cells' });
       const has = (c, rr) => (r.cells || []).some(([a, b]) => a === c && b === rr);
       for (let rr = 0; rr < rows; rr++)
@@ -756,21 +1019,130 @@ function renderInspector() {
       parts.push(h('div', { class: 'field' }, h('span', { class: 'label' }, 'Winning cells'), grid, h('p', { class: 'hint' }, 'Tap cells to paint the win pattern.')));
     }
     parts.push(
-      toggleField({ id: 'ri-wild', label: 'Include a Wild in the win', checked: r.wildAssist, onChange: set('wildAssist') }),
       textField({
         id: 'ri-amount',
         label: 'Win amount',
         type: 'number',
         value: r.amount ?? '',
-        placeholder: `Auto: ${cur}${autoAmount(ctx2, P, r).toFixed(P.machine.decimals | 0)}`,
+        placeholder: `Auto: ${cur}${autoAmount(ctx2, P, r).toFixed(dec)}`,
         onChange: set('amount'),
+        hint: r.multipliers?.length ? 'The total after multipliers.' : null,
       })
     );
+
+    // Tumbles (cascades) with a chain of follow-up wins.
+    const tumbles = tumbleEnabled(ctx2, r) && pattern !== 'full';
+    parts.push(
+      h('div', { class: 'divider' }),
+      segmented({
+        id: 'ri-tumble',
+        label: 'Tumble after the win',
+        value: r.tumble === true ? 'on' : r.tumble === false ? 'off' : 'auto',
+        options: [
+          { value: 'auto', label: tumbleMode() ? 'Auto (on)' : 'Auto (off)', hint: 'On for pay anywhere, clusters and cascade spins' },
+          { value: 'on', label: 'On' },
+          { value: 'off', label: 'Off' },
+        ],
+        onChange: (v) => set('tumble', true)(v === 'on' ? true : v === 'off' ? false : null),
+      })
+    );
+    if (r.expandWild) parts.push(h('p', { class: 'hint' }, 'Expanding wilds hold the reels still, so this round does not tumble.'));
+    if (tumbles) {
+      const list = h('div', { class: 'chain' });
+      (r.chain || []).forEach((st, k) => {
+        const stPattern = st.pattern || base;
+        list.append(
+          h(
+            'div',
+            { class: 'chain-step' },
+            h('div', { class: 'chain-head' }, h('strong', null, `Tumble ${k + 1}`), button('', () => {
+              r.chain.splice(k, 1);
+              changed(kind);
+              refreshList();
+              renderInspector();
+            }, { class: 'icon-btn tiny', icon: 'x', title: 'Remove this tumble win', id: `ri-chain-del-${k}` })),
+            selectField({ id: `ri-chain-sym-${k}`, label: 'Symbol', value: st.symbol || 'auto', options: symbolOptions(), onChange: (v) => { st.symbol = v; changed(kind); } }),
+            countField(`ri-chain-n-${k}`, stPattern, st.count || chainCount(0), (v) => {
+              st.count = v;
+              changed(kind);
+              refreshList();
+            })
+          )
+        );
+      });
+      parts.push(
+        h(
+          'div',
+          { class: 'field' },
+          h('span', { class: 'label' }, 'Tumble chain'),
+          h('p', { class: 'hint' }, 'The winners pop, the rest fall, new symbols drop in and pay again. Each step is one more win; after the last one the refill pays nothing.'),
+          list,
+          (r.chain || []).length < 6
+            ? button('Add a tumble win', () => {
+                r.chain = [...(r.chain || []), { symbol: 'auto', count: chainCount((r.chain || []).length % 2) }];
+                changed(kind);
+                refreshList();
+                renderInspector();
+              }, { class: 'btn small', icon: 'plus', id: 'ri-chain-add' })
+            : null
+        )
+      );
+    }
+
+    // Multipliers collected at the end of the round.
+    const mults = h('div', { class: 'mults' });
+    (r.multipliers || []).forEach((m, k) =>
+      mults.append(
+        button(`x${m}`, () => {
+          r.multipliers.splice(k, 1);
+          changed(kind);
+          refreshList();
+          renderInspector();
+        }, { class: 'chip on', icon: 'x', id: `ri-mult-${k}`, title: 'Remove this multiplier' })
+      )
+    );
+    const multSel = h('select', { id: 'ri-mult-value', 'aria-label': 'Multiplier value' }, MULT_VALUES.map((v) => h('option', { value: v }, `x${v}`)));
+    parts.push(
+      h(
+        'div',
+        { class: 'field' },
+        h('span', { class: 'label' }, 'Multipliers'),
+        mults,
+        (r.multipliers || []).length < 8
+          ? h('div', { class: 'add-row' }, multSel, button('Add', () => {
+              r.multipliers = [...(r.multipliers || []), Number(multSel.value)];
+              changed(kind);
+              refreshList();
+              renderInspector();
+            }, { class: 'btn small', icon: 'plus', id: 'ri-mult-add' }))
+          : null,
+        h('p', { class: 'hint' }, 'Multiplier symbols land with the win, then fly into the total: the win is multiplied by their sum.')
+      )
+    );
+
+    // Wilds.
+    parts.push(
+      h('div', { class: 'divider' }),
+      toggleField({ id: 'ri-wild', label: 'Include a Wild in the win', checked: r.wildAssist, onChange: set('wildAssist') })
+    );
+    if (pattern === 'lines' || pattern === 'ways' || pattern === 'cells') parts.push(toggleField({ id: 'ri-expand', label: 'Expanding wild (fills its reel)', checked: !!r.expandWild, onChange: set('expandWild', true) }));
+  }
+  if (r.outcome !== 'wheel' && r.outcome !== 'fstotal') {
+    parts.push(rangeField({ id: 'ri-extra-wilds', label: 'Extra wilds on the grid', value: r.extraWilds || 0, min: 0, max: Math.min(8, reels * rows - 3), step: 1, onInput: set('extraWilds') }));
+    if (r.free) parts.push(toggleField({ id: 'ri-sticky', label: 'Wilds stick for the rest of the free spins', checked: !!r.sticky, onChange: set('sticky') }));
   }
   if (SCATTER_WINS.includes(r.outcome)) {
-    parts.push(rangeField({ id: 'ri-scatters', label: 'Scatters landing', value: r.scatterCount || 3, min: 3, max: reels, step: 1, onInput: set('scatterCount') }));
+    const trig = P.machine.scatterTrigger || 3;
+    parts.push(rangeField({ id: 'ri-scatters', label: 'Scatters landing', value: Math.max(trig, r.scatterCount || trig), min: Math.min(trig, reels), max: Math.max(trig, P.machine.payMode === 'lines' || P.machine.payMode === 'ways' ? reels : reels * rows - 4), step: 1, onInput: set('scatterCount') }));
   }
-  if (r.outcome === 'freespins') parts.push(rangeField({ id: 'ri-fs', label: 'Free spins awarded', value: r.freeSpins || 10, min: 1, max: 100, step: 1, onInput: set('freeSpins') }));
+  if (r.outcome === 'freespins') {
+    parts.push(
+      rangeField({ id: 'ri-fs', label: 'Free spins awarded', value: r.freeSpins || 10, min: 1, max: 100, step: 1, onInput: set('freeSpins') }),
+      toggleField({ id: 'ri-fs-sticky', label: 'Sticky wilds in these free spins', checked: !!r.sticky, onChange: set('sticky') }),
+      h('p', { class: 'hint' }, 'The rounds after this one that are marked Free spin count up the free spins total. End the block with a Free spins total round.')
+    );
+  }
+  if (r.outcome === 'fstotal') parts.push(textField({ id: 'ri-total-amount', label: 'Total shown', type: 'number', value: r.amount ?? '', placeholder: 'Sum of the free spins above', onChange: set('amount') }));
   if (r.outcome === 'bonus') parts.push(textField({ id: 'ri-bonus-amount', label: 'Bonus amount (optional)', type: 'number', value: r.amount ?? '', placeholder: 'No amount', onChange: set('amount') }));
   if (r.outcome === 'wheel') {
     parts.push(
@@ -796,7 +1168,7 @@ function renderInspector() {
         ],
         onChange: set('wheelLanding'),
       }),
-      textField({ id: 'ri-wheel-amount', label: 'Prize amount', type: 'number', value: r.amount ?? '', placeholder: `From segment: ${cur}${autoAmount(ctx2, P, r).toFixed(P.machine.decimals | 0)}`, onChange: set('amount') })
+      textField({ id: 'ri-wheel-amount', label: 'Prize amount', type: 'number', value: r.amount ?? '', placeholder: `From segment: ${cur}${autoAmount(ctx2, P, r).toFixed(dec)}`, onChange: set('amount') })
     );
   }
   if (r.outcome === 'nearmiss') {
@@ -804,9 +1176,9 @@ function renderInspector() {
       selectField({
         id: 'ri-nm-reel',
         label: 'Reel that misses',
-        value: r.nearMissReel ?? reels - 1,
-        options: Array.from({ length: Math.max(1, reels - 2) }, (_, k) => ({ value: k + 2, label: `Reel ${k + 3}` })),
-        onChange: (v) => set('nearMissReel')(Number(v)),
+        value: r.nearMissReel ?? 'auto',
+        options: [{ value: 'auto', label: 'The last reel to stop' }, ...Array.from({ length: reels }, (_, k) => ({ value: k, label: `Reel ${k + 1}` }))],
+        onChange: (v) => set('nearMissReel')(v === 'auto' ? null : Number(v)),
       }),
       segmented({
         id: 'ri-nm-pos',
@@ -820,6 +1192,8 @@ function renderInspector() {
       })
     );
   }
+
+  // Spin timing and order for this round.
   const useDefault = r.midDuration == null || r.midDuration === '';
   parts.push(
     h('div', { class: 'divider' }),
@@ -835,9 +1209,43 @@ function renderInspector() {
     })
   );
   if (!useDefault) parts.push(rangeField({ id: 'ri-mid', label: 'Spin length (mid phase)', unit: 's', value: r.midDuration, min: 0, max: 6, step: 0.05, onInput: set('midDuration') }));
+  const orderName = ORDERS.find((o) => o.id === (P.spin.stopOrder || 'ltr'))?.label || 'Left to right';
   parts.push(
     rangeField({ id: 'ri-hold', label: 'Pause after this round', unit: 's', value: r.hold || 0, min: 0, max: 4, step: 0.05, onInput: set('hold') }),
-    toggleField({ id: 'ri-tease', label: 'Tease the last reel (anticipation)', checked: !!r.tease, onChange: set('tease') }),
+    selectField({
+      id: 'ri-stop-order',
+      label: 'Stop order',
+      value: r.stopOrder || 'default',
+      options: [{ value: 'default', label: `Project default (${orderName})` }, ...ORDERS.map((o) => ({ value: o.id, label: o.id === 'custom' ? 'Custom (set in Spin)' : o.label }))],
+      onChange: (v) => set('stopOrder')(v === 'default' ? null : v),
+    })
+  );
+  const manual = Array.isArray(r.antic);
+  parts.push(
+    segmented({
+      id: 'ri-antic',
+      label: 'Anticipation',
+      value: manual ? 'pick' : 'auto',
+      options: [
+        { value: 'auto', label: 'Auto', hint: 'Scatter rounds tease the reels after the trigger is in reach' },
+        { value: 'pick', label: 'Pick reels' },
+      ],
+      onChange: (v) => set('antic', true)(v === 'pick' ? [] : 'auto'),
+    })
+  );
+  if (manual) {
+    parts.push(
+      reelChips('ri-antic-reel', r.antic, (c) => {
+        r.antic = r.antic.includes(c) ? r.antic.filter((x) => x !== c) : [...r.antic, c].sort((a, b) => a - b);
+        changed(kind);
+        renderInspector();
+      }),
+      h('p', { class: 'hint' }, r.antic.length ? 'These reels slow down with the glow, in stop order. Set the stop order so the teased reel lands last.' : 'No reel is teased in this round.')
+    );
+  } else {
+    parts.push(toggleField({ id: 'ri-tease', label: 'Also tease the last reel to stop', checked: !!r.tease, onChange: set('tease') }));
+  }
+  parts.push(
     h(
       'div',
       { class: 'row' },
@@ -865,6 +1273,7 @@ const TABS = [
   ['spin', 'Spin'],
   ['effects', 'Effects'],
   ['wheel', 'Wheel'],
+  ['sound', 'Sound'],
   ['export', 'Export'],
 ];
 
@@ -890,7 +1299,7 @@ function renderTabs() {
 }
 
 function renderPanel() {
-  const fn = { assets: panelAssets, machine: panelMachine, spin: panelSpin, effects: panelEffects, wheel: panelWheel, export: panelExport }[state.tab];
+  const fn = { assets: panelAssets, machine: panelMachine, spin: panelSpin, effects: panelEffects, wheel: panelWheel, sound: panelSound, export: panelExport }[state.tab];
   clear(el.panel, fn());
   if (state.tab === 'spin') drawMotionGraph();
   if (state.tab === 'assets') refreshThumbs();
@@ -904,10 +1313,48 @@ function num(obj, key, kind = 'timeline', after) {
   };
 }
 
+// A button that needs a second click within a few seconds.
+function confirmButton(label, armedLabel, onConfirm, opts) {
+  let armed = false;
+  const b = button(label, () => {
+    if (!armed) {
+      armed = true;
+      b.querySelector('span').textContent = armedLabel;
+      setTimeout(() => {
+        armed = false;
+        if (b.isConnected) b.querySelector('span').textContent = label;
+      }, 3500);
+      return;
+    }
+    onConfirm();
+  }, opts);
+  return b;
+}
+
+function loadProject(p, msg) {
+  state.project = p;
+  state.sel = 0;
+  state.t = 0;
+  changed('all');
+  renderAll();
+  toast(msg);
+}
+
 function panelMachine() {
   const P = state.project;
   const fmt = `${P.canvas.width}x${P.canvas.height}`;
+  let preset = PRESETS[0].id;
+  const pm = P.machine.payMode;
   return [
+    section(
+      'Start from a preset',
+      selectField({ id: 'm-preset', value: preset, options: PRESETS.map((p) => ({ value: p.id, label: p.label })), onChange: (v) => (preset = v) }),
+      confirmButton('Load preset', 'Click again to replace this project', () => {
+        const p = PRESETS.find((x) => x.id === preset);
+        loadProject(p.make(), `Loaded ${p.label}.`);
+      }, { class: 'btn small', id: 'm-preset-load' }),
+      h('p', { class: 'hint' }, 'Replaces the whole project, including uploaded symbols. Save it from Export first if you want to keep it.')
+    ),
     section(
       'Output',
       textField({ id: 'm-name', label: 'Project name', value: P.name, onChange: (v) => (P.name = v) && save() }),
@@ -927,12 +1374,32 @@ function panelMachine() {
     ),
     section(
       'Reels',
-      rangeField({ id: 'm-reels', label: 'Reels', value: P.grid.reels, min: 3, max: 7, step: 1, onInput: num(P.grid, 'reels', 'all', () => renderInspector()) }),
-      rangeField({ id: 'm-rows', label: 'Rows', value: P.grid.rows, min: 1, max: 6, step: 1, onInput: num(P.grid, 'rows', 'all', () => renderInspector()) }),
-      rangeField({ id: 'm-lines', label: 'Paylines', value: P.machine.maxLines, min: 1, max: 25, step: 1, onInput: num(P.machine, 'maxLines', 'timeline', () => renderInspector()), hint: 'Generated for the grid: straight lines, V shapes, zigzags.' }),
+      rangeField({ id: 'm-reels', label: 'Reels', value: P.grid.reels, min: 3, max: 8, step: 1, onInput: num(P.grid, 'reels', 'all', () => renderInspector()) }),
+      rangeField({ id: 'm-rows', label: 'Rows', value: P.grid.rows, min: 1, max: 7, step: 1, onInput: num(P.grid, 'rows', 'all', () => renderInspector()) }),
       rangeField({ id: 'm-aspect', label: 'Cell height', unit: '× width', value: P.grid.cellAspect, min: 0.6, max: 1.4, step: 0.02, onInput: num(P.grid, 'cellAspect', 'all') }),
       rangeField({ id: 'm-peek', label: 'Partial symbols above and below', value: P.grid.peek, min: 0, max: 0.5, step: 0.01, onInput: num(P.grid, 'peek', 'all') }),
       rangeField({ id: 'm-curve', label: 'Reel curvature', value: P.grid.curvature, min: 0, max: 1, step: 0.01, onInput: num(P.grid, 'curvature', 'all'), hint: 'Bends the strip like a drum. Preview and MP4 only; the After Effects reels stay flat.' })
+    ),
+    section(
+      'How it pays',
+      segmented({
+        id: 'm-pay',
+        label: 'Pay mode',
+        value: pm,
+        options: PAY_MODES.map((m) => ({ value: m.id, label: m.label, hint: m.hint })),
+        onChange: (v) => {
+          P.machine.payMode = v;
+          for (const r of P.rounds) if (r.pattern && r.pattern !== 'cells' && r.pattern !== 'full') r.pattern = null;
+          changed('timeline');
+          renderPanel();
+          renderInspector();
+        },
+      }),
+      h('p', { class: 'hint' }, PAY_MODES.find((m) => m.id === pm)?.hint || ''),
+      pm === 'lines' ? rangeField({ id: 'm-lines', label: 'Paylines', value: P.machine.maxLines, min: 1, max: 25, step: 1, onInput: num(P.machine, 'maxLines', 'timeline', () => renderInspector()), hint: 'Generated for the grid: straight lines, V shapes, zigzags.' }) : null,
+      pm === 'anywhere' ? rangeField({ id: 'm-min-any', label: 'Symbols needed to pay', value: P.machine.minAnywhere, min: 4, max: 16, step: 1, onInput: num(P.machine, 'minAnywhere', 'timeline', () => renderInspector()) }) : null,
+      pm === 'cluster' ? rangeField({ id: 'm-min-cluster', label: 'Smallest paying cluster', value: P.machine.minCluster, min: 3, max: 12, step: 1, onInput: num(P.machine, 'minCluster', 'timeline', () => renderInspector()) }) : null,
+      rangeField({ id: 'm-scatter', label: 'Scatters to trigger a feature', value: P.machine.scatterTrigger, min: 2, max: 6, step: 1, onInput: num(P.machine, 'scatterTrigger', 'timeline', () => renderInspector()) })
     ),
     section(
       'Look',
@@ -966,22 +1433,20 @@ function panelAssets() {
   el.thumbs = [];
   const tiles = h('div', { class: 'symbols' });
   P.symbols.forEach((s, i) => tiles.append(symbolTile(s, i)));
+  const useSet = (set, name) =>
+    button(name, () => {
+      P.symbols = set.map((s, i) => ({ id: `${set === CANDY_SYMBOLS ? 'c' : 's'}${i}`, src: null, winAnim: null, ...s }));
+      P.rounds.forEach((r) => (r.symbol = 'auto'));
+      changed('all');
+      renderPanel();
+      renderInspector();
+    }, { class: 'btn ghost small', id: `a-set-${set === CANDY_SYMBOLS ? 'candy' : 'classic'}` });
   return [
     section(
       'Symbols',
-      h('p', { class: 'hint' }, 'PNGs with transparent backgrounds work best; each symbol is fitted to its cell. Set one symbol as Wild and one as Scatter. Weight controls how often it shows up as filler.'),
+      h('p', { class: 'hint' }, 'PNGs with transparent backgrounds work best; each symbol is fitted to its cell. Give one symbol each the Wild, Scatter and Multiplier roles. Weight sets how often it shows up as filler. In After Effects every symbol becomes its own comp.'),
       tiles,
-      h(
-        'div',
-        { class: 'row' },
-        button('Add symbol images', addSymbols, { class: 'btn', icon: 'upload', id: 'a-add' }),
-        button('Use the sample set', () => {
-          P.symbols = BUILTIN_SYMBOLS.map((s, i) => ({ id: `s${i}`, src: null, ...s }));
-          changed('all');
-          renderPanel();
-          renderInspector();
-        }, { class: 'btn ghost', id: 'a-reset' })
-      )
+      h('div', { class: 'row' }, button('Add symbol images', addSymbols, { class: 'btn', icon: 'upload', id: 'a-add' }), useSet(BUILTIN_SYMBOLS, 'Classic set'), useSet(CANDY_SYMBOLS, 'Candy set'))
     ),
     section(
       'Scene art',
@@ -1014,6 +1479,56 @@ function refreshThumbs() {
   });
 }
 
+const byName = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
+
+async function uploadWinAnim(s) {
+  const files = await pickFiles('image/png,image/webp,image/jpeg', true);
+  if (!files.length) return;
+  if (files.length > 1) {
+    files.sort((a, b) => byName.compare(a.name, b.name));
+    const srcs = [];
+    for (const f of files.slice(0, 240)) srcs.push(await readFileAsDataURL(f));
+    s.winAnim = { kind: 'frames', srcs, fps: 24 };
+    toast(`${s.name}: ${srcs.length}-frame win animation.`);
+  } else {
+    const src = await readFileAsDataURL(files[0]);
+    const img = await loadImage(src).catch(() => null);
+    const w = img?.naturalWidth || 1;
+    const hh = img?.naturalHeight || 1;
+    const cols = Math.max(1, Math.round(w / hh));
+    s.winAnim = { kind: 'sheet', src, cols, rows: 1, count: cols, fps: 24 };
+    toast(`${s.name}: sprite sheet read as ${cols} frame${cols === 1 ? '' : 's'} in one row. Adjust the grid if it is laid out differently.`, 'info', 5000);
+  }
+  changed('all');
+  renderPanel();
+}
+
+function winAnimControls(s) {
+  const a = s.winAnim;
+  if (!a) return h('div', { class: 'sym-anim' }, button('Win animation', () => uploadWinAnim(s), { class: 'btn small ghost', icon: 'upload', id: `sym-anim-${s.id}`, title: 'Upload a PNG sequence (several files) or one sprite sheet' }));
+  const edit = (k, min, max) =>
+    h('label', { class: 'mini', for: `sym-anim-${k}-${s.id}` }, h('span', null, k === 'fps' ? 'fps' : k), h('input', { type: 'number', id: `sym-anim-${k}-${s.id}`, min, max, step: 1, value: a[k], onchange: (e) => {
+      a[k] = Math.min(max, Math.max(min, Number(e.target.value) || min));
+      e.target.value = a[k];
+      if (a.kind === 'sheet' && (k === 'cols' || k === 'rows')) a.count = a.cols * a.rows;
+      animCache.delete(a);
+      changed('all');
+      if (k === 'cols' || k === 'rows') renderPanel();
+    } }));
+  return h(
+    'div',
+    { class: 'sym-anim on' },
+    h('span', { class: 'sym-anim-what' }, a.kind === 'frames' ? `${a.srcs.length} frames` : 'Sprite sheet'),
+    a.kind === 'sheet' ? [edit('cols', 1, 32), edit('rows', 1, 32), edit('count', 1, 1024)] : null,
+    edit('fps', 1, 60),
+    button('', () => {
+      s.winAnim = null;
+      changed('all');
+      renderPanel();
+    }, { class: 'icon-btn tiny', icon: 'x', title: 'Remove the win animation', id: `sym-anim-del-${s.id}` })
+  );
+}
+
 function symbolTile(s, i) {
   const P = state.project;
   return h(
@@ -1027,10 +1542,11 @@ function symbolTile(s, i) {
       h(
         'div',
         { class: 'sym-row' },
-        h('select', { id: `sym-role-${s.id}`, 'aria-label': 'Role', onchange: (e) => { s.role = e.target.value; changed('timeline'); } }, ['normal', 'wild', 'scatter', 'bonus'].map((r) => h('option', { value: r, selected: s.role === r }, r[0].toUpperCase() + r.slice(1)))),
+        h('select', { id: `sym-role-${s.id}`, 'aria-label': 'Role', onchange: (e) => { s.role = e.target.value; changed('all'); renderInspector(); } }, ROLES.map(([r, l]) => h('option', { value: r, selected: s.role === r }, l))),
         h('select', { id: `sym-tier-${s.id}`, 'aria-label': 'Value', onchange: (e) => { s.tier = e.target.value; changed('timeline'); } }, [['low', 'Low pay'], ['high', 'High pay']].map(([v, l]) => h('option', { value: v, selected: s.tier === v }, l)))
       ),
-      h('label', { class: 'sym-weight', for: `sym-w-${s.id}` }, h('span', null, 'Weight'), h('input', { type: 'range', id: `sym-w-${s.id}`, min: 0, max: 20, step: 1, value: s.weight, oninput: (e) => { s.weight = Number(e.target.value); changed('timeline'); } }))
+      h('label', { class: 'sym-weight', for: `sym-w-${s.id}` }, h('span', null, 'Weight'), h('input', { type: 'range', id: `sym-w-${s.id}`, min: 0, max: 20, step: 1, value: s.weight, oninput: (e) => { s.weight = Number(e.target.value); changed('timeline'); } })),
+      winAnimControls(s)
     ),
     h(
       'div',
@@ -1047,6 +1563,9 @@ function symbolTile(s, i) {
           return;
         }
         P.symbols.splice(i, 1);
+        P.rounds.forEach((r) => {
+          if (r.symbol === s.id) r.symbol = 'auto';
+        });
         changed('all');
         renderPanel();
         renderInspector();
@@ -1059,7 +1578,7 @@ async function addSymbols() {
   const files = await pickFiles('image/png,image/webp,image/jpeg,image/svg+xml', true);
   if (!files.length) return;
   for (const f of files) {
-    state.project.symbols.push({ id: `u${Date.now().toString(36)}${Math.floor(Math.random() * 1e4)}`, name: f.name.replace(/\.[^.]+$/, '').slice(0, 24), role: 'normal', tier: 'low', weight: 8, src: await readFileAsDataURL(f) });
+    state.project.symbols.push({ id: `u${Date.now().toString(36)}${Math.floor(Math.random() * 1e4)}`, name: f.name.replace(/\.[^.]+$/, '').slice(0, 24), role: 'normal', tier: 'low', weight: 8, src: await readFileAsDataURL(f), winAnim: null });
   }
   changed('all');
   renderPanel();
@@ -1096,6 +1615,38 @@ function assetRow(label, key, hint) {
   );
 }
 
+// The full order (custom picks first, then the rest) as chips; tapping a
+// chip moves that reel one place earlier.
+function orderPicker(id, key) {
+  const sp = state.project.spin;
+  const n = state.project.grid.reels;
+  const order = orderList('custom', n, sp[key], null);
+  const wrap = h('ol', { class: 'order-chips', id });
+  order.forEach((c, i) => {
+    wrap.append(
+      h(
+        'li',
+        null,
+        h('button', {
+          type: 'button',
+          class: 'chip',
+          id: `${id}-${c}`,
+          title: i ? 'Move one place earlier' : 'Already first',
+          disabled: i === 0,
+          onclick: () => {
+            const o = order.slice();
+            [o[i - 1], o[i]] = [o[i], o[i - 1]];
+            sp[key] = o;
+            changed('timeline');
+            renderPanel();
+          },
+        }, h('span', { class: 'ord' }, i + 1), `Reel ${c + 1}`)
+      )
+    );
+  });
+  return h('div', { class: 'field' }, wrap, h('p', { class: 'hint' }, 'Tap a reel to move it one place earlier.'));
+}
+
 function panelSpin() {
   const P = state.project;
   const sp = P.spin;
@@ -1105,15 +1656,37 @@ function panelSpin() {
     b.addEventListener('click', () => {
       sp.type = t.id;
       Object.assign(sp, SPIN_PRESETS[t.id] || {});
-      changed('timeline');
+      changed('all');
       renderPanel();
+      renderInspector();
     });
     typeCards.append(b);
   });
   el.graph = h('canvas', { class: 'graph', id: 'motion-graph', width: 640, height: 220, 'aria-label': 'Reel speed over time for the selected round' });
+  const orderOpts = ORDERS.map((o) => ({ value: o.id, label: o.label }));
+  const delays = h('div', { class: 'delays' }, h('div', { class: 'delay head' }, h('span', null, 'Reel'), h('span', null, 'Start +s'), h('span', null, 'Stop +s')));
+  for (let c = 0; c < P.grid.reels; c++) {
+    const d = (sp.reelDelay[c] = sp.reelDelay[c] || { start: 0, stop: 0 });
+    const inp = (k) =>
+      h('input', { type: 'number', id: `spin-delay-${k}-${c}`, step: 0.05, min: -0.5, max: 3, value: d[k] || 0, 'aria-label': `Reel ${c + 1} ${k} delay`, onchange: (e) => {
+        d[k] = Math.min(3, Math.max(-0.5, Number(e.target.value) || 0));
+        e.target.value = d[k];
+        changed('timeline');
+      } });
+    delays.append(h('div', { class: 'delay' }, h('span', { class: 'seg-n' }, c + 1), inp('start'), inp('stop')));
+  }
   return [
     section('Spin type', typeCards, segmented({ id: 'spin-dir', label: 'Direction', value: sp.direction, options: [{ value: 'down', label: 'Spin down' }, { value: 'up', label: 'Spin up' }], onChange: num(sp, 'direction') })),
-    section('Motion curve', h('p', { class: 'hint' }, 'Reel speed in the selected round. Start, mid and end phases are shaded for the first reel.'), el.graph),
+    section(
+      'Reel order',
+      selectField({ id: 'spin-start-order', label: 'Start order', value: sp.startOrder || 'ltr', options: orderOpts, onChange: (v) => { sp.startOrder = v; changed('timeline'); renderPanel(); } }),
+      sp.startOrder === 'custom' ? orderPicker('spin-custom-start', 'customStart') : null,
+      selectField({ id: 'spin-stop-order', label: 'Stop order', value: sp.stopOrder || 'ltr', options: orderOpts, onChange: (v) => { sp.stopOrder = v; changed('timeline'); renderPanel(); renderInspector(); } }),
+      sp.stopOrder === 'custom' ? orderPicker('spin-custom-stop', 'customStop') : null,
+      h('p', { class: 'hint' }, 'The anticipation tease always goes to the reels that stop last, so pick the stop order to choose the teased reel. Each round can override it.'),
+      sp.type === 'cells' ? selectField({ id: 'spin-cell-order', label: 'Cell order', value: sp.cellOrder || 'columns', options: CELL_ORDERS.map((o) => ({ value: o.id, label: o.label })), onChange: num(sp, 'cellOrder') }) : null
+    ),
+    section('Motion curve', h('p', { class: 'hint' }, 'Reel speed in the selected round. Start, mid and end phases are shaded for the first reel to stop.'), el.graph),
     section(
       'Start',
       segmented({ id: 'spin-start', label: 'Style', value: sp.startStyle, options: [{ value: 'windup', label: 'Wind-up' }, { value: 'ease', label: 'Ease in' }, { value: 'instant', label: 'Instant' }], onChange: num(sp, 'startStyle') }),
@@ -1137,7 +1710,8 @@ function panelSpin() {
       rangeField({ id: 'spin-ss', label: 'Start stagger', unit: 's', value: sp.startStagger, min: 0, max: 0.5, step: 0.01, onInput: num(sp, 'startStagger') }),
       rangeField({ id: 'spin-st', label: 'Stop stagger', unit: 's', value: sp.stopStagger, min: 0, max: 0.8, step: 0.01, onInput: num(sp, 'stopStagger') }),
       rangeField({ id: 'spin-ant', label: 'Anticipation extra time', unit: 's', value: sp.anticipation, min: 0, max: 4, step: 0.05, onInput: num(sp, 'anticipation') }),
-      rangeField({ id: 'spin-ant-v', label: 'Anticipation crawl speed', unit: 'symbols/s', value: sp.anticipationSpeed, min: 2, max: 20, step: 0.5, onInput: num(sp, 'anticipationSpeed') })
+      rangeField({ id: 'spin-ant-v', label: 'Anticipation crawl speed', unit: 'symbols/s', value: sp.anticipationSpeed, min: 2, max: 20, step: 0.5, onInput: num(sp, 'anticipationSpeed') }),
+      h('div', { class: 'field' }, h('span', { class: 'label' }, 'Extra delay per reel'), delays, h('p', { class: 'hint' }, 'Added on top of the stagger: hold one reel back, or make it start late.'))
     ),
   ];
 }
@@ -1154,12 +1728,14 @@ function drawMotionGraph() {
   const css = getComputedStyle(document.documentElement);
   const muted = css.getPropertyValue('--muted').trim() || '#999';
   const line = css.getPropertyValue('--line').trim() || '#333';
-  g.font = '600 18px "Instrument Sans", system-ui, sans-serif';
-  if (!R || tl.cascade) {
+  g.font = '600 26px "Instrument Sans", system-ui, sans-serif';
+  if (!R || tl.cascade || R.noSpin) {
     g.fillStyle = muted;
-    g.fillText(tl.cascade ? 'Cascade drops have no reel speed curve.' : 'Select a round to see its curve.', 16, H / 2);
+    g.fillText(tl.cascade ? 'Cascade drops have no reel speed curve.' : R ? 'This round does not spin.' : 'Select a round to see its curve.', 16, H / 2);
     return;
   }
+  // Per-cell spins: plot the top cell of each reel.
+  const keysOf = (k) => (tl.mode === 'cells' ? tl.stripKeys[k * tl.rows] : tl.stripKeys[k]);
   const a = R.t0 - 0.1;
   const b = R.spinEnd + 0.15;
   const N = 220;
@@ -1169,7 +1745,7 @@ function drawMotionGraph() {
     const pts = [];
     for (let i = 0; i <= N; i++) {
       const t = a + ((b - a) * i) / N;
-      const v = evalVelocity(tl.reelKeys[k], t);
+      const v = evalVelocity(keysOf(k), t);
       vmax = Math.max(vmax, Math.abs(v));
       pts.push([t, v]);
     }
@@ -1179,7 +1755,8 @@ function drawMotionGraph() {
   const X = (t) => pad.l + ((t - a) / (b - a)) * (W - pad.l - pad.r);
   const zeroY = pad.t + (H - pad.t - pad.b) * 0.82;
   const Y = (v) => zeroY - (v / vmax) * (zeroY - pad.t);
-  const r0 = R.reels[0];
+  const first = R.stopOrder?.[0] ?? 0;
+  const r0 = R.reels[first] || R.reels[0];
   const sp = project.spin;
   const phases = [
     ['START', r0.start, r0.start + sp.startDuration, 'rgba(120,180,255,0.12)'],
@@ -1208,13 +1785,63 @@ function drawMotionGraph() {
   series.forEach((pts, k) => {
     const mix = tl.reels > 1 ? k / (tl.reels - 1) : 0;
     g.strokeStyle = `hsl(${42 - mix * 70}, 90%, ${62 - mix * 6}%)`;
-    g.lineWidth = k === 0 ? 3 : 2;
-    g.globalAlpha = k === 0 ? 1 : 0.75;
+    g.lineWidth = k === first ? 3 : 2;
+    g.globalAlpha = k === first ? 1 : 0.75;
     g.beginPath();
     pts.forEach(([t, v], i) => (i ? g.lineTo(X(t), Y(v)) : g.moveTo(X(t), Y(v))));
     g.stroke();
   });
   g.globalAlpha = 1;
+}
+
+function sortTiers() {
+  const P = state.project;
+  const ids = P.tiers.map((t) => t.id);
+  P.tiers.sort((a, b) => a.x - b.x);
+  for (const r of P.rounds) {
+    if (r.outcome !== 'big') continue;
+    const id = ids[Math.min(ids.length - 1, r.tier | 0)];
+    r.tier = Math.max(0, P.tiers.findIndex((t) => t.id === id));
+  }
+}
+
+function tierEditor() {
+  const P = state.project;
+  const list = h('div', { class: 'tiers' }, h('div', { class: 'tier head' }, h('span', null, 'Title'), h('span', null, '× bet'), h('span', null, 'Colour'), h('span', null, '')));
+  P.tiers.forEach((t, i) => {
+    list.append(
+      h(
+        'div',
+        { class: 'tier' },
+        h('input', { type: 'text', id: `tier-title-${t.id}`, value: t.title, 'aria-label': `Tier ${i + 1} title`, onchange: (e) => { t.title = e.target.value.slice(0, 24) || 'BIG WIN'; changed('all'); refreshList(); renderSequence(); } }),
+        h('input', { type: 'number', id: `tier-x-${t.id}`, value: t.x, min: 1, step: 1, 'aria-label': `Tier ${i + 1} threshold in bets`, onchange: (e) => { t.x = Math.max(1, Number(e.target.value) || 1); sortTiers(); changed('timeline'); renderPanel(); renderInspector(); } }),
+        h('select', { id: `tier-pal-${t.id}`, 'aria-label': `Tier ${i + 1} colour`, onchange: (e) => { t.palette = e.target.value; changed('all'); } }, TITLE_PALETTE_NAMES.map((p) => h('option', { value: p, selected: t.palette === p }, p[0].toUpperCase() + p.slice(1)))),
+        button('', () => {
+          if (P.tiers.length <= 1) return toast('Keep at least one tier.', 'warn');
+          P.tiers.splice(i, 1);
+          for (const r of P.rounds) if (r.outcome === 'big' && (r.tier | 0) >= i) r.tier = Math.max(0, (r.tier | 0) - 1);
+          changed('all');
+          renderPanel();
+          renderSequence();
+        }, { class: 'icon-btn tiny', icon: 'x', title: 'Remove tier', id: `tier-del-${t.id}` })
+      )
+    );
+  });
+  return h(
+    'div',
+    { class: 'field' },
+    list,
+    P.tiers.length < 6
+      ? button('Add tier', () => {
+          const last = P.tiers[P.tiers.length - 1];
+          P.tiers.push({ id: `tier${Date.now().toString(36)}`, title: 'SUPER WIN', x: Math.round((last?.x || 10) * 2), palette: TITLE_PALETTE_NAMES[P.tiers.length % TITLE_PALETTE_NAMES.length] });
+          changed('all');
+          renderPanel();
+          renderSequence();
+        }, { class: 'btn small', icon: 'plus', id: 'tier-add' })
+      : null,
+    h('p', { class: 'hint' }, 'A big win shows each title as the count passes its threshold (amount ≥ bet × threshold). In After Effects every title is its own layer.')
+  );
 }
 
 function panelEffects() {
@@ -1223,6 +1850,7 @@ function panelEffects() {
   const tm = P.timing;
   const titles = fx.titles;
   return [
+    section('Win tiers', tierEditor()),
     section(
       'Win typography',
       selectField({ id: 'fx-font', label: 'Display font', value: fx.font, options: FONTS.map((f) => ({ value: f, label: f })), onChange: num(fx, 'font', 'all') }),
@@ -1230,10 +1858,8 @@ function panelEffects() {
         'div',
         { class: 'row2' },
         ...[
-          ['big', 'Big win'],
-          ['mega', 'Mega win'],
-          ['epic', 'Epic win'],
           ['freespins', 'Free spins'],
+          ['total', 'Free spins total'],
           ['bonus', 'Bonus'],
           ['wheel', 'Wheel title'],
           ['nearmiss', 'Near miss'],
@@ -1258,10 +1884,13 @@ function panelEffects() {
       rangeField({ id: 'tm-small', label: 'Small win show', unit: 's', value: tm.small, min: 0.8, max: 5, step: 0.05, onInput: num(tm, 'small') }),
       rangeField({ id: 'tm-medium', label: 'Medium win show', unit: 's', value: tm.medium, min: 1, max: 6, step: 0.05, onInput: num(tm, 'medium') }),
       rangeField({ id: 'tm-biglines', label: 'Lines before the big win title', unit: 's', value: tm.bigLines, min: 0.4, max: 3, step: 0.05, onInput: num(tm, 'bigLines') }),
-      rangeField({ id: 'tm-big', label: 'Big win count-up', unit: 's', value: tm.big, min: 1.5, max: 12, step: 0.1, onInput: num(tm, 'big') }),
-      rangeField({ id: 'tm-mega', label: 'Mega win count-up', unit: 's', value: tm.mega, min: 2, max: 14, step: 0.1, onInput: num(tm, 'mega') }),
-      rangeField({ id: 'tm-epic', label: 'Epic win count-up', unit: 's', value: tm.epic, min: 2, max: 16, step: 0.1, onInput: num(tm, 'epic') }),
+      rangeField({ id: 'tm-tier', label: 'Count-up per tier', unit: 's', value: tm.tierCount, min: 1, max: 8, step: 0.1, onInput: num(tm, 'tierCount') }),
       rangeField({ id: 'tm-hold', label: 'Hold the final amount', unit: 's', value: tm.bigHold, min: 0.3, max: 4, step: 0.05, onInput: num(tm, 'bigHold') }),
+      rangeField({ id: 'tm-tshow', label: 'Each tumble win', unit: 's', value: tm.tumbleShow, min: 0.4, max: 3, step: 0.05, onInput: num(tm, 'tumbleShow') }),
+      rangeField({ id: 'tm-tpop', label: 'Tumble pop', unit: 's', value: tm.tumblePop, min: 0.15, max: 1, step: 0.01, onInput: num(tm, 'tumblePop') }),
+      rangeField({ id: 'tm-tfall', label: 'Tumble fall', unit: 's', value: tm.tumbleFall, min: 0.15, max: 1, step: 0.01, onInput: num(tm, 'tumbleFall') }),
+      rangeField({ id: 'tm-mult', label: 'Each multiplier collect', unit: 's', value: tm.multEach, min: 0.2, max: 1.5, step: 0.05, onInput: num(tm, 'multEach') }),
+      rangeField({ id: 'tm-expand', label: 'Wild expand', unit: 's', value: tm.expand, min: 0.3, max: 2, step: 0.05, onInput: num(tm, 'expand') }),
       rangeField({ id: 'tm-cel', label: 'Scatter celebration', unit: 's', value: tm.celebrate, min: 0.5, max: 4, step: 0.05, onInput: num(tm, 'celebrate') }),
       rangeField({ id: 'tm-banner', label: 'Bonus banner', unit: 's', value: tm.banner, min: 1, max: 6, step: 0.05, onInput: num(tm, 'banner') }),
       rangeField({ id: 'tm-wheel', label: 'Wheel spin', unit: 's', value: tm.wheelSpin, min: 2, max: 12, step: 0.1, onInput: num(tm, 'wheelSpin') }),
@@ -1330,6 +1959,79 @@ function panelWheel() {
   ];
 }
 
+// ---------- sound ----------
+
+function soundChanged() {
+  save();
+  scheduleSound();
+}
+
+function panelSound() {
+  const P = state.project;
+  const S = P.sound;
+  const groups = [
+    ['reels', 'Reels and drops'],
+    ['wins', 'Wins, pops, counters'],
+    ['coins', 'Coins'],
+    ['bigwin', 'Big win and features'],
+    ['ui', 'Whooshes'],
+  ];
+  const rows = SOUND_EVENTS.map((ev) => {
+    const has = !!S.custom[ev.id];
+    return h(
+      'div',
+      { class: 'sound-row' },
+      h('span', { class: 'sound-name' }, ev.label, h('span', { class: 'hint' }, has ? 'Your sound' : 'Built-in synth')),
+      button(has ? 'Replace' : 'Upload', async () => {
+        const [f] = await pickFiles('audio/*,.wav,.mp3,.ogg,.m4a');
+        if (!f) return;
+        if (f.size > 4e6) return toast('Keep each sound under 4 MB.', 'warn');
+        S.custom[ev.id] = await readFileAsDataURL(f);
+        soundChanged();
+        renderPanel();
+      }, { class: 'btn small', id: `snd-up-${ev.id}` }),
+      has
+        ? button('', () => {
+            delete S.custom[ev.id];
+            soundChanged();
+            renderPanel();
+          }, { class: 'icon-btn tiny', icon: 'x', title: 'Back to the built-in sound', id: `snd-clear-${ev.id}` })
+        : h('span')
+    );
+  });
+  return [
+    section(
+      'Sound track',
+      toggleField({ id: 'snd-on', label: 'Sound track', checked: S.enabled !== false, onChange: (v) => { S.enabled = v; soundChanged(); renderTransport(); renderPanel(); } }),
+      h('p', { class: 'hint' }, 'Every reel stop, tumble, count-up tick, big win sting, coin shower and wheel peg is generated in sync with the animation. It plays with the preview at 1× speed, is muxed into the MP4 and ships as a WAV layer in the After Effects project.'),
+      S.enabled !== false
+        ? [
+            rangeField({ id: 'snd-vol', label: 'Volume', value: S.volume, min: 0, max: 1, step: 0.01, onInput: (v) => { S.volume = v; soundChanged(); } }),
+            ...groups.map(([k, l]) => rangeField({ id: `snd-mix-${k}`, label: l, value: S.mix[k] ?? 1, min: 0, max: 1.5, step: 0.01, onInput: (v) => { S.mix[k] = v; soundChanged(); } })),
+          ]
+        : null,
+      button('Download the sound track (WAV in a zip)', downloadWav, { class: 'btn small', icon: 'download', id: 'snd-wav', disabled: S.enabled === false })
+    ),
+    S.enabled !== false ? section('Your own sounds', h('p', { class: 'hint' }, 'Replace any cue with a WAV, MP3 or OGG file. It plays from its start at each cue.'), h('div', { class: 'sounds' }, rows)) : null,
+  ];
+}
+
+async function downloadWav() {
+  if (state.busy || !state.scene) return;
+  try {
+    setBusy('wav', 0.2, 'Rendering the sound track…');
+    const buf = await renderSoundtrack(state.scene.tl, state.project, await customSounds(state.project));
+    const zip = new window.JSZip();
+    zip.file(`${slugName()}_soundtrack.wav`, audioBufferToWav(buf));
+    const blob = await zip.generateAsync({ type: 'blob', compression: 'STORE' });
+    setBusy(null);
+    await saveFile(`${slugName()}_soundtrack.zip`, blob);
+  } catch (e) {
+    setBusy(null);
+    toast(`Could not render the sound track: ${e.message}`, 'error', 6000);
+  }
+}
+
 // ---------- export ----------
 
 async function saveFile(filename, blob) {
@@ -1370,7 +2072,7 @@ function slugName() {
 
 function setBusy(kind, progress, label) {
   state.busy = kind ? { kind, progress, label } : null;
-  if (!el.progress) return;
+  if (!el.progress?.isConnected) return;
   if (!kind) {
     el.progress.hidden = true;
     return;
@@ -1384,7 +2086,7 @@ let abortCtl = null;
 async function startMP4() {
   if (state.busy || !state.scene) return;
   if (!canEncodeVideo()) {
-    toast('MP4 export needs a browser with WebCodecs (current Chrome, Edge or Safari). The After Effects package works everywhere.', 'warn', 7000);
+    toast('MP4 preview needs a browser with WebCodecs (current Chrome, Edge or Safari). The After Effects package works everywhere.', 'warn', 7000);
     return;
   }
   const tl = state.scene.tl;
@@ -1397,19 +2099,26 @@ async function startMP4() {
   abortCtl = new AbortController();
   const wasPlaying = state.playing;
   state.playing = false;
+  stopAudio();
   renderTransport();
   try {
+    let sound = null;
+    if (state.mp4Sound && state.project.sound?.enabled !== false && typeof OfflineAudioContext !== 'undefined') {
+      setBusy('mp4', 0, 'Rendering the sound track…');
+      sound = await renderSoundtrack(tl, state.project, await customSounds(state.project));
+    }
     setBusy('mp4', 0, 'Rendering MP4…');
     const blob = await exportMP4(state.scene, {
       from,
       to,
       bitrate: state.bitrate,
       signal: abortCtl.signal,
+      audio: sound,
       onProgress: (p) => setBusy('mp4', p, `Rendering MP4… ${Math.round(p * 100)}%`),
     });
     setBusy(null);
     const suffix = state.exportRange === 'round' ? `_round${state.sel + 1}` : '';
-    await saveFile(`${slugName()}${suffix}.mp4`, blob);
+    await saveFile(`${slugName()}${suffix}_preview.mp4`, blob);
   } catch (e) {
     setBusy(null);
     if (e?.name === 'AbortError') toast('MP4 render cancelled.');
@@ -1423,71 +2132,68 @@ async function startAE() {
   if (state.busy || !state.scene) return;
   try {
     setBusy('ae', 0, 'Building the After Effects package…');
-    const { blob, filename } = await buildAEPackage(state.scene, state.images, (p) => setBusy('ae', p, `Building the After Effects package… ${Math.round(p * 100)}%`));
+    const { blob, filename, formats } = await buildAEPackage(state.scene, state.images, (p) => setBusy('ae', p, `Building the After Effects package… ${Math.round(p * 100)}%`));
     setBusy(null);
-    await saveFile(filename, blob);
+    if (await saveFile(filename, blob)) toast(`The package holds ${formats} format${formats === 1 ? '' : 's'}. Run the .jsx from File → Scripts → Run Script File.`, 'info', 6000);
   } catch (e) {
+    console.error(e);
     setBusy(null);
     toast(`Could not build the package: ${e.message}`, 'error', 7000);
   }
 }
 
+function formatPicker() {
+  const P = state.project;
+  const own = `${P.canvas.width}x${P.canvas.height}`;
+  const choices = FORMAT_CHOICES.some((f) => f.id === own) ? FORMAT_CHOICES : [{ id: own, label: 'Canvas size' }, ...FORMAT_CHOICES];
+  const wrap = h('div', { class: 'formats', role: 'group', 'aria-label': 'After Effects formats' });
+  for (const f of choices) {
+    const on = P.output.formats.includes(f.id);
+    const b = h('button', { type: 'button', class: `fmt${on ? ' on' : ''}`, id: `x-fmt-${f.id}`, 'aria-pressed': String(on) }, h('strong', null, f.id.replace('x', ' × ')), h('span', null, f.label));
+    b.addEventListener('click', () => {
+      const set = new Set(P.output.formats);
+      if (set.has(f.id)) {
+        if (set.size === 1) return toast('Keep at least one format.', 'warn');
+        set.delete(f.id);
+      } else set.add(f.id);
+      P.output.formats = choices.map((c) => c.id).filter((id) => set.has(id));
+      save();
+      renderPanel();
+    });
+    wrap.append(b);
+  }
+  return wrap;
+}
+
 function panelExport() {
-  el.progress = h('div', { class: 'progress', hidden: !state.busy }, h('div', { class: 'progress-track' }, (el.progressBar = h('div', { class: 'progress-bar' }))), h('div', { class: 'progress-row' }, (el.progressLabel = h('span', null, state.busy?.label || '')), button('Cancel', () => abortCtl?.abort(), { class: 'btn small ghost', id: 'x-cancel' })));
-  const ffmpeg = 'ffmpeg -i input.mp4 -c:v prores_ks -profile:v 3 -pix_fmt yuv422p10le output.mov';
-  let resetArmed = false;
-  const resetBtn = button('Start over with the demo project', () => {
-    if (!resetArmed) {
-      resetArmed = true;
-      resetBtn.querySelector('span').textContent = 'Click again to replace this project';
-      setTimeout(() => {
-        resetArmed = false;
-        if (resetBtn.isConnected) resetBtn.querySelector('span').textContent = 'Start over with the demo project';
-      }, 3500);
-      return;
-    }
-    state.project = defaultProject();
-    state.sel = 0;
-    state.t = 0;
-    changed('all');
-    renderAll();
-    toast('Loaded the demo project.');
-  }, { class: 'btn small ghost danger', id: 'x-reset' });
+  const P = state.project;
+  el.progress = h('div', { class: 'progress', hidden: !state.busy }, h('div', { class: 'progress-track' }, (el.progressBar = h('div', { class: 'progress-bar', style: { width: `${Math.round((state.busy?.progress || 0) * 100)}%` } }))), h('div', { class: 'progress-row' }, (el.progressLabel = h('span', null, state.busy?.label || '')), button('Cancel', () => abortCtl?.abort(), { class: 'btn small ghost', id: 'x-cancel' })));
+  const n = P.output.formats.length;
   return [
     el.progress,
     section(
-      'After Effects',
-      h('p', null, 'A zip with a script that rebuilds this animation as a layered After Effects project, plus every image it uses.'),
+      'After Effects project',
+      h('p', null, 'The main export: a zip with a script that rebuilds this animation as a layered, editable After Effects project (2026 or any CC version), plus every image and the sound track.'),
       h(
         'ul',
         { class: 'bullets' },
-        h('li', null, 'Each reel is a precomp driven by one Spin slider with the same start, mid and end keyframes and eases as this preview.'),
-        h('li', null, 'Symbols live in one atlas comp: swap an image once and every reel updates.'),
-        h('li', null, 'Every win is its own precomp: paylines, pops, titles, coins, counters and the bonus wheel.'),
-        h('li', null, 'Counters are driven by Amount sliders, ready for the Odometer plugin.')
+        h('li', null, 'Every symbol is its own comp, with a win comp for its win animation: animate inside once and every reel and win updates.'),
+        h('li', null, 'Reels (or cells) are precomps driven by one Spin slider with the same start, mid and end keyframes and eases as this preview. Tumbles are keyframed layers.'),
+        h('li', null, 'Each win is its own precomp: lines, pops, wilds, multipliers, tier titles, coins, the wheel.'),
+        h('li', null, 'Counters are rolling odometer rigs built from plain layers, no plugin needed.')
       ),
-      button('Download After Effects package', startAE, { class: 'btn primary wide', icon: 'download', id: 'x-ae' }),
-      h('p', { class: 'hint' }, 'In After Effects: File → Scripts → Run Script File, then pick the .jsx inside the folder.')
+      h('div', { class: 'field' }, h('span', { class: 'label' }, `Formats · ${n} selected`), formatPicker(), h('p', { class: 'hint' }, 'Each format gets its own comp tree, laid out for that size. The symbol art is shared.')),
+      toggleField({ id: 'x-transparent', label: 'Transparent background', checked: !!P.output.transparent, onChange: (v) => { P.output.transparent = v; save(); }, hint: 'Switches the background and vignette layers off, ready to render ProRes 4444 with alpha from After Effects.' }),
+      button(`Download After Effects package`, startAE, { class: 'btn primary wide', icon: 'download', id: 'x-ae' }),
+      h('p', { class: 'hint' }, 'In After Effects: File → Scripts → Run Script File, then pick the .jsx inside the folder. The README inside explains every control.')
     ),
     section(
-      'Video',
+      'Quick preview (MP4)',
       segmented({ id: 'x-range', label: 'Range', value: state.exportRange, options: [{ value: 'all', label: 'Whole sequence' }, { value: 'round', label: 'Selected round' }], onChange: (v) => (state.exportRange = v) }),
       selectField({ id: 'x-bitrate', label: 'Quality', value: state.bitrate, options: [{ value: 8e6, label: 'Standard (8 Mbps)' }, { value: 16e6, label: 'High (16 Mbps)' }, { value: 40e6, label: 'Master (40 Mbps)' }], onChange: (v) => (state.bitrate = Number(v)) }),
-      button('Render MP4', startMP4, { class: 'btn wide', icon: 'film', id: 'x-mp4' }),
-      h('p', { class: 'hint' }, 'Rendered frame by frame at full resolution, so no frames drop.'),
-      h('div', { class: 'mov' }, h('strong', null, 'Need a MOV?'), h('p', null, 'Render it from the After Effects package (Render Queue → QuickTime → Apple ProRes), or convert the MP4:'), h('div', { class: 'code' }, h('code', { id: 'x-ffmpeg' }, ffmpeg), button('Copy', async (e) => {
-        try {
-          await navigator.clipboard.writeText(ffmpeg);
-          toast('Command copied.');
-        } catch {
-          const r = document.createRange();
-          r.selectNodeContents(document.getElementById('x-ffmpeg'));
-          getSelection().removeAllRanges();
-          getSelection().addRange(r);
-          toast('Select the command and copy it.');
-        }
-        void e;
-      }, { class: 'btn small', id: 'x-copy' })))
+      toggleField({ id: 'x-mp4-sound', label: 'Include the sound track', checked: state.mp4Sound && P.sound?.enabled !== false, onChange: (v) => (state.mp4Sound = v) }),
+      button('Render MP4 preview', startMP4, { class: 'btn wide', icon: 'film', id: 'x-mp4' }),
+      h('p', { class: 'hint' }, 'For sharing a quick look. Rendered frame by frame at full resolution, so no frames drop.')
     ),
     section(
       'Still frame',
@@ -1498,7 +2204,7 @@ function panelExport() {
     ),
     section(
       'Project file',
-      h('p', { class: 'hint' }, 'Includes your uploaded images, so you can reopen the exact animation later.'),
+      h('p', { class: 'hint' }, 'Includes your uploaded images and sounds, so you can reopen the exact animation later.'),
       h(
         'div',
         { class: 'row' },
@@ -1507,18 +2213,13 @@ function panelExport() {
           const [f] = await pickFiles('application/json,.json');
           if (!f) return;
           try {
-            state.project = migrate(JSON.parse(await f.text()));
-            state.sel = 0;
-            state.t = 0;
-            changed('all');
-            renderAll();
-            toast(`Opened ${f.name}.`);
+            loadProject(migrate(JSON.parse(await f.text())), `Opened ${f.name}.`);
           } catch (err) {
             toast(`That file is not a Reel Studio project: ${err.message}`, 'error', 6000);
           }
         }, { class: 'btn small', icon: 'upload', id: 'x-open' })
       ),
-      resetBtn
+      confirmButton('Start over with the demo project', 'Click again to replace this project', () => loadProject(defaultProject(), 'Loaded the demo project.'), { class: 'btn small ghost danger', id: 'x-reset' })
     ),
   ];
 }
@@ -1556,5 +2257,5 @@ export async function start() {
   });
   state.playing = !matchMedia('(prefers-reduced-motion: reduce)').matches;
   renderTransport();
-  window.reelStudio = { state, rebuild, renderFrame };
+  window.reelStudio = { state, rebuild, renderFrame, audio };
 }

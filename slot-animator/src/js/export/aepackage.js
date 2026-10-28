@@ -1,9 +1,14 @@
-// Builds the After Effects package: the generated .jsx plus every bitmap it
-// imports (symbols, machine frame, titles, coins, rays, wheel), zipped.
+// Builds the After Effects package: the generated .jsx plus every file it
+// imports, zipped. Symbol art, win animations and the sound track are shared;
+// machine art, titles and effects are painted once per output format.
 
-import { AE_ASSETS, buildAEData, buildAEScript } from '../core/ae-export.js';
+import { AE_ASSETS, buildAEData, buildAEScript, exportFormats, projectForFormat } from '../core/ae-export.js';
+import { computeLayout } from '../core/layout.js';
 import { paintHudLayer, paintBulbLayer, paintWheelBulbLayer } from '../render/renderer.js';
-import { canvas } from '../render/sprites.js';
+import { canvas, buildResources } from '../render/sprites.js';
+import { decodeCustomSounds, renderSoundtrack, audioBufferToWav } from '../render/audio.js';
+
+const MAX_WIN_FRAMES = 240;
 
 function toPNG(c) {
   return new Promise((resolve, reject) => c.toBlob((b) => (b ? resolve(b) : reject(new Error('PNG encode failed'))), 'image/png'));
@@ -13,98 +18,157 @@ function slug(s) {
   return (s || 'slot').replace(/[^a-z0-9]+/gi, '_').replace(/^_|_$/g, '') || 'slot';
 }
 
-function symbolCanvas(img) {
+function imageCanvas(img, max = 1024) {
   const w = img.naturalWidth || img.width;
   const h = img.naturalHeight || img.height;
-  const s = Math.min(1, 1024 / Math.max(w, h));
-  const c = canvas(w * s, h * s);
+  const s = Math.min(1, max / Math.max(w, h));
+  const c = canvas(Math.max(1, Math.round(w * s)), Math.max(1, Math.round(h * s)));
   c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
   return c;
 }
 
-const README = (name, file) => `${name} - After Effects package
+const README = ({ name, file, formats, sound, transparent, font }) => `${name} - After Effects package
 =========================================
 
 1. Unzip this folder anywhere. Keep "${file}" next to the "assets" folder.
-2. In After Effects: File > Scripts > Run Script File... and pick "${file}".
-3. The script builds a project folder named "${name}" with:
-   - the main comp (open it and press space to play),
-   - Reels/: one precomp per reel plus "Symbols Atlas" (one symbol per frame).
-     Replace a symbol by swapping its layer source in Symbols Atlas
-     (Alt/Option-drag new footage onto the layer).
-   - Win FX/: one precomp per win presentation (paylines, symbol pops,
-     titles, coins, counters, the bonus wheel).
+2. In After Effects (2026 or any CC version): File > Scripts > Run Script
+   File... and pick "${file}".
+3. The script builds one project folder per format (${formats.join(', ')}).
+   Open the main comp and press space to play.
 
-Editing the motion
-- Each reel comp has a CTRL null with a "Spin" slider. Its keyframes are the
-  start, mid and end phases you set in Reel Studio, with the same speed and
-  influence eases. Open the Graph Editor on that slider to reshape a stop.
-- SLOT CONTROL > Meter drives the win meter; each Win FX comp has WIN CTRL >
-  Amount for its own counter.
-- SCREEN SHAKE is a parent null: its position expression holds the shake
-  events; the Flash solid holds the flashes.
+What you get
+- Symbols/
+  - "Symbol 01 <name>" ... one comp per symbol. Open one and animate inside
+    (swap the art, add a glow, a breathing loop): every reel, every tumble
+    and every win that shows the symbol updates.
+  - "Win 01 <name>" ... the symbol's win animation. It plays once from the
+    start, then loops the tail. A PNG sequence or sprite sheet you uploaded
+    is laid out here frame by frame.
+  - "Symbols Atlas": one symbol per frame, used by the reels.
+- Reels/: one precomp per reel (or per cell for per-cell spins). Each has a
+  CTRL null with a "Spin" slider: its keyframes are the start, mid and end
+  phases from Reel Studio, with the same speed and influence eases. Open the
+  Graph Editor on that slider to reshape a start or a stop. Tumbling symbols
+  are ordinary keyframed layers in the same precomps.
+- Win FX/: one precomp per round that shows something (paylines, symbol
+  pops, expanding wilds, multipliers, titles, coins, counters, the wheel).
+  Each counter is read from WIN CTRL > Amount in its comp.
+- Odometers/: rolling-digit counters built from plain layers, no plugin
+  needed. "Odometer Digits" holds the 0-9 strip: change its font, colour
+  or style once and every counter follows. Each counter's ODO CTRL > Value
+  reads its source slider; key or pick-whip it to drive the counter
+  yourself. The digits roll like the Odometer plugin (each column turns as
+  the one below it wraps) and tick crisply while counting fast.
+- SLOT CONTROL (main comp): "Meter" drives the win meter and "FS Total" the
+  free spins total. SCREEN SHAKE is a parent null whose position expression
+  holds the shake events; the Flash solid holds the flashes.
 
-Odometer plugin (Plugin Everything)
-- Add a solid in a Win FX comp, apply Odometer, and pick-whip its number to
-  WIN CTRL > Amount. Hide the "Win Counter" text layer.
+Transparency
+- ${transparent ? 'Background and Vignette are switched off in this build.' : 'Switch off the Background and Vignette layers in the main comp.'}
+  Then Composition > Add to Render Queue, Output Module: QuickTime, Apple
+  ProRes 4444, Channels: RGB + Alpha. That gives a transparent MOV.
 
-Rendering a MOV
-- Composition > Add to Render Queue, Output Module: QuickTime,
-  Apple ProRes 4444 (with alpha if you hide the Background layer) or 422 HQ.
+Sound
+- ${sound ? '"Sound Track" in the main comp is assets/soundtrack.wav: every reel stop, tumble, count-up and big win cue, in sync with the animation.' : 'Sound was switched off in Reel Studio, so no sound track is included.'}
 
 Notes
-- Fonts: text layers ask for Bungee (PostScript "Bungee-Regular"). Install it
-  from Google Fonts or change the font on the text layers.
-- Reel curvature and bloom are preview effects; the AE reels are flat.
+- Fonts: text layers ask for ${font}. Install it (Google Fonts) or change the
+  font on "Odometer Digits" and the text layers.
+- Reel curvature and bloom are preview-only effects; the AE reels are flat.
+- Markers on the main comp mark where each round starts.
 `;
 
 export async function buildAEPackage(scene, images, onProgress) {
   const JSZip = window.JSZip;
   if (!JSZip) throw new Error('The zip library did not load. Check your connection and reload the page.');
-  const { project, tl, L, res } = scene;
+  const { project, tl } = scene;
   const name = project.name || 'Slot Animation';
   const base = slug(name);
   const zip = new JSZip();
   const dir = zip.folder(`${base}_AE`);
-  const jobs = [];
-  const add = (path, c) => {
-    if (c) jobs.push([path, c]);
+  const formats = exportFormats(project);
+  const steps = formats.length + 2;
+  let step = 0;
+  const tick = (k = 1) => onProgress?.(Math.min(0.9, ((step += k) / steps) * 0.9));
+  const png = async (path, c) => {
+    if (c) dir.file(path, await toPNG(c));
   };
-  add(AE_ASSETS.background, res.bg);
-  add(AE_ASSETS.back, res.back);
-  add(AE_ASSETS.front, res.front);
-  add(AE_ASSETS.bulbsA, project.machine.marquee && project.machine.builtinFrame !== false ? paintBulbLayer(scene, 0) : null);
-  add(AE_ASSETS.bulbsB, project.machine.marquee && project.machine.builtinFrame !== false ? paintBulbLayer(scene, 1) : null);
-  if (L.hud) add(AE_ASSETS.hud, paintHudLayer(scene));
-  add(AE_ASSETS.logo, res.logo);
-  add(AE_ASSETS.vignette, res.vignette);
-  add(AE_ASSETS.coin, res.coin);
-  add(AE_ASSETS.rays, res.rays);
-  add(AE_ASSETS.raysSmall, res.raysSmall);
-  add(AE_ASSETS.wheelDisc, res.wheel.disc);
-  add(AE_ASSETS.wheelRing, res.wheel.ring);
-  add(AE_ASSETS.wheelBulbsA, paintWheelBulbLayer(scene, 0));
-  add(AE_ASSETS.wheelBulbsB, paintWheelBulbLayer(scene, 1));
-  add(AE_ASSETS.wheelPointer, res.wheel.pointer);
-  for (const k of Object.keys(res.titles)) add(AE_ASSETS.title(k), res.titles[k]);
-  images.symbols.forEach((img, i) => add(AE_ASSETS.symbol(i), symbolCanvas(img)));
-  let done = 0;
-  for (const [path, c] of jobs) {
-    dir.file(path, await toPNG(c));
-    done++;
-    onProgress?.(done / (jobs.length + 1));
+
+  // Shared: symbol art (with the built-in multiplier orb when the project
+  // has none), win animation frames, the sound track.
+  for (const [i, img] of images.symbols.entries()) await png(AE_ASSETS.shared.symbol(i), imageCanvas(img));
+  const winFrames = [];
+  const winFps = [];
+  for (const [i, anim] of (images.winAnims || []).entries()) {
+    if (!anim) continue;
+    const frames = anim.frames.slice(0, MAX_WIN_FRAMES);
+    for (const [k, f] of frames.entries()) await png(AE_ASSETS.shared.winFrame(i, k), imageCanvas(f, 768));
+    winFrames[i] = frames;
+    winFps[i] = anim.fps;
   }
-  const data = buildAEData(project, tl, L, {
-    wheelR: res.wheel.R,
-    accent: res.theme.accent,
-    titlePx: res.titlePx,
-    hasLogo: !!res.logo,
-    fontPostScript: `${(project.effects.font || 'Bungee').replace(/\s+/g, '')}-Regular`,
-  });
+  let soundFile = '';
+  if (project.sound?.enabled !== false && typeof OfflineAudioContext !== 'undefined') {
+    const buffer = await renderSoundtrack(tl, project, await decodeCustomSounds(project));
+    dir.file(AE_ASSETS.shared.sound, audioBufferToWav(buffer));
+    soundFile = AE_ASSETS.shared.sound;
+  }
+  tick(2);
+
+  const font = (project.effects.font || 'Bungee').replace(/\s+/g, '');
+  const marquee = project.machine.marquee && project.machine.builtinFrame !== false;
+  const dataList = [];
+  for (const fmt of formats) {
+    const p = projectForFormat(project, fmt);
+    const L = computeLayout(p);
+    const res = buildResources(p, L, images);
+    const sc = { project: p, tl, L, res };
+    const assetDir = `assets/${fmt[0]}x${fmt[1]}`;
+    const A = AE_ASSETS.format(assetDir);
+    const jobs = [
+      [A.background, res.bg],
+      [A.back, res.back],
+      [A.front, res.front],
+      [A.bulbsA, marquee ? paintBulbLayer(sc, 0) : null],
+      [A.bulbsB, marquee ? paintBulbLayer(sc, 1) : null],
+      [A.hud, L.hud ? paintHudLayer(sc) : null],
+      [A.logo, res.logo],
+      [A.vignette, res.vignette],
+      [A.coin, res.coin],
+      [A.rays, res.rays],
+      [A.raysSmall, res.raysSmall],
+      [A.wheelDisc, res.wheel.disc],
+      [A.wheelRing, res.wheel.ring],
+      [A.wheelBulbsA, paintWheelBulbLayer(sc, 0)],
+      [A.wheelBulbsB, paintWheelBulbLayer(sc, 1)],
+      [A.wheelPointer, res.wheel.pointer],
+      ...Object.keys(res.titles).map((k) => [A.title(k), res.titles[k]]),
+    ];
+    for (const [path, c] of jobs) await png(path, c);
+    dataList.push(
+      buildAEData(p, tl, L, {
+        assetDir,
+        winFrames,
+        winFps,
+        wheelR: res.wheel.R,
+        accent: res.theme.accent,
+        titlePx: res.titlePx,
+        hasLogo: !!res.logo,
+        hasBulbs: marquee,
+        fontPostScript: `${font}-Regular`,
+        soundFile,
+        titleKeys: Object.keys(res.titles),
+      })
+    );
+    tick();
+  }
+
   const file = `${base}.jsx`;
-  dir.file(file, buildAEScript(data));
-  dir.file('README.txt', README(name, file));
+  dir.file(file, buildAEScript(dataList));
+  dir.file(
+    'README.txt',
+    README({ name, file, formats: formats.map(([w, h]) => `${w}x${h}`), sound: !!soundFile, transparent: !!project.output?.transparent, font: `${project.effects.font || 'Bungee'} (PostScript "${font}-Regular")` })
+  );
   dir.file(`${base}.reelstudio.json`, JSON.stringify(project, null, 2));
   const blob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE', compressionOptions: { level: 6 } }, (m) => onProgress?.(0.9 + (m.percent / 100) * 0.1));
-  return { blob, filename: `${base}_AfterEffects.zip` };
+  return { blob, filename: `${base}_AfterEffects.zip`, formats: formats.length };
 }

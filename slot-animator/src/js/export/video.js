@@ -10,7 +10,20 @@ export function canEncodeVideo() {
   return typeof window !== 'undefined' && 'VideoEncoder' in window && 'VideoFrame' in window && !!window.Mp4Muxer;
 }
 
-export async function exportMP4(scene, { from = 0, to = scene.tl.duration, bitrate = 16e6, onProgress, signal } = {}) {
+async function audioSetup(audio) {
+  if (!audio || !('AudioEncoder' in window)) return null;
+  for (const [codec, muxCodec] of [['mp4a.40.2', 'aac'], ['opus', 'opus']]) {
+    const cfg = { codec, sampleRate: audio.sampleRate, numberOfChannels: audio.numberOfChannels, bitrate: 192000 };
+    try {
+      if ((await AudioEncoder.isConfigSupported(cfg)).supported) return { cfg, muxCodec };
+    } catch {
+      // try the next codec
+    }
+  }
+  return null;
+}
+
+export async function exportMP4(scene, { from = 0, to = scene.tl.duration, bitrate = 16e6, onProgress, signal, audio = null } = {}) {
   if (!('VideoEncoder' in window)) throw new Error('This browser cannot encode video. Use a current Chrome, Edge or Safari, or export the After Effects package.');
   const Mp4Muxer = window.Mp4Muxer;
   if (!Mp4Muxer) throw new Error('The MP4 writer did not load. Check your connection and reload the page.');
@@ -31,9 +44,11 @@ export async function exportMP4(scene, { from = 0, to = scene.tl.duration, bitra
     }
   }
   if (!config) throw new Error(`This browser cannot encode H.264 at ${W}×${H}. Try a smaller canvas size.`);
+  const au = await audioSetup(audio);
   const muxer = new Mp4Muxer.Muxer({
     target: new Mp4Muxer.ArrayBufferTarget(),
     video: { codec: 'avc', width: W, height: H, frameRate: fps },
+    audio: au ? { codec: au.muxCodec, numberOfChannels: audio.numberOfChannels, sampleRate: audio.sampleRate } : undefined,
     fastStart: 'in-memory',
   });
   let failure = null;
@@ -70,6 +85,7 @@ export async function exportMP4(scene, { from = 0, to = scene.tl.duration, bitra
   await encoder.flush();
   if (failure) throw failure;
   encoder.close();
+  if (au) await encodeAudio(audio, au, muxer, first / fps, (first + total) / fps);
   muxer.finalize();
   onProgress?.(1);
   return new Blob([muxer.target.buffer], { type: 'video/mp4' });
@@ -81,4 +97,27 @@ export function frameToPNG(scene, t) {
   c.height = scene.L.H;
   renderFrame(c.getContext('2d'), scene, t);
   return new Promise((resolve) => c.toBlob(resolve, 'image/png'));
+}
+
+async function encodeAudio(buffer, au, muxer, from, to) {
+  let failure = null;
+  const enc = new AudioEncoder({ output: (chunk, meta) => muxer.addAudioChunk(chunk, meta), error: (e) => (failure = e) });
+  enc.configure(au.cfg);
+  const sr = buffer.sampleRate;
+  const ch = buffer.numberOfChannels;
+  const a = Math.floor(from * sr);
+  const b = Math.min(buffer.length, Math.ceil(to * sr));
+  const block = 2048;
+  const chans = Array.from({ length: ch }, (_, c) => buffer.getChannelData(c));
+  for (let i = a; i < b; i += block) {
+    const n = Math.min(block, b - i);
+    const data = new Float32Array(n * ch);
+    for (let c = 0; c < ch; c++) data.set(chans[c].subarray(i, i + n), c * n);
+    const ad = new AudioData({ format: 'f32-planar', sampleRate: sr, numberOfFrames: n, numberOfChannels: ch, timestamp: Math.round(((i - a) / sr) * 1e6), data });
+    enc.encode(ad);
+    ad.close();
+    if (failure) throw failure;
+  }
+  await enc.flush();
+  enc.close();
 }

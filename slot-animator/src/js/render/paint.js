@@ -510,6 +510,278 @@ const PAINTERS = {
   },
 };
 
+
+function radial(ctx, x, y, r, stops) {
+  const g = ctx.createRadialGradient(x - r * 0.35, y - r * 0.4, r * 0.05, x, y, r * 1.1);
+  stops.forEach((c, i) => g.addColorStop(i / (stops.length - 1), c));
+  return g;
+}
+
+function shine(ctx, path, x, y, rx, ry, rot = -0.5, a = 0.6) {
+  ctx.save();
+  path();
+  ctx.clip();
+  ctx.fillStyle = `rgba(255,255,255,${a})`;
+  ctx.beginPath();
+  ctx.ellipse(x, y, rx, ry, rot, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+}
+
+Object.assign(PAINTERS, {
+  candyHeart(ctx) {
+    const path = () => {
+      ctx.beginPath();
+      ctx.moveTo(0, 190);
+      ctx.bezierCurveTo(-210, 50, -240, -120, -115, -175);
+      ctx.bezierCurveTo(-45, -200, 0, -150, 0, -115);
+      ctx.bezierCurveTo(0, -150, 45, -200, 115, -175);
+      ctx.bezierCurveTo(240, -120, 210, 50, 0, 190);
+      ctx.closePath();
+    };
+    layered(ctx, path, { fill: radial(ctx, -30, -30, 230, ['#ffd0dc', '#ff3d6e', '#c8002f', '#5c0016']), outline: '#4a0014', outlineWidth: 30 });
+    shine(ctx, path, -95, -105, 60, 34, -0.7, 0.7);
+    shine(ctx, path, 60, 90, 70, 18, -0.5, 0.18);
+    sparkle(ctx, 120, -150, 60, 0.9);
+  },
+  candyPurple(ctx) {
+    const path = () => roundRect(ctx, -190, -190, 380, 380, 95);
+    layered(ctx, path, { fill: radial(ctx, -20, -20, 260, ['#f6d3ff', '#c25cff', '#7f1fd1', '#33075c']), outline: '#2a0548', outlineWidth: 30 });
+    ctx.save();
+    roundRect(ctx, -140, -140, 280, 280, 70);
+    ctx.lineWidth = 10;
+    ctx.strokeStyle = 'rgba(255,255,255,0.28)';
+    ctx.stroke();
+    ctx.restore();
+    shine(ctx, path, -90, -110, 80, 38, -0.6, 0.6);
+    sparkle(ctx, 140, -150, 56, 0.9);
+  },
+  candyGreen(ctx) {
+    const path = () => {
+      ctx.beginPath();
+      for (let i = 0; i < 5; i++) {
+        const a = -Math.PI / 2 + (i * 2 * Math.PI) / 5;
+        const x = Math.cos(a) * 210;
+        const y = Math.sin(a) * 210 + 10;
+        if (i) ctx.lineTo(x, y);
+        else ctx.moveTo(x, y);
+      }
+      ctx.closePath();
+    };
+    ctx.lineJoin = 'round';
+    layered(ctx, path, { fill: radial(ctx, -10, -20, 240, ['#e4ffd0', '#5be04a', '#17a32b', '#06430f']), outline: '#063a10', outlineWidth: 54, rim: '#0f6d1f', rimWidth: 40 });
+    shine(ctx, path, -70, -90, 70, 32, -0.6, 0.6);
+    sparkle(ctx, 120, -140, 56, 0.9);
+  },
+  candyBlue(ctx) {
+    const path = () => {
+      ctx.beginPath();
+      ctx.ellipse(0, 0, 225, 165, -0.45, 0, Math.PI * 2);
+    };
+    layered(ctx, path, { fill: radial(ctx, -30, -30, 240, ['#e2f8ff', '#3fb4ff', '#0d63d6', '#062a6b']), outline: '#041f52', outlineWidth: 30 });
+    shine(ctx, path, -80, -70, 80, 34, -0.45, 0.65);
+    sparkle(ctx, 140, -120, 56, 0.9);
+  },
+  banana(ctx) {
+    const path = () => {
+      ctx.beginPath();
+      ctx.moveTo(-205, -95);
+      ctx.bezierCurveTo(-160, 150, 140, 215, 235, 40);
+      ctx.bezierCurveTo(150, 115, -70, 105, -135, -110);
+      ctx.closePath();
+    };
+    const g = ctx.createLinearGradient(-200, -100, 200, 200);
+    g.addColorStop(0, '#fff8b0');
+    g.addColorStop(0.45, '#ffd21f');
+    g.addColorStop(1, '#c78600');
+    layered(ctx, path, { fill: g, outline: '#5a3d00', outlineWidth: 30 });
+    ctx.strokeStyle = 'rgba(150,95,0,0.5)';
+    ctx.lineWidth = 8;
+    ctx.beginPath();
+    ctx.moveTo(-170, -80);
+    ctx.bezierCurveTo(-120, 110, 120, 165, 220, 45);
+    ctx.stroke();
+    ctx.fillStyle = '#4a2c00';
+    for (const [x, y] of [[-172, -103], [232, 40]]) {
+      ctx.beginPath();
+      ctx.arc(x, y, 20, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    shine(ctx, path, -110, -10, 26, 70, -0.5, 0.55);
+  },
+  grapes(ctx) {
+    const pts = [[-110, -60], [0, -75], [110, -60], [-55, 30], [55, 30], [-110, 115], [0, 120], [110, 115], [-55, 200], [55, 200]];
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = '#3b2a0a';
+    ctx.lineWidth = 22;
+    ctx.beginPath();
+    ctx.moveTo(0, -110);
+    ctx.quadraticCurveTo(10, -170, 50, -215);
+    ctx.stroke();
+    const leaf = () => {
+      ctx.beginPath();
+      ctx.moveTo(20, -150);
+      ctx.bezierCurveTo(80, -240, 190, -220, 215, -160);
+      ctx.bezierCurveTo(150, -110, 80, -120, 20, -150);
+      ctx.closePath();
+    };
+    const lg = ctx.createLinearGradient(20, -230, 215, -120);
+    lg.addColorStop(0, '#b6f26a');
+    lg.addColorStop(1, '#2f7d1d');
+    layered(ctx, leaf, { fill: lg, outlineWidth: 22, outline: '#0f2405', shadow: false });
+    for (const [x, y] of pts) {
+      const b = () => {
+        ctx.beginPath();
+        ctx.arc(x, y, 64, 0, Math.PI * 2);
+      };
+      layered(ctx, b, { fill: radial(ctx, x, y, 64, ['#f1c9ff', '#a43ce0', '#5a0f9a', '#22003f']), outline: '#1d0035', outlineWidth: 18, shadow: false });
+      ctx.fillStyle = 'rgba(255,255,255,0.7)';
+      ctx.beginPath();
+      ctx.ellipse(x - 22, y - 24, 14, 9, -0.6, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  },
+  watermelon(ctx) {
+    const rind = () => {
+      ctx.beginPath();
+      ctx.moveTo(-230, -70);
+      ctx.arc(0, -70, 230, Math.PI, 0, true);
+      ctx.closePath();
+    };
+    const flesh = () => {
+      ctx.beginPath();
+      ctx.moveTo(-190, -70);
+      ctx.arc(0, -70, 190, Math.PI, 0, true);
+      ctx.closePath();
+    };
+    layered(ctx, rind, { fill: radial(ctx, 0, 40, 230, ['#b8ff8a', '#2fa83a', '#0b5317']), outline: '#06300d', outlineWidth: 30 });
+    ctx.fillStyle = '#f4ffe4';
+    ctx.beginPath();
+    ctx.moveTo(-205, -70);
+    ctx.arc(0, -70, 205, Math.PI, 0, true);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = radial(ctx, 0, -10, 190, ['#ffc2c2', '#ff3b4f', '#c8102b']);
+    flesh();
+    ctx.fill();
+    ctx.fillStyle = '#2a0a0a';
+    for (const [x, y, a] of [[-90, -30, 0.4], [-20, 20, 0], [60, -20, -0.3], [110, -55, -0.6], [-140, -55, 0.7], [20, 70, 0.1], [-60, 60, 0.3]]) {
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(a);
+      ctx.beginPath();
+      ctx.ellipse(0, 0, 10, 18, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+    shine(ctx, flesh, -90, -50, 60, 18, -0.2, 0.35);
+  },
+  apple(ctx) {
+    const path = () => {
+      ctx.beginPath();
+      ctx.moveTo(0, -115);
+      ctx.bezierCurveTo(-60, -170, -215, -150, -212, 20);
+      ctx.bezierCurveTo(-210, 145, -112, 222, -40, 205);
+      ctx.bezierCurveTo(-15, 196, 15, 196, 40, 205);
+      ctx.bezierCurveTo(112, 222, 210, 145, 212, 20);
+      ctx.bezierCurveTo(215, -150, 60, -170, 0, -115);
+      ctx.closePath();
+    };
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = '#3b2a0a';
+    ctx.lineWidth = 20;
+    ctx.beginPath();
+    ctx.moveTo(0, -110);
+    ctx.quadraticCurveTo(-5, -170, 25, -215);
+    ctx.stroke();
+    layered(ctx, path, { fill: radial(ctx, -40, -30, 240, ['#ffc9b8', '#ff3a2a', '#c41010', '#560404']), outline: '#3a0202', outlineWidth: 30 });
+    const leaf = () => {
+      ctx.beginPath();
+      ctx.moveTo(15, -170);
+      ctx.bezierCurveTo(60, -240, 170, -235, 190, -185);
+      ctx.bezierCurveTo(130, -140, 60, -140, 15, -170);
+      ctx.closePath();
+    };
+    const lg = ctx.createLinearGradient(15, -235, 190, -150);
+    lg.addColorStop(0, '#b6f26a');
+    lg.addColorStop(1, '#2f7d1d');
+    layered(ctx, leaf, { fill: lg, outlineWidth: 20, outline: '#0f2405', shadow: false });
+    shine(ctx, path, -110, -50, 34, 70, 0.3, 0.55);
+  },
+  lollipop(ctx) {
+    ctx.save();
+    ctx.shadowColor = 'rgba(0,0,0,0.5)';
+    ctx.shadowBlur = 20;
+    ctx.shadowOffsetY = 10;
+    roundRect(ctx, -20, 60, 40, 190, 18);
+    ctx.fillStyle = '#fff4fb';
+    ctx.fill();
+    ctx.restore();
+    roundRect(ctx, -20, 60, 40, 190, 18);
+    ctx.lineWidth = 8;
+    ctx.strokeStyle = '#c86aa4';
+    ctx.stroke();
+    const disc = () => {
+      ctx.beginPath();
+      ctx.arc(0, -55, 190, 0, Math.PI * 2);
+    };
+    layered(ctx, disc, { fill: '#ffffff', outline: '#5a1a52', outlineWidth: 32 });
+    ctx.save();
+    disc();
+    ctx.clip();
+    const cols = ['#ff3d8b', '#ffd23f', '#3fd0ff', '#9b4dff', '#45e07a', '#ff7a2e'];
+    ctx.lineWidth = 36;
+    ctx.lineCap = 'round';
+    cols.forEach((col, k) => {
+      ctx.strokeStyle = col;
+      ctx.beginPath();
+      for (let i = 0; i <= 80; i++) {
+        const th = (i / 80) * Math.PI * 4 + (k * Math.PI * 2) / cols.length;
+        const r = 6 + (i / 80) * 210;
+        const x = Math.cos(th) * r;
+        const y = -55 + Math.sin(th) * r;
+        if (i) ctx.lineTo(x, y);
+        else ctx.moveTo(x, y);
+      }
+      ctx.stroke();
+    });
+    const sh = ctx.createRadialGradient(-60, -120, 10, 0, -55, 200);
+    sh.addColorStop(0, 'rgba(255,255,255,0.65)');
+    sh.addColorStop(0.5, 'rgba(255,255,255,0.05)');
+    sh.addColorStop(1, 'rgba(0,0,0,0.25)');
+    ctx.fillStyle = sh;
+    ctx.fillRect(-200, -250, 400, 400);
+    ctx.restore();
+    sparkle(ctx, 120, -190, 64, 1);
+  },
+  orb(ctx) {
+    const glow = ctx.createRadialGradient(0, 0, 60, 0, 0, 256);
+    glow.addColorStop(0, 'rgba(255,190,60,0.7)');
+    glow.addColorStop(1, 'rgba(255,90,0,0)');
+    ctx.fillStyle = glow;
+    ctx.fillRect(-256, -256, 512, 512);
+    const ball = () => {
+      ctx.beginPath();
+      ctx.arc(0, 0, 195, 0, Math.PI * 2);
+    };
+    layered(ctx, ball, { fill: radial(ctx, -20, -30, 200, ['#fff6cf', '#ffc53d', '#ff6a12', '#a01d00', '#3d0800']), rim: metalGradient(ctx, 0, -200, 0, 200, 'gold'), rimWidth: 18, outline: '#2a0700', outlineWidth: 34 });
+    ctx.save();
+    ball();
+    ctx.clip();
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.strokeStyle = 'rgba(255,240,180,0.35)';
+    ctx.lineWidth = 14;
+    for (let i = 0; i < 3; i++) {
+      ctx.beginPath();
+      ctx.ellipse(0, 0, 190, 70, (i * Math.PI) / 3, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    ctx.restore();
+    shine(ctx, ball, -70, -90, 70, 40, -0.6, 0.6);
+    sparkle(ctx, 120, -140, 70, 1);
+  },
+});
+
 export const BUILTIN_KEYS = Object.keys(PAINTERS);
 
 export function paintBuiltin(key, size = 512, font = 'Bungee, "Arial Black", Impact, sans-serif') {

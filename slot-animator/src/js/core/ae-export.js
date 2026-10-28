@@ -1,37 +1,76 @@
 // After Effects export. Produces a self-contained ExtendScript (.jsx) that
 // rebuilds the animation as a layered, editable After Effects project:
-// - each reel is a precomp driven by one "Spin" slider whose keyframes and
-//   speed/influence eases are the exact curves the preview plays,
-// - symbols live in a "Symbols Atlas" comp (one symbol per frame), so
-//   swapping a symbol image updates every reel,
-// - every win presentation is its own precomp (lines, pops, titles, coins,
-//   counters, the bonus wheel), placed on the main timeline.
-// The script is ES3 so it runs in every After Effects version's ExtendScript.
+// - every symbol is its own comp ("Symbol 01 Cherry"), and every symbol has a
+//   win comp ("Win 01 Cherry") holding its win animation: open either one and
+//   animate inside, every reel and every win updates,
+// - reels (or cells) are precomps driven by one "Spin" slider whose keyframes
+//   carry the exact speed/influence eases of the preview; tumbling symbols
+//   are keyframed layers in the same precomps,
+// - every win presentation is its own precomp (lines, pops, bursts, wilds,
+//   multipliers, titles, coins, the bonus wheel),
+// - counters are native odometer rigs driven by sliders (no plugin needed),
+// - the sound track is imported and placed on the timeline.
+// The script is ES3 so every After Effects version's ExtendScript runs it.
 
-import { normInf } from './keys.js';
+import { normInf, evalKeys } from './keys.js';
 import { lineColor } from './paylines.js';
-import { OUTCOME_BY_ID, BIG_WINS } from './defaults.js';
+import { OUTCOME_BY_ID } from './defaults.js';
 
 export const AE_ASSETS = {
-  background: 'assets/background.png',
-  back: 'assets/machine_back.png',
-  front: 'assets/machine_front.png',
-  bulbsA: 'assets/bulbs_a.png',
-  bulbsB: 'assets/bulbs_b.png',
-  hud: 'assets/hud_panel.png',
-  logo: 'assets/logo.png',
-  vignette: 'assets/vignette.png',
-  coin: 'assets/coin.png',
-  rays: 'assets/rays.png',
-  raysSmall: 'assets/rays_small.png',
-  wheelDisc: 'assets/wheel_disc.png',
-  wheelRing: 'assets/wheel_ring.png',
-  wheelBulbsA: 'assets/wheel_bulbs_a.png',
-  wheelBulbsB: 'assets/wheel_bulbs_b.png',
-  wheelPointer: 'assets/wheel_pointer.png',
-  title: (k) => `assets/title_${k}.png`,
-  symbol: (i) => `assets/symbol_${String(i + 1).padStart(2, '0')}.png`,
+  shared: {
+    symbol: (i) => `assets/symbols/symbol_${String(i + 1).padStart(2, '0')}.png`,
+    winFrame: (i, k) => `assets/symbols/win_${String(i + 1).padStart(2, '0')}_${String(k + 1).padStart(3, '0')}.png`,
+    sound: 'assets/soundtrack.wav',
+  },
+  format: (dir) => ({
+    background: `${dir}/background.png`,
+    back: `${dir}/machine_back.png`,
+    front: `${dir}/machine_front.png`,
+    bulbsA: `${dir}/bulbs_a.png`,
+    bulbsB: `${dir}/bulbs_b.png`,
+    hud: `${dir}/hud_panel.png`,
+    logo: `${dir}/logo.png`,
+    vignette: `${dir}/vignette.png`,
+    coin: `${dir}/coin.png`,
+    rays: `${dir}/rays.png`,
+    raysSmall: `${dir}/rays_small.png`,
+    wheelDisc: `${dir}/wheel_disc.png`,
+    wheelRing: `${dir}/wheel_ring.png`,
+    wheelBulbsA: `${dir}/wheel_bulbs_a.png`,
+    wheelBulbsB: `${dir}/wheel_bulbs_b.png`,
+    wheelPointer: `${dir}/wheel_pointer.png`,
+    title: (k) => `${dir}/title_${String(k).replace(/[^a-z0-9_-]/gi, '_')}.png`,
+  }),
 };
+
+// Batch formats are "WxH" strings. The timeline does not depend on the canvas
+// size, so every format shares one timeline and only the layout changes.
+export const FORMAT_CHOICES = [
+  { id: '1920x1080', label: 'Landscape 16:9' },
+  { id: '1080x1920', label: 'Portrait 9:16' },
+  { id: '1080x1080', label: 'Square 1:1' },
+  { id: '1080x1350', label: 'Feed 4:5' },
+  { id: '3840x2160', label: '4K 16:9' },
+];
+
+export function parseFormat(f) {
+  const m = /^(\d{2,5})x(\d{2,5})$/.exec(String(f || ''));
+  if (!m) return null;
+  const w = Math.min(7680, Math.max(64, +m[1]));
+  const h = Math.min(7680, Math.max(64, +m[2]));
+  return [w - (w % 2), h - (h % 2)];
+}
+
+export function exportFormats(project) {
+  const list = (project.output?.formats || []).map(parseFormat).filter(Boolean);
+  const own = [project.canvas.width, project.canvas.height];
+  const seen = new Set();
+  return (list.length ? list : [own]).filter(([w, h]) => !seen.has(`${w}x${h}`) && seen.add(`${w}x${h}`));
+}
+
+export function projectForFormat(project, [w, h]) {
+  return { ...project, canvas: { ...project.canvas, width: w, height: h } };
+}
 
 const r4 = (x) => Math.round(x * 10000) / 10000;
 
@@ -59,49 +98,91 @@ function wheelAngleAt(keys, t) {
   return v;
 }
 
+function stepColor(st, c, r) {
+  for (const l of st.lines || []) if (l.cells.some(([cc, rr]) => cc === c && rr === r)) return lineColor(l.index);
+  return st.symbol >= 0 ? lineColor(st.symbol + 3) : '#ffd25a';
+}
+
+const clean = (s) => String(s || '').replace(/["\\\r\n]/g, '').slice(0, 40);
+
 export function buildAEData(project, tl, L, extras = {}) {
-  const cellX = (c) => L.reelX[c] + L.cellW / 2;
-  const cellY = (r) => L.rowsTop + (r + 0.5) * L.cellH;
-  const titles = project.effects.titles || {};
+  const dir = extras.assetDir || 'assets/format';
+  const A = AE_ASSETS.format(dir);
+  const cellX = (c) => r4(L.reelX[c] + L.cellW / 2);
+  const cellY = (rowPos) => r4(L.rowsTop + (rowPos + 0.5) * L.cellH);
+  const symbols = project.symbols.map((s, i) => ({
+    name: clean(s.name) || `Symbol ${i + 1}`,
+    file: AE_ASSETS.shared.symbol(i),
+    win: extras.winFrames?.[i] ? { frames: extras.winFrames[i].map((_, k) => AE_ASSETS.shared.winFrame(i, k)), fps: extras.winFps?.[i] || 24 } : null,
+  }));
+  if (tl.orbSym === project.symbols.length) symbols.push({ name: 'Multiplier', file: AE_ASSETS.shared.symbol(project.symbols.length), win: null });
+
   const rounds = tl.rounds.map((R) => {
     const p = R.pres;
     const o = OUTCOME_BY_ID[R.outcome] || { label: R.outcome };
     const out = {
       index: R.index,
       outcome: R.outcome,
-      label: o.label,
+      label: clean(o.list || o.label),
       t0: r4(R.t0),
       start: r4(R.presentStart),
       end: r4(R.end),
+      next: r4(R.next),
       amount: R.win.amount || 0,
-      symbol: R.win.symbol,
-      cells: R.win.cells.map(([c, r]) => ({ x: r4(cellX(c)), y: r4(cellY(r)), s: R.grid[c][r], color: rgb(winColor(R, c, r)) })),
-      scatters: R.win.scatters.map(([c, r]) => ({ x: r4(cellX(c)), y: r4(cellY(r)), s: R.grid[c][r] })),
-      lines: R.win.lines.map((l) => {
-        const line = tl.paylines[l.index];
-        const pts = line.map((r, c) => [r4(cellX(c)), r4(cellY(r))]);
-        pts.unshift([r4(L.frame.x + L.pad * 0.35), pts[0][1]]);
-        pts.push([r4(L.frame.x + L.frame.w - L.pad * 0.35), pts[pts.length - 1][1]]);
-        return { index: l.index, color: rgb(lineColor(l.index)), pts };
-      }),
-      antic: R.reels.map((ri, c) => (ri.antic ? { c, x: r4(cellX(c)), start: r4(ri.antic.start), end: r4(ri.antic.end) } : null)).filter(Boolean),
-      nearMiss: R.win.nearMiss ? { x: r4(cellX(R.win.nearMiss.reel)) } : null,
+      steps: (p.steps || []).map((st) => ({
+        start: r4(st.start),
+        end: r4(st.end),
+        amount: r4(st.amount || 0),
+        tumble: st.tumble ? 1 : 0,
+        cells: st.cells.map(([c, r], i) => ({ x: cellX(c), y: cellY(r), s: st.cellSyms[i], color: rgb(stepColor(st, c, r)) })),
+        lines: (st.lines || []).map((l) => {
+          const line = tl.paylines[l.index];
+          const pts = line.map((r, c) => [cellX(c), cellY(r)]);
+          pts.unshift([r4(L.frame.x + L.pad * 0.35), pts[0][1]]);
+          pts.push([r4(L.frame.x + L.frame.w - L.pad * 0.35), pts[pts.length - 1][1]]);
+          return { index: l.index, color: rgb(lineColor(l.index)), pts };
+        }),
+      })),
+      pops: R.actors.filter((a) => a.popAt != null).map((a) => ({ x: cellX(a.c), y: cellY(evalKeys(a.keys, a.popAt)), t: r4(a.popAt), color: rgb(lineColor(a.sym + 3)) })),
+      scatters: R.win.scatters.map(([c, r]) => ({ x: cellX(c), y: cellY(r), s: R.grid[c][r] })),
+      antic: [],
     };
-    if (p.lines) out.lines_t = { start: r4(p.lines.start), end: r4(p.lines.end) };
-    if (p.floatText) out.floatText = { start: r4(p.floatText.start), end: r4(p.floatText.end) };
+    if (R.cells) {
+      for (const ci of R.cells) if (ci && ci.antic) out.antic.push({ x: cellX(ci.c), y: cellY(ci.r), w: L.cellW, h: L.cellH, start: r4(ci.antic.start), end: r4(ci.antic.end) });
+    } else {
+      R.reels.forEach((ri, c) => ri.antic && out.antic.push({ x: cellX(c), y: r4(L.winTop + L.winH / 2), w: r4(L.cellW * 1.06), h: r4(L.winH * 1.02), start: r4(ri.antic.start), end: r4(ri.antic.end) }));
+    }
     if (p.coinBurst) out.coinBurst = { start: r4(p.coinBurst.start), n: p.coinBurst.count };
-    if (p.nearmiss) out.nearmiss = { start: r4(p.nearmiss.start), end: r4(p.nearmiss.end) };
+    if (p.expand) {
+      out.expand = {
+        start: r4(p.expand.start),
+        end: r4(p.expand.end),
+        reels: p.expand.reels.map((c) => {
+          const origin = (p.expand.wilds.find(([cc]) => cc === c) || [c, Math.floor(tl.rows / 2)])[1];
+          return { x: cellX(c), cells: Array.from({ length: tl.rows }, (_, r) => ({ y: cellY(r), delay: r4(Math.abs(r - origin) * 0.1) })) };
+        }),
+      };
+    }
+    if (p.mult) {
+      out.mult = {
+        start: r4(p.mult.start),
+        applyAt: r4(p.mult.applyAt),
+        end: r4(p.mult.end),
+        base: r4(p.mult.base),
+        sum: p.mult.sum,
+        total: r4(p.mult.total),
+        target: [r4(L.W / 2), r4(L.winTop + L.cellH * 0.55)],
+        items: p.mult.items.map((it) => ({ x: cellX(it.c), y: cellY(it.r), t: r4(it.t), value: it.value })),
+      };
+    }
+    if (p.nearmiss) {
+      out.nearmiss = { start: r4(p.nearmiss.start), end: r4(p.nearmiss.end) };
+      if (R.win.nearMiss) out.nearMiss = { x: cellX(R.win.nearMiss.reel) };
+    }
     if (p.celebrate) out.celebrate = { start: r4(p.celebrate.start), end: r4(p.celebrate.end) };
     if (p.overlay) {
       const ov = p.overlay;
-      out.overlay = {
-        start: r4(ov.start),
-        countStart: r4(ov.countStart),
-        countEnd: r4(ov.countEnd),
-        end: r4(ov.end),
-        tiers: ov.tiers,
-        tierTimes: ov.tierTimes.map(r4),
-      };
+      out.overlay = { start: r4(ov.start), countStart: r4(ov.countStart), countEnd: r4(ov.countEnd), end: r4(ov.end), tiers: ov.tiers, tierTimes: ov.tierTimes.map(r4), keys: exportKeys(ov.keys), amount: ov.amount };
     }
     if (p.banner) out.banner = { start: r4(p.banner.start), end: r4(p.banner.end), kind: p.banner.kind, freeSpins: p.banner.freeSpins };
     if (p.meter) out.meter = { start: r4(p.meter.start), end: r4(p.meter.end) };
@@ -113,28 +194,75 @@ export function buildAEData(project, tl, L, extras = {}) {
         spinStart: r4(w.spinStart),
         spinEnd: r4(w.spinEnd),
         prizeStart: r4(w.prizeStart),
+        countStart: r4(w.countStart),
+        countEnd: r4(w.countEnd),
         outStart: r4(w.outStart),
         outEnd: r4(w.outEnd),
         segment: w.segment,
-        label: String(project.wheel.segments[w.segment]?.label ?? ''),
+        label: clean(project.wheel.segments[w.segment]?.label ?? ''),
         angle0: r4(wheelAngleAt(tl.wheelKeys, w.spinStart)),
         keys: exportKeys(tl.wheelKeys, w.spinStart, w.spinEnd),
       };
     }
     return out;
   });
+
+  const actorsByCol = Array.from({ length: tl.reels }, () => []);
+  if (tl.mode === 'cascade') {
+    // Between drops the preview shows the resting grid: before the first
+    // spin, and through rounds that do not spin (a free spins total).
+    const rest = (grid, mult, a, b) => {
+      b = Math.min(b, tl.duration);
+      if (!(b - a > 1e-3)) return;
+      for (let c = 0; c < tl.reels; c++) {
+        for (let r = 0; r < tl.rows; r++) actorsByCol[c].push({ s: grid[c][r], m: mult?.[c]?.[r] ?? null, tIn: r4(a), tOut: r4(b), keys: [{ t: r4(a), v: r, is: 0, ii: 0.1667, os: 0, oi: 0.1667, h: 1 }], pop: null });
+      }
+    };
+    rest(tl.initialGrid, null, 0, tl.rounds.length ? tl.rounds[0].t0 : tl.duration);
+    tl.rounds.forEach((R, i) => {
+      const prevMult = i > 0 ? tl.rounds[i - 1].finalMult : null;
+      rest(R.prevGrid, prevMult, R.t0, R.actorsFrom == null ? R.next : R.actorsFrom);
+    });
+  }
+  for (const R of tl.rounds) {
+    for (const a of R.actors) {
+      actorsByCol[a.c].push({ s: a.sym, m: a.mult, tIn: r4(a.tIn), tOut: r4(Math.min(a.tOut, tl.duration)), keys: exportKeys(a.keys), pop: a.popAt != null ? r4(a.popAt) : null });
+    }
+  }
+  const hideWindows = tl.mode === 'cascade' ? [] : tl.rounds.filter((R) => R.actorsFrom != null).map((R) => [r4(R.actorsFrom), r4(R.next)]);
   const wheelR = extras.wheelR || Math.round(Math.min(L.H * 0.36, L.W * 0.4));
+  const odoSize = 120;
+  const hud = L.hud
+    ? {
+        x: r4(L.hud.x + L.hud.w / 2),
+        y: r4(L.hud.y + L.hud.h * 0.6),
+        size: Math.round(L.hud.h * 0.42),
+        label: Math.round(L.hud.h * 0.17),
+        left: [r4(L.hud.x + L.hud.w * 0.14), r4(L.hud.y + L.hud.h * 0.55)],
+        right: [r4(L.hud.x + L.hud.w * 0.86), r4(L.hud.y + L.hud.h * 0.55)],
+        betText: `BET ${project.machine.currency || ''}${Number(project.machine.bet || 0).toFixed(project.machine.decimals | 0)}`,
+        rightText:
+          project.machine.payMode === 'lines'
+            ? `LINES ${tl.paylines.length}`
+            : project.machine.payMode === 'ways'
+              ? `${Math.pow(tl.rows, tl.reels)} WAYS`
+              : project.machine.payMode === 'anywhere'
+                ? `PAYS ${project.machine.minAnywhere}+`
+                : `CLUSTER ${project.machine.minCluster}+`,
+      }
+    : null;
+
   return {
-    name: project.name || 'Slot Animation',
+    name: clean(project.name) || 'Slot Animation',
     W: L.W,
     H: L.H,
     fps: project.canvas.fps,
     duration: r4(tl.duration),
+    mode: tl.mode,
     reels: tl.reels,
     rows: tl.rows,
     peek: r4(L.peek),
     dir: tl.dir,
-    cascade: tl.cascade ? 1 : 0,
     cellW: L.cellW,
     cellH: L.cellH,
     winX: L.winX,
@@ -144,63 +272,61 @@ export function buildAEData(project, tl, L, extras = {}) {
     rowsTop: r4(L.rowsTop),
     reelX: L.reelX,
     logo: [r4(L.logo.cx), r4(L.logo.cy)],
-    hud: L.hud ? { x: r4(L.hud.x + L.hud.w / 2), y: r4(L.hud.y + L.hud.h * 0.6), size: Math.round(L.hud.h * 0.42) } : null,
-    symbols: project.symbols.map((s, i) => ({ name: s.name || `Symbol ${i + 1}`, file: AE_ASSETS.symbol(i) })),
-    strips: tl.strips,
-    reelKeys: tl.reelKeys.map((k) => exportKeys(k)),
-    cascadeRounds: tl.cascade
-      ? tl.rounds.map((R) => ({
-          grid: R.grid,
-          cells: R.cascade.map((col) => col.map((ck) => ({ inKeys: exportKeys(ck.inKeys), outKeys: exportKeys(ck.outKeys), inStart: r4(ck.inStart), outEnd: r4(ck.outEnd) }))),
-        }))
-      : null,
-    initialGrid: tl.initialGrid,
+    ribbon: [r4(L.W / 2), r4(Math.min(L.frame.y - L.H * 0.025, L.logo.cy + L.logo.h * 0.42))],
+    hud,
+    symbols,
+    wildSym: project.symbols.findIndex((s) => s.role === 'wild'),
+    strips: tl.mode === 'cascade' ? [] : tl.strips,
+    stripKeys: tl.mode === 'cascade' ? [] : tl.stripKeys.map((k) => exportKeys(k)),
+    stripMults: tl.mode === 'cascade' ? [] : tl.stripMults.map((m) => [...m.entries()]),
+    hideWindows,
+    actors: actorsByCol,
     meterKeys: exportKeys(tl.meterKeys),
+    fsTotalKeys: exportKeys(tl.fsTotalKeys),
+    fsBlocks: tl.fsBlocks.map((b) => [r4(b.start), r4(Math.min(b.end, tl.duration)), b.n, b.rounds.map((r) => [r4(r.t0), r.index == null ? -1 : r.index, r.total ? 1 : 0])]),
+    stickies: tl.stickies.map((s) => ({ x: cellX(s.c), y: cellY(s.r), from: r4(s.from), to: r4(Math.min(s.to, tl.duration)) })),
     shakes: tl.shakes.map((s) => [r4(s.t), r4(s.amp * (Number(project.effects.shake) || 0) * L.cellW * 0.09), r4(s.dur)]),
     flashes: tl.flashes.map((f) => [r4(f.t), r4(f.amp * (Number(project.effects.flash) || 0)), r4(f.dur)]),
     rounds,
-    currency: project.machine.currency || '',
+    currency: clean(project.machine.currency || ''),
     decimals: project.machine.decimals | 0,
     dim: r4(Number(project.effects.dim) || 0),
     popScale: r4(Number(project.effects.popScale) || 0),
+    popDur: r4(Number(project.timing.tumblePop) || 0.36),
     blur: r4(Number(project.spin.blur) || 0),
     accent: rgb(extras.accent || '#ffd25a'),
     font: extras.fontPostScript || 'Bungee-Regular',
     titlePx: extras.titlePx || Math.round(Math.min(L.W * 0.11, L.H * 0.16)),
+    odo: { size: odoSize, dw: Math.round(odoSize * 0.8), sw: Math.round(odoSize * 0.38), rh: Math.round(odoSize * 1.3) },
     wheel: { cx: r4(L.W / 2), cy: r4(L.H * 0.54), R: wheelR, segDeg: r4(360 / Math.max(2, project.wheel.segments.length)), n: project.wheel.segments.length },
     maxCoins: 60,
+    transparent: project.output?.transparent ? 1 : 0,
+    sound: extras.soundFile || '',
     assets: {
-      background: AE_ASSETS.background,
-      back: AE_ASSETS.back,
-      front: AE_ASSETS.front,
-      bulbsA: AE_ASSETS.bulbsA,
-      bulbsB: AE_ASSETS.bulbsB,
-      hud: L.hud ? AE_ASSETS.hud : '',
-      logo: extras.hasLogo === false ? '' : AE_ASSETS.logo,
-      vignette: AE_ASSETS.vignette,
-      coin: AE_ASSETS.coin,
-      rays: AE_ASSETS.rays,
-      raysSmall: AE_ASSETS.raysSmall,
-      wheelDisc: AE_ASSETS.wheelDisc,
-      wheelRing: AE_ASSETS.wheelRing,
-      wheelBulbsA: AE_ASSETS.wheelBulbsA,
-      wheelBulbsB: AE_ASSETS.wheelBulbsB,
-      wheelPointer: AE_ASSETS.wheelPointer,
-      titles: Object.fromEntries(['big', 'mega', 'epic', 'bonus', 'freespins', 'wheel', 'nearmiss'].map((k) => [k, AE_ASSETS.title(k)])),
+      background: A.background,
+      back: A.back,
+      front: A.front,
+      bulbsA: extras.hasBulbs ? A.bulbsA : '',
+      bulbsB: extras.hasBulbs ? A.bulbsB : '',
+      hud: L.hud ? A.hud : '',
+      logo: extras.hasLogo === false ? '' : A.logo,
+      vignette: A.vignette,
+      coin: A.coin,
+      rays: A.rays,
+      raysSmall: A.raysSmall,
+      wheelDisc: A.wheelDisc,
+      wheelRing: A.wheelRing,
+      wheelBulbsA: A.wheelBulbsA,
+      wheelBulbsB: A.wheelBulbsB,
+      wheelPointer: A.wheelPointer,
+      titles: Object.fromEntries((extras.titleKeys || []).map((k) => [k, A.title(k)])),
     },
-    titleText: titles,
-    hasWheel: rounds.some((r) => r.wheel) ? 1 : 0,
-    bigWins: BIG_WINS,
   };
 }
 
-function winColor(R, c, r) {
-  for (const l of R.win.lines) if (l.cells.some(([cc, rr]) => cc === c && rr === r)) return lineColor(l.index);
-  return '#ffd25a';
-}
-
-export function buildAEScript(data) {
-  const json = JSON.stringify(data).replace(/\u2028/g, '\\u2028').replace(/\u2029/g, '\\u2029');
+export function buildAEScript(dataList) {
+  const list = Array.isArray(dataList) ? dataList : [dataList];
+  const json = JSON.stringify(list).replace(/\u2028/g, '\\u2028').replace(/\u2029/g, '\\u2029');
   return AE_SCRIPT.replace('__DATA__', () => json);
 }
 
@@ -210,14 +336,15 @@ export const AE_SCRIPT = String.raw`// Slot animation rebuilt for After Effects 
 // Run it with File > Scripts > Run Script File... and keep this .jsx next
 // to the "assets" folder it came with.
 (function () {
-  var DATA = __DATA__;
+  var DATA_LIST = __DATA__;
   var ROOT = (new File($.fileName)).parent;
   var missing = [];
   var BEZ = KeyframeInterpolationType.BEZIER;
   var HOLD = KeyframeInterpolationType.HOLD;
-  var proj, top, fAssets, fReels, fRounds, atlas, main, shake;
+  var proj, fShared;
   var footage = {};
-  var W = DATA.W, H = DATA.H, FPS = DATA.fps, DUR = DATA.duration;
+  var DATA, W, H, FPS, DUR, SUFFIX, top, fSymbols, fReels, fRounds, fOdo, atlas, main, shake, symComps, winComps, digits, mainName;
+  var WIN_INTRO = 0.6, WIN_LOOP = 1.5385;
 
   function file(rel) { return new File(ROOT.fsName + "/" + rel); }
   function folder(name, parent) { var f = proj.items.addFolder(name); if (parent) f.parentFolder = parent; return f; }
@@ -227,7 +354,7 @@ export const AE_SCRIPT = String.raw`// Slot animation rebuilt for After Effects 
     var f = file(rel);
     if (!f.exists) { missing.push(rel); return null; }
     var it = proj.importFile(new ImportOptions(f));
-    it.parentFolder = fAssets;
+    it.parentFolder = fShared;
     footage[rel] = it;
     return it;
   }
@@ -236,13 +363,25 @@ export const AE_SCRIPT = String.raw`// Slot animation rebuilt for After Effects 
   function pos(L, xy) { P(L, "ADBE Position").setValue(xy); }
   function fx(L, match, name) { var e = L.property("ADBE Effect Parade").addProperty(match); if (name) e.name = name; return e; }
   function slider(L, name) { return fx(L, "ADBE Slider Control", name).property(1); }
-  function trim(L, a, b) { if (b !== undefined && b !== null) L.outPoint = b; if (a !== undefined && a !== null) L.inPoint = Math.max(0, a); }
+  // Layer in/out points; the layer always keeps at least one frame.
+  function trim(L, a, b) {
+    var has = a !== undefined && a !== null;
+    if (has) a = Math.max(0, a);
+    if (b !== undefined && b !== null) {
+      if (has && b < a + 1 / FPS) b = a + 1 / FPS;
+      if (b <= L.inPoint) L.inPoint = Math.max(0, b - 1 / FPS);
+      L.outPoint = b;
+    }
+    if (has) L.inPoint = a;
+  }
   function pct(x) { var v = x * 100; if (v < 0.1) v = 0.1; if (v > 100) v = 100; return v; }
-  function setKeys(prop, keys, tOff) {
+  function setKeys(prop, keys, tOff, mul, add) {
     var i, times = [], vals = [];
     tOff = tOff || 0;
+    mul = (mul === undefined) ? 1 : mul;
+    add = add || 0;
     if (!keys || !keys.length) return;
-    for (i = 0; i < keys.length; i++) { times.push(keys[i].t + tOff); vals.push(keys[i].v); }
+    for (i = 0; i < keys.length; i++) { times.push(keys[i].t + tOff); vals.push(keys[i].v * mul + add); }
     prop.setValuesAtTimes(times, vals);
     for (i = 0; i < keys.length; i++) {
       var k = keys[i];
@@ -251,7 +390,7 @@ export const AE_SCRIPT = String.raw`// Slot animation rebuilt for After Effects 
         prop.setInterpolationTypeAtKey(i + 1, prevHold ? HOLD : BEZ, k.h ? HOLD : BEZ);
         prop.setTemporalContinuousAtKey(i + 1, false);
         prop.setTemporalAutoBezierAtKey(i + 1, false);
-        prop.setTemporalEaseAtKey(i + 1, [new KeyframeEase(k.is, pct(k.ii))], [new KeyframeEase(k.os, pct(k.oi))]);
+        prop.setTemporalEaseAtKey(i + 1, [new KeyframeEase(k.is * mul, pct(k.ii))], [new KeyframeEase(k.os * mul, pct(k.oi))]);
       } catch (e) {}
     }
   }
@@ -277,6 +416,12 @@ export const AE_SCRIPT = String.raw`// Slot animation rebuilt for After Effects 
     L.name = name;
     if (xy) pos(L, xy);
     return L;
+  }
+  function fitTo(L, w, h) {
+    try {
+      var s = 100 * Math.min(w / L.source.width, h / L.source.height);
+      P(L, "ADBE Scale").setValue([s, s]);
+    } catch (e) {}
   }
   function solid(comp, rgbv, name, w, h, xy) {
     var L = comp.layers.addSolid(rgbv, name, Math.max(4, Math.round(w)), Math.max(4, Math.round(h)), 1, comp.duration);
@@ -308,6 +453,12 @@ export const AE_SCRIPT = String.raw`// Slot animation rebuilt for After Effects 
     r.property("ADBE Vector Rect Roundness").setValue(round || 0);
     return r;
   }
+  function ellipse(cont, xy, size) {
+    var e = cont.addProperty("ADBE Vector Shape - Ellipse");
+    e.property("ADBE Vector Ellipse Size").setValue(size);
+    e.property("ADBE Vector Ellipse Position").setValue(xy);
+    return e;
+  }
   function stroke(cont, rgbv, width) {
     var s = cont.addProperty("ADBE Vector Graphic - Stroke");
     s.property("ADBE Vector Stroke Color").setValue(rgbv);
@@ -329,7 +480,7 @@ export const AE_SCRIPT = String.raw`// Slot animation rebuilt for After Effects 
       try { g.property("Glow Threshold").setValue(55); } catch (e3) {}
     } catch (e) {}
   }
-  function text(comp, name, str, size, xy, rgbv) {
+  function text(comp, name, str, size, xy, rgbv, shadow) {
     var L = comp.layers.addText(str);
     L.name = name;
     var prop = L.property("ADBE Text Properties").property("ADBE Text Document");
@@ -345,31 +496,89 @@ export const AE_SCRIPT = String.raw`// Slot animation rebuilt for After Effects 
     try { td.font = DATA.font; } catch (e) { try { td.font = "Arial-BoldMT"; } catch (e2) {} }
     prop.setValue(td);
     pos(L, [xy[0], xy[1] + size * 0.36]);
-    try {
-      var ds = fx(L, "ADBE Drop Shadow");
-      ds.property("ADBE Drop Shadow-0002").setValue(70);
-      ds.property("ADBE Drop Shadow-0004").setValue(Math.round(size * 0.06));
-      ds.property("ADBE Drop Shadow-0005").setValue(Math.round(size * 0.12));
-    } catch (e3) {}
+    if (shadow !== false) {
+      try {
+        var ds = fx(L, "ADBE Drop Shadow");
+        ds.property("ADBE Drop Shadow-0002").setValue(178);
+        ds.property("ADBE Drop Shadow-0004").setValue(Math.round(size * 0.06));
+        ds.property("ADBE Drop Shadow-0005").setValue(Math.round(size * 0.12));
+      } catch (e3) {}
+    }
     return L;
   }
+  function fmtExpr() {
+    return "function fmt(v){var d=" + DATA.decimals + ";var s=Math.max(0,v).toFixed(d);var parts=s.split('.');var i=parts[0];var out='';" +
+      "while(i.length>3){out=','+i.substr(i.length-3)+out;i=i.substr(0,i.length-3);}return '" + DATA.currency + "'+i+out+(d>0?'.'+parts[1]:'');}\n";
+  }
   function counterExpr(ref) {
-    return "var v = " + ref + ";\n" +
-      "var d = " + DATA.decimals + ";\n" +
-      "var s = Math.max(0, v).toFixed(d); var parts = s.split('.'); var i = parts[0]; var out = '';\n" +
-      "while (i.length > 3) { out = ',' + i.substr(i.length - 3) + out; i = i.substr(0, i.length - 3); }\n" +
-      "v > 0.0001 ? '" + DATA.currency.replace(/'/g, "\\'") + "' + i + out + (d > 0 ? '.' + parts[1] : '') : '';";
+    return fmtExpr() + "var v = " + ref + ";\nv > 0.0001 ? fmt(v) : '';";
+  }
+  function windowsExpr(name, list) {
+    var s = "var " + name + " = [", i;
+    for (i = 0; i < list.length; i++) s += (i ? "," : "") + "[" + list[i][0] + "," + list[i][1] + "]";
+    return s + "];\n";
   }
   var EASE_LIB = "function c01(x){return x<0?0:(x>1?1:x);}\n" +
     "function outBack(x){var s=1.70158;return 1+(s+1)*Math.pow(x-1,3)+s*Math.pow(x-1,2);}\n" +
     "function outElastic(x){return x<=0?0:(x>=1?1:Math.pow(2,-10*x)*Math.sin((x*10-0.75)*(2*Math.PI)/3)+1);}\n" +
     "function inCubic(x){return x*x*x;}\n";
-  function popScaleExpr(start, end, k, base) {
-    base = base || 100;
-    return EASE_LIB + "var a = time - " + start + "; var e = " + end + ";\n" +
-      "var s = a < 0.6 ? outElastic(c01(a / 0.6)) : 0.78 + 0.22 * Math.sin(a * Math.PI * 2 * 1.3);\n" +
-      "var o = c01((e - time) / 0.3);\n" +
-      "var v = " + base + " * (1 + " + k + " * s * o); [v, v];";
+  function uniqueName(base) {
+    var names = {}, i;
+    for (i = 1; i <= proj.numItems; i++) if (proj.item(i).layers) names[proj.item(i).name] = true;
+    if (!names[base]) return base;
+    for (i = 2; i < 1000; i++) if (!names[base + " " + i]) return base + " " + i;
+    return base + " " + (new Date()).getTime();
+  }
+  function addComp(name, w, h, dur, parent) {
+    var c = proj.items.addComp(uniqueName(name), Math.max(4, Math.round(w)), Math.max(4, Math.round(h)), 1, Math.max(1 / FPS, dur), FPS);
+    if (parent) c.parentFolder = parent;
+    return c;
+  }
+  function pad2(n) { return n < 10 ? "0" + n : "" + n; }
+
+  // ---------- symbols ----------
+  function buildSymbols() {
+    var i, k;
+    symComps = [];
+    winComps = [];
+    for (i = 0; i < DATA.symbols.length; i++) {
+      var sd = DATA.symbols[i];
+      var sc = addComp("Symbol " + pad2(i + 1) + " " + sd.name + SUFFIX, DATA.cellW, DATA.cellH, 10, fSymbols);
+      var art = image(sc, sd.file, sd.name, [DATA.cellW / 2, DATA.cellH / 2]);
+      if (art) fitTo(art, DATA.cellW * 0.88, DATA.cellH * 0.88);
+      symComps.push(sc);
+      var wdur = sd.win ? sd.win.frames.length / sd.win.fps : WIN_INTRO + WIN_LOOP;
+      var wc = addComp("Win " + pad2(i + 1) + " " + sd.name + SUFFIX, DATA.cellW * 1.6, DATA.cellH * 1.6, wdur, fSymbols);
+      wc.comment = sd.win ? "loop" : "intro";
+      if (sd.win) {
+        var fd = 1 / sd.win.fps;
+        for (k = 0; k < sd.win.frames.length; k++) {
+          var fl = image(wc, sd.win.frames[k], sd.name + " win " + (k + 1), [wc.width / 2, wc.height / 2]);
+          if (!fl) continue;
+          fitTo(fl, DATA.cellW * 0.88, DATA.cellH * 0.88);
+          fl.outPoint = (k + 1) * fd;
+          fl.inPoint = k * fd;
+        }
+      } else {
+        var wl = wc.layers.add(sc);
+        wl.name = sd.name;
+        pos(wl, [wc.width / 2, wc.height / 2]);
+        P(wl, "ADBE Scale").expression = EASE_LIB + "var a = time; var s = a < " + WIN_INTRO + " ? outElastic(c01(a / " + WIN_INTRO + ")) : 0.78 + 0.22 * Math.cos((a - " + WIN_INTRO + ") * Math.PI * 2 * 1.3);\n" +
+          "var v = 100 * (1 + " + DATA.popScale + " * s); [v, v];";
+        glow(wl, DATA.cellW * 0.14, 1.1);
+      }
+      winComps.push(wc);
+    }
+  }
+  function buildAtlas() {
+    var n = DATA.symbols.length, i;
+    atlas = addComp("Symbols Atlas" + SUFFIX, DATA.cellW, DATA.cellH, Math.max(n, 1) / FPS, fSymbols);
+    for (i = 0; i < n; i++) {
+      var L = atlas.layers.add(symComps[i]);
+      L.name = DATA.symbols[i].name;
+      L.startTime = i / FPS;
+      L.outPoint = (i + 1) / FPS;
+    }
   }
   function symbolLayer(comp, sym, xy, name) {
     var L = comp.layers.add(atlas);
@@ -380,6 +589,180 @@ export const AE_SCRIPT = String.raw`// Slot animation rebuilt for After Effects 
     pos(L, xy);
     return L;
   }
+  function winLayer(comp, sym, xy, a, b, name) {
+    var wc = winComps[sym] || winComps[0];
+    var L = comp.layers.add(wc);
+    L.name = name || ("Win " + DATA.symbols[sym].name);
+    L.startTime = a;
+    L.timeRemapEnabled = true;
+    L.outPoint = Math.max(a + 1 / FPS, Math.min(comp.duration, b));
+    if (wc.comment === "loop") L.property("ADBE Time Remapping").expression = "(time - inPoint) % thisLayer.source.duration;";
+    else L.property("ADBE Time Remapping").expression = "var a = time - inPoint; a < " + (WIN_INTRO + WIN_LOOP) + " ? a : " + WIN_INTRO + " + ((a - " + WIN_INTRO + ") % " + WIN_LOOP + ");";
+    trim(L, a, b);
+    pos(L, xy);
+    return L;
+  }
+
+  // ---------- odometer (native, no plugin) ----------
+  function buildDigits() {
+    var O = DATA.odo, i;
+    digits = addComp("Odometer Digits" + SUFFIX, O.dw, O.rh * 11, 10, fOdo);
+    for (i = 0; i <= 10; i++) text(digits, "Digit " + (i % 10), String(i % 10), O.size, [O.dw / 2, (i + 0.5) * O.rh]);
+  }
+  function odometer(parent, name, ref, maxValue, size, xy) {
+    var O = DATA.odo, D = DATA.decimals, i;
+    var scaled = Math.floor(Math.max(0, maxValue) * Math.pow(10, D) + 1e-6);
+    // One spare digit, so a value edited up in After Effects still fits.
+    var n = Math.max(D + 1, String(scaled).length) + 1;
+    var curW = DATA.currency ? O.size * 0.75 : 0;
+    var sepCount = 0;
+    for (i = 1; i <= n - 1; i++) if ((i === D && D > 0) || (i > D && (i - D) % 3 === 0)) sepCount++;
+    var w = curW + n * O.dw + sepCount * O.sw + O.dw;
+    var oc = addComp(name + " Odometer" + SUFFIX, w, O.rh * 1.15, parent.duration, fOdo);
+    oc.motionBlur = true;
+    var ctrl = oc.layers.addNull(oc.duration);
+    ctrl.name = "ODO CTRL";
+    slider(ctrl, "Value").expression = ref;
+    var pre = "var SC = Math.pow(10, " + D + "); var D = " + D + "; var DW = " + O.dw + "; var SW = " + O.sw + "; var CURW = " + curW + "; var RH = " + O.rh + ";\n" +
+      "var vv = Math.max(0, thisComp.layer(\"ODO CTRL\").effect(\"Value\")(1).value) * SC;\n" +
+      "var iu = Math.floor(vv + 1e-6); var n = Math.max(D + 1, String(iu).length);\n" +
+      "function isSep(q) { return (q == D && D > 0) || (q > D && (q - D) % 3 == 0); }\n" +
+      "var tot = 0; for (var q = 1; q <= n - 1; q++) if (isSep(q)) tot++;\n" +
+      "var x0 = thisComp.width / 2 - (CURW + n * DW + tot * SW) / 2;\n";
+    for (i = 0; i < n; i++) {
+      var L = oc.layers.add(digits);
+      L.name = "Digit x10^" + i;
+      L.motionBlur = true;
+      P(L, "ADBE Position").expression = pre + "var K = " + i + ";\n" +
+        "var sl = 0; for (var q2 = K + 1; q2 <= n - 1; q2++) if (isSep(q2)) sl++;\n" +
+        "var x = x0 + CURW + (n - 1 - K) * DW + sl * SW + DW / 2;\n" +
+        "var p = Math.pow(10, K); var base = Math.floor(vv / p + 1e-9); var lower = vv - base * p;\n" +
+        "var prog = K == 0 ? lower : Math.max(0, lower - (p - 1));\n" +
+        "var spd = Math.abs(thisComp.layer(\"ODO CTRL\").effect(\"Value\")(1).velocity) * SC / p;\n" +
+        "var d = (base % 10) + (spd > 18 ? 0 : Math.min(1, prog));\n" +
+        "[x, thisComp.height / 2 + (5 - d) * RH];";
+      P(L, "ADBE Opacity").expression = pre + i + " < n ? 100 : 0;";
+    }
+    for (i = 1; i <= n - 1; i++) {
+      if (!((i === D && D > 0) || (i > D && (i - D) % 3 === 0))) continue;
+      var S = text(oc, i === D ? "Decimal point" : "Thousands comma", i === D ? "." : ",", O.size, [0, 0]);
+      P(S, "ADBE Position").expression = pre + "var Q = " + i + "; var sl = 0; for (var q3 = Q + 1; q3 <= n - 1; q3++) if (isSep(q3)) sl++;\n" +
+        "[x0 + CURW + (n - Q) * DW + sl * SW + SW / 2, thisComp.height / 2 + " + (O.size * 0.36) + "];";
+      P(S, "ADBE Opacity").expression = pre + "Q = " + i + "; Q <= n - 1 ? 100 : 0;";
+    }
+    if (DATA.currency) {
+      var C = text(oc, "Currency", DATA.currency, O.size, [0, 0]);
+      P(C, "ADBE Position").expression = pre + "[x0 + CURW / 2, thisComp.height / 2 + " + (O.size * 0.36) + "];";
+    }
+    var OL = parent.layers.add(oc);
+    OL.name = name + " Odometer";
+    pos(OL, xy);
+    var s = 100 * size / O.size;
+    P(OL, "ADBE Scale").setValue([s, s]);
+    return OL;
+  }
+
+  // ---------- reels ----------
+  function stripCells(rc, s, nCells, rowsInWindow, x, peek) {
+    var k;
+    var S = "var S = [" + DATA.strips[s].join(",") + "];\n";
+    var head = "var p = thisComp.layer(\"CTRL\").effect(\"Spin\")(1).value;\n";
+    var hide = windowsExpr("HW", DATA.hideWindows) + "var hid = false; for (var w = 0; w < HW.length; w++) if (time >= HW[w][0] && time < HW[w][1]) hid = true;\n";
+    for (k = 0; k < nCells; k++) {
+      var L = rc.layers.add(atlas);
+      L.name = "Cell " + (k + 1);
+      L.timeRemapEnabled = true;
+      L.outPoint = DUR;
+      L.property("ADBE Time Remapping").expression = S + head + "var j = Math.floor(p + 1e-4) - 2 + " + k + ";\n" +
+        "var s = (j >= 0 && j < S.length) ? S[j] : 0;\n(s + 0.5) * thisComp.frameDuration;";
+      P(L, "ADBE Position").expression = head + "var j = Math.floor(p + 1e-4) - 2 + " + k + ";\n" +
+        "var row = " + DATA.dir + " > 0 ? (" + (rowsInWindow - 1) + " - (j - p)) : (j - p);\n" +
+        "[" + x + ", (row + 0.5 + " + peek + ") * " + DATA.cellH + "];";
+      if (DATA.hideWindows.length) P(L, "ADBE Opacity").expression = hide + "hid ? 0 : 100;";
+    }
+    // Multiplier values riding on the strip.
+    var mults = DATA.stripMults[s] || [];
+    for (k = 0; k < mults.length; k++) {
+      var j = mults[k][0];
+      var T = text(rc, "x" + mults[k][1], "x" + mults[k][1], Math.round(DATA.cellH * 0.3), [x, 0], [1, 0.7, 0.2]);
+      P(T, "ADBE Position").expression = head + "var row = " + DATA.dir + " > 0 ? (" + (rowsInWindow - 1) + " - (" + j + " - p)) : (" + j + " - p);\n" +
+        "[" + x + ", (row + 0.5 + " + peek + ") * " + DATA.cellH + " + " + (DATA.cellH * 0.3) + "];";
+      P(T, "ADBE Opacity").expression = head + (DATA.hideWindows.length ? hide : "var hid = false;\n") + "var row = " + DATA.dir + " > 0 ? (" + (rowsInWindow - 1) + " - (" + j + " - p)) : (" + j + " - p);\n" +
+        "(hid || row < -1.2 || row > " + (rowsInWindow + 0.2) + ") ? 0 : 100;";
+    }
+  }
+  function blurLayer(rc) {
+    var adj = rc.layers.addSolid([1, 1, 1], "Reel Motion Blur", rc.width, rc.height, 1, DUR);
+    adj.adjustmentLayer = true;
+    var db = fx(adj, "ADBE Motion Blur", "Spin Blur");
+    db.property(2).expression = "var v = Math.abs(thisComp.layer(\"CTRL\").effect(\"Spin\")(1).velocity);\n" +
+      "var a = Math.max(0, Math.min(1, (v - 3) / 14)) * " + DATA.blur + ";\na * " + DATA.cellH + " * 0.35;";
+  }
+  function actorLayers(rc, c) {
+    var list = DATA.actors[c] || [], i;
+    for (i = 0; i < list.length; i++) {
+      var a = list[i];
+      var y0 = (a.keys[0].v + 0.5 + DATA.peek) * DATA.cellH;
+      var L = symbolLayer(rc, a.s, [DATA.cellW / 2, y0], "Tumble " + DATA.symbols[a.s].name);
+      var Pp = P(L, "ADBE Position");
+      try { Pp.dimensionsSeparated = true; } catch (e) {}
+      var yp = tr(L).property("ADBE Position_1");
+      if (a.keys.length > 1) setKeys(yp, a.keys, 0, DATA.cellH, (0.5 + DATA.peek) * DATA.cellH);
+      else yp.setValue(y0);
+      L.motionBlur = true;
+      if (a.pop !== null) {
+        ease1(P(L, "ADBE Opacity"), [[a.pop, 100], [a.pop + DATA.popDur * 0.5, 75], [a.pop + DATA.popDur, 0]]);
+        P(L, "ADBE Scale").expression = EASE_LIB + "var k = c01((time - " + a.pop + ") / " + DATA.popDur + "); var s = 100 * (1 + 0.38 * (1 - Math.pow(1 - k, 3))); [s, s];";
+      }
+      if (a.m !== null && a.m !== undefined) {
+        var T = text(rc, "x" + a.m, "x" + a.m, Math.round(DATA.cellH * 0.3), [DATA.cellW / 2, y0 + DATA.cellH * 0.3 - DATA.cellH * 0.3 * 0.36], [1, 0.7, 0.2]);
+        T.parent = L;
+        trim(T, a.tIn, a.tOut);
+      }
+      trim(L, a.tIn, a.tOut);
+    }
+  }
+  function buildReels() {
+    var out = [], c, r;
+    var hasActors = function (cc) { return DATA.actors[cc] && DATA.actors[cc].length; };
+    if (DATA.mode === "cells") {
+      for (c = 0; c < DATA.reels; c++) {
+        for (r = 0; r < DATA.rows; r++) {
+          var s = c * DATA.rows + r;
+          var cc2 = addComp("Cell " + (c + 1) + "-" + (r + 1) + SUFFIX, DATA.cellW, DATA.cellH, DUR, fReels);
+          var ctrl = cc2.layers.addNull(DUR);
+          ctrl.name = "CTRL";
+          setKeys(slider(ctrl, "Spin"), DATA.stripKeys[s]);
+          stripCells(cc2, s, 5, 1, DATA.cellW / 2, 0);
+          blurLayer(cc2);
+          var CL = main.layers.add(cc2);
+          CL.name = "Cell " + (c + 1) + "-" + (r + 1);
+          pos(CL, [DATA.reelX[c] + DATA.cellW / 2, DATA.rowsTop + (r + 0.5) * DATA.cellH]);
+          out.push(CL);
+        }
+      }
+    }
+    for (c = 0; c < DATA.reels; c++) {
+      if (DATA.mode === "cells" && !hasActors(c)) continue;
+      var rc = addComp((DATA.mode === "cells" ? "Tumble " : "Reel ") + (c + 1) + SUFFIX, DATA.cellW, DATA.winH, DUR, fReels);
+      rc.motionBlur = true;
+      if (DATA.mode === "reels") {
+        var ctrl2 = rc.layers.addNull(DUR);
+        ctrl2.name = "CTRL";
+        setKeys(slider(ctrl2, "Spin"), DATA.stripKeys[c]);
+        stripCells(rc, c, DATA.rows + 4, DATA.rows, DATA.cellW / 2, DATA.peek);
+      }
+      actorLayers(rc, c);
+      if (DATA.mode === "reels") blurLayer(rc);
+      var RL = main.layers.add(rc);
+      RL.name = (DATA.mode === "cells" ? "Tumble " : "Reel ") + (c + 1);
+      pos(RL, [DATA.reelX[c] + DATA.cellW / 2, DATA.winTop + DATA.winH / 2]);
+      out.push(RL);
+    }
+    return out;
+  }
+
+  // ---------- effects building blocks ----------
   function coins(comp, o) {
     var it = imp(DATA.assets.coin);
     if (!it) return;
@@ -407,17 +790,15 @@ export const AE_SCRIPT = String.raw`// Slot animation rebuilt for After Effects 
   function ring(comp, xy, t, maxR, rgbv, width) {
     var L = shapeLayer(comp, "Shockwave");
     var c = group(L);
-    var e = c.addProperty("ADBE Vector Shape - Ellipse");
-    e.property("ADBE Vector Ellipse Size").setValue([maxR * 2, maxR * 2]);
-    e.property("ADBE Vector Ellipse Position").setValue(xy);
+    ellipse(c, xy, [maxR * 2, maxR * 2]);
     stroke(c, rgbv, width);
     L.blendingMode = BlendingMode.ADD;
     P(L, "ADBE Anchor Point").setValue(xy);
     pos(L, xy);
     P(L, "ADBE Scale").expression = EASE_LIB + "var a = c01((time - " + t + ") / 0.7); var s = 100 * (1 - Math.pow(1 - a, 3)); [s, s];";
-    P(L, "ADBE Opacity").expression = EASE_LIB + "var a = (time - " + t + ") / 0.7; (a < 0 || a > 1) ? 0 : 100 * Math.pow(1 - a, 1.5);";
+    P(L, "ADBE Opacity").expression = "var a = (time - " + t + ") / 0.7; (a < 0 || a > 1) ? 0 : 100 * Math.pow(1 - a, 1.5);";
     glow(L, width * 2, 1);
-    trim(L, t, t + 0.75);
+    trim(L, Math.max(0, t), t + 0.75);
     return L;
   }
   function darkLayer(comp, a, b, peak) {
@@ -449,20 +830,27 @@ export const AE_SCRIPT = String.raw`// Slot animation rebuilt for After Effects 
     } catch (e4) {}
     return L;
   }
-  function winCtrl(comp, keys) {
+  function winCtrl(comp, keys, tOff) {
     var c = comp.layers.addNull(comp.duration);
     c.name = "WIN CTRL";
-    var s = slider(c, "Amount");
-    setKeys(s, keys);
+    setKeys(slider(c, "Amount"), keys, tOff);
     return c;
   }
-  function counter(comp, xy, size, slamAt) {
-    var L = text(comp, "Win Counter", "0", size, xy);
-    L.property("ADBE Text Properties").property("ADBE Text Document").expression = counterExpr('thisComp.layer("WIN CTRL").effect("Amount")(1).value');
+  function counters(comp, xy, size, maxValue, slamAt) {
+    var ref = "comp(\"" + comp.name + "\").layer(\"WIN CTRL\").effect(\"Amount\")(1).valueAtTime(time)";
+    var od = odometer(comp, comp.name.replace(/ FX.*$/, ""), ref, maxValue, size, xy);
     if (slamAt !== undefined) {
-      P(L, "ADBE Scale").expression = EASE_LIB + "var a = time - " + slamAt + "; var s = a > 0 ? 100 * (1 + 0.2 * Math.pow(1 - c01(a / 0.35), 2)) : 100; [s, s];";
+      var base = P(od, "ADBE Scale").value[0];
+      P(od, "ADBE Scale").expression = EASE_LIB + "var a = time - " + slamAt + "; var s = " + base + " * (a > 0 ? 1 + 0.2 * Math.pow(1 - c01(a / 0.35), 2) : 1); [s, s];";
     }
-    return L;
+    var tx = text(comp, "Win Counter (text)", "0", size, xy);
+    tx.property("ADBE Text Properties").property("ADBE Text Document").expression = counterExpr('thisComp.layer("WIN CTRL").effect("Amount")(1).value');
+    tx.enabled = false;
+    return od;
+  }
+  function countKeys(a, b, amount) {
+    var d = Math.max(0.1, b - a);
+    return [{ t: a, v: 0, is: 0, ii: 0.3333, os: amount / d * 1.25, oi: 0.3333, h: 0 }, { t: b, v: amount, is: 0, ii: 0.6, os: 0, oi: 0.3333, h: 1 }];
   }
   function cellFrame(comp, x, y, rgbv, a, b) {
     var L = shapeLayer(comp, "Cell Frame");
@@ -473,7 +861,7 @@ export const AE_SCRIPT = String.raw`// Slot animation rebuilt for After Effects 
     fadeKeys(L, a, b, 0.12, 0.3);
     return L;
   }
-  function popCells(comp, cells, a, b, k, withRays) {
+  function popCells(comp, cells, a, b, withRays, withFrames) {
     var i;
     for (i = 0; i < cells.length; i++) {
       var cl = cells[i];
@@ -486,123 +874,48 @@ export const AE_SCRIPT = String.raw`// Slot animation rebuilt for After Effects 
           fadeKeys(rr, a, b, 0.2, 0.3, 75);
         }
       }
-      var L = symbolLayer(comp, cl.s, [cl.x, cl.y]);
-      P(L, "ADBE Scale").expression = popScaleExpr(a + i * 0.05, b, k);
-      glow(L, DATA.cellW * 0.14, 1.1);
-      trim(L, a, b);
-      if (cl.color) cellFrame(comp, cl.x, cl.y, cl.color, a, b);
+      winLayer(comp, cl.s, [cl.x, cl.y], a + i * 0.05, b);
+      if (withFrames && cl.color) cellFrame(comp, cl.x, cl.y, cl.color, a, b);
+    }
+  }
+  function linesFor(comp, lines, la, lb) {
+    var i;
+    for (i = 0; i < lines.length; i++) {
+      var ln = lines[i];
+      var S = shapeLayer(comp, "Payline " + (ln.index + 1));
+      var g = group(S);
+      path(g, ln.pts, false);
+      var tp = g.addProperty("ADBE Vector Filter - Trim");
+      stroke(g, ln.color, Math.max(3, DATA.cellW * 0.05));
+      var core = group(S);
+      path(core, ln.pts, false);
+      var tp2 = core.addProperty("ADBE Vector Filter - Trim");
+      stroke(core, [1, 1, 1], Math.max(1, DATA.cellW * 0.016));
+      ease1(tp.property("ADBE Vector Trim End"), [[la + i * 0.07, 0], [la + i * 0.07 + 0.45, 100]]);
+      ease1(tp2.property("ADBE Vector Trim End"), [[la + i * 0.07, 0], [la + i * 0.07 + 0.45, 100]]);
+      glow(S, DATA.cellW * 0.22, 1.5);
+      S.blendingMode = BlendingMode.ADD;
+      fadeKeys(S, la, lb, 0.15, 0.35);
     }
   }
 
-  function buildAtlas() {
-    var n = DATA.symbols.length, i;
-    atlas = proj.items.addComp("Symbols Atlas", DATA.cellW, DATA.cellH, 1, Math.max(n, 1) / FPS, FPS);
-    atlas.parentFolder = fReels;
-    for (i = 0; i < n; i++) {
-      var L = image(atlas, DATA.symbols[i].file, DATA.symbols[i].name);
-      if (!L) continue;
-      var w = L.source.width, h = L.source.height;
-      var s = 100 * Math.min(DATA.cellW * 0.88 / w, DATA.cellH * 0.88 / h);
-      P(L, "ADBE Scale").setValue([s, s]);
-      pos(L, [DATA.cellW / 2, DATA.cellH / 2]);
-      L.outPoint = (i + 1) / FPS;
-      L.inPoint = i / FPS;
-    }
-  }
-
-  function buildReels() {
-    var reels = [], c, k;
-    var nCells = DATA.rows + 4;
-    for (c = 0; c < DATA.reels; c++) {
-      var rc = proj.items.addComp("Reel " + (c + 1), DATA.cellW, DATA.winH, 1, DUR, FPS);
-      rc.parentFolder = fReels;
-      if (!DATA.cascade) {
-        var ctrl = rc.layers.addNull(DUR);
-        ctrl.name = "CTRL";
-        setKeys(slider(ctrl, "Spin"), DATA.reelKeys[c]);
-        var S = "var S = [" + DATA.strips[c].join(",") + "];\n";
-        var head = "var p = thisComp.layer(\"CTRL\").effect(\"Spin\")(1).value;\n";
-        for (k = 0; k < nCells; k++) {
-          var L = rc.layers.add(atlas);
-          L.name = "Cell " + (k + 1);
-          L.timeRemapEnabled = true;
-          L.outPoint = DUR;
-          L.property("ADBE Time Remapping").expression = S + head +
-            "var j = Math.floor(p + 1e-4) - 2 + " + k + ";\n" +
-            "var s = (j >= 0 && j < S.length) ? S[j] : 0;\n" +
-            "(s + 0.5) * thisComp.frameDuration;";
-          P(L, "ADBE Position").expression = head +
-            "var j = Math.floor(p + 1e-4) - 2 + " + k + ";\n" +
-            "var row = " + DATA.dir + " > 0 ? (" + (DATA.rows - 1) + " - (j - p)) : (j - p);\n" +
-            "[thisComp.width / 2, (row + 0.5 + " + DATA.peek + ") * " + DATA.cellH + "];";
-        }
-      } else {
-        buildCascadeReel(rc, c);
-      }
-      var adj = rc.layers.addSolid([1, 1, 1], "Reel Motion Blur", DATA.cellW, DATA.winH, 1, DUR);
-      adj.adjustmentLayer = true;
-      var db = fx(adj, "ADBE Motion Blur", "Spin Blur");
-      if (!DATA.cascade) {
-        db.property(2).expression = "var v = Math.abs(thisComp.layer(\"CTRL\").effect(\"Spin\")(1).velocity);\n" +
-          "var a = Math.max(0, Math.min(1, (v - 3) / 14)) * " + DATA.blur + ";\n" +
-          "a * " + DATA.cellH + " * 0.35;";
-      }
-      var RL = main.layers.add(rc);
-      RL.name = "Reel " + (c + 1);
-      pos(RL, [DATA.reelX[c] + DATA.cellW / 2, DATA.winTop + DATA.winH / 2]);
-      reels.push(RL);
-    }
-    return reels;
-  }
-
-  function buildCascadeReel(rc, c) {
-    var r, i;
-    for (r = 0; r < DATA.rows; r++) {
-      var y0 = (r + 0.5 + DATA.peek) * DATA.cellH;
-      var first = symbolLayer(rc, DATA.initialGrid[c][r], [DATA.cellW / 2, y0], "Start r" + (r + 1));
-      var fk = DATA.cascadeRounds.length ? DATA.cascadeRounds[0].cells[c][r] : null;
-      if (fk) {
-        cascadeY(first, fk.outKeys, y0);
-        trim(first, 0, fk.outEnd + 0.02);
-      }
-      for (i = 0; i < DATA.cascadeRounds.length; i++) {
-        var cr = DATA.cascadeRounds[i];
-        var ck = cr.cells[c][r];
-        var L = symbolLayer(rc, cr.grid[c][r], [DATA.cellW / 2, y0], "R" + (i + 1) + " r" + (r + 1));
-        var next = i + 1 < DATA.cascadeRounds.length ? DATA.cascadeRounds[i + 1].cells[c][r] : null;
-        var keys = ck.inKeys.slice(0);
-        if (next) keys = keys.concat(next.outKeys);
-        cascadeY(L, keys, y0);
-        trim(L, ck.inStart, next ? next.outEnd + 0.02 : DUR);
-      }
-    }
-  }
-  function cascadeY(L, keys, y0) {
-    var Y = P(L, "ADBE Position");
-    try { Y.dimensionsSeparated = true; } catch (e) {}
-    var yp = tr(L).property("ADBE Position_1");
-    var scaled = [], i;
-    for (i = 0; i < keys.length; i++) {
-      var k = keys[i];
-      scaled.push({ t: k.t, v: y0 + k.v * DATA.cellH, is: k.is * DATA.cellH, ii: k.ii, os: k.os * DATA.cellH, oi: k.oi, h: k.h });
-    }
-    setKeys(yp, scaled);
-  }
-
+  // ---------- main comp ----------
   function buildMain() {
-    main = proj.items.addComp(uniqueName(DATA.name), W, H, 1, DUR, FPS);
+    mainName = uniqueName(DATA.name + SUFFIX);
+    main = proj.items.addComp(mainName, W, H, 1, DUR, FPS);
     main.parentFolder = top;
     main.motionBlur = true;
     var bg = image(main, DATA.assets.background, "Background");
     var ctrl = main.layers.addNull(DUR);
     ctrl.name = "SLOT CONTROL";
     setKeys(slider(ctrl, "Meter"), DATA.meterKeys);
+    setKeys(slider(ctrl, "FS Total"), DATA.fsTotalKeys);
     shake = main.layers.addNull(DUR);
     shake.name = "SCREEN SHAKE";
-    var kids = [];
+    var kids = [], i, r;
     var back = image(main, DATA.assets.back, "Machine Back");
     if (back) kids.push(back);
-    var reels = buildReels(), i;
+    var reels = buildReels();
     for (i = 0; i < reels.length; i++) kids.push(reels[i]);
     var front = image(main, DATA.assets.front, "Machine Frame");
     if (front) kids.push(front);
@@ -613,27 +926,13 @@ export const AE_SCRIPT = String.raw`// Slot animation rebuilt for After Effects 
     var bb = image(main, DATA.assets.bulbsB, "Marquee B");
     if (ba) { P(ba, "ADBE Opacity").expression = winExpr + "Math.floor(time * (on ? 7 : 1.6)) % 2 == 0 ? 100 : 18;"; ba.blendingMode = BlendingMode.ADD; kids.push(ba); }
     if (bb) { P(bb, "ADBE Opacity").expression = winExpr + "Math.floor(time * (on ? 7 : 1.6)) % 2 == 1 ? 100 : 18;"; bb.blendingMode = BlendingMode.ADD; kids.push(bb); }
-    var logo = image(main, DATA.assets.logo, "Logo", DATA.logo);
-    if (logo) {
-      kids.push(logo);
-      P(logo, "ADBE Scale").expression = "var s = 100 * (1 + 0.012 * Math.sin(time * 1.6)); [s, s];";
-    }
-    if (DATA.hud) {
-      var hp = image(main, DATA.assets.hud, "Win Meter Panel");
-      if (hp) kids.push(hp);
-      var meter = text(main, "Win Meter", "0", DATA.hud.size, [DATA.hud.x, DATA.hud.y]);
-      meter.property("ADBE Text Properties").property("ADBE Text Document").expression = counterExpr('thisComp.layer("SLOT CONTROL").effect("Meter")(1).value');
-      kids.push(meter);
-    }
-    // Anticipation glow around teasing reels.
-    var r, a;
     for (r = 0; r < DATA.rounds.length; r++) {
-      var R = DATA.rounds[r];
+      var R = DATA.rounds[r], a;
       for (a = 0; a < R.antic.length; a++) {
         var an = R.antic[a];
-        var S = shapeLayer(main, "Anticipation R" + (r + 1) + " reel " + (an.c + 1));
+        var S = shapeLayer(main, "Anticipation R" + (r + 1));
         var cg = group(S);
-        rect(cg, [an.x, DATA.winTop + DATA.winH / 2], [DATA.cellW * 1.06, DATA.winH * 1.02], DATA.cellW * 0.06);
+        rect(cg, [an.x, an.y], [an.w, an.h], DATA.cellW * 0.06);
         stroke(cg, [1, 0.67, 0.16], Math.max(2, DATA.cellW * 0.05));
         fill(cg, [1, 0.55, 0.08], 18);
         glow(S, DATA.cellW * 0.3, 1.6);
@@ -642,11 +941,71 @@ export const AE_SCRIPT = String.raw`// Slot animation rebuilt for After Effects 
         kids.push(S);
       }
     }
+    // Sticky wilds sit on top of the reels for the rest of the free spins.
+    for (i = 0; i < DATA.stickies.length; i++) {
+      var st = DATA.stickies[i];
+      if (DATA.wildSym < 0) break;
+      var SL = main.layers.add(symComps[DATA.wildSym]);
+      SL.name = "Sticky Wild " + (i + 1);
+      pos(SL, [st.x, st.y]);
+      P(SL, "ADBE Scale").expression = EASE_LIB + "var s = 100 * outBack(c01((time - " + st.from + ") / 0.4)); [s, s];";
+      trim(SL, st.from, st.to);
+      var SF = shapeLayer(main, "Sticky Frame " + (i + 1));
+      var sg = group(SF);
+      rect(sg, [st.x, st.y], [DATA.cellW * 0.96, DATA.cellH * 0.96], DATA.cellW * 0.12);
+      stroke(sg, [1, 0.82, 0.35], Math.max(2, DATA.cellW * 0.035));
+      glow(SF, DATA.cellW * 0.15, 1.3);
+      trim(SF, st.from, st.to);
+      kids.push(SL);
+      kids.push(SF);
+    }
+    var logo = image(main, DATA.assets.logo, "Logo", DATA.logo);
+    if (logo) {
+      kids.push(logo);
+      P(logo, "ADBE Scale").expression = "var s = 100 * (1 + 0.012 * Math.sin(time * 1.6)); [s, s];";
+    }
+    var fsData = "var B = [";
+    for (i = 0; i < DATA.fsBlocks.length; i++) {
+      var b = DATA.fsBlocks[i], q, rs = "[";
+      for (q = 0; q < b[3].length; q++) rs += (q ? "," : "") + "[" + b[3][q].join(",") + "]";
+      fsData += (i ? "," : "") + "[" + b[0] + "," + b[1] + "," + b[2] + "," + rs + "]]";
+    }
+    fsData += "];\nvar cur = null; for (var i = 0; i < B.length; i++) if (time >= B[i][0] && time < B[i][1]) cur = B[i];\n" +
+      "var idx = 0, done = false; if (cur) for (var k = 0; k < cur[3].length; k++) if (cur[3][k][0] <= time) { if (cur[3][k][2]) done = true; else idx = cur[3][k][1]; }\n";
+    if (DATA.fsBlocks.length) {
+      var rib = text(main, "Free Spins Ribbon", "FREE SPINS", Math.round(H * 0.035), DATA.ribbon, [0.6, 0.95, 1]);
+      rib.property("ADBE Text Properties").property("ADBE Text Document").expression = fsData + "cur ? (done ? 'FREE SPINS COMPLETE' : 'FREE SPIN ' + Math.max(1, idx) + ' OF ' + Math.max(cur[2], idx)) : '';";
+      kids.push(rib);
+    }
+    if (DATA.hud) {
+      var hp = image(main, DATA.assets.hud, "Win Meter Panel");
+      if (hp) kids.push(hp);
+      var lab = text(main, "WIN label", "WIN", DATA.hud.label, [DATA.hud.x, DATA.hud.y - DATA.hud.size * 0.85], DATA.accent, false);
+      kids.push(lab);
+      var betL = text(main, "Bet", DATA.hud.betText, DATA.hud.label, DATA.hud.left, [1, 1, 1], false);
+      var rightL = text(main, "Pay mode", DATA.hud.rightText, DATA.hud.label, DATA.hud.right, [1, 1, 1], false);
+      kids.push(betL);
+      kids.push(rightL);
+      if (DATA.fsBlocks.length) {
+        P(betL, "ADBE Opacity").expression = fsData + "cur ? 0 : 75;";
+        P(rightL, "ADBE Opacity").expression = fsData + "cur ? 0 : 75;";
+        var fsl = text(main, "Free Spins Counter", "FREE SPINS", DATA.hud.label, DATA.hud.left, DATA.accent, false);
+        fsl.property("ADBE Text Properties").property("ADBE Text Document").expression = fsData + "cur ? (done ? 'FREE SPINS DONE' : 'FREE SPINS ' + idx + '/' + Math.max(cur[2], idx)) : '';";
+        var fst = text(main, "Free Spins Total", "TOTAL", DATA.hud.label, DATA.hud.right, DATA.accent, false);
+        fst.property("ADBE Text Properties").property("ADBE Text Document").expression = fmtExpr() + fsData + "cur ? 'TOTAL ' + fmt(thisComp.layer(\"SLOT CONTROL\").effect(\"FS Total\")(1).value) : '';";
+        kids.push(fsl);
+        kids.push(fst);
+      }
+      var maxMeter = 0;
+      for (i = 0; i < DATA.meterKeys.length; i++) maxMeter = Math.max(maxMeter, DATA.meterKeys[i].v);
+      var mo = odometer(main, "Win Meter", "comp(\"" + mainName + "\").layer(\"SLOT CONTROL\").effect(\"Meter\")(1).valueAtTime(time)", maxMeter, DATA.hud.size, [DATA.hud.x, DATA.hud.y]);
+      P(mo, "ADBE Opacity").expression = "thisComp.layer(\"SLOT CONTROL\").effect(\"Meter\")(1).value > 0.0001 ? 100 : 0;";
+      kids.push(mo);
+    }
     for (r = 0; r < DATA.rounds.length; r++) {
       var fxL = buildRound(DATA.rounds[r]);
       if (fxL) kids.push(fxL);
     }
-    // Shake: parent everything except the background, then animate.
     for (i = 0; i < kids.length; i++) kids[i].parent = shake;
     var sh = "var S = [";
     for (i = 0; i < DATA.shakes.length; i++) sh += (i ? "," : "") + "[" + DATA.shakes[i].join(",") + "]";
@@ -658,69 +1017,89 @@ export const AE_SCRIPT = String.raw`// Slot animation rebuilt for After Effects 
     for (i = 0; i < DATA.flashes.length; i++) fe += (i ? "," : "") + "[" + DATA.flashes[i].join(",") + "]";
     fe += "]; var a = 0;\nfor (var i = 0; i < F.length; i++) { var d = time - F[i][0]; if (d >= 0 && d < F[i][2]) a += F[i][1] * Math.pow(1 - d / F[i][2], 2); }\nMath.min(90, a * 100);";
     P(fl, "ADBE Opacity").expression = fe;
-    image(main, DATA.assets.vignette, "Vignette");
+    var vg = image(main, DATA.assets.vignette, "Vignette");
+    if (DATA.sound) {
+      var snd = imp(DATA.sound);
+      if (snd) {
+        var SL2 = main.layers.add(snd);
+        SL2.name = "Sound Track";
+      }
+    }
     for (r = 0; r < DATA.rounds.length; r++) {
       try { main.markerProperty.setValueAtTime(DATA.rounds[r].t0, new MarkerValue("R" + (r + 1) + " " + DATA.rounds[r].label)); } catch (e) {}
     }
     if (bg) bg.moveToEnd();
+    if (DATA.transparent) {
+      if (bg) bg.enabled = false;
+      if (vg) vg.enabled = false;
+    }
   }
 
-  function uniqueName(base) {
-    var names = {}, i;
-    for (i = 1; i <= proj.numItems; i++) if (proj.item(i).layers) names[proj.item(i).name] = true;
-    if (!names[base]) return base;
-    for (i = 2; i < 1000; i++) if (!names[base + " " + i]) return base + " " + i;
-    return base + " " + (new Date()).getTime();
-  }
-  function pad2(n) { return n < 10 ? "0" + n : "" + n; }
-
+  // ---------- win presentations ----------
   function buildRound(R) {
-    var P0 = R.start, len = Math.max(0.6, R.end - P0 + 0.6), i;
-    var hasFx = R.lines_t || R.overlay || R.banner || R.wheel || R.celebrate || R.nearmiss;
+    var P0 = R.start, len = Math.max(0.6, R.next - P0 + 0.6), i, k;
+    var hasFx = R.steps.length || R.overlay || R.banner || R.wheel || R.celebrate || R.nearmiss || R.expand || R.mult || R.pops.length;
     if (!hasFx) return null;
-    var comp = proj.items.addComp("R" + pad2(R.index + 1) + " " + R.label + " FX", W, H, 1, len, FPS);
-    comp.parentFolder = fRounds;
+    var comp = addComp("R" + pad2(R.index + 1) + " " + R.label + " FX" + SUFFIX, W, H, len, fRounds);
     function rel(t) { return Math.max(0, t - P0); }
     var winC = [DATA.winX + DATA.winW / 2, DATA.winTop + DATA.winH / 2];
-    if (R.lines_t || R.celebrate || R.nearmiss) {
-      var de = R.lines_t ? R.lines_t.end : (R.celebrate ? R.celebrate.end + 0.4 : R.nearmiss.end);
+    var dimW = [];
+    for (i = 0; i < R.steps.length; i++) dimW.push([rel(R.steps[i].start), rel(R.steps[i].end + (R.steps[i].tumble ? 0.25 : 0))]);
+    if (R.celebrate) dimW.push([rel(R.celebrate.start), rel(R.celebrate.end + 0.4)]);
+    if (R.nearmiss) dimW.push([rel(R.nearmiss.start), rel(R.nearmiss.end)]);
+    if (R.mult) dimW.push([rel(R.mult.start), rel(R.mult.end)]);
+    if (dimW.length) {
       var dim = solid(comp, [0, 0, 0], "Dim Reels", DATA.winW, DATA.winH, winC);
-      fadeKeys(dim, 0, rel(de), 0.2, 0.35, DATA.dim * 100 * (R.nearmiss ? 0.6 : 1));
+      P(dim, "ADBE Opacity").expression = windowsExpr("D", dimW) + "var a = 0; for (var i = 0; i < D.length; i++) { var x = Math.min((time - D[i][0]) / 0.2, (D[i][1] - time) / 0.35); a = Math.max(a, Math.max(0, Math.min(1, x))); }\na * " + (DATA.dim * 100) + ";";
     }
-    if (R.lines_t) {
-      var la = rel(R.lines_t.start), lb = rel(R.lines_t.end);
-      for (i = 0; i < R.lines.length; i++) {
-        var ln = R.lines[i];
-        var S = shapeLayer(comp, "Payline " + (ln.index + 1));
-        var g = group(S);
-        path(g, ln.pts, false);
-        var tp = g.addProperty("ADBE Vector Filter - Trim");
-        stroke(g, ln.color, Math.max(3, DATA.cellW * 0.05));
-        var core = group(S);
-        path(core, ln.pts, false);
-        var tp2 = core.addProperty("ADBE Vector Filter - Trim");
-        stroke(core, [1, 1, 1], Math.max(1, DATA.cellW * 0.016));
-        var ends = [[la + i * 0.07, 0], [la + i * 0.07 + 0.45, 100]];
-        ease1(tp.property("ADBE Vector Trim End"), [[ends[0][0], 0], [ends[1][0], 100]]);
-        ease1(tp2.property("ADBE Vector Trim End"), [[ends[0][0], 0], [ends[1][0], 100]]);
-        glow(S, DATA.cellW * 0.22, 1.5);
-        S.blendingMode = BlendingMode.ADD;
-        fadeKeys(S, la, lb, 0.15, 0.35);
+    if (R.expand) {
+      for (i = 0; i < R.expand.reels.length; i++) {
+        var er = R.expand.reels[i];
+        var beam = shapeLayer(comp, "Expanding Wild Glow");
+        var bgp = group(beam);
+        rect(bgp, [er.x, winC[1]], [DATA.cellW, DATA.winH], DATA.cellW * 0.06);
+        stroke(bgp, [1, 0.84, 0.35], Math.max(2, DATA.cellW * 0.04));
+        fill(bgp, [1, 0.8, 0.4], 22);
+        glow(beam, DATA.cellW * 0.25, 1.5);
+        beam.blendingMode = BlendingMode.ADD;
+        fadeKeys(beam, rel(R.expand.start), rel(R.expand.end + 0.5), 0.15, 0.5);
+        for (k = 0; k < er.cells.length; k++) {
+          if (DATA.wildSym < 0) break;
+          var wl = comp.layers.add(symComps[DATA.wildSym]);
+          wl.name = "Expanded Wild";
+          pos(wl, [er.x, er.cells[k].y]);
+          var ta = rel(R.expand.start) + er.cells[k].delay;
+          P(wl, "ADBE Scale").expression = EASE_LIB + "var s = 30 + 70 * outBack(c01((time - " + ta + ") / 0.35)); [s, s];";
+          trim(wl, ta, len);
+        }
       }
-      popCells(comp, R.cells, la, lb, DATA.popScale, false);
-      if (R.floatText && R.amount > 0) {
-        var ft = text(comp, "Win Amount", DATA.currency + R.amount.toFixed(DATA.decimals), Math.round(DATA.titlePx * 0.5), [W / 2, DATA.winTop + DATA.winH / 2 - DATA.cellH * 0.15]);
-        ft.property("ADBE Text Properties").property("ADBE Text Document").setValue("+" + DATA.currency + R.amount.toFixed(DATA.decimals));
-        var fa = rel(R.floatText.start), fb = rel(R.floatText.end);
+    }
+    for (i = 0; i < R.steps.length; i++) {
+      var st = R.steps[i];
+      var la = rel(st.start), lb = rel(st.end);
+      if (st.lines.length) linesFor(comp, st.lines, la, lb);
+      popCells(comp, st.cells, la, lb, false, true);
+      if (st.amount > 0) {
+        var cx = 0, cy = 0;
+        for (k = 0; k < st.cells.length; k++) { cx += st.cells[k].x; cy += st.cells[k].y; }
+        cx /= st.cells.length;
+        cy /= st.cells.length;
+        if (st.lines.length) { cx = W / 2; cy = winC[1] - DATA.cellH * 0.15; }
+        var ft = text(comp, "Win Amount", "+" + DATA.currency + st.amount.toFixed(DATA.decimals), Math.round(DATA.titlePx * (st.tumble ? 0.4 : 0.5)), [cx, cy]);
         var p0 = P(ft, "ADBE Position").value;
-        ease1(P(ft, "ADBE Position"), [[fa, p0], [fb, [p0[0], p0[1] - DATA.cellH * 0.5]]]);
-        fadeKeys(ft, fa, fb, 0.2, 0.5);
+        ease1(P(ft, "ADBE Position"), [[la + 0.15, p0], [lb, [p0[0], p0[1] - DATA.cellH * 0.5]]]);
+        fadeKeys(ft, la + 0.15, lb, 0.2, 0.4);
       }
-      if (R.coinBurst) coins(comp, { n: R.coinBurst.n, start: rel(R.coinBurst.start), end: rel(R.coinBurst.start) + 0.5, x: W / 2, y: winC[1], w: DATA.winW * 0.3, spread: 0.7, vy0: 0.8, vy1: 0.5, g: 2.6, life: 1.8, scale: 1, seed: 40 + R.index });
     }
-    if (R.celebrate) popCells(comp, R.scatters, rel(R.celebrate.start), rel(R.celebrate.end) + 0.4, DATA.popScale * 1.4, true);
+    for (i = 0; i < R.pops.length; i++) {
+      var pp = R.pops[i];
+      ring(comp, [pp.x, pp.y], rel(pp.t), DATA.cellW * 0.8, pp.color, DATA.cellW * 0.05);
+    }
+    if (R.coinBurst) coins(comp, { n: R.coinBurst.n, start: rel(R.coinBurst.start), end: rel(R.coinBurst.start) + 0.5, x: W / 2, y: winC[1], w: DATA.winW * 0.3, spread: 0.7, vy0: 0.8, vy1: 0.5, g: 2.6, life: 1.8, scale: 1, seed: 40 + R.index });
+    if (R.mult) buildMult(comp, R, rel);
+    if (R.celebrate) popCells(comp, R.scatters, rel(R.celebrate.start), rel(R.celebrate.end) + 0.4, true, false);
     if (R.nearmiss) {
-      popCells(comp, R.scatters, rel(R.nearmiss.start), rel(R.nearmiss.end), DATA.popScale * 0.6, false);
+      popCells(comp, R.scatters, rel(R.nearmiss.start), rel(R.nearmiss.end), false, false);
       if (R.nearMiss) {
         var nmL = shapeLayer(comp, "Near Miss Reel");
         var ng = group(nmL);
@@ -742,9 +1121,35 @@ export const AE_SCRIPT = String.raw`// Slot animation rebuilt for After Effects 
     return L;
   }
 
-  function countKeys(a, b, amount) {
-    var d = Math.max(0.1, b - a);
-    return [{ t: a, v: 0, is: 0, ii: 0.3333, os: amount / d * 1.25, oi: 0.3333, h: 0 }, { t: b, v: amount, is: 0, ii: 0.6, os: 0, oi: 0.3333, h: 1 }];
+  function buildMult(comp, R, rel) {
+    var M = R.mult, i;
+    var tg = M.target;
+    for (i = 0; i < M.items.length; i++) {
+      var it = M.items[i];
+      var t = rel(it.t);
+      ring(comp, [it.x, it.y], Math.max(0, t - 0.25), DATA.cellW * 0.9, [1, 0.82, 0.35], DATA.cellW * 0.05);
+      var fly = text(comp, "Multiplier x" + it.value, "x" + it.value, Math.round(DATA.cellH * 0.36), [it.x, it.y], [1, 0.62, 0.15]);
+      var a0 = P(fly, "ADBE Position").value;
+      var mid = [(a0[0] + tg[0]) / 2, Math.min(a0[1], tg[1]) - DATA.cellH * 0.8];
+      ease1(P(fly, "ADBE Position"), [[t, a0], [t + 0.22, mid], [t + 0.45, [tg[0], tg[1] + DATA.cellH * 0.12]]]);
+      glow(fly, DATA.cellW * 0.12, 1.4);
+      trim(fly, t, t + 0.5);
+    }
+    var pl = shapeLayer(comp, "Multiplier Plaque");
+    var pg = group(pl);
+    rect(pg, tg, [DATA.cellW * 2.6, DATA.cellH * 0.7], DATA.cellH * 0.2);
+    fill(pg, [0.08, 0.02, 0.12], 85);
+    stroke(pg, [1, 0.82, 0.35], Math.max(2, DATA.cellW * 0.03));
+    fadeKeys(pl, rel(M.start), rel(M.end + 0.3), 0.25, 0.4);
+    var items = "var I = [";
+    for (i = 0; i < M.items.length; i++) items += (i ? "," : "") + "[" + rel(M.items[i].t) + "," + M.items[i].value + "]";
+    items += "]; var sum = 0; for (var i = 0; i < I.length; i++) if (time >= I[i][0] + 0.45) sum += I[i][1];\n";
+    var tx = text(comp, "Multiplier Total", "x", Math.round(DATA.cellH * 0.35), tg);
+    tx.property("ADBE Text Properties").property("ADBE Text Document").expression = fmtExpr() + items +
+      "time >= " + rel(M.applyAt) + " ? fmt(" + M.total + ") : (sum > 0 ? fmt(" + M.base + ") + ' x' + sum : fmt(" + M.base + "));";
+    P(tx, "ADBE Scale").expression = EASE_LIB + "var a = time - " + rel(M.applyAt) + "; var s = a > 0 ? 100 * (1 + 0.25 * Math.pow(1 - c01(a / 0.4), 2)) : 100; [s, s];";
+    fadeKeys(tx, rel(M.start), rel(M.end + 0.3), 0.25, 0.4);
+    ring(comp, tg, rel(M.applyAt), DATA.cellW * 2.6, [1, 0.82, 0.35], DATA.cellW * 0.06);
   }
 
   function buildBigWin(comp, R, rel) {
@@ -763,9 +1168,9 @@ export const AE_SCRIPT = String.raw`// Slot animation rebuilt for After Effects 
       if (T && i + 1 === ov.tiers.length) fadeKeys(T, ta, tb, 0.05, 0.6);
       if (i > 0) ring(comp, [cx, cy], ta, H * 0.75, DATA.accent, H * 0.02);
     }
-    winCtrl(comp, countKeys(rel(ov.countStart), rel(ov.countEnd), R.amount));
-    var ctr = counter(comp, [cx, cy + H * 0.13], Math.round(DATA.titlePx * 0.72), rel(ov.countEnd));
-    fadeKeys(ctr, a + 0.2, b, 0.3, 0.6);
+    winCtrl(comp, ov.keys, -R.start);
+    var od = counters(comp, [cx, cy + H * 0.13], Math.round(DATA.titlePx * 0.72), ov.amount, rel(ov.countEnd));
+    fadeKeys(od, a + 0.2, b, 0.3, 0.6);
   }
 
   function buildBanner(comp, R, rel) {
@@ -783,14 +1188,14 @@ export const AE_SCRIPT = String.raw`// Slot animation rebuilt for After Effects 
       fadeKeys(num, a, b, 0.05, 0.5);
     } else if (R.amount > 0 && R.meter) {
       winCtrl(comp, countKeys(rel(R.meter.start), rel(R.meter.end), R.amount));
-      var c = counter(comp, [cx, cy + H * 0.16], Math.round(DATA.titlePx * 0.6));
-      fadeKeys(c, a, b, 0.3, 0.5);
+      var od = counters(comp, [cx, cy + H * 0.16], Math.round(DATA.titlePx * 0.6), R.amount);
+      fadeKeys(od, a, b, 0.3, 0.5);
     }
     coins(comp, { n: 80, start: a + 0.1, end: a + 0.9, x: cx, y: H * 1.02, w: W * 0.3, spread: 1.0, vy0: 1.1, vy1: 0.5, g: 2.6, life: 2.2, scale: 1, seed: 200 + R.index });
   }
 
   function buildWheel(comp, R, rel) {
-    var w = R.wheel, WH = DATA.wheel;
+    var w = R.wheel, WH = DATA.wheel, i, s;
     var inA = rel(w.inStart), inB = rel(w.inEnd), outA = rel(w.outStart), outB = rel(w.outEnd);
     var cx = WH.cx, cy = WH.cy, Rr = WH.R;
     var envExpr = EASE_LIB + "var tIn = c01((time - " + inA + ") / " + (inB - inA) + "); var tOut = c01((time - " + outA + ") / " + (outB - outA) + ");\n" +
@@ -814,8 +1219,7 @@ export const AE_SCRIPT = String.raw`// Slot animation rebuilt for After Effects 
       rot.setValue(w.angle0);
       setKeys(rot, w.keys, -R.start);
       kids.push(disc);
-      // Winning segment highlight, drawn where that segment sits at t = 0.
-      var seg = WH.segDeg, a0 = -90 + w.segment * seg + w.angle0, pts = [[cx, cy]], s;
+      var seg = WH.segDeg, a0 = -90 + w.segment * seg + w.angle0, pts = [[cx, cy]];
       for (s = 0; s <= 12; s++) {
         var ang = (a0 + seg * s / 12) * Math.PI / 180;
         pts.push([cx + Math.cos(ang) * Rr, cy + Math.sin(ang) * Rr]);
@@ -844,7 +1248,6 @@ export const AE_SCRIPT = String.raw`// Slot animation rebuilt for After Effects 
         "u > 1 - w ? -mx * ((u - (1 - w)) / w) : (u < b ? -mx * Math.pow(1 - u / b, 2) * Math.cos(u / b * Math.PI * 1.5) : 0);";
       kids.push(ptr);
     }
-    var i;
     for (i = 0; i < kids.length; i++) {
       kids[i].parent = rig;
       P(kids[i], "ADBE Opacity").expression = envExpr + "env * 100;";
@@ -853,7 +1256,6 @@ export const AE_SCRIPT = String.raw`// Slot animation rebuilt for After Effects 
       "var s = (0.3 + 0.7 * outBack(tIn)) * (1 - 0.35 * inCubic(tOut)) * 100; [s, s];";
     var title = titleLayer(comp, "wheel", [cx, cy - Rr * 1.28], inA, rel(w.spinStart) + 1.1, W * 0.9);
     if (title) fadeKeys(title, inA, rel(w.spinStart) + 1.1, 0.3, 0.5);
-    // Prize plaque.
     var pa = rel(w.prizeStart);
     coins(comp, { n: 110, start: pa, end: pa + 1.2, x: cx, y: H * 1.03, w: W * 0.5, spread: 1.2, vy0: 1.1, vy1: 0.55, g: 2.6, life: 2.4, scale: 1.2, seed: 260 + R.index });
     ring(comp, [cx, cy], pa, Rr * 1.6, DATA.accent, Rr * 0.05);
@@ -870,26 +1272,42 @@ export const AE_SCRIPT = String.raw`// Slot animation rebuilt for After Effects 
     var lbl = text(comp, "Prize Label", w.label, Math.round(Rr * 0.2), [cx, cy - Rr * 0.1]);
     P(lbl, "ADBE Scale").expression = popE;
     trim(lbl, pa, outB);
-    winCtrl(comp, countKeys(rel(R.meter.start), rel(R.meter.end), R.amount));
-    var ctr = counter(comp, [cx, cy + Rr * 0.12], Math.round(Rr * 0.14));
-    trim(ctr, pa, outB);
+    winCtrl(comp, countKeys(rel(w.countStart), rel(w.countEnd), R.amount));
+    var od = counters(comp, [cx, cy + Rr * 0.12], Math.round(Rr * 0.14), R.amount);
+    trim(od, pa, outB);
     var fadeOut = envExpr + "env * 100;";
     P(pl, "ADBE Opacity").expression = fadeOut;
     P(lbl, "ADBE Opacity").expression = fadeOut;
-    P(ctr, "ADBE Opacity").expression = fadeOut;
+    P(od, "ADBE Opacity").expression = fadeOut;
+  }
+
+  function buildFormat() {
+    W = DATA.W;
+    H = DATA.H;
+    FPS = DATA.fps;
+    DUR = DATA.duration;
+    top = folder(DATA.name + SUFFIX);
+    fSymbols = folder("Symbols", top);
+    fReels = folder("Reels", top);
+    fRounds = folder("Win FX", top);
+    fOdo = folder("Odometers", top);
+    buildSymbols();
+    buildAtlas();
+    buildDigits();
+    buildMain();
   }
 
   if (!app.project) app.newProject();
   proj = app.project;
-  app.beginUndoGroup("Build " + DATA.name);
+  app.beginUndoGroup("Build slot animation");
   try {
-    top = folder(DATA.name);
-    fAssets = folder("Assets", top);
-    fReels = folder("Reels", top);
-    fRounds = folder("Win FX", top);
-    // Atlas first: reels reference it.
-    buildAtlas();
-    buildMain();
+    fShared = folder("Slot Assets");
+    var f;
+    for (f = 0; f < DATA_LIST.length; f++) {
+      DATA = DATA_LIST[f];
+      SUFFIX = DATA_LIST.length > 1 ? " " + DATA.W + "x" + DATA.H : "";
+      buildFormat();
+    }
     main.openInViewer();
   } catch (err) {
     alert("The slot build stopped: " + err.toString() + (err.line ? " (script line " + err.line + ")" : ""));

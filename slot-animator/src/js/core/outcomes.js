@@ -1,17 +1,20 @@
-// Turns a round description ("big win on lines 1-3 with Lucky 7") into a
-// concrete grid of symbols plus the cells that should light up. Filler
-// symbols are re-rolled until no unintended payline win remains, so a
-// "no win" round never shows three cherries on a line by accident.
+// Turns a round description ("big win, tumble twice, bombs x2 and x10") into
+// concrete grids: the grid the spin lands on, then one grid per tumble step,
+// with the cells that win at each step. Filler is re-rolled until no
+// unintended win remains for the machine's pay mode, so a "no win" spin never
+// pays by accident.
 
 import { pickWeighted, shuffle } from './rng.js';
-import { LINE_WINS, BIG_WINS, SCATTER_WINS } from './defaults.js';
+import { LINE_WINS, SCATTER_WINS } from './defaults.js';
+import { keyOf, cloneGrid, lineRuns, waysWins, anywhereWins, clusterWins, componentAt, collapse, countSymbols } from './grid.js';
 
 export function symbolRoles(symbols) {
-  const roles = { normal: [], low: [], high: [], wild: [], scatter: [], bonus: [] };
+  const roles = { normal: [], low: [], high: [], wild: [], scatter: [], bonus: [], multiplier: [] };
   symbols.forEach((s, i) => {
     if (s.role === 'wild') roles.wild.push(i);
     else if (s.role === 'scatter') roles.scatter.push(i);
     else if (s.role === 'bonus') roles.bonus.push(i);
+    else if (s.role === 'multiplier') roles.multiplier.push(i);
     else {
       roles.normal.push(i);
       (s.tier === 'high' ? roles.high : roles.low).push(i);
@@ -23,90 +26,111 @@ export function symbolRoles(symbols) {
 
 export function makeContext(project, paylines) {
   const symbols = project.symbols;
+  const roles = symbolRoles(symbols);
+  const normal = new Set(roles.normal);
+  const m = project.machine;
   return {
     reels: project.grid.reels,
     rows: project.grid.rows,
     paylines,
     symbols,
-    roles: symbolRoles(symbols),
-    bet: Number(project.machine.bet) || 1,
+    roles,
+    bet: Number(m.bet) || 1,
+    payMode: m.payMode || 'lines',
+    minAnywhere: Math.max(3, Number(m.minAnywhere) || 8),
+    minCluster: Math.max(3, Number(m.minCluster) || 5),
+    scatterTrigger: Math.max(2, Number(m.scatterTrigger) || 3),
+    spinType: project.spin.type,
+    wildSet: new Set(roles.wild),
+    wildSym: roles.wild.length ? roles.wild[0] : null,
+    scatterSym: roles.scatter[0] ?? roles.bonus[0] ?? null,
+    // Without a multiplier symbol the renderer supplies a built-in orb here.
+    orbSym: roles.multiplier.length ? roles.multiplier[0] : symbols.length,
+    payable: (s) => normal.has(s),
     weightOf: (i) => (symbols[i] ? Number(symbols[i].weight) || 0 : 0),
+    tiers: project.tiers || [],
   };
 }
 
 export function fillSymbol(ctx, rng, exclude = null) {
   let pool = ctx.roles.normal;
-  if (exclude != null && pool.length > 1) pool = pool.filter((i) => !(exclude instanceof Set ? exclude.has(i) : i === exclude));
+  if (exclude && pool.length > 1) {
+    const ex = exclude instanceof Set ? exclude : new Set([exclude]);
+    const p = pool.filter((i) => !ex.has(i));
+    if (p.length) pool = p;
+  }
   return pickWeighted(rng, pool, ctx.weightOf);
 }
 
-export function randomGrid(ctx, rng) {
-  const grid = [];
-  for (let c = 0; c < ctx.reels; c++) {
-    grid.push([]);
-    for (let r = 0; r < ctx.rows; r++) grid[c].push(fillSymbol(ctx, rng));
-  }
-  sanitize(grid, new Set(), ctx, rng, null);
-  return grid;
+function emptyGrid(ctx, fill) {
+  return Array.from({ length: ctx.reels }, () => Array.from({ length: ctx.rows }, fill));
 }
 
-function lineRun(grid, line, wild) {
-  let sym = -1;
-  let len = 0;
-  for (let c = 0; c < line.length; c++) {
-    const s = grid[c][line[c]];
-    if (sym === -1) {
-      len++;
-      if (!wild.has(s)) sym = s;
-      continue;
+export function defaultPattern(mode) {
+  return mode === 'ways' ? 'ways' : mode === 'anywhere' ? 'anywhere' : mode === 'cluster' ? 'cluster' : 'lines';
+}
+
+// Wins the machine would pay that nobody asked for. A win is fine when every
+// cell in it was placed on purpose (locked), or when it is the intended symbol
+// in a pay-anywhere / cluster / ways round.
+function unwanted(grid, ctx, locked, intended, wildAt) {
+  const K = keyOf(ctx.rows);
+  const allLocked = (cells) => cells.every(([c, r]) => locked.has(K(c, r)));
+  const out = [];
+  if (ctx.payMode === 'lines') {
+    for (const run of lineRuns(grid, ctx, wildAt)) if (!allLocked(run.cells)) out.push(run);
+  } else if (ctx.payMode === 'ways') {
+    for (const w of waysWins(grid, ctx, wildAt)) {
+      if (w.sym === intended.sym && w.reels <= intended.count) continue;
+      if (w.sym === intended.sym) out.push({ sym: w.sym, cells: w.cells.filter(([c]) => c === intended.count) });
+      else if (!allLocked(w.cells)) out.push({ sym: w.sym, cells: w.cells.filter(([c, r]) => grid[c][r] === w.sym && c <= 2) });
     }
-    if (s === sym || wild.has(s)) len++;
-    else break;
+  } else if (ctx.payMode === 'anywhere') {
+    for (const g of anywhereWins(grid, ctx, ctx.minAnywhere)) if (g.sym !== intended.sym && !allLocked(g.cells)) out.push(g);
+  } else {
+    for (const g of clusterWins(grid, ctx, ctx.minCluster, wildAt)) if (g.sym !== intended.sym && !allLocked(g.cells)) out.push(g);
   }
-  return { sym, len };
+  return out;
 }
 
-// Re-roll unlocked cells that form a payline (or ways) win nobody asked for.
-function sanitize(grid, locked, ctx, rng, waysSym) {
-  const wild = new Set(ctx.roles.wild);
-  const K = (c, r) => c * ctx.rows + r;
-  for (let iter = 0; iter < 400; iter++) {
+function sanitize(grid, ctx, rng, { locked, intended = { sym: -1, count: 0 }, wildAt, free = null }) {
+  const K = keyOf(ctx.rows);
+  for (let iter = 0; iter < 500; iter++) {
+    const groups = unwanted(grid, ctx, locked, intended, wildAt);
+    if (!groups.length) return true;
     let fixed = false;
-    for (const line of ctx.paylines) {
-      const run = lineRun(grid, line, wild);
-      if (run.len < 3) continue;
-      const cells = [];
-      for (let c = 0; c < run.len; c++) cells.push([c, line[c]]);
-      const free = cells.filter(([c, r]) => !locked.has(K(c, r)));
-      if (!free.length) continue;
-      const [c, r] = free[free.length - 1];
-      grid[c][r] = fillSymbol(ctx, rng, new Set([run.sym, grid[c][r]]));
+    for (const g of groups) {
+      const cand = g.cells.filter(([c, r]) => grid[c][r] != null && !locked.has(K(c, r)) && !wildAt(c, r) && (!free || free.has(K(c, r))));
+      if (!cand.length) continue;
+      const [c, r] = ctx.payMode === 'lines' ? cand[cand.length - 1] : cand[Math.floor(rng() * cand.length)];
+      grid[c][r] = fillSymbol(ctx, rng, new Set([g.sym, grid[c][r], intended.sym]));
       fixed = true;
     }
-    if (waysSym != null) {
-      // In a ways round only the chosen symbol may connect reels 1-3.
-      const present = (c, s) => grid[c].some((x) => x === s || wild.has(x));
-      for (const s of ctx.roles.normal) {
-        if (s === waysSym) continue;
-        if (present(0, s) && present(1, s) && present(2, s)) {
-          for (let r = 0; r < ctx.rows; r++) {
-            if (grid[2][r] === s && !locked.has(K(2, r))) {
-              grid[2][r] = fillSymbol(ctx, rng, new Set([s]));
-              fixed = true;
-            }
-          }
-        }
-      }
-    }
-    if (!fixed) break;
+    if (!fixed) return false;
   }
+  return false;
+}
+
+export function randomGrid(ctx, rng) {
+  const grid = emptyGrid(ctx, () => fillSymbol(ctx, rng));
+  const wildAt = (c, r) => ctx.wildSet.has(grid[c][r]);
+  sanitize(grid, ctx, rng, { locked: new Set(), wildAt });
+  return grid;
 }
 
 function resolveSymbolIndex(ctx, ref) {
   if (ref == null || ref === 'auto') return -1;
   if (typeof ref === 'number') return ref >= 0 && ref < ctx.symbols.length ? ref : -1;
-  const i = ctx.symbols.findIndex((s) => s.id === ref);
-  return i;
+  return ctx.symbols.findIndex((s) => s.id === ref);
+}
+
+function pickSymbol(ctx, rng, ref, prefer, avoid) {
+  const s = resolveSymbolIndex(ctx, ref);
+  if (s >= 0 && ctx.payable(s)) return s;
+  let pool = (prefer === 'high' ? ctx.roles.high : ctx.roles.low).filter((x) => !avoid?.has(x));
+  if (!pool.length) pool = ctx.roles.normal.filter((x) => !avoid?.has(x));
+  if (!pool.length) pool = ctx.roles.normal;
+  return pool[Math.floor(rng() * pool.length)];
 }
 
 function spreadReels(reels, n) {
@@ -117,7 +141,33 @@ function spreadReels(reels, n) {
   return [...new Set(out)];
 }
 
-export const AUTO_MULTIPLIER = { small: 2, medium: 8, big: 25, mega: 60, epic: 150 };
+function growRegion(ctx, rng, start, n, canUse) {
+  const K = keyOf(ctx.rows);
+  const region = [start];
+  const inR = new Set([K(...start)]);
+  let frontier = [];
+  const addN = ([c, r]) => {
+    for (const [dc, dr] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      const cc = c + dc;
+      const rr = r + dr;
+      if (cc < 0 || cc >= ctx.reels || rr < 0 || rr >= ctx.rows || inR.has(K(cc, rr)) || !canUse(cc, rr)) continue;
+      frontier.push([cc, rr]);
+    }
+  };
+  addN(start);
+  while (region.length < n && frontier.length) {
+    const i = Math.floor(rng() * frontier.length);
+    const cell = frontier.splice(i, 1)[0];
+    if (inR.has(K(...cell))) continue;
+    inR.add(K(...cell));
+    region.push(cell);
+    addN(cell);
+    frontier = frontier.filter((x) => !inR.has(K(...x)));
+  }
+  return region;
+}
+
+export const AUTO_MULTIPLIER = { small: 2, medium: 8 };
 
 export function autoAmount(ctx, project, round) {
   if (round.outcome === 'wheel') {
@@ -126,124 +176,400 @@ export function autoAmount(ctx, project, round) {
     const v = seg ? Number(seg.value) || 0 : 0;
     return project.wheel.multiplyByBet ? v * ctx.bet : v;
   }
+  if (round.outcome === 'big') {
+    const tiers = ctx.tiers;
+    if (!tiers.length) return 25 * ctx.bet;
+    const t = tiers[Math.min(tiers.length - 1, Math.max(0, round.tier | 0))];
+    return Math.round((Number(t.x) || 20) * ctx.bet * 1.15 * 100) / 100;
+  }
   return (AUTO_MULTIPLIER[round.outcome] || 0) * ctx.bet;
 }
 
-export function resolveRound(ctx, project, round, rng) {
-  const { reels, rows, paylines, roles } = ctx;
-  const grid = [];
-  for (let c = 0; c < reels; c++) {
-    grid.push([]);
-    for (let r = 0; r < rows; r++) grid[c].push(fillSymbol(ctx, rng));
-  }
+function minCountFor(ctx, pattern) {
+  return pattern === 'anywhere' ? ctx.minAnywhere : pattern === 'cluster' ? ctx.minCluster : 3;
+}
+
+export function tumbleEnabled(ctx, round) {
+  if (round.expandWild) return false;
+  if (round.tumble === true || round.tumble === false) return round.tumble;
+  return ctx.payMode === 'anywhere' || ctx.payMode === 'cluster' || ctx.spinType === 'cascade';
+}
+
+// carry: { sticky: Set of cell keys held as wilds, fsTotal }
+export function resolveRound(ctx, project, round, rng, carry = {}) {
+  const { reels, rows, paylines } = ctx;
+  const K = keyOf(rows);
+  const outcome = round.outcome;
+  const grid = emptyGrid(ctx, () => fillSymbol(ctx, rng));
+  const mult = emptyGrid(ctx, () => null);
   const locked = new Set();
-  const K = (c, r) => c * rows + r;
+  const wildMask = new Set();
+  const isFree = (c, r) => !locked.has(K(c, r));
   const place = (c, r, s) => {
     if (c < 0 || c >= reels || r < 0 || r >= rows) return;
     grid[c][r] = s;
     locked.add(K(c, r));
   };
-  const outcome = round.outcome;
-  const win = {
-    kind: 'none',
-    symbol: -1,
-    lines: [],
-    cells: [],
-    scatters: [],
-    nearMiss: null,
-    amount: 0,
-    tiers: [],
-  };
-  let waysSym = null;
+  let curGrid = grid;
+  const wildAt = (c, r) => ctx.wildSet.has(curGrid[c][r]) || wildMask.has(K(c, r));
+  for (const k of carry.sticky || []) {
+    if (ctx.wildSym == null) break;
+    place(Math.floor(k / rows), k % rows, ctx.wildSym);
+  }
+  const win = { kind: 'none', symbol: -1, lines: [], cells: [], scatters: [], nearMiss: null, amount: 0, base: 0, multSum: 0, expand: [], wilds: [] };
+  const steps = [];
+  const randomFreeCells = (n, extra = () => true) => shuffle(rng, allCells(ctx).filter(([c, r]) => isFree(c, r) && extra(c, r))).slice(0, n);
+
+  const amountTotal = round.amount != null && round.amount !== '' && !Number.isNaN(Number(round.amount)) ? Number(round.amount) : autoAmount(ctx, project, round);
+  const multValues = (round.multipliers || []).map(Number).filter((v) => v > 0);
 
   if (LINE_WINS.includes(outcome)) {
-    let sym = resolveSymbolIndex(ctx, round.symbol);
-    if (sym < 0 || roles.scatter.includes(sym)) {
-      const pool = BIG_WINS.includes(outcome) || outcome === 'medium' ? roles.high : roles.low;
-      const list = pool.length ? pool : roles.normal;
-      sym = list[Math.floor(rng() * list.length)];
-    }
-    win.symbol = sym;
-    const count = Math.max(2, Math.min(reels, round.count | 0 || reels));
-    const pattern = round.pattern || 'lines';
-    win.kind = pattern;
+    const pattern = round.pattern || defaultPattern(ctx.payMode);
+    const tumble = tumbleEnabled(ctx, round) && pattern !== 'full';
+    const specs = [{ pattern, symbol: round.symbol, count: round.count, lines: round.lines, cells: round.cells }];
+    if (tumble) for (const s of round.chain || []) specs.push({ pattern: s.pattern || defaultPattern(ctx.payMode), symbol: s.symbol, count: s.count, lines: s.lines });
+    const prefer = outcome === 'small' ? 'low' : 'high';
+    const syms = [];
+    specs.forEach((s, i) => syms.push(pickSymbol(ctx, rng, s.symbol, i ? (rng() < 0.5 ? 'low' : 'high') : prefer, new Set(i ? [syms[i - 1]] : []))));
+    const counts = specs.map((s) => {
+      const minC = minCountFor(ctx, s.pattern);
+      const maxC = s.pattern === 'lines' || s.pattern === 'ways' ? reels : reels * rows - 2;
+      return Math.max(Math.min(minC, maxC), Math.min(maxC, Number(s.count) || minC));
+    });
+
+    // Step 0 on the landed grid.
+    const s0 = syms[0];
+    const spec0 = specs[0];
+    const n0 = counts[0];
+    const stepLines = [];
     if (pattern === 'lines') {
-      let idxs = (round.lines || []).filter((i) => i >= 0 && i < paylines.length);
+      let idxs = (spec0.lines || []).filter((i) => i >= 0 && i < paylines.length);
       if (!idxs.length) idxs = [0];
       for (const li of idxs) {
         const line = paylines[li];
         const cells = [];
-        for (let c = 0; c < count; c++) {
-          place(c, line[c], sym);
+        for (let c = 0; c < Math.min(n0, reels); c++) {
+          place(c, line[c], s0);
           cells.push([c, line[c]]);
         }
-        win.lines.push({ index: li, cells });
+        stepLines.push({ index: li, cells });
       }
     } else if (pattern === 'cells') {
-      const cells = (round.cells || []).filter(([c, r]) => c < reels && r < rows);
+      const cells = (spec0.cells || []).filter(([c, r]) => c < reels && r < rows);
       const use = cells.length ? cells : [[0, 0], [1, 1], [2, 2]].filter(([c, r]) => c < reels && r < rows);
-      for (const [c, r] of use) place(c, r, sym);
+      for (const [c, r] of use) place(c, r, s0);
     } else if (pattern === 'ways') {
-      waysSym = sym;
-      for (let c = 0; c < count; c++) {
-        const n = rows > 1 && rng() < (BIG_WINS.includes(outcome) ? 0.7 : 0.35) ? 2 : 1;
-        for (const r of shuffle(rng, Array.from({ length: rows }, (_, i) => i)).slice(0, n)) place(c, r, sym);
+      for (let c = 0; c < n0; c++) {
+        const k = rows > 1 && rng() < (outcome === 'big' ? 0.7 : 0.35) ? 2 : 1;
+        for (const r of shuffle(rng, range(rows)).slice(0, k)) if (isFree(c, r)) place(c, r, s0);
+        if (!grid[c].some((x, r) => x === s0 || wildAt(c, r))) place(c, Math.floor(rng() * rows), s0);
       }
     } else if (pattern === 'full') {
-      for (let c = 0; c < reels; c++) for (let r = 0; r < rows; r++) place(c, r, sym);
+      for (let c = 0; c < reels; c++) for (let r = 0; r < rows; r++) if (isFree(c, r)) place(c, r, s0);
+    } else if (pattern === 'anywhere') {
+      for (const [c, r] of randomFreeCells(n0)) place(c, r, s0);
+    } else if (pattern === 'cluster') {
+      const start = randomFreeCells(1)[0] || [0, 0];
+      for (const [c, r] of growRegion(ctx, rng, start, n0, isFree)) place(c, r, s0);
     }
-    if (round.wildAssist && roles.wild.length) {
-      const candidates = [...locked].map((k) => [Math.floor(k / rows), k % rows]).filter(([c]) => c > 0);
-      if (candidates.length) {
-        const [c, r] = candidates[Math.floor(rng() * candidates.length)];
-        grid[c][r] = roles.wild[0];
+    if (round.wildAssist && ctx.wildSym != null && (pattern === 'lines' || pattern === 'ways' || pattern === 'cells')) {
+      const cand = [...locked].map((k) => [Math.floor(k / rows), k % rows]).filter(([c, r]) => c > 0 && grid[c][r] === s0);
+      if (cand.length) {
+        const [c, r] = cand[Math.floor(rng() * cand.length)];
+        grid[c][r] = ctx.wildSym;
       }
     }
-    win.cells = [...locked].map((k) => [Math.floor(k / rows), k % rows]);
-    win.amount = round.amount != null && round.amount !== '' ? Number(round.amount) : autoAmount(ctx, project, round);
-    win.tiers = outcome === 'epic' ? ['big', 'mega', 'epic'] : outcome === 'mega' ? ['big', 'mega'] : outcome === 'big' ? ['big'] : [];
+    // Pre-seed the next tumble's symbol in cells that will survive.
+    if (tumble && specs.length > 1) preseed(syms[1], counts[1], n0, (c, r) => isFree(c, r));
+    placeExtras();
+    if (round.expandWild && ctx.wildSym != null) expandWilds();
+    sanitize(grid, ctx, rng, { locked, intended: { sym: s0, count: n0 }, wildAt });
+    let first = stepWin(grid, pattern, s0, n0, stepLines, locked);
+    if (tumble) {
+      lookahead(grid, mult, first.cells, (c, r) => !locked.has(K(c, r)), specs.length > 1 ? syms[1] : -1, s0, { locked, intended: { sym: s0, count: n0 }, wildAt });
+      first = stepWin(grid, pattern, s0, n0, stepLines, locked);
+    }
+    steps.push({ grid: cloneGrid(grid), mult: cloneGrid(mult), ...first });
+
+    if (tumble) {
+      let cur = grid;
+      let curMult = mult;
+      for (let k = 1; k <= specs.length; k++) {
+        const prev = steps[steps.length - 1];
+        const removed = new Set(prev.cells.map(([c, r]) => K(c, r)));
+        const col = collapse(cur, curMult, removed, rows);
+        const g = col.grid;
+        const m = col.mult;
+        curGrid = g;
+        const holeSet = new Set(col.holes.map(([c, r]) => K(c, r)));
+        const assigned = new Set();
+        const lockedK = new Set();
+        for (let c = 0; c < reels; c++) for (let r = 0; r < rows; r++) if (!holeSet.has(K(c, r))) lockedK.add(K(c, r));
+        const freeHole = (c, r) => holeSet.has(K(c, r)) && !assigned.has(K(c, r));
+        const assign = (c, r, s) => {
+          g[c][r] = s;
+          assigned.add(K(c, r));
+          lockedK.add(K(c, r));
+        };
+        let stepOk = false;
+        let sym = -1;
+        let n = 0;
+        let lines = [];
+        const spec = specs[k];
+        if (spec) {
+          sym = syms[k];
+          n = counts[k];
+          stepOk = placeChainStep(spec.pattern, sym, n, g, freeHole, assign, (out) => (lines = out));
+          if (stepOk && specs[k + 1]) preseed(syms[k + 1], counts[k + 1], n, freeHole, assign, g);
+        }
+        for (const [c, r] of col.holes) if (!assigned.has(K(c, r))) g[c][r] = fillSymbol(ctx, rng, stepOk ? new Set([sym]) : null);
+        sanitize(g, ctx, rng, { locked: lockedK, intended: stepOk ? { sym, count: n } : { sym: -1, count: 0 }, wildAt, free: holeSet });
+        const refill = col.holes.map(([c, r]) => [c, r, g[c][r]]);
+        const base = { moves: col.moves, refill, removed: prev.cells };
+        if (stepOk) {
+          let w = stepWin(g, spec.pattern, sym, n, lines, lockedK);
+          if (w.cells.length) {
+            const freeHoleFn = (c, r) => holeSet.has(K(c, r)) && !assigned.has(K(c, r));
+            lookahead(g, m, w.cells, freeHoleFn, specs[k + 1] ? syms[k + 1] : -1, sym, { locked: lockedK, intended: { sym, count: n }, wildAt, free: holeSet });
+            w = stepWin(g, spec.pattern, sym, n, lines, lockedK);
+          }
+          if (w.cells.length) {
+            steps.push({ grid: cloneGrid(g), mult: cloneGrid(m), ...w, ...base });
+            cur = g;
+            curMult = m;
+            continue;
+          }
+        }
+        // Final refill: no more wins, the chain ends here.
+        steps.push({ grid: cloneGrid(g), mult: cloneGrid(m), cells: [], lines: [], symbol: -1, count: 0, final: true, ...base });
+        cur = g;
+        curMult = m;
+        break;
+      }
+    }
+    const paying = steps.filter((s) => s.cells.length);
+    const weights = paying.map((_, i) => Math.pow(0.8, i));
+    const wsum = weights.reduce((a, b) => a + b, 0) || 1;
+    win.multSum = multValues.reduce((a, b) => a + b, 0);
+    win.amount = amountTotal;
+    win.base = win.multSum > 0 ? amountTotal / win.multSum : amountTotal;
+    paying.forEach((s, i) => (s.amount = (win.base * weights[i]) / wsum));
+    win.kind = pattern;
+    win.symbol = s0;
+    win.cells = steps[0].cells;
+    win.lines = steps[0].lines;
   } else if (SCATTER_WINS.includes(outcome) || outcome === 'nearmiss') {
-    const scatter = roles.scatter[0] ?? roles.bonus[0] ?? roles.high[0] ?? 0;
+    const scatter = ctx.scatterSym ?? ctx.roles.high[0] ?? 0;
     win.symbol = scatter;
-    const n = outcome === 'nearmiss' ? 2 : Math.max(3, Math.min(reels, round.scatterCount || 3));
-    let reelIdx;
-    if (outcome === 'nearmiss') {
-      const nm = round.nearMissReel != null ? Math.min(reels - 1, round.nearMissReel) : reels - 1;
-      reelIdx = spreadReels(Math.max(2, nm), 2).filter((c) => c !== nm);
-      if (reelIdx.length < 2) reelIdx = [0, 1].filter((c) => c !== nm);
+    const gridMode = ctx.payMode === 'anywhere' || ctx.payMode === 'cluster';
+    const trigger = ctx.scatterTrigger;
+    const n = outcome === 'nearmiss' ? Math.max(2, trigger - 1) : Math.max(trigger, Math.min(reels * rows - 1, Number(round.scatterCount) || trigger));
+    let cells;
+    if (gridMode) {
+      cells = randomFreeCells(n);
+      if (outcome === 'nearmiss') win.nearMiss = { reel: carry.lastReel ?? reels - 1, symbol: scatter, position: round.nearMissPosition || 'below' };
+    } else if (outcome === 'nearmiss') {
+      const nm = round.nearMissReel != null ? Math.min(reels - 1, round.nearMissReel) : carry.lastReel ?? reels - 1;
+      const others = range(reels).filter((c) => c !== nm);
+      const pick = spreadReels(others.length, Math.min(n, others.length)).map((i) => others[i]);
+      cells = pick.map((c) => [c, Math.floor(rng() * rows)]);
       win.nearMiss = { reel: nm, symbol: scatter, position: round.nearMissPosition || 'below' };
     } else {
-      reelIdx = spreadReels(reels, n);
+      cells = spreadReels(reels, Math.min(n, reels)).map((c) => [c, Math.floor(rng() * rows)]);
     }
-    for (const c of reelIdx) {
-      const r = Math.floor(rng() * rows);
+    for (const [c, r] of cells) {
       place(c, r, scatter);
       win.scatters.push([c, r]);
     }
+    placeExtras();
+    sanitize(grid, ctx, rng, { locked, wildAt });
     win.kind = 'scatter';
     win.cells = win.scatters.slice();
-    if (outcome !== 'nearmiss') {
-      win.amount = round.amount != null && round.amount !== '' ? Number(round.amount) : autoAmount(ctx, project, round);
+    if (outcome !== 'nearmiss') win.amount = amountTotal;
+    if (outcome === 'bonus' && !(round.amount != null && round.amount !== '')) win.amount = 0;
+  } else if (outcome === 'fstotal') {
+    win.kind = 'total';
+    win.amount = round.amount != null && round.amount !== '' ? Number(round.amount) : carry.fsTotal || 0;
+  } else {
+    placeExtras();
+    sanitize(grid, ctx, rng, { locked, wildAt });
+  }
+
+  curGrid = grid;
+  win.wilds = [];
+  grid.forEach((col, c) => col.forEach((s, r) => ctx.wildSet.has(s) && win.wilds.push([c, r])));
+  const last = steps.length ? steps[steps.length - 1] : null;
+  const mults = [];
+  const finalMult = last ? last.mult : mult;
+  finalMult.forEach((col, c) => col.forEach((v, r) => v != null && mults.push({ c, r, value: v })));
+  return {
+    grid,
+    mult,
+    steps,
+    finalGrid: last ? last.grid : grid,
+    finalMult,
+    mults,
+    win,
+  };
+
+  // --- helpers that need the round's state ---
+
+  function placeExtras() {
+    for (const v of multValues) {
+      const [cell] = randomFreeCells(1);
+      if (!cell) break;
+      place(cell[0], cell[1], ctx.orbSym);
+      mult[cell[0]][cell[1]] = v;
+    }
+    const extra = Math.max(0, Number(round.extraWilds) || 0);
+    if (extra && ctx.wildSym != null) for (const [c, r] of randomFreeCells(extra)) place(c, r, ctx.wildSym);
+  }
+
+  function expandWilds() {
+    const reelsWithWild = new Set();
+    grid.forEach((col, c) => col.forEach((s) => ctx.wildSet.has(s) && reelsWithWild.add(c)));
+    win.expand = [...reelsWithWild].sort((a, b) => a - b);
+    for (const c of win.expand)
+      for (let r = 0; r < rows; r++) {
+        wildMask.add(K(c, r));
+        locked.add(K(c, r));
+      }
+  }
+
+  function preseed(sym, need, holes, canUse, assignFn, g = grid) {
+    if (ctx.payMode !== 'anywhere') return;
+    const have = countSymbols(g).get(sym)?.length || 0;
+    const want = Math.min(ctx.minAnywhere - 1, Math.max(0, need - holes + 1)) - have;
+    if (want <= 0) return;
+    const cand = shuffle(rng, allCells(ctx).filter(([c, r]) => canUse(c, r)));
+    for (const [c, r] of cand.slice(0, want)) {
+      if (assignFn) assignFn(c, r, sym);
+      else place(c, r, sym);
     }
   }
-  sanitize(grid, locked, ctx, rng, waysSym);
-  if (win.kind === 'lines') addCoincidentLines(grid, win, ctx);
-  return { grid, win };
+
+  function placeChainStep(pat, sym, n, g, freeHole, assign, setLines) {
+    const have = () => countSymbols(g).get(sym) || [];
+    if (pat === 'anywhere') {
+      const need = n - have().length;
+      const cand = shuffle(rng, allCells(ctx).filter(([c, r]) => freeHole(c, r)));
+      cand.slice(0, Math.max(0, need)).forEach(([c, r]) => assign(c, r, sym));
+      return have().length >= ctx.minAnywhere;
+    }
+    if (pat === 'cluster') {
+      const startC = shuffle(rng, allCells(ctx).filter(([c, r]) => freeHole(c, r)))[0];
+      if (!startC) return false;
+      const region = growRegion(ctx, rng, startC, n, (c, r) => freeHole(c, r) || g[c][r] === sym);
+      region.forEach(([c, r]) => freeHole(c, r) && assign(c, r, sym));
+      return componentAt(g, ctx, startC[0], startC[1], sym, wildAtGrid(g)).length >= ctx.minCluster;
+    }
+    if (pat === 'lines') {
+      const cnt = Math.min(n, reels);
+      for (const li of shuffle(rng, range(paylines.length))) {
+        const line = paylines[li];
+        let ok = true;
+        for (let c = 0; c < cnt; c++) {
+          const r = line[c];
+          if (!(freeHole(c, r) || g[c][r] === sym || ctx.wildSet.has(g[c][r]))) {
+            ok = false;
+            break;
+          }
+        }
+        if (!ok) continue;
+        const cells = [];
+        for (let c = 0; c < cnt; c++) {
+          if (freeHole(c, line[c])) assign(c, line[c], sym);
+          cells.push([c, line[c]]);
+        }
+        setLines([{ index: li, cells }]);
+        return true;
+      }
+      return false;
+    }
+    if (pat === 'ways') {
+      for (let c = 0; c < n; c++) {
+        if (g[c].some((s, r) => s === sym || (s != null && ctx.wildSet.has(s)))) continue;
+        const r = range(rows).find((rr) => freeHole(c, rr));
+        if (r == null) return c >= 3;
+        assign(c, r, sym);
+      }
+      return true;
+    }
+    return false;
+  }
+
+  // Survivors that fall together can form a win of their own. Simulate the
+  // collapse and re-roll filler that would cause one.
+  function lookahead(g, m, winCells, canChange, nextSym, curSym, sanitizeOpts) {
+    for (let it = 0; it < 60; it++) {
+      const removed = new Set(winCells.map(([c, r]) => K(c, r)));
+      const col = collapse(g, m, removed, rows);
+      const back = new Map(col.moves.map((mv) => [K(mv.c, mv.to), [mv.c, mv.from]]));
+      const wa = (c, r) => col.grid[c][r] != null && ctx.wildSet.has(col.grid[c][r]);
+      let groups;
+      if (ctx.payMode === 'cluster') groups = clusterWins(col.grid, ctx, ctx.minCluster, wa);
+      else if (ctx.payMode === 'anywhere') groups = anywhereWins(col.grid, ctx, ctx.minAnywhere);
+      else if (ctx.payMode === 'ways') groups = waysWins(col.grid, ctx, wa);
+      else groups = lineRuns(col.grid, ctx, wa);
+      groups = groups.filter((x) => x.sym !== nextSym);
+      if (!groups.length) return;
+      let fixed = false;
+      for (const grp of groups) {
+        const orig = grp.cells.map(([c, r]) => back.get(K(c, r))).filter((x) => x && canChange(x[0], x[1]) && g[x[0]][x[1]] === grp.sym);
+        if (!orig.length) continue;
+        const [c, r] = orig[Math.floor(rng() * orig.length)];
+        g[c][r] = fillSymbol(ctx, rng, new Set([grp.sym, curSym, nextSym]));
+        fixed = true;
+      }
+      if (!fixed) return;
+      sanitize(g, ctx, rng, sanitizeOpts);
+    }
+  }
+
+  function wildAtGrid(g) {
+    return (c, r) => ctx.wildSet.has(g[c][r]) || wildMask.has(K(c, r));
+  }
+
+  function stepWin(g, pat, sym, n, lines, lockedSet) {
+    const wa = wildAtGrid(g);
+    let cells = [];
+    let outLines = lines.slice();
+    if (pat === 'lines') {
+      const have = new Set(outLines.map((l) => l.index));
+      for (const run of lineRuns(g, ctx, wa)) {
+        if (have.has(run.index)) continue;
+        if (run.sym === sym && run.cells.every(([c, r]) => lockedSet.has(K(c, r)))) outLines.push({ index: run.index, cells: run.cells, bonus: true });
+      }
+      const seen = new Set();
+      for (const l of outLines) for (const [c, r] of l.cells) if (!seen.has(K(c, r))) {
+        seen.add(K(c, r));
+        cells.push([c, r]);
+      }
+    } else if (pat === 'ways') {
+      for (let c = 0; c < n; c++) for (let r = 0; r < rows; r++) if (g[c][r] === sym || wa(c, r)) cells.push([c, r]);
+    } else if (pat === 'anywhere') {
+      cells = (countSymbols(g).get(sym) || []).slice();
+    } else if (pat === 'cluster') {
+      const seen = new Set();
+      for (const [c, r] of countSymbols(g).get(sym) || []) {
+        if (seen.has(K(c, r))) continue;
+        const comp = componentAt(g, ctx, c, r, sym, wa);
+        comp.forEach(([cc, rr]) => seen.add(K(cc, rr)));
+        if (comp.length >= ctx.minCluster) cells.push(...comp);
+      }
+    } else {
+      g.forEach((col, c) => col.forEach((s, r) => (s === sym || (s != null && ctx.wildSet.has(s))) && lockedSet.has(K(c, r)) && cells.push([c, r])));
+    }
+    return { cells, lines: outLines, symbol: sym, count: cells.length, pattern: pat };
+  }
 }
 
-// Locked cells of two winning lines can complete a third line (a V through
-// a top and a middle line, say). A real machine pays and shows that line
-// too, so add it to the win instead of leaving an unlit winning line.
-function addCoincidentLines(grid, win, ctx) {
-  const wild = new Set(ctx.roles.wild);
-  const have = new Set(win.lines.map((l) => l.index));
-  ctx.paylines.forEach((line, i) => {
-    if (have.has(i)) return;
-    const run = lineRun(grid, line, wild);
-    if (run.len >= 3 && run.sym === win.symbol) {
-      const cells = [];
-      for (let c = 0; c < run.len; c++) cells.push([c, line[c]]);
-      win.lines.push({ index: i, cells, bonus: true });
-    }
-  });
+function range(n) {
+  return Array.from({ length: n }, (_, i) => i);
+}
+
+function allCells(ctx) {
+  const out = [];
+  for (let c = 0; c < ctx.reels; c++) for (let r = 0; r < ctx.rows; r++) out.push([c, r]);
+  return out;
 }
