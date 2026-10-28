@@ -3,6 +3,7 @@
 // animation.
 
 import { defaultParticles } from './particles.js';
+import { defaultWinFx } from './winfx.js';
 
 export const OUTCOMES = [
   { id: 'none', label: 'No win', list: 'No win', short: 'No win', color: '#56607a' },
@@ -242,6 +243,9 @@ export const SOUND_EVENTS = [
   { id: 'cellStop', label: 'Empty cell stops', group: 'reels' },
   { id: 'respinReset', label: 'Respins reset', group: 'ui' },
   { id: 'collect', label: 'Coin collected', group: 'coins' },
+  { id: 'scoreHit', label: 'Symbol lands in the score', group: 'wins' },
+  { id: 'magnet', label: 'Symbols pulled together', group: 'wins' },
+  { id: 'merge', label: 'Symbols merge into one', group: 'wins' },
 ];
 
 let roundCounter = 0;
@@ -386,6 +390,7 @@ function baseProject() {
     output: { transparent: false, formats: ['1920x1080'] },
     holdspin: defaultHoldSpin(),
     particles: defaultParticles(),
+    winfx: defaultWinFx(),
     symbols: BUILTIN_SYMBOLS.map((s, i) => ({ id: `s${i}`, src: null, winAnim: null, ...s })),
     assets: { background: null, frame: null, logo: null },
     rounds: [],

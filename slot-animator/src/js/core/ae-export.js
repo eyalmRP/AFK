@@ -22,6 +22,7 @@ import { OUTCOME_BY_ID } from './defaults.js';
 import { holdSpinConfig, isCoinSym, formatPrize, COIN_GLOW } from './coins.js';
 import { sfxCues, SFX_GROUPS, toDb } from './sfx.js';
 import { particleAssetInfo, spawnParticles, TEMPLATE_BY_ID } from './particles.js';
+import { jumpTarget, mergeTarget, flightPath, winFxConfig } from './winfx.js';
 
 export const AE_ASSETS = {
   shared: {
@@ -140,6 +141,24 @@ export function buildAEData(project, tl, L, extras = {}) {
   const partAssets = usedParticleAssets(tl, project);
   const particleIndex = (id) => Math.max(0, partAssets.findIndex((a) => a.id === particleAssetInfo(project, id).id));
 
+  // Jumping or merging winners: their flights, laid out for this format.
+  const bigScale = r4(Number(winFxConfig(project).bigScale) || 2.2);
+  const winFxData = (st) => {
+    const f = st.fx;
+    const goal = f.style === 'jump' ? jumpTarget(project, L, st) : mergeTarget(project, L, st);
+    const out = {
+      style: f.style,
+      launch: f.launch.map(r4),
+      arrive: f.arrive.map(r4),
+      goal: [r4(goal.x), r4(goal.y)],
+      paths: st.cells.map(([c, r]) => {
+        const q = flightPath(f.style, { x: cellX(c), y: cellY(r) }, goal, L);
+        return [q.x0, q.y0, q.cx, q.cy, q.x1, q.y1].map(r4);
+      }),
+    };
+    if (f.style === 'merge') Object.assign(out, { mergeAt: r4(f.mergeAt), big: bigScale, sym: st.symbol >= 0 ? st.symbol : st.cellSyms[0] });
+    return out;
+  };
   const rounds = tl.rounds.map((R) => {
     const p = R.pres;
     const o = OUTCOME_BY_ID[R.outcome] || { label: R.outcome };
@@ -165,6 +184,7 @@ export function buildAEData(project, tl, L, extras = {}) {
           pts.push([r4(L.frame.x + L.frame.w - L.pad * 0.35), pts[pts.length - 1][1]]);
           return { index: l.index, color: rgb(lineColor(l.index)), pts };
         }),
+        fx: st.fx ? winFxData(st) : null,
       })),
       pops: R.actors.filter((a) => a.popAt != null).map((a) => ({ x: cellX(a.c), y: cellY(evalKeys(a.keys, a.popAt)), t: r4(a.popAt), color: rgb(lineColor(a.sym + 3)) })),
       scatters: R.win.scatters.map(([c, r]) => ({ x: cellX(c), y: cellY(r), s: R.grid[c][r] })),
@@ -1196,6 +1216,60 @@ export const AE_SCRIPT = String.raw`// Slot animation rebuilt for After Effects 
       if (withFrames && cl.color) cellFrame(comp, cl.x, cl.y, cl.color, a, b);
     }
   }
+  // Winners that jump into the score or merge into one big symbol: each
+  // win comp flies on an expression that holds the preview's path
+  // (core/winfx.js). Jumpers ring the landing spot; a merge grows the big
+  // symbol where they fuse.
+  function flightExprs(F, i, rel) {
+    var q = F.paths[i], L0 = r4(rel(F.launch[i])), D = r4(Math.max(0.01, F.arrive[i] - F.launch[i]));
+    var pre = "var u = Math.max(0, Math.min(1, (time - " + L0 + ") / " + D + "));\n";
+    if (F.style === "jump") {
+      pre += "var e = u * u * (3 - 2 * u); var q = 1 - e;\n";
+      return {
+        pos: pre + "[q * q * " + q[0] + " + 2 * q * e * " + q[2] + " + e * e * " + q[4] + ", q * q * " + q[1] + " + 2 * q * e * " + q[3] + " + e * e * " + q[5] + "];",
+        scale: pre + "var s = 100 * (1 - 0.55 * e); [s, s];",
+        opacity: pre + "time >= " + r4(L0 + D) + " ? 0 : (time <= " + L0 + " ? 100 : Math.min(100, (1 - u) / 0.15 * 100));"
+      };
+    }
+    pre += "var e = Math.pow(u, 2.4);\n";
+    return {
+      pos: pre + "[" + q[0] + " + " + r4(q[4] - q[0]) + " * e, " + q[1] + " + " + r4(q[5] - q[1]) + " * e];",
+      scale: pre + "var s = 100 * (1 - 0.3 * e); [s, s];",
+      opacity: "time >= " + r4(L0 + D) + " ? 0 : 100;"
+    };
+  }
+  function flyCells(comp, st, la, lb, rel) {
+    var F = st.fx, i;
+    for (i = 0; i < st.cells.length; i++) {
+      var cl = st.cells[i];
+      var L0 = rel(F.launch[i]), L1 = rel(F.arrive[i]);
+      var wl = winLayer(comp, cl.s, [cl.x, cl.y], la + i * 0.05, Math.max(la + i * 0.05 + 0.1, L1 + 0.02), (F.style === "jump" ? "Jump " : "Pull ") + DATA.symbols[cl.s].name);
+      var ex = flightExprs(F, i, rel);
+      P(wl, "ADBE Position").expression = ex.pos;
+      P(wl, "ADBE Scale").expression = ex.scale;
+      P(wl, "ADBE Opacity").expression = ex.opacity;
+      // The frame stays with the cell and fades as the symbol leaves.
+      if (cl.color) {
+        var fr = cellFrame(comp, cl.x, cl.y, cl.color, la, Math.max(la + 0.2, L0 + 0.15));
+        fadeKeys(fr, la, Math.max(la + 0.2, L0 + 0.15), 0.12, 0.15);
+      }
+      if (F.style === "jump") ring(comp, F.goal, L1, DATA.cellW * 0.65, DATA.accent);
+    }
+    if (F.style !== "merge") return;
+    var M = rel(F.mergeAt);
+    ring(comp, F.goal, M, DATA.cellW * 2.6, DATA.accent);
+    var rr = inst(comp, raysPH(true), "Merge Rays", F.goal, M, lb);
+    if (rr) {
+      rr.blendingMode = BlendingMode.ADD;
+      P(rr, "ADBE Rotate Z").expression = "time * 52;";
+      P(rr, "ADBE Scale").expression = EASE_LIB + "var a = c01((time - " + M + ") / 0.6); var s = " + r4(100 * DATA.cellW * F.big * 1.7 / rr.source.width) + " * outElastic(a); [s, s];";
+      fadeKeys(rr, M, lb, 0.05, 0.3, 70);
+    }
+    var big = winLayer(comp, F.sym, F.goal, M, lb, "Merged " + DATA.symbols[F.sym].name);
+    P(big, "ADBE Scale").expression = EASE_LIB + "var a = c01((time - " + M + ") / 0.6); var s = 100 * " + F.big + " * outElastic(a) * (1 + 0.04 * Math.sin((time - " + M + ") * 5)); [s, s];";
+    fadeKeys(big, M, lb, 0.05, 0.3);
+  }
+
   // Payline placeholders draw themselves on in 0.45 s from their start.
   function paylinePH(ln) {
     return ph("Payline " + pad2(ln.index + 1), "Paylines", W, H, DUR + 2, function (c) {
@@ -1467,17 +1541,26 @@ export const AE_SCRIPT = String.raw`// Slot animation rebuilt for After Effects 
       var st = R.steps[i];
       var la = rel(st.start), lb = rel(st.end);
       if (st.lines.length) linesFor(comp, st.lines, la, lb);
-      popCells(comp, st.cells, la, lb, false, true);
+      if (st.fx) flyCells(comp, st, la, lb, rel);
+      else popCells(comp, st.cells, la, lb, false, true);
       if (st.amount > 0) {
         var cx = 0, cy = 0;
         for (k = 0; k < st.cells.length; k++) { cx += st.cells[k].x; cy += st.cells[k].y; }
         cx /= st.cells.length;
         cy /= st.cells.length;
         if (st.lines.length) { cx = W / 2; cy = winC[1] - DATA.cellH * 0.15; }
+        // A merged win shows its amount under the big symbol once it forms.
+        var ta = la + 0.15;
+        if (st.fx && st.fx.style === "merge") {
+          cx = st.fx.goal[0];
+          cy = st.fx.goal[1] + DATA.cellH * (st.fx.big * 0.5 + 0.25);
+          ta = rel(st.fx.mergeAt) + 0.15;
+        }
         var ft = text(comp, "Win Amount", "+" + DATA.currency + st.amount.toFixed(DATA.decimals), Math.round(DATA.titlePx * (st.tumble ? 0.4 : 0.5)), [cx, cy]);
         var p0 = P(ft, "ADBE Position").value;
-        ease1(P(ft, "ADBE Position"), [[la + 0.15, p0], [lb, [p0[0], p0[1] - DATA.cellH * 0.5]]]);
-        fadeKeys(ft, la + 0.15, lb, 0.2, 0.4);
+        ease1(P(ft, "ADBE Position"), [[ta, p0], [lb, [p0[0], p0[1] - DATA.cellH * 0.5]]]);
+        fadeKeys(ft, ta, lb, 0.2, 0.4);
+        trim(ft, ta, lb);
       }
     }
     for (i = 0; i < R.pops.length; i++) {

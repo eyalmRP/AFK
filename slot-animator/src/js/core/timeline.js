@@ -15,6 +15,7 @@ import { keyOf } from './grid.js';
 import { LINE_WINS, BIG_WINS, SCATTER_WINS, GAME_OUTCOMES } from './defaults.js';
 import { holdSpinConfig, pickCoinValue, coinTypeIndex } from './coins.js';
 import { scheduleParticles } from './particles.js';
+import { winFxConfig, winStyleOf, scheduleWinFx } from './winfx.js';
 
 export const STRIP_PAD = 4;
 
@@ -608,16 +609,38 @@ export function buildTimeline(project) {
         tcur = settle + 0.1;
       }
       if (!step.cells.length) return;
-      const show = showFor();
+      // Winning symbols: pop in place, jump into the score, or merge.
+      const wfx = scheduleWinFx(winStyleOf(project, round), tcur, step.cells.length, winFxConfig(project));
+      const show = Math.max(showFor(), wfx.need);
       const amt = step.amount || 0;
       const before = cum;
       cum += amt;
       const expanded = new Set(win.expand);
       const cellSyms = step.cells.map(([c, r]) => (expanded.has(c) && ctx.wildSym != null ? ctx.wildSym : step.grid[c][r]));
-      const st = { start: tcur, end: tcur + show, cells: step.cells, cellSyms, lines: step.lines, amount: amt, cum, symbol: step.symbol, pattern: step.pattern, count: step.cells.length, index: stepsT.length, tumble: !!tumble };
+      const st = { start: tcur, end: tcur + show, cells: step.cells, cellSyms, lines: step.lines, amount: amt, cum, symbol: step.symbol, pattern: step.pattern, count: step.cells.length, index: stepsT.length, tumble: !!tumble, fx: wfx.style === 'pop' ? null : wfx };
       stepsT.push(st);
       sfx.push({ t: tcur, type: 'win', step: stepsT.length - 1, amount: amt });
-      if (amt > 0) {
+      if (wfx.style === 'jump') {
+        // Each landing adds its share; landings too close together count
+        // up in one sweep instead.
+        const n = wfx.arrive.length;
+        const gap = n > 1 ? wfx.arrive[1] - wfx.arrive[0] : 1;
+        if (amt > 0 && gap >= 0.12) {
+          wfx.arrive.forEach((t, i) => pushKeys(meterKeys, [key(t, before + (amt * i) / n), key(t + 0.1, before + (amt * (i + 1)) / n, { hold: true })]));
+        } else if (amt > 0) {
+          pushKeys(meterKeys, [key(wfx.arrive[0], before, { outSpeed: (amt / (wfx.arrive[n - 1] - wfx.arrive[0] + 0.12)) * 1.25 }), key(wfx.arrive[n - 1] + 0.12, cum, { inInf: 0.6, hold: true })]);
+        }
+        wfx.arrive.forEach((t, i) => sfx.push({ t, type: 'scoreHit', i, n }));
+      } else if (wfx.style === 'merge') {
+        sfx.push({ t: wfx.launch[0], type: 'magnet', dur: wfx.mergeAt - wfx.launch[0] });
+        sfx.push({ t: wfx.mergeAt, type: 'merge' });
+        flashes.push({ t: wfx.mergeAt, amp: 0.3, dur: 0.28 });
+        shakes.push({ t: wfx.mergeAt, amp: 0.45, dur: 0.3 });
+        if (amt > 0) {
+          pushKeys(meterKeys, [key(wfx.mergeAt + 0.1, before, { outSpeed: (amt / 0.6) * 1.25 }), key(wfx.mergeAt + 0.7, cum, { inInf: 0.6, hold: true })]);
+          sfx.push({ t: wfx.mergeAt + 0.1, type: 'count', dur: 0.6 });
+        }
+      } else if (amt > 0) {
         pushKeys(meterKeys, [key(tcur + 0.12, before, { outSpeed: (amt / 0.6) * 1.25 }), key(tcur + 0.72, cum, { inInf: 0.6, hold: true })]);
         sfx.push({ t: tcur + 0.12, type: 'count', dur: 0.6 });
       }

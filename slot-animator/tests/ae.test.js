@@ -62,6 +62,8 @@ test('AE script is plain ES3 source (no ES6 syntax in the template)', () => {
   assert.doesNotMatch(body, /\b(let|const|class)\s/);
   assert.doesNotMatch(body, /`/);
   assert.doesNotMatch(body, /\.\.\.\w/);
+  // ES3 has no trailing commas in object or array literals.
+  assert.doesNotMatch(body, /,\s*[}\]]/);
 });
 
 test('AE script runs against the mock DOM for every preset, without errors or missing files', () => {

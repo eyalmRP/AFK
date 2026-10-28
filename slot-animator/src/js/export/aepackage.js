@@ -111,6 +111,10 @@ timing lives in the round comps, and a few controls sit on SLOT CONTROL.
   placeholders in time: paylines, win comps on the winning cells, cell
   frames, shockwaves, expanding wilds, multipliers, titles, the wheel, coin
   landings and the collect. Move a layer to retime an effect.
+  Winning symbols that jump into the score are "Jump <symbol>" layers and
+  ones that merge are "Pull <symbol>" layers plus a "Merged <symbol>": their
+  position, scale and opacity expressions hold the flight from Reel Studio
+  (time, path, landing spot), so they move exactly as in the preview.
   - Particles/: every win explosion (small burst, fountain, rain, confetti
     cannons, fireworks...) is a comp of its own. Each layer is one
     particle: a use of its Particle placeholder whose position, rotation,

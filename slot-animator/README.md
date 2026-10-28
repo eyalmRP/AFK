@@ -27,6 +27,11 @@ the result as an editable **After Effects project**.
   again), multiplier symbols that fly into the total, expanding wilds,
   extra wilds, sticky wilds through a free spins block, and a free spins
   counter with a running total.
+- Winning symbols: pop in place, jump into the score (they fly one by one
+  to the win meter, the win amount, above the reels, the screen centre or
+  any spot you click on the preview; each landing counts up the win), or
+  magnet merge (they pull together and fuse into one big symbol). Per
+  project, with a per-round override.
 - Win particles: 14 explosion templates, short (small, medium and big
   bursts, ring blast, confetti cannons, party popper, magnet) or continuous
   (fountain from below, geyser, rain, side streams, fireworks, spiral,
@@ -38,10 +43,22 @@ the result as an editable **After Effects project**.
   coins, wheel pegs) is synthesised in sync with the animation; any cue can
   be replaced with your own file. It plays with the preview.
 
-- Editor: the side panels resize (drag a divider, or focus it and use the
-  arrow keys; double-click resets) and remember their widths. The Asset
-  Bank (symbols, coins, particles, scene art) is a floating window you can
-  move, resize and minimise (B toggles it); on phones it is a bottom sheet.
+- Editor:
+  - Feature search (Ctrl K or /): every control, section and command, found
+    by name, by the words people use for it ("confetti", "fly to score",
+    "magnet") or despite a typo. Picking one opens its tab or the Asset
+    Bank, selects a fitting round, unfolds the section and highlights it.
+  - Project menu: new project, open and save the project file (Ctrl O,
+    Ctrl S), start from a preset, clear all rounds, reset to the demo.
+    Undo and redo (Ctrl Z, Ctrl Shift Z) cover every change.
+  - Settings tabs: Machine, Spin, Wins (tiers, winning symbols, particles,
+    titles, win timing), Effects, Wheel, Sound, Export. Every section
+    folds and remembers it; Alt-click a section title folds them all.
+  - The side panels resize (drag a divider, or focus it and use the arrow
+    keys; double-click resets) and remember their widths. The Asset Bank
+    (symbols, coins, particles, scene art) is a floating window you can
+    move, resize and minimise (B toggles it); on phones it is a bottom
+    sheet. ? lists the keyboard shortcuts.
 
 Exports:
 
@@ -80,6 +97,7 @@ Everything is a pure function of time, built from one JSON project:
 | `src/js/core/timeline.js` | Schedules every round: reel or cell start/stop times, anticipation, tumble actors, wilds, multipliers, win presentations, the free spins block, the wheel, shakes, flashes and sound cues. Reel motion is stored as After Effects style keyframes (value + speed/influence eases). |
 | `src/js/core/keys.js` | Evaluates those keyframes with the same cubic Bézier After Effects uses, so exported curves play back identically. |
 | `src/js/core/layout.js` | Screen layout shared by the renderer and the exporter. |
+| `src/js/core/winfx.js` | Winning symbols that jump into the score or merge into one: landing spots and the flight curves the preview and After Effects share. |
 | `src/js/core/particles.js` | Explosion templates and the win emitters: which moment throws which particles, and every particle's flight as a closed form (gravity, air drag, flutter) that the preview and After Effects both evaluate. |
 | `src/js/core/sfx.js` | The sound cues as separate clips for the After Effects SFX comp (identical cues share a clip). |
 | `src/js/core/ae-export.js` | Builds the ES3 `.jsx` for After Effects. |

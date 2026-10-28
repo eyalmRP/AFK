@@ -39,6 +39,8 @@ import { loadImage, loadWinAnim, buildResources, fontStack, extraSymbolImages } 
 import { paintBuiltin } from '../render/paint.js';
 import { loadParticleSprites, drawParticleList } from '../render/particles.js';
 import { PARTICLE_TEMPLATES, TEMPLATE_BY_ID, BUILTIN_PARTICLES, PARTICLE_MOTIONS, PARTICLE_MOMENTS, tierParticles, spawnParticles, particleAssetInfo } from '../core/particles.js';
+import { WIN_STYLES, JUMP_TARGETS, MERGE_POINTS, winFxConfig, jumpTarget, mergeTarget } from '../core/winfx.js';
+import { searchFeatures } from './search.js';
 import { renderFrame } from '../render/renderer.js';
 import { decodeCustomSounds, renderSoundtrack, audioBufferToWav } from '../render/audio.js';
 import { exportMP4, frameToPNG, canEncodeVideo } from '../export/video.js';
@@ -368,6 +370,7 @@ function renderBank() {
   );
   const scroll = el.bankBody.scrollTop;
   clear(el.bankBody, panelAssets(ui.bank.filter));
+  collapsify(el.bankBody, 'bank');
   el.bankBody.scrollTop = scroll;
   refreshThumbs();
 }
@@ -375,6 +378,436 @@ function renderBank() {
 // Anything that changes the assets redraws the bank.
 function renderAssets() {
   renderBank();
+}
+
+// ---------- collapsible sections ----------
+// Every settings section folds. Which ones are open is remembered per
+// browser; the first sections of each tab start open.
+
+const SECTION_OPEN = {
+  machine: ['game', 'reels', 'how-it-pays'],
+  spin: ['spin-type', 'motion-curve'],
+  wins: ['win-tiers', 'winning-symbols', 'win-particles'],
+  effects: ['intensity'],
+  wheel: ['segments', 'spin'],
+  sound: ['sound-track'],
+  export: ['after-effects-project', 'quick-preview-mp4'],
+  seq: [],
+};
+const slugOf = (t) => String(t).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+
+function sectionOpen(key, scope, name) {
+  ui.sections = ui.sections || {};
+  if (key in ui.sections) return ui.sections[key];
+  const list = SECTION_OPEN[scope];
+  return !list || list.includes(name);
+}
+
+function setSection(sec, open, remember = true) {
+  sec.classList.toggle('closed', !open);
+  const btn = sec.querySelector(':scope > h3 > .group-toggle');
+  const body = sec.querySelector(':scope > .group-body');
+  if (btn) btn.setAttribute('aria-expanded', String(open));
+  if (body) body.hidden = !open;
+  if (remember && sec.dataset.key) {
+    ui.sections = ui.sections || {};
+    ui.sections[sec.dataset.key] = open;
+    saveUI();
+  }
+  if (open && sec.querySelector('#motion-graph')) drawMotionGraph();
+}
+
+function collapsify(root, scope) {
+  for (const sec of root.querySelectorAll(':scope > section.group')) {
+    const h3 = sec.querySelector(':scope > h3');
+    if (!h3 || sec.dataset.key) continue;
+    const title = h3.textContent;
+    const name = slugOf(title);
+    const key = `${scope}/${name}`;
+    sec.dataset.key = key;
+    const body = h('div', { class: 'group-body', id: `sec-${scope}-${name}` });
+    for (const node of [...sec.childNodes]) if (node !== h3) body.append(node);
+    const btn = h('button', { type: 'button', class: 'group-toggle', 'aria-expanded': 'true', 'aria-controls': body.id }, icon('chevron'), h('span', null, title));
+    btn.addEventListener('click', (e) => {
+      // Alt-click folds or unfolds every section in this panel.
+      const open = sec.classList.contains('closed');
+      if (e.altKey) for (const other of root.querySelectorAll(':scope > section.group[data-key]')) setSection(other, open);
+      else setSection(sec, open);
+    });
+    h3.replaceChildren(btn);
+    sec.append(body);
+    setSection(sec, sectionOpen(key, scope, name), false);
+  }
+}
+
+// Opens the section around an element (search results land inside folded
+// sections too).
+function revealSection(node) {
+  for (let sec = node.closest('section.group'); sec; sec = sec.parentElement?.closest('section.group')) if (sec.classList.contains('closed')) setSection(sec, true);
+}
+
+// ---------- undo / redo ----------
+// Snapshots of the project as JSON; uploaded images (data URLs) are stored
+// once and referenced, so a long history stays small.
+
+const hist = { past: [], future: [], last: null, timer: null, intern: new Map(), back: new Map() };
+
+function snapshot() {
+  return JSON.stringify(state.project, (k, v) => {
+    if (typeof v === 'string' && v.length > 256 && v.startsWith('data:')) {
+      let id = hist.intern.get(v);
+      if (!id) {
+        id = `@@asset:${hist.intern.size}`;
+        hist.intern.set(v, id);
+        hist.back.set(id, v);
+      }
+      return id;
+    }
+    return v;
+  });
+}
+
+function fromSnapshot(str) {
+  return JSON.parse(str, (k, v) => (typeof v === 'string' && v.startsWith('@@asset:') ? hist.back.get(v) ?? v : v));
+}
+
+function recordNow() {
+  clearTimeout(hist.timer);
+  hist.timer = null;
+  if (!state.project) return;
+  const snap = snapshot();
+  if (snap === hist.last) return;
+  if (hist.last != null) {
+    hist.past.push(hist.last);
+    if (hist.past.length > 100) hist.past.shift();
+  }
+  hist.last = snap;
+  hist.future = [];
+  renderHistoryButtons();
+}
+
+function recordSoon() {
+  clearTimeout(hist.timer);
+  hist.timer = setTimeout(recordNow, 450);
+}
+
+function restore(snap, msg) {
+  state.project = fromSnapshot(snap);
+  hist.last = snap;
+  state.sel = Math.min(state.sel, Math.max(0, state.project.rounds.length - 1));
+  save();
+  rebuild('all');
+  renderAll();
+  renderHistoryButtons();
+  if (ui.bank.open) renderBank();
+  toast(msg, 'info', 1600);
+}
+
+function undo() {
+  if (hist.timer) recordNow();
+  if (!hist.past.length) return toast('Nothing to undo.', 'info', 1600);
+  hist.future.push(hist.last);
+  restore(hist.past.pop(), 'Undone.');
+}
+
+function redo() {
+  if (hist.timer) recordNow();
+  if (!hist.future.length) return toast('Nothing to redo.', 'info', 1600);
+  hist.past.push(hist.last);
+  restore(hist.future.pop(), 'Redone.');
+}
+
+function renderHistoryButtons() {
+  if (!el.undoBtn) return;
+  el.undoBtn.disabled = !hist.past.length && !hist.timer;
+  el.redoBtn.disabled = !hist.future.length;
+}
+
+// ---------- the Project menu ----------
+
+function newProject() {
+  const p = defaultProject();
+  p.name = 'Untitled slot';
+  p.rounds = [];
+  loadProject(p, 'New project: pick a quick sequence or add rounds on the right. Undo brings the old one back.');
+}
+
+function clearRounds() {
+  if (!state.project.rounds.length) return toast('There are no rounds to clear.', 'info');
+  state.project.rounds = [];
+  state.sel = 0;
+  state.t = 0;
+  changed('timeline');
+  renderSequence();
+  toast('All rounds cleared. Undo brings them back.', 'info', 4000);
+}
+
+function saveProjectFile() {
+  return saveFile(`${slugName()}.json`, new Blob([JSON.stringify(state.project, null, 2)], { type: 'application/json' }));
+}
+
+async function openProjectFile() {
+  const [f] = await pickFiles('application/json,.json');
+  if (!f) return;
+  try {
+    loadProject(migrate(JSON.parse(await f.text())), `Opened ${f.name}.`);
+  } catch (e) {
+    toast(`Could not open ${f.name}: ${e.message}`, 'error', 6000);
+  }
+}
+
+function projectMenuItems() {
+  return [
+    { id: 'pm-new', label: 'New project', hint: 'Default machine, no rounds', run: newProject },
+    { id: 'pm-open', label: 'Open project file…', kbd: 'Ctrl O', run: openProjectFile },
+    { id: 'pm-save', label: 'Save project file', kbd: 'Ctrl S', hint: 'Downloads a .json you can open again', run: saveProjectFile },
+    { sep: true, label: 'Start from a preset' },
+    ...PRESETS.map((p) => ({ id: `pm-preset-${p.id}`, label: p.label, run: () => loadProject(p.make(), `Loaded ${p.label}. Undo brings your project back.`) })),
+    { sep: true },
+    { id: 'pm-clear', label: 'Clear all rounds', hint: 'Keeps the machine and the art', run: clearRounds },
+    { id: 'pm-reset', label: 'Reset to the demo project', run: () => loadProject(defaultProject(), 'Back to the demo project. Undo brings yours back.') },
+    { sep: true },
+    { id: 'pm-undo', label: 'Undo', kbd: 'Ctrl Z', run: undo },
+    { id: 'pm-redo', label: 'Redo', kbd: 'Ctrl Shift Z', run: redo },
+    { id: 'pm-keys', label: 'Keyboard shortcuts', kbd: '?', run: showShortcuts },
+  ];
+}
+
+function buildProjectMenu() {
+  el.pmBtn = h('button', { type: 'button', class: 'btn', id: 'top-project', 'aria-haspopup': 'menu', 'aria-expanded': 'false', 'aria-controls': 'project-menu' }, icon('folder'), h('span', null, 'Project'));
+  el.pm = h('div', { class: 'menu', id: 'project-menu', role: 'menu', 'aria-labelledby': 'top-project', hidden: true });
+  const close = (refocus = true) => {
+    el.pm.hidden = true;
+    el.pmBtn.setAttribute('aria-expanded', 'false');
+    document.removeEventListener('pointerdown', outside, true);
+    if (refocus) el.pmBtn.focus();
+  };
+  const outside = (e) => {
+    if (!el.pm.contains(e.target) && !el.pmBtn.contains(e.target)) close(false);
+  };
+  const open = () => {
+    clear(
+      el.pm,
+      projectMenuItems().map((it) =>
+        it.sep
+          ? h('div', { class: 'menu-sep', role: 'separator' }, it.label ? h('span', null, it.label) : null)
+          : h('button', { type: 'button', role: 'menuitem', class: 'menu-item', id: it.id, tabindex: -1, onclick: () => { close(); it.run(); } }, h('span', { class: 'menu-label' }, it.label, it.hint ? h('small', null, it.hint) : null), it.kbd ? h('kbd', null, it.kbd) : null)
+      ),
+      h('p', { class: 'menu-foot' }, 'Your project is also kept in this browser automatically.')
+    );
+    el.pm.hidden = false;
+    el.pmBtn.setAttribute('aria-expanded', 'true');
+    el.pm.querySelector('.menu-item')?.focus();
+    document.addEventListener('pointerdown', outside, true);
+  };
+  el.pmBtn.addEventListener('click', () => (el.pm.hidden ? open() : close()));
+  el.pmBtn.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowDown' && el.pm.hidden) {
+      e.preventDefault();
+      open();
+    }
+  });
+  el.pm.addEventListener('keydown', (e) => {
+    const items = [...el.pm.querySelectorAll('.menu-item')];
+    const i = items.indexOf(document.activeElement);
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      items[(i + (e.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length].focus();
+    } else if (e.key === 'Home' || e.key === 'End') {
+      e.preventDefault();
+      items[e.key === 'Home' ? 0 : items.length - 1].focus();
+    } else if (e.key === 'Escape' || e.key === 'Tab') {
+      e.stopPropagation();
+      close(e.key === 'Escape');
+    }
+  });
+  return h('div', { class: 'menu-wrap' }, el.pmBtn, el.pm);
+}
+
+// ---------- feature search ----------
+
+const SEARCH_ACTIONS = {
+  new: () => newProject(),
+  open: () => openProjectFile(),
+  save: () => saveProjectFile(),
+  presets: () => el.pmBtn.click(),
+  clear: () => clearRounds(),
+  reset: () => loadProject(defaultProject(), 'Back to the demo project. Undo brings yours back.'),
+  undo: () => undo(),
+  redo: () => redo(),
+  keys: () => showShortcuts(),
+  bank: () => openBank(),
+  splitters: () => {
+    const sp = el.splitters[0];
+    if (sp && sp.offsetParent) {
+      sp.focus();
+      spotlight(sp);
+      toast('Drag the divider, or use the arrow keys while it is focused. Double-click resets.', 'info', 4500);
+    } else toast('The side panels resize on wider windows.', 'info');
+  },
+};
+
+function spotlight(node) {
+  const target = node.closest('.field, .toggle, .pfx-row, .sym, .asset-row, section.group') || node;
+  target.scrollIntoView({ block: 'center', behavior: reducedMotion() ? 'auto' : 'smooth' });
+  target.classList.remove('found');
+  void target.offsetWidth;
+  target.classList.add('found');
+  setTimeout(() => target.classList.remove('found'), 2200);
+}
+
+// Takes the user to a feature: the right tab, bank filter or round, the
+// section unfolded, the control scrolled into view, highlighted and focused.
+function goToFeature(f) {
+  closeSearch();
+  const g = f.go;
+  if (g.action) return SEARCH_ACTIONS[g.action]?.();
+  let root = document;
+  if (g.tab) {
+    if (state.tab !== g.tab) {
+      state.tab = g.tab;
+      renderTabs();
+      renderPanel();
+    }
+  } else if (g.bank) {
+    openBank(g.bank, false);
+    root = el.bank;
+  } else if (g.round) {
+    const P = state.project;
+    const fits = (r) => r && (g.round === 'any' || g.round.includes(r.outcome));
+    if (!fits(P.rounds[state.sel])) {
+      const i = P.rounds.findIndex(fits);
+      if (i < 0) return toast(`Add a round with a ${g.round.map((o) => OUTCOME_BY_ID[o]?.label || o).join(' or ')} outcome to see “${f.title}”.`, 'info', 5000);
+      selectRound(i, true);
+    }
+  }
+  requestAnimationFrame(() => {
+    let node = g.id ? document.getElementById(g.id) : null;
+    if (!node && g.section) node = (root === document ? document : root).querySelector(`section.group[data-key$="${g.section}"]`);
+    if (!node && g.tab) node = el.panel;
+    if (!node) return toast(f.when || `“${f.title}” is not shown for this project right now.`, 'info', 5000);
+    revealSection(node);
+    if (f.when && g.id && !document.getElementById(g.id)) toast(f.when, 'info', 5000);
+    spotlight(node);
+    if (/^(INPUT|SELECT|BUTTON|TEXTAREA)$/.test(node.tagName) && !node.disabled) node.focus({ preventScroll: true });
+    else node.querySelector?.('.seg button.on, input, select, button, .group-toggle')?.focus({ preventScroll: true });
+    // The floating Asset Bank folds away if it covers what was found.
+    if (ui.bank.open && !el.bank.contains(node) && !narrow()) {
+      setTimeout(() => {
+        const a = el.bank.getBoundingClientRect();
+        const b = node.getBoundingClientRect();
+        if (a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom) setBankMin(true);
+      }, 450);
+    }
+  });
+}
+
+function closeSearch() {
+  if (!el.search) return;
+  el.search.remove();
+  el.search = null;
+}
+
+function openSearch() {
+  if (el.search) return el.searchInput.focus();
+  let results = [];
+  let active = 0;
+  const list = h('ul', { class: 'search-results', id: 'search-results', role: 'listbox', 'aria-label': 'Features' });
+  const input = h('input', { type: 'search', id: 'search-input', placeholder: 'Search features: try “confetti”, “fly to score”, “save”…', autocomplete: 'off', spellcheck: 'false', role: 'combobox', 'aria-expanded': 'true', 'aria-controls': 'search-results', 'aria-autocomplete': 'list' });
+  el.searchInput = input;
+  const paint = () => {
+    results = searchFeatures(input.value);
+    active = Math.min(active, Math.max(0, results.length - 1));
+    clear(
+      list,
+      results.length
+        ? results.map((r, i) =>
+            h(
+              'li',
+              { role: 'option', id: `sr-${i}`, class: i === active ? 'on' : '', 'aria-selected': String(i === active), onclick: () => goToFeature(r.feature), onpointermove: () => { if (active !== i) { active = i; paint(); } } },
+              h('span', { class: 'sr-title' }, r.feature.title),
+              h('span', { class: 'sr-where' }, r.feature.where),
+              r.via ? h('span', { class: 'sr-via' }, `matches “${r.via}”`) : null
+            )
+          )
+        : h('li', { class: 'sr-none', role: 'option', 'aria-disabled': 'true' }, 'Nothing found. Try another word: synonyms and small typos are fine.')
+    );
+    input.setAttribute('aria-activedescendant', results.length ? `sr-${active}` : '');
+    list.querySelector('.on')?.scrollIntoView({ block: 'nearest' });
+  };
+  input.addEventListener('input', () => {
+    active = 0;
+    paint();
+  });
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      if (results.length) active = (active + (e.key === 'ArrowDown' ? 1 : -1) + results.length) % results.length;
+      paint();
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      if (results[active]) goToFeature(results[active].feature);
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      e.stopPropagation();
+      closeSearch();
+      el.searchBtn.focus();
+    }
+  });
+  el.search = h(
+    'div',
+    { class: 'modal-back search-back', onpointerdown: (e) => e.target === el.search && closeSearch() },
+    h(
+      'div',
+      { class: 'search', role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Search features' },
+      h('div', { class: 'search-field' }, icon('search'), input, h('kbd', null, 'Esc')),
+      h('p', { class: 'search-head' }, 'Popular'),
+      list,
+      h('p', { class: 'search-foot' }, h('span', null, h('kbd', null, '↑'), h('kbd', null, '↓'), ' move'), h('span', null, h('kbd', null, 'Enter'), ' go there'), h('span', null, 'Synonyms and typos understood'))
+    )
+  );
+  input.addEventListener('input', () => {
+    el.search.querySelector('.search-head').hidden = !!input.value.trim();
+  });
+  document.body.append(el.search);
+  paint();
+  input.focus();
+}
+
+// ---------- keyboard shortcuts ----------
+
+const SHORTCUTS = [
+  ['Ctrl K  or  /', 'Search every feature'],
+  ['Space', 'Play / pause'],
+  ['← →', 'Step one frame (Shift: one second)'],
+  ['Home', 'Back to the start'],
+  ['B', 'Asset Bank'],
+  ['Ctrl Z', 'Undo'],
+  ['Ctrl Shift Z  or  Ctrl Y', 'Redo'],
+  ['Ctrl S', 'Save the project file'],
+  ['Ctrl O', 'Open a project file'],
+  ['?', 'This list'],
+  ['Alt-click a section title', 'Fold or unfold every section'],
+];
+
+function showShortcuts() {
+  if (el.keys && !el.keys.hidden) return;
+  const closeK = () => {
+    el.keys.remove();
+    el.keys = null;
+  };
+  el.keys = h(
+    'div',
+    { class: 'modal-back', onclick: (e) => e.target === el.keys && closeK() },
+    h(
+      'div',
+      { class: 'modal', role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'keys-title', onkeydown: (e) => e.key === 'Escape' && (e.stopPropagation(), closeK()) },
+      h('header', { class: 'modal-head' }, h('h2', { id: 'keys-title' }, 'Keyboard shortcuts'), button('', closeK, { class: 'icon-btn tiny', icon: 'x', id: 'keys-close', title: 'Close' })),
+      h('dl', { class: 'keys' }, SHORTCUTS.map(([k, d]) => [h('dt', null, k.split('  ').map((x, i) => [i ? h('span', { class: 'or' }, ' ') : null, ...x.replace(/^or /, '').split(' ').map((p) => (p === 'or' ? h('span', { class: 'or' }, 'or') : h('kbd', null, p)))])), h('dd', null, d)]))
+    )
+  );
+  document.body.append(el.keys);
+  el.keys.querySelector('#keys-close').focus();
 }
 
 // ---------- persistence ----------
@@ -451,6 +884,7 @@ let rebuildTimer = null;
 let rebuildVersion = 0;
 function changed(kind = 'all') {
   save();
+  recordSoon();
   clearTimeout(rebuildTimer);
   state.pendingKind = state.pendingKind === 'all' || kind === 'all' ? 'all' : 'timeline';
   rebuildTimer = setTimeout(() => {
@@ -559,6 +993,7 @@ function draw() {
   if (!state.scene || !ctx) return;
   const t0 = performance.now();
   renderFrame(ctx, state.scene, state.t, { scale: state.quality });
+  drawMarker();
   const ms = performance.now() - t0;
   if (state.playing && state.autoQuality) {
     state.perf.push(ms);
@@ -720,7 +1155,9 @@ function buildShell() {
   ctx = el.canvas.getContext('2d');
   el.viewport = h('div', { class: 'viewport' }, el.canvas);
   el.badge = h('div', { class: 'badge' });
-  el.viewport.append(el.badge);
+  el.pickNote = h('div', { class: 'pick-note', role: 'status', hidden: true });
+  el.viewport.append(el.badge, el.pickNote);
+  el.canvas.addEventListener('click', onPreviewClick);
   el.transport = h('div', { class: 'transport' });
   el.timeline = h('div', { class: 'timeline' });
   el.tabs = h('nav', { class: 'tabs', role: 'tablist', 'aria-label': 'Settings' });
@@ -739,6 +1176,14 @@ function buildShell() {
       'header',
       { class: 'top' },
       h('div', { class: 'brand' }, h('span', { class: 'brand-mark', 'aria-hidden': 'true' }, '7'), h('div', null, h('div', { class: 'brand-name' }, 'Reel Studio'), h('div', { class: 'brand-sub' }, 'Slot win animator'))),
+      h(
+        'div',
+        { class: 'top-left' },
+        buildProjectMenu(),
+        (el.undoBtn = button('', undo, { class: 'icon-btn', icon: 'undo', id: 'top-undo', title: 'Undo (Ctrl Z)', disabled: true })),
+        (el.redoBtn = button('', redo, { class: 'icon-btn', icon: 'redo', id: 'top-redo', title: 'Redo (Ctrl Shift Z)', disabled: true })),
+        (el.searchBtn = h('button', { type: 'button', class: 'search-btn', id: 'top-search', onclick: () => openSearch(), 'aria-haspopup': 'dialog' }, icon('search'), h('span', null, 'Search features'), h('kbd', null, 'Ctrl K')))
+      ),
       el.transport,
       h(
         'div',
@@ -780,7 +1225,36 @@ function seek(t) {
 
 function onKey(e) {
   const tag = (e.target.tagName || '').toLowerCase();
-  if (tag === 'input' || tag === 'select' || tag === 'textarea' || e.target.isContentEditable) return;
+  const typing = tag === 'input' || tag === 'select' || tag === 'textarea' || e.target.isContentEditable;
+  const mod = e.ctrlKey || e.metaKey;
+  // Work everywhere, even while typing in a field.
+  if (mod && (e.key === 'k' || e.key === 'K')) {
+    e.preventDefault();
+    return openSearch();
+  }
+  if (mod && (e.key === 's' || e.key === 'S')) {
+    e.preventDefault();
+    return saveProjectFile();
+  }
+  if (mod && (e.key === 'o' || e.key === 'O')) {
+    e.preventDefault();
+    return openProjectFile();
+  }
+  if (e.key === 'Escape' && state.pick) return endPick();
+  if (typing) return;
+  if (mod && (e.key === 'z' || e.key === 'Z')) {
+    e.preventDefault();
+    return e.shiftKey ? redo() : undo();
+  }
+  if (mod && (e.key === 'y' || e.key === 'Y')) {
+    e.preventDefault();
+    return redo();
+  }
+  if (e.key === '/' && !mod) {
+    e.preventDefault();
+    return openSearch();
+  }
+  if (e.key === '?') return showShortcuts();
   if (!state.scene) return;
   const fd = 1 / state.scene.tl.fps;
   if (e.code === 'Space') {
@@ -973,6 +1447,12 @@ function renderSequence() {
     el.list,
     el.inspector
   );
+  collapsify(el.sequence, 'seq');
+  // With no rounds yet, the quick sequence is the way in: show it open.
+  if (!state.project.rounds.length) {
+    const qs = el.sequence.querySelector('section.group[data-key="seq/quick-sequence"]');
+    if (qs) setSection(qs, true, false);
+  }
   refreshList();
   renderInspector();
 }
@@ -1677,8 +2157,23 @@ function renderInspector() {
     );
   }
 
-  // Win particles: the Effects tab's pick for this moment, or the round's own.
-  if (!['none', 'nearmiss', 'respin'].includes(r.outcome)) {
+  // How it looks: winning symbols and particles, from the Wins tab or the
+  // round's own.
+  const showsWin = !['none', 'nearmiss', 'respin'].includes(r.outcome);
+  if (showsWin) parts.push(h('h4', { class: 'insp-sub' }, 'Look'));
+  if (LINE_WINS.includes(r.outcome)) {
+    const def = WIN_STYLES.find((x) => x.id === winFxConfig(P).style)?.label || 'Pop in place';
+    parts.push(
+      selectField({
+        id: 'ri-winstyle',
+        label: 'Winning symbols',
+        value: r.winStyle || 'auto',
+        options: [{ value: 'auto', label: `Wins tab default (${def})` }, ...WIN_STYLES.map((x) => ({ value: x.id, label: x.label }))],
+        onChange: (v) => set('winStyle')(v === 'auto' ? null : v),
+      })
+    );
+  }
+  if (showsWin) {
     const rp = r.particles || { fx: 'auto', asset: 'auto' };
     const setP = (k) => (v) => {
       r.particles = { fx: 'auto', asset: 'auto', ...(r.particles || {}), [k]: v };
@@ -1689,7 +2184,7 @@ function renderInspector() {
       h(
         'div',
         { class: 'row2' },
-        h('div', { class: 'field' }, h('label', { class: 'label', for: 'ri-pfx' }, 'Win particles'), h('select', { id: 'ri-pfx', onchange: (e) => setP('fx')(e.target.value) }, h('option', { value: 'auto', selected: (rp.fx || 'auto') === 'auto' }, 'Auto (Effects tab)'), templateOptions(rp.fx || 'auto'))),
+        h('div', { class: 'field' }, h('label', { class: 'label', for: 'ri-pfx' }, 'Win particles'), h('select', { id: 'ri-pfx', onchange: (e) => setP('fx')(e.target.value) }, h('option', { value: 'auto', selected: (rp.fx || 'auto') === 'auto' }, 'Wins tab default'), templateOptions(rp.fx || 'auto'))),
         selectField({ id: 'ri-passet', label: 'Particle', value: rp.asset || 'auto', options: [{ value: 'auto', label: 'Auto' }, ...particleAssetChoices()], onChange: setP('asset') })
       )
     );
@@ -1699,7 +2194,7 @@ function renderInspector() {
   // the wheel game's machine).
   const spins = r.outcome !== 'collect' && gameOf() !== 'wheel' && !(gameOf() === 'holdspin' && r.outcome === 'wheel');
   const useDefault = r.midDuration == null || r.midDuration === '';
-  parts.push(h('div', { class: 'divider' }));
+  parts.push(h('h4', { class: 'insp-sub' }, 'Spin and timing'));
   if (spins) parts.push(
     toggleField({
       id: 'ri-mid-default',
@@ -1752,24 +2247,22 @@ function renderInspector() {
   } else if (teases) {
     parts.push(toggleField({ id: 'ri-tease', label: 'Also tease the last reel to stop', checked: !!r.tease, onChange: set('tease') }));
   }
-  parts.push(
-    h(
-      'div',
-      { class: 'row' },
-      button(isHS ? 'New coins' : 'New symbols', () => {
-        r.seed = Math.floor(Math.random() * 1e6);
-        changed(kind);
-      }, { class: 'btn small', icon: 'dice', id: 'ri-reroll', title: isHS ? 'Re-roll where the coins land and their values' : 'Re-roll the filler symbols for this round' }),
-      button('Preview this round', () => {
-        state.solo = true;
-        renderTransport();
-        selectRound(state.sel, true);
-        if (!state.playing) togglePlay();
-      }, { class: 'btn small', icon: 'eye', id: 'ri-preview' })
-    )
+  const actions = h(
+    'div',
+    { class: 'row insp-actions' },
+    button('Preview this round', () => {
+      state.solo = true;
+      renderTransport();
+      selectRound(state.sel, true);
+      if (!state.playing) togglePlay();
+    }, { class: 'btn small', icon: 'eye', id: 'ri-preview' }),
+    button(isHS ? 'New coins' : 'New symbols', () => {
+      r.seed = Math.floor(Math.random() * 1e6);
+      changed(kind);
+    }, { class: 'btn small', icon: 'dice', id: 'ri-reroll', title: isHS ? 'Re-roll where the coins land and their values' : 'Re-roll the filler symbols for this round' })
   );
   const o = OUTCOME_BY_ID[r.outcome];
-  clear(el.inspector, h('div', { class: 'inspector-head', style: { '--c': o.color } }, h('span', { class: 'dot' }), h('h2', null, `Round ${state.sel + 1}`), h('span', { class: 'muted' }, o.label)), parts);
+  clear(el.inspector, h('div', { class: 'inspector-head', style: { '--c': o.color } }, h('span', { class: 'dot' }), h('h2', null, `Round ${state.sel + 1}`), h('span', { class: 'muted' }, o.label)), actions, parts);
 }
 
 // ---------- settings (left panel) ----------
@@ -1777,6 +2270,7 @@ function renderInspector() {
 const TABS = [
   ['machine', 'Machine'],
   ['spin', 'Spin'],
+  ['wins', 'Wins'],
   ['effects', 'Effects'],
   ['wheel', 'Wheel'],
   ['sound', 'Sound'],
@@ -1805,8 +2299,9 @@ function renderTabs() {
 }
 
 function renderPanel() {
-  const fn = { machine: panelMachine, spin: panelSpin, effects: panelEffects, wheel: panelWheel, sound: panelSound, export: panelExport }[state.tab] || panelMachine;
+  const fn = { machine: panelMachine, spin: panelSpin, wins: panelWins, effects: panelEffects, wheel: panelWheel, sound: panelSound, export: panelExport }[state.tab] || panelMachine;
   clear(el.panel, fn());
+  collapsify(el.panel, state.tab);
   if (state.tab === 'spin') drawMotionGraph();
 }
 
@@ -1837,12 +2332,15 @@ function confirmButton(label, armedLabel, onConfirm, opts) {
 }
 
 function loadProject(p, msg) {
+  if (hist.timer) recordNow();
   state.project = p;
   state.sel = 0;
   state.t = 0;
   changed('all');
+  recordNow();
   renderAll();
-  toast(msg);
+  if (ui.bank.open) renderBank();
+  toast(msg, 'info', 4000);
 }
 
 // Switching games keeps the rounds that fit the new game; the others are
@@ -1888,7 +2386,6 @@ function holdSettings() {
 function panelMachine() {
   const P = state.project;
   const fmt = `${P.canvas.width}x${P.canvas.height}`;
-  let preset = PRESETS[0].id;
   const pm = P.machine.payMode;
   const game = gameOf();
   return [
@@ -1896,15 +2393,6 @@ function panelMachine() {
       'Game',
       segmented({ id: 'm-game', value: game, options: GAMES.map((g) => ({ value: g.id, label: g.label, hint: g.hint })), onChange: setGame }),
       h('p', { class: 'hint' }, GAMES.find((g) => g.id === game).hint)
-    ),
-    section(
-      'Start from a preset',
-      selectField({ id: 'm-preset', value: preset, options: PRESETS.map((p) => ({ value: p.id, label: p.label })), onChange: (v) => (preset = v) }),
-      confirmButton('Load preset', 'Click again to replace this project', () => {
-        const p = PRESETS.find((x) => x.id === preset);
-        loadProject(p.make(), `Loaded ${p.label}.`);
-      }, { class: 'btn small', id: 'm-preset-load' }),
-      h('p', { class: 'hint' }, 'Replaces the whole project, including uploaded symbols. Save it from Export first if you want to keep it.')
     ),
     section(
       'Output',
@@ -2670,6 +3158,12 @@ function panelSpin() {
       rangeField({ id: 'spin-ant-v', label: 'Anticipation crawl speed', unit: 'symbols/s', value: sp.anticipationSpeed, min: 2, max: 20, step: 0.5, onInput: num(sp, 'anticipationSpeed') }),
       h('div', { class: 'field' }, h('span', { class: 'label' }, 'Extra delay per reel'), delays, h('p', { class: 'hint' }, 'Added on top of the stagger: hold one reel back, or make it start late.'))
     ),
+    section(
+      'Between rounds',
+      rangeField({ id: 'tm-gap', label: 'Gap between rounds', unit: 's', value: state.project.timing.gap, min: 0, max: 2, step: 0.05, onInput: num(state.project.timing, 'gap') }),
+      rangeField({ id: 'tm-intro', label: 'Intro hold', unit: 's', value: state.project.timing.intro, min: 0, max: 3, step: 0.05, onInput: num(state.project.timing, 'intro') }),
+      rangeField({ id: 'tm-outro', label: 'Outro hold', unit: 's', value: state.project.timing.outro, min: 0, max: 3, step: 0.05, onInput: num(state.project.timing, 'outro') })
+    ),
   ];
 }
 
@@ -2805,17 +3299,18 @@ function tierEditor() {
   );
 }
 
-function panelEffects() {
+function panelWins() {
   const P = state.project;
   const fx = P.effects;
   const tm = P.timing;
   const titles = fx.titles;
   return [
     section('Win tiers', tierEditor()),
+    winSymbolsSection(),
     particleSettings(),
     templateGallery(),
     section(
-      'Win typography',
+      'Titles and font',
       selectField({ id: 'fx-font', label: 'Display font', value: fx.font, options: FONTS.map((f) => ({ value: f, label: f })), onChange: num(fx, 'font', 'all') }),
       h(
         'div',
@@ -2832,19 +3327,7 @@ function panelEffects() {
       )
     ),
     section(
-      'Intensity',
-      rangeField({ id: 'fx-dim', label: 'Dim other symbols', value: fx.dim, min: 0, max: 0.9, step: 0.01, onInput: num(fx, 'dim') }),
-      rangeField({ id: 'fx-pop', label: 'Winning symbol pop', value: fx.popScale, min: 0, max: 0.4, step: 0.01, onInput: num(fx, 'popScale') }),
-      rangeField({ id: 'fx-line', label: 'Payline glow', value: fx.lineGlow, min: 0, max: 1.5, step: 0.01, onInput: num(fx, 'lineGlow') }),
-      rangeField({ id: 'fx-spark', label: 'Sparkles', value: fx.sparkles, min: 0, max: 2, step: 0.01, onInput: num(fx, 'sparkles') }),
-      rangeField({ id: 'fx-rays', label: 'Light rays', value: fx.rays, min: 0, max: 1.5, step: 0.01, onInput: num(fx, 'rays') }),
-      rangeField({ id: 'fx-shake', label: 'Screen shake', value: fx.shake, min: 0, max: 2, step: 0.01, onInput: num(fx, 'shake') }),
-      rangeField({ id: 'fx-flash', label: 'Flashes', value: fx.flash, min: 0, max: 1.5, step: 0.01, onInput: num(fx, 'flash') }),
-      rangeField({ id: 'fx-bloom', label: 'Bloom glow', value: fx.bloom, min: 0, max: 1.2, step: 0.01, onInput: num(fx, 'bloom'), hint: 'Preview and MP4 only.' }),
-      rangeField({ id: 'fx-bokeh', label: 'Background lights', value: fx.bokeh, min: 0, max: 2, step: 0.01, onInput: num(fx, 'bokeh') })
-    ),
-    section(
-      'Timing',
+      'Win timing',
       rangeField({ id: 'tm-small', label: 'Small win show', unit: 's', value: tm.small, min: 0.8, max: 5, step: 0.05, onInput: num(tm, 'small') }),
       rangeField({ id: 'tm-medium', label: 'Medium win show', unit: 's', value: tm.medium, min: 1, max: 6, step: 0.05, onInput: num(tm, 'medium') }),
       rangeField({ id: 'tm-biglines', label: 'Lines before the big win title', unit: 's', value: tm.bigLines, min: 0.4, max: 3, step: 0.05, onInput: num(tm, 'bigLines') }),
@@ -2858,12 +3341,163 @@ function panelEffects() {
       rangeField({ id: 'tm-collect', label: 'Each coin collected', unit: 's', value: tm.collectEach ?? 0.22, min: 0.11, max: 0.6, step: 0.01, onInput: num(tm, 'collectEach') }),
       rangeField({ id: 'tm-cel', label: 'Scatter celebration', unit: 's', value: tm.celebrate, min: 0.5, max: 4, step: 0.05, onInput: num(tm, 'celebrate') }),
       rangeField({ id: 'tm-banner', label: 'Bonus banner', unit: 's', value: tm.banner, min: 1, max: 6, step: 0.05, onInput: num(tm, 'banner') }),
-      rangeField({ id: 'tm-wheel', label: 'Wheel spin', unit: 's', value: tm.wheelSpin, min: 2, max: 12, step: 0.1, onInput: num(tm, 'wheelSpin') }),
-      rangeField({ id: 'tm-gap', label: 'Gap between rounds', unit: 's', value: tm.gap, min: 0, max: 2, step: 0.05, onInput: num(tm, 'gap') }),
-      rangeField({ id: 'tm-intro', label: 'Intro hold', unit: 's', value: tm.intro, min: 0, max: 3, step: 0.05, onInput: num(tm, 'intro') }),
-      rangeField({ id: 'tm-outro', label: 'Outro hold', unit: 's', value: tm.outro, min: 0, max: 3, step: 0.05, onInput: num(tm, 'outro') })
+      rangeField({ id: 'tm-wheel', label: 'Wheel spin', unit: 's', value: tm.wheelSpin, min: 2, max: 12, step: 0.1, onInput: num(tm, 'wheelSpin') })
     ),
   ];
+}
+
+function panelEffects() {
+  const P = state.project;
+  const fx = P.effects;
+  return [
+    section(
+      'Intensity',
+      rangeField({ id: 'fx-line', label: 'Payline glow', value: fx.lineGlow, min: 0, max: 1.5, step: 0.01, onInput: num(fx, 'lineGlow') }),
+      rangeField({ id: 'fx-spark', label: 'Sparkles', value: fx.sparkles, min: 0, max: 2, step: 0.01, onInput: num(fx, 'sparkles') }),
+      rangeField({ id: 'fx-rays', label: 'Light rays', value: fx.rays, min: 0, max: 1.5, step: 0.01, onInput: num(fx, 'rays') }),
+      rangeField({ id: 'fx-shake', label: 'Screen shake', value: fx.shake, min: 0, max: 2, step: 0.01, onInput: num(fx, 'shake') }),
+      rangeField({ id: 'fx-flash', label: 'Flashes', value: fx.flash, min: 0, max: 1.5, step: 0.01, onInput: num(fx, 'flash') }),
+      rangeField({ id: 'fx-bloom', label: 'Bloom glow', value: fx.bloom, min: 0, max: 1.2, step: 0.01, onInput: num(fx, 'bloom'), hint: 'Preview and MP4 only.' }),
+      rangeField({ id: 'fx-bokeh', label: 'Background lights', value: fx.bokeh, min: 0, max: 2, step: 0.01, onInput: num(fx, 'bokeh') })
+    ),
+    h('p', { class: 'hint' }, 'Win tiers, winning symbols, particles and win timing are in the Wins tab.'),
+  ];
+}
+
+// ---------- winning symbols (Wins tab) ----------
+
+function pickOnPreview(kind) {
+  state.pick = kind;
+  el.viewport.classList.add('picking');
+  el.pickNote.hidden = false;
+  el.pickNote.textContent = kind === 'jump' ? 'Click the preview where the winning symbols should land. Esc cancels.' : 'Click the preview where the winning symbols should merge. Esc cancels.';
+  el.canvas.focus?.();
+}
+
+function endPick() {
+  state.pick = null;
+  el.viewport.classList.remove('picking');
+  el.pickNote.hidden = true;
+}
+
+function onPreviewClick(e) {
+  if (!state.pick) return;
+  const r = el.canvas.getBoundingClientRect();
+  const fx = Math.min(1, Math.max(0, (e.clientX - r.left) / r.width));
+  const fy = Math.min(1, Math.max(0, (e.clientY - r.top) / r.height));
+  const W = state.project.winfx;
+  if (state.pick === 'jump') Object.assign(W, { target: 'custom', jx: +fx.toFixed(3), jy: +fy.toFixed(3) });
+  else Object.assign(W, { point: 'custom', mx: +fx.toFixed(3), my: +fy.toFixed(3) });
+  const kind = state.pick;
+  endPick();
+  changed('timeline');
+  if (state.tab === 'wins') renderPanel();
+  toast(`${kind === 'jump' ? 'Landing spot' : 'Merge point'} set to ${Math.round(fx * 100)}% across, ${Math.round(fy * 100)}% down.`, 'good');
+}
+
+// Where the current winning-symbol target sits, for the marker on the preview.
+function winFxMarker() {
+  if (state.tab !== 'wins' || !state.scene) return null;
+  const P = state.project;
+  const cfg = winFxConfig(P);
+  if (cfg.style === 'pop') return null;
+  const L = state.scene.L;
+  const st = { cells: [[0, 0]], lines: [] };
+  if (cfg.style === 'jump' && cfg.target === 'amount') return null;
+  if (cfg.style === 'merge' && cfg.point === 'cells') return null;
+  const g = cfg.style === 'jump' ? jumpTarget(P, L, st) : mergeTarget(P, L, st);
+  return { ...g, label: cfg.style === 'jump' ? 'Landing spot' : 'Merge point' };
+}
+
+function drawMarker() {
+  const m = winFxMarker();
+  if (!m) return;
+  const k = state.quality;
+  const u = state.scene.L.cellW * k;
+  ctx.save();
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  const x = m.x * k;
+  const y = m.y * k;
+  ctx.lineWidth = Math.max(2, u * 0.03);
+  ctx.strokeStyle = 'rgba(255,226,154,0.95)';
+  ctx.setLineDash([u * 0.12, u * 0.08]);
+  ctx.beginPath();
+  ctx.arc(x, y, u * 0.42, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.beginPath();
+  ctx.moveTo(x - u * 0.62, y);
+  ctx.lineTo(x - u * 0.22, y);
+  ctx.moveTo(x + u * 0.22, y);
+  ctx.lineTo(x + u * 0.62, y);
+  ctx.moveTo(x, y - u * 0.62);
+  ctx.lineTo(x, y - u * 0.22);
+  ctx.moveTo(x, y + u * 0.22);
+  ctx.lineTo(x, y + u * 0.62);
+  ctx.stroke();
+  ctx.font = `600 ${Math.round(u * 0.2)}px "Instrument Sans", system-ui, sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.fillStyle = 'rgba(255,226,154,0.95)';
+  // The label sits above the reticle, or below it near the top edge.
+  ctx.fillText(m.label, x, y < u * 1.1 ? y + u * 0.95 : y - u * 0.75);
+  ctx.restore();
+}
+
+function winSymbolsSection() {
+  const P = state.project;
+  P.winfx = winFxConfig(P);
+  const W = P.winfx;
+  const fx = P.effects;
+  const set = (k, kind = 'timeline', rerender = false) => (v) => {
+    W[k] = v;
+    changed(kind);
+    if (rerender) renderPanel();
+    else draw();
+  };
+  const custom = (kx, ky, pickKind) => [
+    h('div', { class: 'row2' },
+      rangeField({ id: `wf-${kx}`, label: 'Across', unit: '%', value: Math.round(W[kx] * 100), min: 0, max: 100, step: 1, onInput: (v) => set(kx)(v / 100) }),
+      rangeField({ id: `wf-${ky}`, label: 'Down', unit: '%', value: Math.round(W[ky] * 100), min: 0, max: 100, step: 1, onInput: (v) => set(ky)(v / 100) })
+    ),
+  ].concat(button('Pick on the preview', () => pickOnPreview(pickKind), { class: 'btn small', icon: 'target', id: `wf-pick-${pickKind}` }));
+  const style = WIN_STYLES.find((x) => x.id === W.style) || WIN_STYLES[0];
+  const parts = [
+    segmented({ id: 'wf-style', label: 'Winning symbols', value: W.style, options: WIN_STYLES.map((x) => ({ value: x.id, label: x.short, hint: x.hint })), onChange: set('style', 'timeline', true) }),
+    h('p', { class: 'hint' }, style.hint),
+  ];
+  if (W.style === 'jump') {
+    parts.push(
+      selectField({ id: 'wf-target', label: 'They land on', value: W.target, options: JUMP_TARGETS.map((x) => ({ value: x.id, label: x.label })), onChange: set('target', 'timeline', true) }),
+      W.target === 'custom' ? custom('jx', 'jy', 'jump') : null,
+      rangeField({ id: 'wf-flight', label: 'Flight time', unit: 's', value: W.flight, min: 0.25, max: 1.5, step: 0.05, onInput: set('flight') }),
+      rangeField({ id: 'wf-stagger', label: 'Delay between symbols', unit: 's', value: W.stagger, min: 0, max: 0.25, step: 0.01, onInput: set('stagger') })
+    );
+  } else if (W.style === 'merge') {
+    parts.push(
+      selectField({ id: 'wf-point', label: 'They merge at', value: W.point, options: MERGE_POINTS.map((x) => ({ value: x.id, label: x.label })), onChange: set('point', 'timeline', true) }),
+      W.point === 'custom' ? custom('mx', 'my', 'merge') : null,
+      rangeField({ id: 'wf-big', label: 'Big symbol size', unit: '× cell', value: W.bigScale, min: 1.2, max: 4, step: 0.1, onInput: set('bigScale') })
+    );
+  }
+  parts.push(
+    rangeField({ id: 'fx-pop', label: 'Winning symbol pop', value: fx.popScale, min: 0, max: 0.4, step: 0.01, onInput: num(fx, 'popScale') }),
+    rangeField({ id: 'fx-dim', label: 'Dim other symbols', value: fx.dim, min: 0, max: 0.9, step: 0.01, onInput: num(fx, 'dim') }),
+    h('div', { class: 'row' }, button('Preview a win', previewAWin, { class: 'btn small', icon: 'eye', id: 'wf-preview' })),
+    h('p', { class: 'hint' }, 'Any round can use its own style in the round inspector. The landing spot shows on the preview while this tab is open.')
+  );
+  const sec = section('Winning symbols', ...parts);
+  sec.id = 'fx-winsyms';
+  return sec;
+}
+
+// Plays the first round with a line or cluster win.
+function previewAWin() {
+  const i = state.scene?.tl.rounds.findIndex((R) => (R.pres.steps || []).length) ?? -1;
+  if (i < 0) return toast('No round in the sequence has a win to show. Add a Small or Medium win round.', 'warn');
+  state.solo = true;
+  renderTransport();
+  selectRound(i, true);
+  if (!state.playing) togglePlay();
 }
 
 function panelWheel() {
@@ -3170,22 +3804,8 @@ function panelExport() {
     ),
     section(
       'Project file',
-      h('p', { class: 'hint' }, 'Includes your uploaded images and sounds, so you can reopen the exact animation later.'),
-      h(
-        'div',
-        { class: 'row' },
-        button('Save project', () => saveFile(`${slugName()}.json`, new Blob([JSON.stringify(state.project, null, 2)], { type: 'application/json' })), { class: 'btn small', icon: 'download', id: 'x-save' }),
-        button('Open project', async () => {
-          const [f] = await pickFiles('application/json,.json');
-          if (!f) return;
-          try {
-            loadProject(migrate(JSON.parse(await f.text())), `Opened ${f.name}.`);
-          } catch (err) {
-            toast(`That file is not a Reel Studio project: ${err.message}`, 'error', 6000);
-          }
-        }, { class: 'btn small', icon: 'upload', id: 'x-open' })
-      ),
-      confirmButton('Start over with the demo project', 'Click again to replace this project', () => loadProject(defaultProject(), 'Loaded the demo project.'), { class: 'btn small ghost danger', id: 'x-reset' })
+      h('p', { class: 'hint' }, 'Includes your uploaded images and sounds, so you can reopen the exact animation later. New project, presets, clear and reset are in the Project menu at the top left.'),
+      h('div', { class: 'row' }, button('Save project', saveProjectFile, { class: 'btn small', icon: 'download', id: 'x-save' }), button('Open project', openProjectFile, { class: 'btn small', icon: 'upload', id: 'x-open' }))
     ),
   ];
 }
@@ -3217,6 +3837,7 @@ export async function start() {
   await withTimeout(Promise.all(['Bungee', 'Instrument Sans'].map((f) => document.fonts.load(`32px "${f}"`).catch(() => null))), 3000);
   await rebuild('all');
   renderPanel();
+  recordNow();
   // The Asset Bank reopens where it was left.
   if (ui.bank.open) {
     const wasMin = ui.bank.min;

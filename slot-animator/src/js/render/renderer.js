@@ -10,6 +10,7 @@ import { hash01 } from '../core/rng.js';
 import { sparkle, roundRect } from './paint.js';
 import { canvas, paintTitle } from './sprites.js';
 import { drawEmitter } from './particles.js';
+import { jumpTarget, mergeTarget, flightPath, flightAt, bigScaleAt, winFxConfig } from '../core/winfx.js';
 
 const clamp01 = (x) => (x < 0 ? 0 : x > 1 ? 1 : x);
 const prog = (t, a, b) => clamp01((t - a) / Math.max(1e-6, b - a));
@@ -837,18 +838,33 @@ function drawWinCells(ctx, scene, R, t, cells, start, end, opts = {}) {
   if (a <= 0) return;
   const k = (Number(fx.popScale) || 0) * (opts.popMul || 1);
   const sym = (c, r, i) => (opts.syms ? opts.syms[i] : R.grid[c][r]);
+  // Jumping or merging winners leave their cells (core/winfx.js).
+  const wfx = opts.step && opts.step.fx;
+  const goal = wfx ? (wfx.style === 'jump' ? jumpTarget(project, L, opts.step) : mergeTarget(project, L, opts.step)) : null;
   cells.forEach(([c, r], i) => {
-    const m = L.cellCenter(c, r);
+    const m0 = L.cellCenter(c, r);
     const col = opts.color || (opts.step && stepCellColor(opts.step, c, r)) || res.theme.accent;
-    const s = popScale(t, start + (opts.stagger ? i * 0.05 : 0), end, k);
-    if (opts.rays) {
+    let s = popScale(t, start + (opts.stagger ? i * 0.05 : 0), end, k);
+    let m = m0;
+    let fa = 1;
+    let stay = 1;
+    if (wfx) {
+      const f = flightAt(flightPath(wfx.style, m0, goal, L), wfx.launch[i], wfx.arrive[i], t);
+      if (f.flying) m = { x: f.x, y: f.y, s: m0.s };
+      s *= f.s;
+      fa = f.a;
+      stay = 1 - clamp01((t - wfx.launch[i]) / 0.15);
+    }
+    if (fa <= 0 && stay <= 0) return;
+    if (opts.rays && stay > 0) {
       ctx.save();
       ctx.globalCompositeOperation = 'lighter';
       drawCentered(ctx, res.raysSmall, m.x, m.y, (L.cellW * 2.1) / res.raysSmall.width * s, 0.75 * a, t * 1.2 + i);
       ctx.restore();
     }
-    drawGlow(ctx, res, col, m.x, m.y, L.cellW * 1.7 * s, (0.45 + 0.2 * Math.sin(t * 6 + i)) * a);
+    drawGlow(ctx, res, col, m.x, m.y, L.cellW * 1.7 * s, (0.45 + 0.2 * Math.sin(t * 6 + i)) * a * fa);
     ctx.save();
+    ctx.globalAlpha *= fa;
     ctx.translate(m.x, m.y);
     ctx.scale(s, s * m.s);
     const si = sym(c, r, i);
@@ -862,12 +878,13 @@ function drawWinCells(ctx, scene, R, t, cells, start, end, opts = {}) {
     }
     ctx.restore();
     if (opts.values && opts.values[i] != null) drawValueLabel(ctx, scene, si, opts.values[i], m.x, m.y, s);
-    // Cell frame with a chasing light.
+    if (stay <= 0) return;
+    // Cell frame with a chasing light (it stays with the cell).
     ctx.save();
-    ctx.globalAlpha = a;
+    ctx.globalAlpha = a * stay;
     const fw = L.cellW * 0.97;
-    const fh = L.cellH * 0.97 * m.s;
-    roundRect(ctx, m.x - fw / 2, m.y - fh / 2, fw, fh, L.cellW * 0.1);
+    const fh = L.cellH * 0.97 * m0.s;
+    roundRect(ctx, m0.x - fw / 2, m0.y - fh / 2, fw, fh, L.cellW * 0.1);
     ctx.lineWidth = L.cellW * 0.03;
     ctx.strokeStyle = col;
     ctx.shadowColor = col;
@@ -887,12 +904,52 @@ function drawWinCells(ctx, scene, R, t, cells, start, end, opts = {}) {
         const per = 0.7 + hash01(salt, 21) * 0.6;
         const ph = ((t - start + hash01(salt, 22) * per) % per) / per;
         const tw = Math.sin(ph * Math.PI);
-        const sx = m.x + (hash01(salt + Math.floor((t - start) / per), 23) - 0.5) * L.cellW * 0.85;
-        const sy = m.y + (hash01(salt + Math.floor((t - start) / per), 24) - 0.5) * L.cellH * 0.85;
-        sparkle(ctx, sx, sy, L.cellW * 0.11 * tw, a * tw * Number(fx.sparkles));
+        const sx = m0.x + (hash01(salt + Math.floor((t - start) / per), 23) - 0.5) * L.cellW * 0.85;
+        const sy = m0.y + (hash01(salt + Math.floor((t - start) / per), 24) - 0.5) * L.cellH * 0.85;
+        sparkle(ctx, sx, sy, L.cellW * 0.11 * tw, a * stay * tw * Number(fx.sparkles));
       }
     }
   });
+}
+
+// After the winners: rings where jumpers land, or the merged big symbol.
+function drawWinFxGoal(ctx, scene, R, st, t) {
+  const wfx = st.fx;
+  if (!wfx || t < st.start || t > st.end) return;
+  const { L, res, project } = scene;
+  const accent = res.theme.accent;
+  if (wfx.style === 'jump') {
+    const g = jumpTarget(project, L, st);
+    let hit = 0;
+    for (const at of wfx.arrive) {
+      drawRing(ctx, g.x, g.y, (t - at) / 0.45, L.cellW * 0.65, accent, L.cellW * 0.05);
+      if (t >= at) hit = Math.max(hit, 1 - clamp01((t - at) / 0.35));
+    }
+    if (hit > 0) drawGlow(ctx, res, accent, g.x, g.y, L.cellW * 1.6, 0.6 * hit);
+    return;
+  }
+  const g = mergeTarget(project, L, st);
+  const big = bigScaleAt(wfx.mergeAt, st.end, Number(winFxConfig(project).bigScale) || 2.2, t);
+  // The pull: a glow gathering where they fuse.
+  const pull = clamp01((t - wfx.launch[0]) / (wfx.mergeAt - wfx.launch[0]));
+  if (t < wfx.mergeAt) drawGlow(ctx, res, accent, g.x, g.y, L.cellW * (1 + 1.5 * pull), 0.5 * pull);
+  if (big <= 0) return;
+  const a = env(t, wfx.mergeAt, st.end, 0.05, 0.3);
+  drawRing(ctx, g.x, g.y, (t - wfx.mergeAt) / 0.7, L.cellW * 2.6, accent, L.cellW * 0.07);
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  drawCentered(ctx, res.raysSmall, g.x, g.y, ((L.cellW * big * 1.7) / res.raysSmall.width), 0.7 * a, t * 0.9);
+  ctx.restore();
+  drawGlow(ctx, res, accent, g.x, g.y, L.cellW * big * 1.6, 0.6 * a);
+  const si = st.symbol >= 0 ? st.symbol : st.cellSyms[0];
+  const anim = res.winAnim && res.winAnim[si];
+  ctx.save();
+  ctx.globalAlpha *= a;
+  ctx.translate(g.x, g.y);
+  ctx.scale(big, big);
+  if (anim && anim.frames.length) ctx.drawImage(anim.frames[Math.floor(Math.max(0, t - wfx.mergeAt) * anim.fps) % anim.frames.length], -L.cellW / 2, -L.cellH / 2, L.cellW, L.cellH);
+  else ctx.drawImage((res.sym[si] || res.sym[0]).sharp, -L.cellW / 2, -L.cellH / 2, L.cellW, L.cellH);
+  ctx.restore();
 }
 
 function drawRing(ctx, x, y, a, maxR, color, width) {
@@ -944,9 +1001,13 @@ function drawSteps(ctx, scene, R, t) {
     if (t < st.start || t > st.end) continue;
     if (st.lines && st.lines.length) drawWinLines(ctx, scene, R, t, st);
     drawWinCells(ctx, scene, R, t, st.cells, st.start, st.end, { stagger: true, step: st, syms: st.cellSyms });
-    if (st.amount > 0) {
-      const a = env(t, st.start + 0.15, st.end, 0.2, 0.4);
-      const k = prog(t, st.start, st.end);
+    drawWinFxGoal(ctx, scene, R, st, t);
+    // A merged win shows its amount under the big symbol once it forms.
+    const merged = st.fx && st.fx.style === 'merge';
+    const aStart = merged ? st.fx.mergeAt + 0.15 : st.start + 0.15;
+    if (st.amount > 0 && t >= aStart) {
+      const a = env(t, aStart, st.end, 0.2, 0.4);
+      const k = prog(t, aStart, st.end);
       let cx = 0;
       let cy = 0;
       for (const [c, r] of st.cells) {
@@ -960,10 +1021,15 @@ function drawSteps(ctx, scene, R, t) {
         cx = L.W / 2;
         cy = L.winCY - L.cellH * 0.15;
       }
+      if (merged) {
+        const g = mergeTarget(project, L, st);
+        cx = g.x;
+        cy = g.y + L.cellH * ((Number(winFxConfig(project).bigScale) || 2.2) * 0.5 + 0.25);
+      }
       const cur = project.machine.currency || '';
       const txt = `+${cur}${Number(st.amount).toFixed(project.machine.decimals | 0)}`;
       const img = cachedTitle(res, 'float', txt, Math.round(res.titlePx * (st.tumble ? 0.4 : 0.5)), 'gold');
-      const s2 = 0.4 + 0.6 * ease.outBack(clamp01((t - st.start - 0.15) / 0.45));
+      const s2 = 0.4 + 0.6 * ease.outBack(clamp01((t - aStart) / 0.45));
       drawCentered(ctx, img, cx, cy - k * L.cellH * 0.5, s2, a);
     }
   }

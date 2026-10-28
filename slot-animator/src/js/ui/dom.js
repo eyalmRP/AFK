@@ -69,7 +69,7 @@ export function selectField({ id, label, value, options, onChange, hint }) {
 }
 
 export function segmented({ id, label, value, options, onChange }) {
-  const wrap = h('div', { class: 'seg', role: 'radiogroup', 'aria-label': label });
+  const wrap = h('div', { class: 'seg', id, role: 'radiogroup', 'aria-label': label });
   options.forEach((o) => {
     const b = h('button', { type: 'button', id: `${id}-${o.value}`, class: String(o.value) === String(value) ? 'on' : '', role: 'radio', 'aria-checked': String(String(o.value) === String(value)), title: o.hint || null }, o.label);
     b.addEventListener('click', () => {
@@ -127,6 +127,13 @@ const ICONS = {
   minus: 'M5 11h14v2H5z',
   window: 'M4 5h16v14H4zm2 4v8h12V9z',
   sparkle: 'M12 2l1.8 6.2L20 10l-6.2 1.8L12 18l-1.8-6.2L4 10l6.2-1.8zM19 15l.9 2.1L22 18l-2.1.9L19 21l-.9-2.1L16 18l2.1-.9z',
+  target: 'M11 2h2v3.1a7 7 0 016.9 6.9H23v2h-3.1a7 7 0 01-6.9 6.9V23h-2v-3.1A7 7 0 014.1 13H1v-2h3.1A7 7 0 0111 4.1zm1 4a6 6 0 100 12 6 6 0 000-12zm0 4a2 2 0 110 4 2 2 0 010-4z',
+  chevron: 'M8.6 5.6L15 12l-6.4 6.4L7.2 17l5-5-5-5z',
+  folder: 'M3 5h6l2 2h10v12H3z',
+  undo: 'M8 5L3 10l5 5v-3.5h6.5a4.5 4.5 0 010 9H11v2h3.5a6.5 6.5 0 000-13H8z',
+  redo: 'M16 5l5 5-5 5v-3.5H9.5a4.5 4.5 0 000 9H13v2H9.5a6.5 6.5 0 010-13H16z',
+  search: 'M10 3a7 7 0 015.6 11.2l5.1 5.1-1.4 1.4-5.1-5.1A7 7 0 1110 3zm0 2a5 5 0 100 10 5 5 0 000-10z',
+  keyboard: 'M2 6h20v12H2zm2 2v2h2V8zm3 0v2h2V8zm3 0v2h2V8zm3 0v2h2V8zm3 0v2h2V8zM4 11v2h2v-2zm3 0v2h2v-2zm3 0v2h2v-2zm3 0v2h2v-2zm3 0v2h2v-2zM7 14v2h10v-2z',
 };
 
 export function icon(name) {
