@@ -64,11 +64,16 @@ const FORMATS = [
   ['1080x1080', 'Square · 1080 × 1080'],
 ];
 const MULT_VALUES = [2, 3, 5, 10, 15, 20, 25, 50, 100, 250, 500];
+const WILD_MULT_VALUES = [2, 3, 4, 5, 10];
+// Cash symbol values, in bets.
+const CASH_VALUES = [0.5, 1, 2, 3, 5, 10, 15, 20, 25, 50, 100];
 const ROLES = [
   ['normal', 'Normal'],
   ['wild', 'Wild'],
   ['scatter', 'Scatter'],
   ['multiplier', 'Multiplier'],
+  ['mystery', 'Mystery'],
+  ['collector', 'Collector'],
   ['bonus', 'Bonus'],
 ];
 
@@ -1937,7 +1942,9 @@ function wheelBuilder() {
 
 function addRound(outcome) {
   const prev = state.project.rounds[state.sel];
-  const r = newRound(outcome, prev?.free && outcome !== 'freespins' && outcome !== 'fstotal' && !HS_OUTCOMES.includes(outcome) ? { free: true } : {});
+  // Inside free spins a round is a free spin; a free spins trigger there is
+  // a retrigger that adds spins.
+  const r = newRound(outcome, prev?.free && outcome === 'freespins' ? { free: true, freeSpins: 5 } : prev?.free && outcome !== 'fstotal' && !HS_OUTCOMES.includes(outcome) ? { free: true } : {});
   state.project.rounds.splice(state.sel + 1, 0, r);
   state.sel = Math.min(state.project.rounds.length - 1, state.sel + 1);
   changed('timeline');
@@ -1947,6 +1954,17 @@ function addRound(outcome) {
 function patternLabel(p, r) {
   const n = (r.lines || []).length;
   return { lines: `${n} line${n === 1 ? '' : 's'}`, cells: 'custom cells', ways: 'ways', full: 'full screen', anywhere: 'anywhere', cluster: 'cluster' }[p] || p;
+}
+
+// What else lands in a round: mystery blocks, cash and the collector.
+function extrasText(r) {
+  const cur = state.project.machine.currency || '';
+  let t = '';
+  if (r.wildMults?.length) t += ` · wild ${r.wildMults.map((m) => `x${m}`).join(' ')}`;
+  if (r.mystery > 0) t += ` · ${r.mystery} mystery`;
+  if (r.cash?.length) t += ` · cash ${r.cash.map((v) => `${cur}${v}`).join(' ')}`;
+  if (r.collector) t += ' · collector';
+  return t;
 }
 
 function describe(r) {
@@ -1960,6 +1978,7 @@ function describe(r) {
     if (r.chain?.length && tumbleEnabled(ctx2, r)) text += ` · +${r.chain.length} tumble${r.chain.length === 1 ? '' : 's'}`;
     if (r.multipliers?.length) text += ` · ${r.multipliers.map((m) => `x${m}`).join(' ')}`;
     if (r.expandWild) text += ' · expanding wild';
+    text += extrasText(r);
     if (r.outcome === 'big') text = `To ${tierTitle(r.tier)} · ${text}`;
     return fs + text;
   }
@@ -1968,7 +1987,7 @@ function describe(r) {
     const ls = wheelLandings(P, r);
     return ls.length > 1 ? `Spin again, then ${segs[ls[1]]?.label ?? '?'}` : `Lands on ${segs[ls[0]]?.label ?? '?'}`;
   }
-  if (r.outcome === 'freespins') return `${r.freeSpins} free spins${r.sticky ? ' · sticky wilds' : ''}`;
+  if (r.outcome === 'freespins') return r.free ? `Retrigger · +${r.freeSpins} spins` : `${r.freeSpins} free spins${r.walking ? ' · walking wilds' : r.sticky ? ' · sticky wilds' : ''}`;
   if (r.outcome === 'bonus') return 'Scatter trigger';
   if (r.outcome === 'nearmiss') return `${fs}Scatters short by one, the last one slides past`;
   if (r.outcome === 'fstotal') return 'Free spins total win';
@@ -1977,7 +1996,7 @@ function describe(r) {
   if (r.outcome === 'hstrigger') return `${r.coinsIn} coins land${sp}`;
   if (r.outcome === 'respin') return r.fill ? `Fills the board${sp}` : r.coinsIn > 0 ? `${r.coinsIn} coin${r.coinsIn === 1 ? '' : 's'} land${sp}` : 'Nothing lands';
   if (r.outcome === 'collect') return 'Collects every coin';
-  return `${fs}Reels spin and stop${r.extraWilds ? ` · ${r.extraWilds} wild${r.extraWilds === 1 ? '' : 's'}` : ''}`;
+  return `${fs}Reels spin and stop${r.extraWilds ? ` · ${r.extraWilds} wild${r.extraWilds === 1 ? '' : 's'}` : ''}${extrasText(r)}`;
 }
 
 function refreshList() {
@@ -2070,6 +2089,20 @@ function countField(id, pattern, value, onInput) {
     return rangeField({ id, label: pattern === 'anywhere' ? 'Symbols on the grid' : 'Cluster size', value: Math.min(max, Math.max(min, value)), min, max, step: 1, onInput });
   }
   return rangeField({ id, label: 'Symbols in a row', value: Math.min(reels, Math.max(3, value)), min: Math.min(3, reels), max: reels, step: 1, onInput });
+}
+
+// A list of values as removable chips, with a picker to add one.
+function valueChips({ id, label, list, values, fmt, max, set, hint }) {
+  const cur = list || [];
+  const sel = h('select', { id: `${id}-value`, 'aria-label': `${label}: value to add` }, values.map((v) => h('option', { value: v }, fmt(v))));
+  return h(
+    'div',
+    { class: 'field', id },
+    h('span', { class: 'label' }, label),
+    h('div', { class: 'mults' }, cur.map((v, k) => button(fmt(v), () => set(cur.filter((_, j) => j !== k)), { class: 'chip on', icon: 'x', id: `${id}-${k}`, title: 'Remove' }))),
+    cur.length < max ? h('div', { class: 'add-row' }, sel, button('Add', () => set([...cur, Number(sel.value)]), { class: 'btn small', icon: 'plus', id: `${id}-add` })) : null,
+    hint ? h('p', { class: 'hint' }, hint) : null
+  );
 }
 
 function symbolOptions(withAuto = true) {
@@ -2193,8 +2226,24 @@ function renderInspector() {
   const cur = P.machine.currency || '';
   const dec = P.machine.decimals | 0;
   const isHS = HS_OUTCOMES.includes(r.outcome);
-  const canFree = gameOf() === 'slot' && r.outcome !== 'freespins' && r.outcome !== 'fstotal' && !isHS;
-  if (canFree) parts.push(toggleField({ id: 'ri-free', label: 'Free spin (counts toward the free spins total)', checked: !!r.free, onChange: set('free', true), hint: r.free && !P.rounds.slice(0, state.sel).some((x) => x.outcome === 'freespins') ? 'Add a Free spins trigger round before this one to start the counter.' : null }));
+  const canFree = gameOf() === 'slot' && r.outcome !== 'fstotal' && !isHS;
+  const noBlock = r.free && !P.rounds.slice(0, state.sel).some((x) => x.outcome === 'freespins' && !x.free);
+  if (canFree)
+    parts.push(
+      toggleField({
+        id: 'ri-free',
+        label: r.outcome === 'freespins' ? 'Free spin: a retrigger that adds spins' : 'Free spin (counts toward the free spins total)',
+        checked: !!r.free,
+        onChange: (v) => {
+          r.free = v;
+          if (r.outcome === 'freespins' && v && (r.freeSpins | 0) === 10) r.freeSpins = 5;
+          changed(kind);
+          refreshList();
+          renderInspector();
+        },
+        hint: noBlock ? 'Add a Free spins trigger round before this one to start the counter.' : null,
+      })
+    );
   if (LINE_WINS.includes(r.outcome)) {
     const mode = P.machine.payMode;
     const base = defaultPattern(mode);
@@ -2364,12 +2413,31 @@ function renderInspector() {
       h('div', { class: 'divider' }),
       toggleField({ id: 'ri-wild', label: 'Include a Wild in the win', checked: r.wildAssist, onChange: set('wildAssist') })
     );
-    if (pattern === 'lines' || pattern === 'ways' || pattern === 'cells') parts.push(toggleField({ id: 'ri-expand', label: 'Expanding wild (fills its reel)', checked: !!r.expandWild, onChange: set('expandWild', true) }));
+    if (pattern === 'lines' || pattern === 'ways' || pattern === 'cells') {
+      parts.push(toggleField({ id: 'ri-expand', label: 'Expanding wild (fills its reel)', checked: !!r.expandWild, onChange: set('expandWild', true) }));
+      parts.push(valueChips({ id: 'ri-wmult', label: 'Multiplier wilds', list: r.wildMults, values: WILD_MULT_VALUES, fmt: (v) => `x${v}`, max: 5, set: (list) => set('wildMults', true)(list), hint: tumbles ? 'A tumble would carry the wilds away, so a tumbling round has none.' : 'Wilds in the win carry these; the win is multiplied by their sum after it shows.' }));
+    }
   }
   if (isHS) parts.push(...holdInspector(r, set));
   if (r.outcome !== 'wheel' && r.outcome !== 'fstotal' && !isHS && gameOf() === 'slot') {
     parts.push(rangeField({ id: 'ri-extra-wilds', label: 'Extra wilds on the grid', value: r.extraWilds || 0, min: 0, max: Math.min(8, reels * rows - 3), step: 1, onInput: set('extraWilds') }));
     if (r.free) parts.push(toggleField({ id: 'ri-sticky', label: 'Wilds stick for the rest of the free spins', checked: !!r.sticky, onChange: set('sticky') }));
+    // Mystery blocks: on a win they reveal the winning symbol.
+    if (LINE_WINS.includes(r.outcome) || r.outcome === 'none') {
+      parts.push(
+        h('div', { class: 'divider' }),
+        rangeField({ id: 'ri-mystery', label: 'Mystery symbols', value: r.mystery || 0, min: 0, max: Math.min(10, reels * rows - 3), step: 1, onInput: set('mystery', true), hint: LINE_WINS.includes(r.outcome) ? 'They land on winners and turn over to the winning symbol.' : 'They turn over to one symbol, kept from paying.' })
+      );
+      if (r.outcome === 'none' && r.mystery > 0) parts.push(selectField({ id: 'ri-mystery-sym', label: 'Mystery reveals', value: r.mysterySymbol || 'auto', options: symbolOptions(), onChange: set('mysterySymbol') }));
+    }
+    // Cash symbols, and the collector that takes them.
+    if (LINE_WINS.includes(r.outcome) || ['none', 'nearmiss', 'freespins', 'bonus'].includes(r.outcome)) {
+      parts.push(
+        h('div', { class: 'divider' }),
+        valueChips({ id: 'ri-cash', label: 'Cash symbols', list: r.cash, values: CASH_VALUES, fmt: (v) => `${cur}${v}`, max: 10, set: (list) => set('cash', true)(list), hint: 'Coins carrying a value (in bets). On their own they just land; a collector takes them all.' }),
+        toggleField({ id: 'ri-collector', label: 'A collector lands and takes the cash', checked: !!r.collector, onChange: set('collector', true), hint: r.collector && !(r.cash || []).length ? 'Add cash symbols for it to collect.' : null })
+      );
+    }
   }
   if (SCATTER_WINS.includes(r.outcome)) {
     const trig = P.machine.scatterTrigger || 3;
@@ -2377,10 +2445,29 @@ function renderInspector() {
   }
   if (r.outcome === 'freespins') {
     parts.push(
-      rangeField({ id: 'ri-fs', label: 'Free spins awarded', value: r.freeSpins || 10, min: 1, max: 100, step: 1, onInput: set('freeSpins') }),
-      toggleField({ id: 'ri-fs-sticky', label: 'Sticky wilds in these free spins', checked: !!r.sticky, onChange: set('sticky') }),
-      h('p', { class: 'hint' }, 'The rounds after this one that are marked Free spin count up the free spins total. End the block with a Free spins total round.')
+      rangeField({ id: 'ri-fs', label: r.free ? 'Extra spins' : 'Free spins awarded', value: r.freeSpins || (r.free ? 5 : 10), min: 1, max: 100, step: 1, onInput: set('freeSpins') })
     );
+    if (r.free) parts.push(h('p', { class: 'hint' }, 'A retrigger: this free spin lands scatters, the EXTRA SPINS banner shows, and the counter grows by these spins.'));
+    else
+      parts.push(
+        segmented({
+          id: 'ri-fs-wilds',
+          label: 'Wilds in these free spins',
+          value: r.walking ? 'walking' : r.sticky ? 'sticky' : 'normal',
+          options: [
+            { value: 'normal', label: 'Normal' },
+            { value: 'sticky', label: 'Sticky', hint: 'Stay put for the rest of the free spins' },
+            { value: 'walking', label: 'Walking', hint: 'Step one reel left each spin until they walk off' },
+          ],
+          onChange: (v) => {
+            r.sticky = v === 'sticky';
+            r.walking = v === 'walking';
+            changed(kind);
+            refreshList();
+          },
+        }),
+        h('p', { class: 'hint' }, 'The rounds after this one that are marked Free spin count up the free spins total. Add a Free spins trigger inside them for a retrigger. End the block with a Free spins total round.')
+      );
   }
   if (r.outcome === 'fstotal') parts.push(textField({ id: 'ri-total-amount', label: 'Total shown', type: 'number', value: r.amount ?? '', placeholder: 'Sum of the free spins above', onChange: set('amount') }));
   if (r.outcome === 'bonus') parts.push(textField({ id: 'ri-bonus-amount', label: 'Bonus amount (optional)', type: 'number', value: r.amount ?? '', placeholder: 'No amount', onChange: set('amount') }));
@@ -2551,6 +2638,7 @@ function renderInspector() {
   );
   const o = OUTCOME_BY_ID[r.outcome];
   clear(el.inspector, h('div', { class: 'inspector-head', style: { '--c': o.color } }, h('span', { class: 'dot' }), h('h2', null, `Round ${state.sel + 1}`), h('span', { class: 'muted' }, o.label)), actions, parts);
+  markTips(el.inspector);
 }
 
 // ---------- settings (left panel) ----------
@@ -3775,6 +3863,7 @@ function panelWins() {
         { class: 'row2' },
         ...[
           ['freespins', 'Free spins'],
+          ['retrigger', 'Free spins retrigger'],
           ['total', 'Free spins total'],
           ['bonus', 'Bonus'],
           ['wheel', 'Wheel title'],

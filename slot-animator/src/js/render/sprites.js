@@ -100,8 +100,9 @@ export function paintWheelIcon(id, size = 256, font) {
 }
 
 // The symbols after the project's own (see core/coins.js): the built-in
-// multiplier orb when needed, one image per Hold & Spin coin type, and the
-// empty cell. Uploaded art wins over the painted stand-ins.
+// multiplier orb, mystery block and collector when the project has no
+// symbol for them, one image per Hold & Spin coin type, and the empty cell.
+// Uploaded art wins over the painted stand-ins.
 export async function extraSymbolImages(project, font, load = loadImage) {
   const lay = symbolLayout(project);
   const hs = holdSpinConfig(project);
@@ -117,7 +118,7 @@ export async function extraSymbolImages(project, font, load = loadImage) {
     return fallback();
   };
   const out = [];
-  if (lay.virtualOrb) out.push(paintBuiltin('orb', 512, font));
+  for (const v of lay.virtual) out.push(paintBuiltin(v.art, 512, font));
   for (const ct of hs.coins) out.push(await tryLoad(ct.src, () => paintCoinSymbol(512, ct.palette, ct.label, font)));
   out.push(await tryLoad(hs.emptySrc, () => paintEmptyCell(512)));
   return out;
@@ -857,6 +858,7 @@ export function buildResources(project, L, images) {
   make('total', 'gold', 0.85);
   make('bonus', 'gold');
   make('freespins', 'gold', 0.8);
+  make('retrigger', 'gold', 0.8);
   make('wheel', 'gold', 0.7);
   make('nearmiss', 'silver', 0.55);
   make('holdspin', 'gold', 0.8);

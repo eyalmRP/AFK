@@ -36,6 +36,30 @@ the result as an editable **After Effects project**.
   out of its spinning reel; in After Effects a Subtract mask on the reel
   layer does it; a later win drawn through one pays through the wild), and
   a free spins counter with a running total.
+- More mechanics, set per round in the round inspector:
+  - Free spins retrigger: a Free spins trigger round marked Free spin,
+    inside a free spins block, lands scatters, shows EXTRA SPINS with the
+    spins it adds, and the counter grows from then on (adding a trigger
+    after a free spin makes one).
+  - Multiplier wilds: wilds in a line or ways win carry x2, x3... badges
+    (a winner turns wild when there are too few); after the win shows the
+    badges fly into the plaque and the win is multiplied by their sum. Not
+    on tumbling rounds, and never on a sticky or walking wild.
+  - Mystery symbols: blocks land, glow and turn over together into one
+    symbol. On a win they sit on winners and reveal the winning symbol; on
+    a no-win spin they reveal a symbol you pick, kept from paying. While
+    they turn, their cells are cut out of the reels and the reels swap to
+    the revealed symbols underneath. Works with every spin type.
+  - Walking wilds (a free spins trigger option, next to sticky): every
+    wild that lands steps one reel to the left as each free spin starts,
+    hopping, until it walks off the grid. The cell it leaves turns back
+    into an ordinary symbol while the wild still covers it.
+  - Cash symbols and a collector (Big Bass style): coins land with values
+    (in bets); a collector, landing on the last reel to stop when it can,
+    takes them one by one on top of the win, the meter counting each in.
+  The mystery block and the collector are built-in symbols unless the
+  project has a symbol with the Mystery or Collector role, whose art is
+  used instead.
 - Winning symbols: pop in place, jump into the score (they fly one by one
   to the win meter, the win amount, above the reels, the screen centre or
   any spot you click on the preview; each landing counts up the win), or
@@ -93,9 +117,10 @@ the result as an editable **After Effects project**.
     framings and spin again). Options that do not apply to the game type
     or spin style stay in view, greyed out and locked, saying why. Section
     headers have icons. Search also reads the tooltip texts.
-  - Presets (top bar, or P): a gallery of 16 ready-made animations with a
+  - Presets (top bar, or P): a gallery of 18 ready-made animations with a
     frame of each: classic, fruit 3×3, 243 ways, tumbles, clusters 7×7,
-    per-cell spins, mobile portrait, free spins with sticky wilds, teases,
+    per-cell spins, mobile portrait, free spins with sticky wilds and a
+    retrigger, a cash collector, mystery and walking wilds, teases,
     the big win ladder, slot into Hold & Spin, Hold & Spin, a slot wheel
     bonus and three wheel-only framings. It opens by itself on the first
     visit. Between them they show the newer options, each where it fits:
@@ -107,7 +132,9 @@ the result as an editable **After Effects project**.
     Spin, wheel from above), fireworks that run to the end (ladder), Spin
     again and No win segments (slot wheel bonus, wheel only, close-up),
     every wheel landing, a centre icon of its own and a label font (wheel
-    from above). The editor opens on the classic preset;
+    from above), retriggers (free spins, cash collector), cash and the
+    collector, mystery symbols, multiplier wilds and walking wilds
+    (mystery and walking wilds). The editor opens on the classic preset;
     `defaultProject()` stays plain because saved projects are filled in
     from it.
   - Project menu: new project, open and save the project file (Ctrl O,
@@ -213,8 +240,12 @@ comp, the round comps place them in time, and a few controls sit on
   board, with the coin values as text layers.
 - `Rounds/Rxx ...`: one comp per round that shows something, placing the
   placeholders in time: paylines, win comps on the winning cells, frames,
-  shockwaves, expanding wilds, multipliers flying into the total, titles,
-  counters driven by `WIN CTRL > Amount`, the wheel rig. `Rounds/Particles/`
+  shockwaves, expanding wilds, multipliers flying into the total (a
+  multiplier wild's x rides on its win comp), mystery cards turning over
+  (`Mystery Block` narrowing, `Mystery Reveal` opening, while `Reveal n`
+  masks cut their cells out of the reels), the collector with each cash
+  value flying in and its running total, titles, counters driven by
+  `WIN CTRL > Amount`, the wheel rig. `Rounds/Particles/`
   holds every win explosion as its own comp: one layer per particle, a use
   of its particle placeholder, with expressions that reproduce the
   preview's flight exactly. Looping emitters wrap each particle's age by
@@ -225,7 +256,9 @@ comp, the round comps place them in time, and a few controls sit on
 - `Sound/SFX`: one audio layer per cue at its time, named after the cue and
   round and coloured by group. The `SFX MIX` null holds Master and per-group
   levels in dB (Master includes headroom: After Effects has no compressor).
-- Main comp: background, ambient particles, machine, reels, sticky wilds,
+- Main comp: background, ambient particles, machine, reels, sticky wilds
+  and walking wilds (each step a `Walking Wild n` layer hopping in from
+  the reel it left, on the same path as the preview),
   the tease (a `Tease Dim Rn` solid per reel, scaled by `Dim %`, and a
   `Scatter Lands Rxx` copy with a shockwave for every scatter or trigger
   coin that lands, lit by expression), coin lock frames, marquee, logo, free spins ribbon and HUD texts, win

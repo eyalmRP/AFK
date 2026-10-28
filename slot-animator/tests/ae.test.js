@@ -296,7 +296,9 @@ test('AE hold & spin board: every cell lands the preview coin, with its value', 
   assert.equal(main.layers.list.filter((l) => /^Coin Lock /.test(l.name)).length, tl.hold.locks.length);
   assert.ok(main.layers.list.some((l) => l.name === 'Respins Counter'));
   assert.ok(log.comps.some((x) => / Grand Counter$/.test(x.name)), 'grand counter');
-  assert.ok(log.comps.some((x) => x.name === 'Symbol 16 Empty cell'));
+  assert.ok(log.comps.some((x) => x.name === `Symbol ${tl.lay.blankSym + 1} Empty cell`));
+  // The built-in stand-ins have comps of their own too.
+  for (const v of tl.lay.virtual) assert.ok(log.comps.some((x) => x.name === `Symbol ${v.sym + 1} ${v.name}`), v.name);
 });
 
 test('AE trigger round: coins land on the reels with their values, then carry onto the board', () => {

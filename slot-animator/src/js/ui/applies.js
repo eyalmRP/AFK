@@ -45,6 +45,7 @@ export const APPLIES = {
   'tm-cel': { games: SLOT },
   'tm-banner': { games: REELS },
   'fx-t-freespins': { games: SLOT },
+  'fx-t-retrigger': { games: SLOT },
   'fx-t-total': { games: SLOT },
   'fx-t-bonus': { games: SLOT },
   'fx-t-nearmiss': { games: SLOT },

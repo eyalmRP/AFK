@@ -12,7 +12,7 @@ import { canvas, paintTitle } from './sprites.js';
 import { drawEmitter } from './particles.js';
 import { jumpTarget, mergeTarget, flightPath, flightAt, bigScaleAt, winFxConfig } from '../core/winfx.js';
 import { cameraAt, zoomConfig } from '../core/camera.js';
-import { heldCells } from '../core/timeline.js';
+import { heldCells, walkStep, WALK_HOP } from '../core/timeline.js';
 import { pointerAt } from '../core/wheel.js';
 import { teaseWindows, teaseEnv, teaseDim, landLit, landScale, landings, LAND_POP } from '../core/tease.js';
 
@@ -656,8 +656,15 @@ function fsStateAt(tl, t) {
   if (!block) return null;
   let index = 0;
   let total = false;
-  for (const r of block.rounds) if (r.t0 <= t) r.total ? (total = true) : (index = r.index);
-  return { block, index, total, n: block.n };
+  let n = block.n;
+  for (const r of block.rounds) {
+    if (r.t0 > t) continue;
+    if (r.total) total = true;
+    else index = r.index;
+    // A retrigger raises the number of spins from its banner on.
+    if (r.n) n = r.n;
+  }
+  return { block, index, total, n };
 }
 
 // panelOnly paints the bare panel: the After Effects build adds its labels
@@ -892,7 +899,9 @@ function drawWinCells(ctx, scene, R, t, cells, start, end, opts = {}) {
       ctx.drawImage(sp.sharp, -L.cellW / 2, -L.cellH / 2, L.cellW, L.cellH);
     }
     ctx.restore();
-    if (opts.values && opts.values[i] != null) drawValueLabel(ctx, scene, si, opts.values[i], m.x, m.y, s);
+    // Values ride along: a coin's prize, a multiplier wild's x.
+    const val = opts.values ? opts.values[i] : opts.mults?.[c]?.[r];
+    if (val != null) drawValueLabel(ctx, scene, si, val, m.x, m.y, s, fa);
     if (stay <= 0) return;
     // Cell frame with a chasing light (it stays with the cell).
     ctx.save();
@@ -1018,7 +1027,7 @@ function drawSteps(ctx, scene, R, t) {
   for (const st of p.steps || []) {
     if (t < st.start || t > st.end) continue;
     if (st.lines && st.lines.length && project.effects.showLines !== false) drawWinLines(ctx, scene, R, t, st);
-    drawWinCells(ctx, scene, R, t, st.cells, st.start, st.end, { stagger: true, step: st, syms: st.cellSyms });
+    drawWinCells(ctx, scene, R, t, st.cells, st.start, st.end, { stagger: true, step: st, syms: st.cellSyms, mults: st.tumble ? null : R.mult });
     drawWinFxGoal(ctx, scene, R, st, t);
     // A merged win shows its amount under the big symbol once it forms.
     const merged = st.fx && st.fx.style === 'merge';
@@ -1168,6 +1177,25 @@ function drawExpand(ctx, scene, R, t) {
   }
 }
 
+// A cell's centre, also one reel off the left edge (where walking wilds go).
+function cellAt(L, c, r) {
+  if (c >= 0) return L.cellCenter(c, r);
+  const m = L.cellCenter(0, r);
+  const pitch = L.reelX.length > 1 ? L.reelX[1] - L.reelX[0] : L.cellW;
+  return { ...m, x: m.x + c * pitch };
+}
+
+// Where a sticky or walking wild is at t: it pops in where it landed, or
+// hops in from the reel it walked from (core/timeline.js walkStep); one
+// walking off the grid fades as it goes.
+function wildPose(L, st, t) {
+  const to = cellAt(L, st.c, st.r);
+  if (!st.walkIn) return { x: to.x, y: to.y, s: to.s, k: ease.outBack(clamp01((t - st.from) / 0.4)), a: 1 };
+  const { u, hop } = walkStep(st, t);
+  const from = cellAt(L, st.walkIn[0], st.walkIn[1]);
+  return { x: from.x + (to.x - from.x) * u, y: from.y + (to.y - from.y) * u - hop * L.cellH * WALK_HOP, s: to.s, k: 1 + 0.08 * hop, a: st.exit ? 1 - u : 1 };
+}
+
 function drawStickies(ctx, scene, t) {
   const { L, res, tl } = scene;
   if (!tl.stickies.length) return;
@@ -1175,8 +1203,10 @@ function drawStickies(ctx, scene, t) {
   if (!sp) return;
   for (const st of tl.stickies) {
     if (t < st.from || t >= st.to) continue;
-    const k = ease.outBack(clamp01((t - st.from) / 0.4));
-    const m = L.cellCenter(st.c, st.r);
+    const m = wildPose(L, st, t);
+    const k = m.k;
+    ctx.save();
+    ctx.globalAlpha = m.a;
     drawGlow(ctx, res, '#ffcf45', m.x, m.y, L.cellW * 1.4, 0.35 + 0.1 * Math.sin(t * 4));
     ctx.save();
     ctx.translate(m.x, m.y);
@@ -1198,8 +1228,83 @@ function drawStickies(ctx, scene, t) {
     ctx.strokeStyle = '#fff6d0';
     ctx.stroke();
     ctx.restore();
-    const tag = cachedTitle(res, 'sticky', 'STICKY', Math.round(L.cellH * 0.12), 'gold');
-    drawCentered(ctx, tag, m.x, m.y + fh * 0.42, Math.min(1, (L.cellW * 0.7) / tag.width), clamp01((t - st.from) / 0.3));
+    const tag = cachedTitle(res, st.walking ? 'walking' : 'sticky', st.walking ? 'WALKING' : 'STICKY', Math.round(L.cellH * 0.12), 'gold');
+    drawCentered(ctx, tag, m.x, m.y + fh * 0.42, Math.min(1, (L.cellW * 0.7) / tag.width), st.walkIn ? 1 : clamp01((t - st.from) / 0.3));
+    ctx.restore();
+  }
+}
+
+// Mystery blocks glow, then turn over together to the symbol they hide.
+// Their cells are cut out of the reels while they turn (core/timeline.js).
+function drawMystery(ctx, scene, R, t) {
+  const my = R.pres.mystery;
+  if (!my || t < my.start || t > my.end + 0.6) return;
+  const { L, res } = scene;
+  const from = res.sym[my.from];
+  const to = res.sym[my.sym];
+  const glow = env(t, my.start, my.flipEnd + 0.3, 0.3, 0.4);
+  my.cells.forEach(([c, r], i) => {
+    const m = L.cellCenter(c, r);
+    drawGlow(ctx, res, '#c48cff', m.x, m.y, L.cellW * 1.9, (0.4 + 0.25 * Math.sin(t * 14 + i)) * glow);
+    if (t >= my.flipAt && t < my.flipEnd) {
+      const u = (t - my.flipAt) / (my.flipEnd - my.flipAt);
+      const sp = u < 0.5 ? from : to;
+      const lift = 1 + 0.12 * Math.sin(u * Math.PI);
+      if (sp) {
+        ctx.save();
+        ctx.translate(m.x, m.y);
+        ctx.scale(Math.max(0.02, Math.abs(Math.cos(u * Math.PI))) * lift, lift * m.s);
+        ctx.drawImage(sp.sharp, -L.cellW / 2, -L.cellH / 2, L.cellW, L.cellH);
+        ctx.restore();
+      }
+    }
+    if (t >= my.mid && t < my.mid + 0.6) drawRing(ctx, m.x, m.y, (t - my.mid) / 0.6, L.cellW * 0.95, '#e0b3ff', L.cellW * 0.05);
+  });
+}
+
+// The collector wakes, every cash value flies into it one by one (the
+// meter counts each in), and it shows what it took.
+function drawCollector(ctx, scene, R, t) {
+  const cl = R.pres.collector;
+  if (!cl || t < cl.start || t > cl.end + 0.4) return;
+  const { L, res, project, tl } = scene;
+  const target = L.cellCenter(cl.c, cl.r);
+  const a = Math.min(clamp01((t - cl.start) / 0.25), clamp01((cl.end + 0.4 - t) / 0.4));
+  const cur = project.machine.currency || '';
+  const dec = project.machine.decimals | 0;
+  let got = 0;
+  let bump = 0;
+  for (const it of cl.items) {
+    const p0 = L.cellCenter(it.c, it.r);
+    if (t >= it.at && t < it.at + 0.5) drawRing(ctx, p0.x, p0.y, (t - it.at) / 0.5, L.cellW * 0.8, res.theme.accent, L.cellW * 0.04);
+    if (t >= it.at && t < it.arrive) {
+      const k = ease.inOut((t - it.at) / (it.arrive - it.at));
+      const x = p0.x + (target.x - p0.x) * k;
+      const y = p0.y + (target.y - p0.y) * k - Math.sin(k * Math.PI) * L.cellH * 0.6;
+      drawGlow(ctx, res, res.theme.accent, x, y, L.cellW * 1.1, 0.8);
+      const img = cachedTitle(res, 'cashfly', formatPrize(it.value, cur, dec), Math.round(L.cellH * 0.24), 'gold');
+      drawCentered(ctx, img, x, y, Math.min(1, (L.cellW * 0.9) / img.width) * (1.15 - 0.25 * k));
+    }
+    if (t >= it.arrive) {
+      got += it.value;
+      bump = Math.max(bump, 1 - clamp01((t - it.arrive) / 0.25));
+    }
+  }
+  const pulse = 1 + 0.05 * Math.sin((t - cl.start) * 9) + 0.16 * bump;
+  drawGlow(ctx, res, res.theme.accent, target.x, target.y, L.cellW * 2.4, (0.55 + 0.25 * bump) * a);
+  const sp = res.sym[tl.lay.collectorSym];
+  if (sp) {
+    ctx.save();
+    ctx.globalAlpha = a;
+    ctx.translate(target.x, target.y);
+    ctx.scale(pulse, pulse * target.s);
+    ctx.drawImage(sp.sharp, -L.cellW / 2, -L.cellH / 2, L.cellW, L.cellH);
+    ctx.restore();
+  }
+  if (got > 0) {
+    const img = cachedTitle(res, 'collected', formatPrize(got, cur, dec), Math.round(L.cellH * 0.3), 'gold');
+    const done = clamp01((t - cl.done) / 0.3);
+    drawCentered(ctx, img, target.x, target.y + L.cellH * 0.3, Math.min(1.3, (L.cellW * 1.2) / img.width) * (1 + 0.2 * bump + 0.15 * done), a);
   }
 }
 
@@ -1208,6 +1313,7 @@ function drawScatterFx(ctx, scene, R, t) {
   const p = R.pres;
   // Scatters (and trigger coins) pop lit as they land, over the dim of a
   // tease (core/tease.js); kept lit, they glow on until the tease ends.
+  const coins = R.win.coins || [];
   const W = teaseWindows(R);
   const keep = !!project.spin?.scatterLit;
   let tease = 0;
@@ -1336,11 +1442,11 @@ function drawBanner(ctx, scene, R, t) {
   drawRing(ctx, cx, cy, (t - b.start) / 0.8, L.H * 0.7, res.theme.accent, L.H * 0.02);
   const title = res.titles[b.kind] || res.titles.bonus;
   const s = 0.2 + 0.8 * ease.outElastic(clamp01((t - b.start) / 0.8));
-  const ty = b.kind === 'freespins' || b.kind === 'holdspin' ? cy - L.H * 0.13 : cy;
+  const ty = b.kind === 'freespins' || b.kind === 'retrigger' || b.kind === 'holdspin' ? cy - L.H * 0.13 : cy;
   drawCentered(ctx, title, cx, ty, s * Math.min(1, (L.W * 0.9) / title.width), a);
   drawShimmer(ctx, res, title, cx, ty, s * Math.min(1, (L.W * 0.9) / title.width), ((t - b.start) % 1.6) / 1.6 * 1.6 - 0.3, a);
-  if (b.kind === 'freespins') {
-    const num = cachedTitle(res, 'fs', String(b.freeSpins), Math.round(res.titlePx * 1.5), 'fire');
+  if (b.kind === 'freespins' || b.kind === 'retrigger') {
+    const num = cachedTitle(res, 'fs', b.kind === 'retrigger' ? `+${b.freeSpins}` : String(b.freeSpins), Math.round(res.titlePx * 1.5), 'fire');
     const s2 = 0.1 + 0.9 * ease.outElastic(clamp01((t - b.start - 0.35) / 0.8));
     drawCentered(ctx, num, cx, cy + L.H * 0.12, s2, a);
   } else if (b.kind === 'holdspin') {
@@ -1808,11 +1914,13 @@ export function renderFrame(ctx, scene, t, opts = {}) {
     drawHud(ctx, scene, R, t);
   }
   if (R) {
+    drawMystery(ctx, scene, R, t);
     drawExpand(ctx, scene, R, t);
     drawScatterFx(ctx, scene, R, t);
     drawPops(ctx, scene, R, t);
     drawSteps(ctx, scene, R, t);
     drawMultPhase(ctx, scene, R, t);
+    drawCollector(ctx, scene, R, t);
     drawGrand(ctx, scene, R, t);
     drawBigWin(ctx, scene, R, t);
     drawBanner(ctx, scene, R, t);

@@ -388,6 +388,11 @@ test('presets: every one builds, and between them they show the newer features',
   any('no win', (p) => p.wheel.segments.some((s) => s.kind === 'none'));
   any('pointer at the bottom', (p) => p.game === 'wheel' && p.wheel.pointer === 'bottom');
   any('a centre icon of its own', (p) => p.wheel.centerIcon && p.wheel.centerIcon !== 'builtin:star');
+  any('a free spins retrigger', (p) => p.rounds.some((r) => r.outcome === 'freespins' && r.free));
+  any('walking wilds', (p) => p.rounds.some((r) => r.walking));
+  any('mystery symbols', (p) => p.rounds.some((r) => r.mystery > 0));
+  any('multiplier wilds', (p) => p.rounds.some((r) => r.wildMults?.length));
+  any('a collector', (p) => p.rounds.some((r) => r.collector && r.cash?.length));
   // The classic preset is the demo the editor opens with; the plain default
   // project (the base saved projects are filled in from) keeps everything off.
   const classic = made[PRESETS.findIndex((pr) => pr.id === 'classic')];

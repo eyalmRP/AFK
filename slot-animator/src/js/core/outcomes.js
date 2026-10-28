@@ -8,15 +8,14 @@ import { pickWeighted, shuffle } from './rng.js';
 import { wheelLandings, segmentKind } from './wheel.js';
 import { LINE_WINS, SCATTER_WINS } from './defaults.js';
 import { keyOf, cloneGrid, lineRuns, waysWins, anywhereWins, clusterWins, componentAt, collapse, countSymbols } from './grid.js';
-import { symbolLayout, holdSpinConfig, pickCoinValue, coinTypeIndex } from './coins.js';
+import { symbolLayout, holdSpinConfig, pickCoinValue, coinTypeIndex, isCoinSym } from './coins.js';
+
+const SPECIAL_ROLES = ['wild', 'scatter', 'bonus', 'multiplier', 'mystery', 'collector'];
 
 export function symbolRoles(symbols) {
-  const roles = { normal: [], low: [], high: [], wild: [], scatter: [], bonus: [], multiplier: [] };
+  const roles = { normal: [], low: [], high: [], ...Object.fromEntries(SPECIAL_ROLES.map((r) => [r, []])) };
   symbols.forEach((s, i) => {
-    if (s.role === 'wild') roles.wild.push(i);
-    else if (s.role === 'scatter') roles.scatter.push(i);
-    else if (s.role === 'bonus') roles.bonus.push(i);
-    else if (s.role === 'multiplier') roles.multiplier.push(i);
+    if (SPECIAL_ROLES.includes(s.role)) roles[s.role].push(i);
     else {
       roles.normal.push(i);
       (s.tier === 'high' ? roles.high : roles.low).push(i);
@@ -50,8 +49,11 @@ export function makeContext(project, paylines) {
     wildSet: new Set(roles.wild),
     wildSym: roles.wild.length ? roles.wild[0] : null,
     scatterSym: roles.scatter[0] ?? roles.bonus[0] ?? null,
-    // Without a multiplier symbol the renderer supplies a built-in orb here.
+    // Without a multiplier, mystery or collector symbol the renderer
+    // supplies a built-in one at these indices.
     orbSym: lay.orbSym,
+    mysterySym: lay.mysterySym,
+    collectorSym: lay.collectorSym,
     payable: (s) => normal.has(s),
     weightOf: (i) => (symbols[i] ? Number(symbols[i].weight) || 0 : 0),
     tiers: project.tiers || [],
@@ -226,12 +228,13 @@ export function resolveRound(ctx, project, round, rng, carry = {}) {
   const held = new Set(ctx.wildSym == null ? [] : carry.sticky || []);
   for (const k of held) place(Math.floor(k / rows), k % rows, ctx.wildSym);
   const placeWin = (c, r, s) => held.has(K(c, r)) || place(c, r, s);
-  const win = { kind: 'none', symbol: -1, lines: [], cells: [], scatters: [], nearMiss: null, amount: 0, base: 0, multSum: 0, expand: [], wilds: [] };
+  const win = { kind: 'none', symbol: -1, lines: [], cells: [], scatters: [], nearMiss: null, amount: 0, base: 0, multSum: 0, expand: [], wilds: [], wildMults: [], mystery: null, cash: [], collector: null, collected: 0 };
   const steps = [];
   const randomFreeCells = (n, extra = () => true) => shuffle(rng, allCells(ctx).filter(([c, r]) => isFree(c, r) && extra(c, r))).slice(0, n);
 
   const amountTotal = round.amount != null && round.amount !== '' && !Number.isNaN(Number(round.amount)) ? Number(round.amount) : autoAmount(ctx, project, round);
   const multValues = (round.multipliers || []).map(Number).filter((v) => v > 0);
+  const mysteryN = Math.max(0, Math.round(Number(round.mystery)) || 0);
 
   if (LINE_WINS.includes(outcome)) {
     const pattern = round.pattern || defaultPattern(ctx.payMode);
@@ -252,6 +255,8 @@ export function resolveRound(ctx, project, round, rng, carry = {}) {
     const spec0 = specs[0];
     const n0 = counts[0];
     const stepLines = [];
+    // The cells the win was drawn on (multiplier wilds go there).
+    let winPlaced = [];
     if (pattern === 'lines') {
       let idxs = (spec0.lines || []).filter((i) => i >= 0 && i < paylines.length);
       if (!idxs.length) idxs = [0];
@@ -263,16 +268,19 @@ export function resolveRound(ctx, project, round, rng, carry = {}) {
           cells.push([c, line[c]]);
         }
         stepLines.push({ index: li, cells });
+        winPlaced.push(...cells.filter(([c]) => c > 0));
       }
     } else if (pattern === 'cells') {
       const cells = (spec0.cells || []).filter(([c, r]) => c < reels && r < rows);
       const use = cells.length ? cells : [[0, 0], [1, 1], [2, 2]].filter(([c, r]) => c < reels && r < rows);
       for (const [c, r] of use) placeWin(c, r, s0);
+      winPlaced = use.slice();
     } else if (pattern === 'ways') {
       for (let c = 0; c < n0; c++) {
         const k = rows > 1 && rng() < (outcome === 'big' ? 0.7 : 0.35) ? 2 : 1;
         for (const r of shuffle(rng, range(rows)).slice(0, k)) if (isFree(c, r)) place(c, r, s0);
         if (!grid[c].some((x, r) => x === s0 || wildAt(c, r))) place(c, Math.floor(rng() * rows), s0);
+        if (c > 0) for (let r = 0; r < rows; r++) if (grid[c][r] === s0 || wildAt(c, r)) winPlaced.push([c, r]);
       }
     } else if (pattern === 'full') {
       for (let c = 0; c < reels; c++) for (let r = 0; r < rows; r++) if (isFree(c, r)) place(c, r, s0);
@@ -289,6 +297,20 @@ export function resolveRound(ctx, project, round, rng, carry = {}) {
         grid[c][r] = ctx.wildSym;
       }
     }
+    // Multiplier wilds: wilds in the win carry x values; a winner turns
+    // wild when there are too few. A tumble would carry them off, so not
+    // then; and not on a sticky or walking wild, whose art covers the x.
+    const wildMults = (round.wildMults || []).map(Number).filter((v) => v > 0);
+    if (wildMults.length && !tumble && ctx.wildSym != null && winPlaced.length) {
+      const isWild = ([c, r]) => (ctx.wildSet.has(grid[c][r]) ? 1 : 0);
+      const cand = shuffle(rng, winPlaced.filter(([c, r]) => !held.has(K(c, r)) && (grid[c][r] === s0 || isWild([c, r])))).sort((a, b) => isWild(b) - isWild(a));
+      wildMults.slice(0, cand.length).forEach((v, j) => {
+        const [c, r] = cand[j];
+        grid[c][r] = ctx.wildSym;
+        mult[c][r] = v;
+        win.wildMults.push({ c, r, value: v });
+      });
+    }
     // Pre-seed the next tumble's symbol in cells that will survive.
     if (tumble && specs.length > 1) preseed(syms[1], counts[1], n0, (c, r) => isFree(c, r));
     placeExtras();
@@ -300,6 +322,8 @@ export function resolveRound(ctx, project, round, rng, carry = {}) {
       first = stepWin(grid, pattern, s0, n0, stepLines, locked);
     }
     steps.push({ grid: cloneGrid(grid), mult: cloneGrid(mult), ...first });
+    // Mystery blocks land on winners and reveal the winning symbol.
+    if (mysteryN > 0) win.mystery = { cells: shuffle(rng, first.cells.filter(([c, r]) => grid[c][r] === s0)).slice(0, mysteryN), sym: s0 };
 
     if (tumble) {
       let cur = grid;
@@ -360,7 +384,7 @@ export function resolveRound(ctx, project, round, rng, carry = {}) {
     const paying = steps.filter((s) => s.cells.length);
     const weights = paying.map((_, i) => Math.pow(0.8, i));
     const wsum = weights.reduce((a, b) => a + b, 0) || 1;
-    win.multSum = multValues.reduce((a, b) => a + b, 0);
+    win.multSum = [...multValues, ...win.wildMults.map((m) => m.value)].reduce((a, b) => a + b, 0);
     win.amount = amountTotal;
     win.base = win.multSum > 0 ? amountTotal / win.multSum : amountTotal;
     paying.forEach((s, i) => (s.amount = (win.base * weights[i]) / wsum));
@@ -417,17 +441,25 @@ export function resolveRound(ctx, project, round, rng, carry = {}) {
     win.kind = 'total';
     win.amount = round.amount != null && round.amount !== '' ? Number(round.amount) : carry.fsTotal || 0;
   } else {
+    placeMystery();
     placeExtras();
     sanitize(grid, ctx, rng, { locked, wildAt });
   }
 
+  // A collector takes every cash value on screen, on top of the win.
+  if (win.collector && win.cash.length) {
+    win.collected = win.cash.reduce((a, cs) => a + cs.value, 0);
+    win.amount = (win.amount || 0) + win.collected;
+  }
   curGrid = grid;
   win.wilds = [];
   grid.forEach((col, c) => col.forEach((s, r) => ctx.wildSet.has(s) && win.wilds.push([c, r])));
   const last = steps.length ? steps[steps.length - 1] : null;
   const mults = [];
   const finalMult = last ? last.mult : mult;
-  finalMult.forEach((col, c) => col.forEach((v, r) => v != null && mults.push({ c, r, value: v })));
+  const finalGrid = last ? last.grid : grid;
+  // Multipliers (orbs and multiplier wilds); cash and coin values are not.
+  finalMult.forEach((col, c) => col.forEach((v, r) => v != null && !isCoinSym(ctx.lay, finalGrid[c][r]) && mults.push({ c, r, value: v })));
   return {
     grid,
     mult,
@@ -449,6 +481,36 @@ export function resolveRound(ctx, project, round, rng, carry = {}) {
     }
     const extra = Math.max(0, Number(round.extraWilds) || 0);
     if (extra && ctx.wildSym != null) for (const [c, r] of randomFreeCells(extra)) place(c, r, ctx.wildSym);
+    // Cash symbols carry a value each (in bets); a collector, landing on
+    // the last reel to stop when it can, takes them all.
+    for (const v of (round.cash || []).map(Number).filter((x) => x > 0)) {
+      const [cell] = randomFreeCells(1);
+      if (!cell) break;
+      place(cell[0], cell[1], ctx.lay.coinBase);
+      mult[cell[0]][cell[1]] = v * ctx.bet;
+      win.cash.push({ c: cell[0], r: cell[1], value: v * ctx.bet });
+    }
+    if (round.collector) {
+      const last = carry.lastReel ?? reels - 1;
+      const cell = randomFreeCells(1, (c) => c === last)[0] || randomFreeCells(1)[0];
+      if (cell) {
+        place(cell[0], cell[1], ctx.collectorSym);
+        win.collector = cell;
+      }
+    }
+  }
+
+  // Mystery blocks on a spin that does not win: they reveal one symbol,
+  // kept off the first reel (and below a win's size) so they cannot pay
+  // on their own.
+  function placeMystery() {
+    if (!(mysteryN > 0)) return;
+    const sym = pickSymbol(ctx, rng, round.mysterySymbol, 'high');
+    const cap = ctx.payMode === 'anywhere' ? ctx.minAnywhere - 1 : ctx.payMode === 'cluster' ? ctx.minCluster - 1 : mysteryN;
+    const lineish = ctx.payMode === 'lines' || ctx.payMode === 'ways';
+    const cells = randomFreeCells(Math.min(mysteryN, cap), (c) => !lineish || c > 0);
+    for (const [c, r] of cells) place(c, r, sym);
+    win.mystery = { cells, sym };
   }
 
   function expandWilds() {

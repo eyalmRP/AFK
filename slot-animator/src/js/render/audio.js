@@ -44,7 +44,7 @@ function noiseData() {
 }
 
 // How long each synth cue rings after its start (plus its own duration).
-const TAIL = { merge: 1.1, bigWin: 2.9, fsTrigger: 2.2, scatter: 1.2, wheelLand: 1.2, countEnd: 1.0, tierUp: 0.9, expand: 0.9, mult: 0.9, nearMiss: 0.8, coinLand: 0.8, respinReset: 0.6 };
+const TAIL = { reveal: 1.2, merge: 1.1, bigWin: 2.9, fsTrigger: 2.2, scatter: 1.2, wheelLand: 1.2, countEnd: 1.0, tierUp: 0.9, expand: 0.9, mult: 0.9, nearMiss: 0.8, coinLand: 0.8, respinReset: 0.6 };
 
 function tailOf(e, custom) {
   const buf = custom.get(e.type);
@@ -311,6 +311,18 @@ function renderChunk(list, offset, length, sound, custom) {
     wheelAgain(e, o) {
       [523, 659, 784, 1046, 1318].forEach((f, i) => tone('triangle', f, e.t + i * 0.055, 0.28, o, 0.11));
       noise(e.t + 0.2, 0.5, o, 0.12, { f0: 500, f1: 3500 });
+    },
+    // Mystery blocks: a shimmering swell, then a bright chord as they turn.
+    reveal(e, o) {
+      noise(e.t, 0.5, o, 0.1, { f0: 1200, f1: 6000, attack: 0.3 });
+      [0, 4, 7, 12].forEach((n, i) => tone('triangle', semis(523, n), e.t + 0.42 + i * 0.03, 0.5, o, 0.09));
+      tone('sine', semis(523, 24), e.t + 0.5, 0.6, o, 0.05);
+    },
+    // Walking wilds: a soft hop.
+    wildWalk(e, o) {
+      tone('sine', 220, e.t, 0.16, o, 0.18, { f1: 440 });
+      noise(e.t + 0.02, 0.12, o, 0.08, { f0: 600, f1: 1800 });
+      tone('sine', 140, e.t + 0.4, 0.14, o, 0.2, { f1: 70 });
     },
     // A winning reel lands: a thump and a note that climbs a step each time.
     winLand(e, o) {

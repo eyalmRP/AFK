@@ -13,7 +13,7 @@ import { makeContext, randomGrid, resolveRound, fillSymbol, tumbleEnabled } from
 import { orderList, ranksOf, cellOrderList } from './order.js';
 import { keyOf } from './grid.js';
 import { LINE_WINS, BIG_WINS, SCATTER_WINS, GAME_OUTCOMES } from './defaults.js';
-import { holdSpinConfig, pickCoinValue, coinTypeIndex } from './coins.js';
+import { holdSpinConfig, pickCoinValue, coinTypeIndex, isCoinSym } from './coins.js';
 import { scheduleParticles } from './particles.js';
 import { winFxConfig, winStyleOf, scheduleWinFx } from './winfx.js';
 import { scheduleCamera } from './camera.js';
@@ -182,6 +182,7 @@ export function buildTimeline(project) {
   const flashes = [];
   const sfx = [];
   const stickies = [];
+  const reveals = [];
   const fsBlocks = [];
   const rounds = [];
   let prevGrid = initialGrid;
@@ -288,6 +289,23 @@ export function buildTimeline(project) {
     fs.block.end = t;
     fs = null;
   };
+  // Jump strip s, at t, to a copy of what it shows with `col` in the window
+  // (the symbols just outside the window stay as they were).
+  const swapStrip = (s, t, col, multCol, rng) => {
+    const strip = strips[s];
+    const P1 = pos[s];
+    const P2 = strip.length + 6;
+    ensure(strip, P2 + stripRows + 6, ctx, rng);
+    for (let d = -4; d < stripRows + 4; d++) {
+      strip[P2 + d] = strip[P1 + d];
+      const v = stripValues[s].get(P1 + d);
+      if (v != null) stripValues[s].set(P2 + d, v);
+      else stripValues[s].delete(P2 + d);
+    }
+    placeColumn(strip, P2, col, dir, stripRows, ctx, rng, stripValues[s], multCol);
+    pushKeys(stripKeys[s], [key(t - 0.01, P1, { hold: true }), key(t, P2, { hold: true })]);
+    pos[s] = P2;
+  };
 
   project.rounds.forEach((round, i) => {
     const rng = mulberry32(hashSeed(project.seed, round.seed, i));
@@ -303,6 +321,35 @@ export function buildTimeline(project) {
     const stopRank = ranksOf(stopOrder);
     const startRank = ranksOf(startOrder);
     const cellOrder = cellOrderList(sp.cellOrder || 'columns', reels, rows, stopOrder, rng);
+    // ---- walking wilds step one reel to the left as each free spin starts;
+    // one on the first reel walks off ----
+    const spins = !(o === 'fstotal' || o === 'respin' || o === 'collect' || game !== 'slot');
+    // The cell a walking wild leaves still holds the wild it landed as:
+    // while the wild still hides it, the reel there swaps to an ordinary
+    // symbol (cascade drops take it from `vacated`).
+    const vacated = new Map();
+    if (fs && fs.walking && round.free && spins && stickyOpen.size) {
+      const moved = new Map();
+      const rngW = mulberry32(hashSeed(project.seed, 'walk', i));
+      for (const st of stickyOpen.values()) vacated.set(K(st.c, st.r), fillSymbol(ctx, rngW));
+      if (mode === 'reels') {
+        for (const c of new Set([...vacated.keys()].map((k) => Math.floor(k / rows)))) {
+          swapStrip(c, t0 - 0.02, prevGrid[c].map((sym, r) => vacated.get(K(c, r)) ?? sym), prevMult[c].map((v, r) => (vacated.has(K(c, r)) ? null : v)), rngW);
+        }
+      } else if (mode === 'cells') for (const [k, sym] of vacated) swapStrip(k, t0 - 0.02, [sym], [null], rngW);
+      for (const st of stickyOpen.values()) {
+        st.to = t0;
+        const seg = { c: st.c - 1, r: st.r, from: t0, to: Infinity, cover: t0 + WILD_WALK, walkIn: [st.c, st.r], walking: true };
+        stickies.push(seg);
+        if (seg.c < 0) {
+          seg.to = t0 + WILD_WALK;
+          seg.cover = Infinity;
+          seg.exit = true;
+        } else moved.set(K(seg.c, seg.r), seg);
+      }
+      stickyOpen = moved;
+      sfx.push({ t: t0, type: 'wildWalk' });
+    }
     const carry = {
       sticky: fs && round.free ? new Set(stickyOpen.keys()) : new Set(),
       fsTotal: fs ? fs.total : 0,
@@ -338,6 +385,10 @@ export function buildTimeline(project) {
     }
 
     const sfxStop = (t, c) => sfx.push({ t, type: 'reelStop', pan: reels > 1 ? (c / (reels - 1)) * 2 - 1 : 0 });
+    // Mystery blocks land in place of the symbols they will reveal.
+    const mysteryAt = new Set(win.mystery && !noSpin ? win.mystery.cells.map(([c, r]) => K(c, r)) : []);
+    const mysteryActors = new Map();
+    const landCol = (c) => grid[c].map((sym, r) => (mysteryAt.has(K(c, r)) ? lay.mysterySym : sym));
 
     if (!noSpin && mode === 'reels') {
       let shift = 0;
@@ -354,7 +405,7 @@ export function buildTimeline(project) {
         pushKeys(stripKeys[c], keys);
         const strip = strips[c];
         ensure(strip, T, ctx, rng);
-        placeColumn(strip, T, grid[c], dir, rows, ctx, rng, stripValues[c], res.mult[c]);
+        placeColumn(strip, T, landCol(c), dir, rows, ctx, rng, stripValues[c], res.mult[c]);
         ensure(strip, T + rows + 4, ctx, rng);
         if (win.nearMiss && win.nearMiss.reel === c) strip[win.nearMiss.position === 'above' ? T + rows : T - 1] = win.nearMiss.symbol;
         tmp[c] = { start: ts, stop, settle, antic: a ? { start: a.tSlow, end: stop } : null, from: pos[c], to: T };
@@ -386,7 +437,7 @@ export function buildTimeline(project) {
         pushKeys(stripKeys[idx], keys);
         const strip = strips[idx];
         ensure(strip, T, ctx, rng);
-        placeColumn(strip, T, [grid[c][r]], dir, 1, ctx, rng, stripValues[idx], [res.mult[c][r]]);
+        placeColumn(strip, T, [landCol(c)[r]], dir, 1, ctx, rng, stripValues[idx], [res.mult[c][r]]);
         ensure(strip, T + 5, ctx, rng);
         if (win.nearMiss && rank === cellOrder.length - 1) strip[win.nearMiss.position === 'above' ? T + 1 : T - 1] = win.nearMiss.symbol;
         cellInfo[idx] = { c, r, rank, start: ts, stop, settle, antic: a ? { start: a.tSlow, end: stop } : null };
@@ -420,11 +471,14 @@ export function buildTimeline(project) {
           // A column held back by a tease keeps its old symbols until just
           // before its new ones drop, instead of standing empty.
           const outS = t0 + startRank[c] * sp.startStagger + (rows - 1 - r) * 0.035 + delays[c].start + shift;
-          actors.push({ id: ++actorId, c, sym: prevGrid[c][r], mult: prevMult[c][r], tIn: t0, tOut: outS + 0.36, keys: exitKeys(outS, r, rows + 1 + peek * 2, 0.36), old: true });
+          const gone = vacated.get(K(c, r));
+          actors.push({ id: ++actorId, c, sym: gone ?? prevGrid[c][r], mult: gone != null ? null : prevMult[c][r], tIn: t0, tOut: outS + 0.36, keys: exitKeys(outS, r, rows + 1 + peek * 2, 0.36), old: true });
           const inS = inBase + stopRank[c] * sp.stopStagger + (rows - 1 - r) * 0.05 + shift + delays[c].stop;
           const dropDur = 0.3 + 0.02 * (rows - r);
           const keys = fallKeys(inS, r - (rows + 0.6 + peek), r, dropDur);
-          actors.push({ id: ++actorId, c, sym: grid[c][r], mult: res.mult[c][r], tIn: inS, tOut: Infinity, keys, row: r });
+          const act = { id: ++actorId, c, sym: landCol(c)[r], mult: res.mult[c][r], tIn: inS, tOut: Infinity, keys, row: r };
+          actors.push(act);
+          if (mysteryAt.has(K(c, r))) mysteryActors.set(K(c, r), act);
           first = Math.min(first, inS + dropDur);
           last = Math.max(last, inS + dropDur + 0.18);
         }
@@ -537,9 +591,9 @@ export function buildTimeline(project) {
       for (const [c, r] of win.wilds) {
         const k = K(c, r);
         if (stickyOpen.has(k)) continue;
-        if (!(round.sticky || fs.sticky)) continue;
+        if (!(round.sticky || fs.sticky || fs.walking)) continue;
         const landT = mode === 'cells' ? cellInfo[k].stop : reelInfo[c].stop;
-        const s = { c, r, from: landT, to: Infinity };
+        const s = { c, r, from: landT, to: Infinity, walking: !!fs.walking };
         stickyOpen.set(k, s);
         stickies.push(s);
         sfx.push({ t: landT + 0.05, type: 'sticky' });
@@ -552,6 +606,31 @@ export function buildTimeline(project) {
     // HUD win meter resets when a new spin starts (Hold & Spin rounds keep it
     // for the collect).
     if (o !== 'fstotal' && o !== 'respin' && o !== 'collect') pushKeys(meterKeys, [key(t0, 0, { hold: true })]);
+
+    // ---- mystery blocks flip over together, revealing one symbol; under
+    // the cards the reels swap to it ----
+    if (mysteryAt.size) {
+      const flipAt = tcur + MYSTERY.build;
+      const flipEnd = flipAt + MYSTERY.flip;
+      const mid = (flipAt + flipEnd) / 2;
+      const cells = win.mystery.cells;
+      pres.mystery = { start: tcur, flipAt, mid, flipEnd, end: flipEnd + MYSTERY.after, cells, sym: win.mystery.sym, from: lay.mysterySym };
+      for (const [c, r] of cells) reveals.push({ c, r, from: flipAt, cover: flipAt, to: flipEnd });
+      if (mode === 'reels') for (const c of new Set(cells.map(([c]) => c))) swapStrip(c, flipAt + 0.02, grid[c], res.mult[c], rng);
+      else if (mode === 'cells') for (const [c, r] of cells) swapStrip(K(c, r), flipAt + 0.02, [grid[c][r]], [res.mult[c][r]], rng);
+      else {
+        for (const [c, r] of cells) {
+          const a = mysteryActors.get(K(c, r));
+          if (!a) continue;
+          a.tOut = mid;
+          a.row = null;
+          actors.push({ id: ++actorId, c, sym: grid[c][r], mult: res.mult[c][r], tIn: mid, tOut: Infinity, keys: [key(mid, r)], row: r });
+        }
+      }
+      sfx.push({ t: tcur, type: 'reveal', n: cells.length });
+      flashes.push({ t: mid, amp: 0.15, dur: 0.25 });
+      tcur = pres.mystery.end;
+    }
 
     // ---- expanding wilds ----
     if (win.expand.length) {
@@ -567,10 +646,11 @@ export function buildTimeline(project) {
     let actorGrid = null;
     const needActors = res.steps.some((s) => s.moves);
     if (needActors && mode !== 'cascade') {
-      actorsFrom = spinEnd;
+      const actorT = pres.mystery ? pres.mystery.end : spinEnd;
+      actorsFrom = actorT;
       actorGrid = grid.map((col, c) =>
         col.map((sym, r) => {
-          const a = { id: ++actorId, c, sym, mult: res.mult[c][r], tIn: spinEnd, tOut: Infinity, keys: [key(spinEnd, r)], row: r };
+          const a = { id: ++actorId, c, sym, mult: res.mult[c][r], tIn: actorT, tOut: Infinity, keys: [key(actorT, r)], row: r };
           actors.push(a);
           return a;
         })
@@ -669,19 +749,51 @@ export function buildTimeline(project) {
     if (o === 'medium' && stepsT.length) pres.coinBurst = { start: stepsT[0].start + 0.25, count: 46 };
 
     // ---- multipliers ----
-    if (res.mults.length && paying.length && win.amount > 0) {
+    const lineTotal = win.amount - (win.collected || 0);
+    if (res.mults.length && paying.length && lineTotal > 0) {
       const each = num(tm.multEach, 0.5);
       const items = res.mults.map((m, j) => ({ ...m, t: tcur + 0.15 + j * each }));
       const applyAt = items[items.length - 1].t + 0.55;
-      pres.mult = { start: tcur, items, sum: win.multSum, base: win.base, total: win.amount, applyAt, end: applyAt + 1.0 };
+      pres.mult = { start: tcur, items, sum: win.multSum, base: win.base, total: lineTotal, applyAt, end: applyAt + 1.0 };
       items.forEach((it) => sfx.push({ t: it.t, type: 'mult', value: it.value }));
-      pushKeys(meterKeys, [key(applyAt, cum, { outSpeed: ((win.amount - cum) / 0.7) * 1.25 }), key(applyAt + 0.7, win.amount, { inInf: 0.6, hold: true })]);
+      pushKeys(meterKeys, [key(applyAt, cum, { outSpeed: ((lineTotal - cum) / 0.7) * 1.25 }), key(applyAt + 0.7, lineTotal, { inInf: 0.6, hold: true })]);
       sfx.push({ t: applyAt, type: 'tierUp' });
       sfx.push({ t: applyAt, type: 'count', dur: 0.7 });
       flashes.push({ t: applyAt, amp: 0.4, dur: 0.3 });
       shakes.push({ t: applyAt, amp: 0.7, dur: 0.4 });
-      cum = win.amount;
+      cum = lineTotal;
       tcur = pres.mult.end;
+    }
+
+    // ---- a collector takes every cash value on screen, one by one ----
+    if (win.collected > 0 && !noSpin) {
+      const fg = res.finalGrid;
+      const fm = res.finalMult;
+      let at = win.collector;
+      const cash = [];
+      fg.forEach((col, c) =>
+        col.forEach((sym, r) => {
+          if (sym === lay.collectorSym) at = [c, r];
+          else if (isCoinSym(lay, sym) && fm[c][r] != null) cash.push({ c, r, value: fm[c][r] });
+        })
+      );
+      const t1 = tcur + COLLECTOR.wake;
+      let sum = cum;
+      const items = cash.map((cs, j) => {
+        const go = t1 + j * COLLECTOR.each;
+        const arrive = go + COLLECTOR.flight;
+        pushKeys(meterKeys, [key(arrive, sum), key(arrive + 0.1, sum + cs.value, { hold: true })]);
+        sum += cs.value;
+        sfx.push({ t: go, type: 'collect', i: j, n: cash.length });
+        return { ...cs, at: go, arrive, after: sum };
+      });
+      const done = (items.length ? items[items.length - 1].arrive : t1) + 0.1;
+      pres.collector = { start: tcur, c: at[0], r: at[1], items, total: win.collected, done, end: done + COLLECTOR.hold };
+      sfx.push({ t: tcur, type: 'magnet', dur: COLLECTOR.wake }, { t: done, type: 'countEnd' });
+      flashes.push({ t: done, amp: 0.35, dur: 0.3 });
+      shakes.push({ t: done, amp: 0.5, dur: 0.35 });
+      cum = sum;
+      tcur = pres.collector.end;
     }
 
     // ---- presentation by outcome ----
@@ -730,10 +842,12 @@ export function buildTimeline(project) {
         end = Math.max(tcur, spinEnd + 0.5);
       }
     } else if (o === 'freespins' || o === 'bonus') {
+      // Scatters landing in free spins retrigger: they add spins.
+      const retrigger = o === 'freespins' && fs && round.free;
       const cel = num(tm.celebrate, 1.8);
       pres.celebrate = { start: tcur, end: tcur + cel };
       const bs = tcur + cel - 0.3;
-      pres.banner = { start: bs, end: bs + num(tm.banner, 2.6), kind: o, freeSpins: round.freeSpins | 0 || 10, amount: win.amount };
+      pres.banner = { start: bs, end: bs + num(tm.banner, 2.6), kind: retrigger ? 'retrigger' : o, freeSpins: round.freeSpins | 0 || (retrigger ? 5 : 10), amount: win.amount };
       if (win.amount > 0) {
         pres.meter = { start: bs + 0.5, end: bs + 1.8 };
         pushKeys(meterKeys, [key(bs + 0.5, 0, { outSpeed: (win.amount / 1.3) * 1.25 }), key(bs + 1.8, win.amount, { inInf: 0.6, hold: true })]);
@@ -942,9 +1056,20 @@ export function buildTimeline(project) {
 
     // ---- free spins bookkeeping ----
     let fsInfo = null;
-    if (o === 'freespins') {
+    if (o === 'freespins' && fs && round.free) {
+      // A retrigger: this free spin counts, then the spins it adds join in
+      // (the counter changes as the banner lands).
+      const add = pres.banner.freeSpins;
+      fs.count++;
+      fs.total += win.amount || 0;
+      fs.n += add;
+      fs.block.rounds.push({ t0, index: fs.count });
+      fs.block.rounds.push({ t0: pres.banner.start + 0.4, index: fs.count, n: fs.n });
+      fsInfo = { index: fs.count, of: fs.n, totalAfter: fs.total, retrigger: add };
+      pushKeys(fsTotalKeys, [key(end - 0.6, fs.total - (win.amount || 0), { outSpeed: ((win.amount || 0) / 0.6) * 1.25 }), key(end, fs.total, { inInf: 0.6, hold: true })]);
+    } else if (o === 'freespins') {
       if (fs) closeBlock(t0);
-      fs = { n: round.freeSpins | 0 || 10, count: 0, total: 0, sticky: !!round.sticky, block: { start: next, end: Infinity, n: round.freeSpins | 0 || 10, rounds: [] } };
+      fs = { n: round.freeSpins | 0 || 10, count: 0, total: 0, sticky: !!round.sticky && !round.walking, walking: !!round.walking, block: { start: next, end: Infinity, n: round.freeSpins | 0 || 10, rounds: [] } };
       fsBlocks.push(fs.block);
       fsInfo = { trigger: fs.n };
     } else if (round.free && fs) {
@@ -1026,6 +1151,7 @@ export function buildTimeline(project) {
     flashes,
     sfx,
     stickies,
+    reveals,
     fsBlocks,
     rounds,
     initialGrid,
@@ -1079,10 +1205,32 @@ export { LINE_WINS, BIG_WINS, SCATTER_WINS, tumbleEnabled };
 // (the wild has popped in on top by then).
 export const STICKY_COVER = 0.45;
 
-// The cells held by sticky wilds at time t, whose strip is hidden.
+// The cells whose strip is hidden at time t: held by a sticky or walking
+// wild (from when it has popped or walked in), or turning over in a
+// mystery reveal.
 export function heldCells(tl, t) {
-  return (tl.stickies || []).filter((s) => t >= s.from + STICKY_COVER && t < s.to);
+  const on = (s) => t >= (s.cover ?? s.from + STICKY_COVER) && t < s.to;
+  return (tl.stickies || []).filter(on).concat((tl.reveals || []).filter(on));
 }
+
+// A walking wild's step from one reel to the next, and how high it hops
+// (in cell heights).
+export const WILD_WALK = 0.45;
+export const WALK_HOP = 0.3;
+
+// How far along its step a walking wild is at t (0 to 1, eased in and out)
+// and how high it is in its hop (0 to 1).
+export function walkStep(st, t) {
+  const x = Math.min(1, Math.max(0, (t - st.from) / WILD_WALK));
+  const u = x < 0.5 ? 2 * x * x : 1 - Math.pow(-2 * x + 2, 2) / 2;
+  return { u, hop: Math.sin(u * Math.PI) };
+}
+
+// Mystery reveal: the blocks glow, flip over together, then the win shows.
+export const MYSTERY = { build: 0.45, flip: 0.5, after: 0.3 };
+
+// The collector wakes, each cash value flies in, then the total holds.
+export const COLLECTOR = { wake: 0.5, each: 0.26, flight: 0.42, hold: 0.9 };
 
 // The landing build-up's shake, from the first winning reel to the last.
 export const LAND_SHAKE = [0.18, 0.68];

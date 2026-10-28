@@ -782,6 +782,96 @@ Object.assign(PAINTERS, {
   },
 });
 
+// Stand-ins for the mystery block and the collector (core/coins.js).
+Object.assign(PAINTERS, {
+  mystery(ctx, font) {
+    const glow = ctx.createRadialGradient(0, 0, 90, 0, 0, 262);
+    glow.addColorStop(0, 'rgba(190,120,255,0.75)');
+    glow.addColorStop(1, 'rgba(120,40,255,0)');
+    ctx.fillStyle = glow;
+    ctx.fillRect(-256, -256, 512, 512);
+    const box = () => roundRect(ctx, -200, -200, 400, 400, 70);
+    layered(ctx, box, { fill: radial(ctx, -20, -30, 220, ['#f3e6ff', '#b47cff', '#6a22d6', '#3a0c8a', '#16033d']), rim: metalGradient(ctx, 0, -210, 0, 210, 'gold'), rimWidth: 22, outline: '#14022e', outlineWidth: 36 });
+    roundRect(ctx, -158, -158, 316, 316, 46);
+    ctx.lineWidth = 8;
+    ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+    ctx.stroke();
+    ctx.font = `300px ${font}`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.lineJoin = 'round';
+    ctx.lineWidth = 34;
+    ctx.strokeStyle = '#1c0442';
+    ctx.strokeText('?', 0, 22);
+    ctx.lineWidth = 12;
+    ctx.strokeStyle = metalGradient(ctx, 0, -120, 0, 150, 'gold');
+    ctx.strokeText('?', 0, 22);
+    const tg = ctx.createLinearGradient(0, -120, 0, 150);
+    tg.addColorStop(0, '#ffffff');
+    tg.addColorStop(0.5, '#fff0a8');
+    tg.addColorStop(1, '#ffb52e');
+    ctx.fillStyle = tg;
+    ctx.fillText('?', 0, 22);
+    shine(ctx, box, -80, -135, 150, 55, -0.3, 0.28);
+    sparkle(ctx, 150, -160, 62, 1);
+    sparkle(ctx, -150, 140, 40, 0.8);
+  },
+  collector(ctx, font) {
+    const glow = ctx.createRadialGradient(0, 20, 80, 0, 20, 262);
+    glow.addColorStop(0, 'rgba(255,210,90,0.7)');
+    glow.addColorStop(1, 'rgba(255,150,0,0)');
+    ctx.fillStyle = glow;
+    ctx.fillRect(-256, -256, 512, 512);
+    const sack = ['#fff1c4', '#e8b860', '#b4782a', '#6e4210', '#2e1a04'];
+    const bag = () => {
+      ctx.beginPath();
+      ctx.moveTo(-72, -118);
+      ctx.bezierCurveTo(-130, -60, -218, 10, -204, 100);
+      ctx.bezierCurveTo(-192, 196, -100, 214, 0, 214);
+      ctx.bezierCurveTo(100, 214, 192, 196, 204, 100);
+      ctx.bezierCurveTo(218, 10, 130, -60, 72, -118);
+      ctx.closePath();
+    };
+    layered(ctx, bag, { fill: radial(ctx, -30, 40, 230, sack), outline: '#2a1400', outlineWidth: 34 });
+    const top = () => {
+      ctx.beginPath();
+      ctx.moveTo(-72, -118);
+      ctx.lineTo(-128, -204);
+      ctx.quadraticCurveTo(-62, -176, 0, -222);
+      ctx.quadraticCurveTo(62, -176, 128, -204);
+      ctx.lineTo(72, -118);
+      ctx.closePath();
+    };
+    layered(ctx, top, { fill: radial(ctx, -20, -170, 120, sack), outline: '#2a1400', outlineWidth: 28 });
+    const band = () => roundRect(ctx, -96, -142, 192, 44, 20);
+    layered(ctx, band, { fill: metalGradient(ctx, 0, -142, 0, -98, 'gold'), outline: '#2a1400', outlineWidth: 22, shadow: false });
+    shine(ctx, bag, -90, -10, 60, 110, 0.3, 0.25);
+    ctx.font = `200px ${font}`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.lineJoin = 'round';
+    ctx.lineWidth = 30;
+    ctx.strokeStyle = '#2a1400';
+    ctx.strokeText('$', 0, 52);
+    ctx.fillStyle = metalGradient(ctx, 0, -40, 0, 140, 'gold');
+    ctx.fillText('$', 0, 52);
+    const ribbon = () => roundRect(ctx, -236, 150, 472, 92, 28);
+    const rg = ctx.createLinearGradient(0, 150, 0, 242);
+    rg.addColorStop(0, '#5aa8ff');
+    rg.addColorStop(0.5, '#0b5cd6');
+    rg.addColorStop(1, '#03285e');
+    layered(ctx, ribbon, { fill: rg, rim: metalGradient(ctx, 0, 146, 0, 246, 'gold'), rimWidth: 14, outlineWidth: 30, outline: '#021430' });
+    ctx.font = `64px ${font}`;
+    ctx.lineWidth = 14;
+    ctx.strokeStyle = '#021430';
+    ctx.strokeText('COLLECT', 0, 198);
+    ctx.fillStyle = metalGradient(ctx, 0, 165, 0, 230, 'gold');
+    ctx.fillText('COLLECT', 0, 198);
+    sparkle(ctx, 150, -170, 60, 1);
+    sparkle(ctx, -160, -60, 38, 0.8);
+  },
+});
+
 export const BUILTIN_KEYS = Object.keys(PAINTERS);
 
 export function paintBuiltin(key, size = 512, font = 'Bungee, "Arial Black", Impact, sans-serif') {

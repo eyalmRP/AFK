@@ -1,8 +1,9 @@
 // The Hold & Spin coin set, and where every extra symbol sits in the symbol
-// index space: the machine's own symbols first, then the built-in multiplier
-// orb (when the project has no multiplier symbol), then one symbol per coin
-// type, and last the empty cell. The renderer, the timeline and the After
-// Effects export all use this one layout.
+// index space: the machine's own symbols first, then the built-in stand-ins
+// for the roles the project has no symbol for (the multiplier orb, the
+// mystery block, the collector), then one symbol per coin type, and last the
+// empty cell. The renderer, the timeline and the After Effects export all use
+// this one layout.
 
 import { defaultHoldSpin } from './defaults.js';
 import { pickWeighted } from './rng.js';
@@ -18,14 +19,41 @@ export function holdSpinConfig(project) {
   return hs;
 }
 
+// Built-in stand-ins, in layout order: [role, painted art, name].
+export const VIRTUAL_SYMBOLS = [
+  ['multiplier', 'orb', 'Multiplier'],
+  ['mystery', 'mystery', 'Mystery'],
+  ['collector', 'collector', 'Collector'],
+];
+
 export function symbolLayout(project) {
   const n = project.symbols.length;
-  const mi = project.symbols.findIndex((s) => s.role === 'multiplier');
-  const virtualOrb = mi < 0;
-  const coinBase = n + (virtualOrb ? 1 : 0);
+  let next = n;
+  const virtual = [];
+  const at = {};
+  for (const [role, art, name] of VIRTUAL_SYMBOLS) {
+    const i = project.symbols.findIndex((s) => s.role === role);
+    if (i >= 0) at[role] = i;
+    else {
+      at[role] = next++;
+      virtual.push({ role, art, name, sym: at[role] });
+    }
+  }
+  const coinBase = next;
   const coinCount = holdSpinConfig(project).coins.length;
   const blankSym = coinBase + coinCount;
-  return { n, virtualOrb, orbSym: virtualOrb ? n : mi, coinBase, coinCount, blankSym, total: blankSym + 1 };
+  return {
+    n,
+    virtual,
+    virtualOrb: virtual.some((v) => v.role === 'multiplier'),
+    orbSym: at.multiplier,
+    mysterySym: at.mystery,
+    collectorSym: at.collector,
+    coinBase,
+    coinCount,
+    blankSym,
+    total: blankSym + 1,
+  };
 }
 
 export const isCoinSym = (lay, s) => s != null && s >= lay.coinBase && s < lay.blankSym;

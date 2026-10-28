@@ -240,6 +240,8 @@ export const SOUND_EVENTS = [
   { id: 'sticky', label: 'Wild sticks', group: 'wins' },
   { id: 'fsTrigger', label: 'Free spins fanfare', group: 'bigwin' },
   { id: 'winLand', label: 'Winning reel lands (climbs)', group: 'wins' },
+  { id: 'reveal', label: 'Mystery symbols reveal', group: 'wins' },
+  { id: 'wildWalk', label: 'Walking wilds step', group: 'wins' },
   { id: 'wheelAgain', label: 'Wheel: spin again', group: 'bigwin' },
   { id: 'wheelTick', label: 'Wheel peg tick', group: 'reels' },
   { id: 'wheelLand', label: 'Wheel lands', group: 'bigwin' },
@@ -359,6 +361,7 @@ function baseProject() {
       titles: {
         bonus: 'BONUS!',
         freespins: 'FREE SPINS',
+        retrigger: 'EXTRA SPINS',
         wheel: 'WHEEL BONUS',
         nearmiss: 'SO CLOSE!',
         total: 'TOTAL WIN',
@@ -650,9 +653,59 @@ export function freeSpinsProject() {
     newRound('freespins', { seed: 192, freeSpins: 8, sticky: true }),
     newRound('small', { seed: 193, ...fs, lines: [0], count: 3, extraWilds: 1 }),
     newRound('none', { seed: 194, ...fs, extraWilds: 1 }),
+    newRound('freespins', { seed: 198, ...fs, freeSpins: 5 }),
     newRound('medium', { seed: 195, ...fs, lines: [1, 3], count: 4 }),
     newRound('big', { seed: 196, ...fs, lines: [0, 2], count: 5, tier: 1, wildAssist: true }),
     newRound('fstotal', { seed: 197 }),
+  ];
+  return p;
+}
+
+// Big Bass style: cash coins land with values; in free spins a collector
+// takes them all, a retrigger adds spins, and the last catch is a big win.
+export function cashCollectorProject() {
+  const p = baseProject();
+  p.name = 'Cash Catch';
+  p.seed = 301;
+  Object.assign(p.machine, { theme: 'emerald', title: 'CASH CATCH' });
+  p.effects.font = 'Lilita One';
+  p.effects.landShake = true;
+  p.spin.scatterLit = true;
+  const fs = { free: true };
+  p.rounds = [
+    newRound('none', { seed: 311, cash: [1, 2] }),
+    newRound('small', { seed: 312, lines: [0], count: 3, cash: [2, 5] }),
+    newRound('freespins', { seed: 313, freeSpins: 8 }),
+    newRound('none', { seed: 314, ...fs, cash: [2, 5, 10], collector: true }),
+    newRound('freespins', { seed: 315, ...fs, freeSpins: 4 }),
+    newRound('small', { seed: 316, ...fs, lines: [1], count: 3, cash: [3, 15, 1], collector: true }),
+    newRound('big', { seed: 317, ...fs, lines: [0, 2], count: 5, tier: 1, cash: [5, 10, 25], collector: true }),
+    newRound('fstotal', { seed: 318 }),
+  ];
+  return p;
+}
+
+// Mystery blocks reveal wins, wilds carry multipliers, and in free spins
+// the wilds walk off reel by reel.
+export function mysteryWalkProject() {
+  const p = baseProject();
+  p.name = 'Mystery Walkers';
+  p.seed = 321;
+  Object.assign(p.machine, { theme: 'neon', title: 'MYSTERY WALKERS' });
+  p.effects.font = 'Russo One';
+  p.effects.landShake = true;
+  p.spin.scatterLit = true;
+  const fs = { free: true };
+  p.rounds = [
+    newRound('none', { seed: 331, mystery: 3 }),
+    newRound('medium', { seed: 332, lines: [1, 2], count: 4, mystery: 3 }),
+    newRound('big', { seed: 333, lines: [0], count: 5, tier: 0, wildMults: [2, 5] }),
+    newRound('freespins', { seed: 334, freeSpins: 6, walking: true }),
+    newRound('none', { seed: 335, ...fs, extraWilds: 2 }),
+    newRound('small', { seed: 336, ...fs, lines: [0], count: 3, mystery: 2 }),
+    newRound('none', { seed: 337, ...fs }),
+    newRound('medium', { seed: 338, ...fs, lines: [1], count: 5, wildMults: [3] }),
+    newRound('fstotal', { seed: 339 }),
   ];
   return p;
 }
@@ -765,7 +818,9 @@ export const PRESETS = [
   { id: 'clusters', group: 'Slots', label: 'Cluster pays 7×7', desc: 'Clusters wind up, pull in one by one and merge into one big symbol.', make: clusterProject },
   { id: 'cells', group: 'Slots', label: 'Per-cell spins 5×3', desc: 'Every cell spins on its own and bumps as a winner lands; an expanding wild.', make: cellsProject },
   { id: 'portrait', group: 'Slots', label: 'Mobile portrait 9:16', desc: 'A taller 5×4 machine for phones; winners hop into the meter.', make: portraitProject },
-  { id: 'freespins', group: 'Features', label: 'Free spins with sticky wilds', desc: 'Scatters trigger, wilds stick while their reels spin on, the total counts up.', make: freeSpinsProject },
+  { id: 'freespins', group: 'Features', label: 'Free spins with sticky wilds', desc: 'Scatters trigger, wilds stick while their reels spin on, a retrigger adds spins, the total counts up.', make: freeSpinsProject },
+  { id: 'cash', group: 'Features', label: 'Cash collector', desc: 'Cash coins land with values; in free spins a collector takes them all, and a retrigger adds spins.', make: cashCollectorProject },
+  { id: 'mystery', group: 'Features', label: 'Mystery and walking wilds', desc: 'Mystery blocks reveal wins, wilds carry multipliers, and in free spins wilds walk off reel by reel.', make: mysteryWalkProject },
   { id: 'tease', group: 'Features', label: 'Near misses and teases', desc: 'Reels tease with the camera pushing in, then a big win.', make: teaseProject },
   { id: 'ladder', group: 'Features', label: 'Big win ladder', desc: 'Small, medium, then every big win title; the fireworks run to the end.', make: ladderProject },
   { id: 'slot-hs', group: 'Hold & Spin', label: 'Slot into Hold & Spin', desc: 'Coins land on the reels and carry onto the board.', make: slotHoldSpinProject },

@@ -123,6 +123,42 @@ export const DEMOS = {
       return [w.agains[0].at - 1.4, w.spinEnd + 1];
     },
   },
+  retrigger: {
+    make: () => slot(() => [newRound('freespins', { seed: 1, freeSpins: 6 }), newRound('freespins', { seed: 3, free: true, freeSpins: 4 })]),
+    window: (tl) => {
+      const b = tl.rounds[1].pres.banner;
+      return [b.start - 0.5, b.start + 2.2];
+    },
+  },
+  'wild-mult': {
+    make: () => slot(() => [newRound('medium', { seed: 5, lines: [0], count: 5, wildMults: [2, 3] })]),
+    window: (tl) => {
+      const R = R0(tl);
+      return [R.pres.steps[0].start - 0.2, R.pres.mult.end + 0.2];
+    },
+  },
+  mystery: {
+    make: () => slot(() => [newRound('small', { seed: 7, lines: [1], count: 4, mystery: 3, tumble: false })]),
+    window: (tl) => {
+      const m = R0(tl).pres.mystery;
+      return [m.start - 0.7, m.end + 1.2];
+    },
+  },
+  walking: {
+    make: () =>
+      slot(
+        () => [newRound('freespins', { seed: 9, walking: true }), newRound('none', { seed: 10, free: true, extraWilds: 2 }), newRound('none', { seed: 11, free: true }), newRound('none', { seed: 12, free: true })],
+        (p) => (p.spin.zoomOn = false)
+      ),
+    window: (tl) => [tl.rounds[2].t0 - 0.3, tl.rounds[3].t0 + 0.9],
+  },
+  collector: {
+    make: () => slot(() => [newRound('none', { seed: 8, cash: [2, 5, 10], collector: true })]),
+    window: (tl) => {
+      const c = R0(tl).pres.collector;
+      return [c.start - 0.6, c.end];
+    },
+  },
   holdspin: {
     make: () => {
       const p = small(holdSpinProject());

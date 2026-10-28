@@ -85,7 +85,13 @@ export const TIPS = {
   'w-label-height': T('wheel', 'Text height', 'How far out from the hub the segment text sits.'),
   'w-icon-height': T('wheel', 'Icon height', 'How far out from the hub the segment icons sit.'),
   // Round inspector
-  'ri-fs-sticky': T('round', 'Sticky wilds', 'Wilds that land stay put for the rest of the free spins; their reel spins on around them.', 'sticky', ['freespins']),
+  'ri-fs-wilds-sticky': T('round', 'Sticky wilds', 'Wilds that land stay put for the rest of the free spins; their reel spins on around them.', 'sticky', ['freespins']),
+  'ri-fs-wilds-walking': T('round', 'Walking wilds', 'Every wild that lands in these free spins steps one reel to the left as each spin starts, until it walks off the grid.', 'walking', ['freespins']),
+  'ri-fs': T('round', 'Free spins and retriggers', 'How many free spins the trigger awards. Inside free spins (marked Free spin) it is a retrigger: EXTRA SPINS shows and the counter grows by this many.', 'retrigger', ['freespins']),
+  'ri-wmult': T('round', 'Multiplier wilds', 'Wilds in the win carry an x2, x3... badge. After the win shows, the badges fly in and multiply it by their sum.', 'wild-mult', ['small', 'medium', 'big']),
+  'ri-mystery': T('round', 'Mystery symbols', 'Mystery blocks land, glow and turn over together into one symbol. On a win they sit on winners and reveal the winning symbol.', 'mystery', ['none', 'small', 'medium', 'big']),
+  'ri-cash': T('round', 'Cash symbols', 'Coins that land carrying a value, in bets. On their own they just land; a collector takes them all.', 'collector', ['none', 'small', 'medium', 'big', 'nearmiss', 'freespins', 'bonus']),
+  'ri-collector': T('round', 'Collector', 'A collector lands, on the last reel to stop when it can, and every cash value flies into it one by one, on top of the win.', 'collector', ['none', 'small', 'medium', 'big', 'nearmiss', 'freespins', 'bonus']),
   'ri-expand': T('round', 'Expanding wild', 'A wild grows to fill its whole reel.', 'expand', ['small', 'medium', 'big']),
   'ri-tumble': T('round', 'Tumbles', 'Winners pop, the rest fall, new symbols drop in and can win again.', 'tumble', ['small', 'medium', 'big']),
 };

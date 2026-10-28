@@ -8,7 +8,7 @@ const slug = (t) => String(t).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(
 test('what applies: every listed control and section exists in the editor', () => {
   const app = readFileSync(new URL('../src/js/ui/app.js', import.meta.url), 'utf8');
   const ids = new Set([...app.matchAll(/id: '([a-z0-9-]+)'/g)].map((m) => m[1]));
-  for (const k of ['freespins', 'total', 'bonus', 'wheel', 'nearmiss', 'holdspin', 'grand']) ids.add(`fx-t-${k}`);
+  for (const k of ['freespins', 'retrigger', 'total', 'bonus', 'wheel', 'nearmiss', 'holdspin', 'grand']) ids.add(`fx-t-${k}`);
   const titles = new Set([...app.matchAll(/section\(\s*'([^']+)'/g)].map((m) => slug(m[1])));
   titles.add('winning-symbols');
   for (const key of Object.keys(APPLIES)) {
