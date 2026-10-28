@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { defaultProject, candyProject, cellsProject, newRound } from '../src/js/core/defaults.js';
+import { defaultProject, candyProject, cellsProject, newRound, PRESETS } from '../src/js/core/defaults.js';
 import { buildTimeline, holdAlpha } from '../src/js/core/timeline.js';
 import { evalKeys, key } from '../src/js/core/keys.js';
 import { generatePaylines } from '../src/js/core/paylines.js';
@@ -189,6 +189,21 @@ test('sticky wilds stay wild for the rest of the free spins', () => {
   for (const R of tl.rounds.slice(2)) assert.equal(R.grid[s.c][s.r], wild);
 });
 
+test('a line win drawn through a sticky wild keeps the wild', () => {
+  const p = defaultProject();
+  const wild = p.symbols.findIndex((x) => x.role === 'wild');
+  p.rounds = [newRound('freespins', { seed: 1, sticky: true }), newRound('none', { seed: 2, free: true, extraWilds: 1 })];
+  const held = buildTimeline(p).stickies[0];
+  // A payline through the sticky wild, then wins drawn along it.
+  const line = generatePaylines(p.grid.reels, p.grid.rows, p.machine.maxLines).findIndex((l) => l[held.c] === held.r);
+  p.rounds.push(newRound('medium', { seed: 3, free: true, lines: [line], count: 5 }), newRound('big', { seed: 4, free: true, lines: [line], count: 5, tier: 0 }));
+  const tl = buildTimeline(p);
+  for (const R of tl.rounds.slice(2)) {
+    assert.equal(R.grid[held.c][held.r], wild, `round ${R.index}: the sticky wild is still there`);
+    assert.ok(R.win.lines.some((l) => l.index === line && l.cells.some(([c, r]) => c === held.c && r === held.r)), 'and the line pays through it');
+  }
+});
+
 test('expanding wilds turn their reel wild', () => {
   const tl = buildTimeline(cellsProject());
   const R = tl.rounds.find((r) => r.win.expand.length);
@@ -354,4 +369,27 @@ test('tumble spins: a column held back by a tease keeps its old symbols until ju
     }
   }
   assert.ok(tl.rounds.some((R) => R.reels.some((ri) => ri.antic)), 'the case has a tease');
+});
+
+test('presets: every one builds, and between them they show the newer features', () => {
+  assert.equal(new Set(PRESETS.map((pr) => pr.id)).size, PRESETS.length);
+  const made = PRESETS.map((pr) => pr.make());
+  for (const [i, p] of made.entries()) assert.ok(buildTimeline(p).duration > 5, PRESETS[i].id);
+  const any = (what, f) => assert.ok(made.some(f), what);
+  any('build-up shake', (p) => p.effects.landShake);
+  any('row lines', (p) => p.machine.rowLines);
+  any('jump with a wind-up flight', (p) => p.winfx.style === 'jump' && p.winfx.jumpPath === 'back');
+  any('merge one by one', (p) => p.winfx.style === 'merge' && p.winfx.mergeSeq > 0);
+  any('ambient particles', (p) => p.particles.ambient.fx !== 'none');
+  any('particles that run to the end', (p) => p.tiers.some((t) => t.particles?.length === 'always'));
+  any('sticky wilds', (p) => p.rounds.some((r) => r.sticky));
+  any('spin again', (p) => p.wheel.segments.some((s) => s.kind === 'again') && p.rounds.some((r) => r.wheelThen != null));
+  any('no win', (p) => p.wheel.segments.some((s) => s.kind === 'none'));
+  any('pointer at the bottom', (p) => p.game === 'wheel' && p.wheel.pointer === 'bottom');
+  any('a centre icon of its own', (p) => p.wheel.centerIcon && p.wheel.centerIcon !== 'builtin:star');
+  // The classic preset is the demo the editor opens with; the plain default
+  // project (the base saved projects are filled in from) keeps everything off.
+  const classic = made[PRESETS.findIndex((pr) => pr.id === 'classic')];
+  assert.ok(classic.effects.landShake && classic.wheel.segments.every((s) => s.icon));
+  assert.ok(!defaultProject().effects.landShake && !defaultProject().wheel.segments.some((s) => s.icon || s.kind));
 });

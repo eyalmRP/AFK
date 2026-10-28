@@ -67,7 +67,9 @@ test('particles: Hold & Spin collects, grands and the wheel game get theirs', ()
   const ov = col.pres.overlay;
   assert.deepEqual(col.pres.particles.filter((e) => e.moment !== 'grand').map((e) => e.moment), ov.tiers.map((id) => (id === 'total' ? 'total' : 'tier')));
   const wh = buildTimeline(wheelProject());
-  assert.ok(wh.emitters.length >= wh.rounds.length);
+  // Every spin that pays gets its coins; a no win gets none.
+  const paying = wh.rounds.filter((R) => !R.pres.wheel.noWin).length;
+  assert.ok(paying >= 1 && paying < wh.rounds.length && wh.emitters.length >= paying);
   assert.ok(wh.emitters.every((e) => e.moment === 'wheel' && e.focus.kind === 'wheel'));
   const candy = buildTimeline(candyProject());
   assert.ok(candy.emitters.some((e) => e.moment === 'small' && e.asset === 'star'));

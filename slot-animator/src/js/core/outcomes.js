@@ -222,10 +222,10 @@ export function resolveRound(ctx, project, round, rng, carry = {}) {
   };
   let curGrid = grid;
   const wildAt = (c, r) => ctx.wildSet.has(curGrid[c][r]) || wildMask.has(K(c, r));
-  for (const k of carry.sticky || []) {
-    if (ctx.wildSym == null) break;
-    place(Math.floor(k / rows), k % rows, ctx.wildSym);
-  }
+  // Sticky wilds stay put: a win drawn through one keeps the wild there.
+  const held = new Set(ctx.wildSym == null ? [] : carry.sticky || []);
+  for (const k of held) place(Math.floor(k / rows), k % rows, ctx.wildSym);
+  const placeWin = (c, r, s) => held.has(K(c, r)) || place(c, r, s);
   const win = { kind: 'none', symbol: -1, lines: [], cells: [], scatters: [], nearMiss: null, amount: 0, base: 0, multSum: 0, expand: [], wilds: [] };
   const steps = [];
   const randomFreeCells = (n, extra = () => true) => shuffle(rng, allCells(ctx).filter(([c, r]) => isFree(c, r) && extra(c, r))).slice(0, n);
@@ -259,7 +259,7 @@ export function resolveRound(ctx, project, round, rng, carry = {}) {
         const line = paylines[li];
         const cells = [];
         for (let c = 0; c < Math.min(n0, reels); c++) {
-          place(c, line[c], s0);
+          placeWin(c, line[c], s0);
           cells.push([c, line[c]]);
         }
         stepLines.push({ index: li, cells });
@@ -267,7 +267,7 @@ export function resolveRound(ctx, project, round, rng, carry = {}) {
     } else if (pattern === 'cells') {
       const cells = (spec0.cells || []).filter(([c, r]) => c < reels && r < rows);
       const use = cells.length ? cells : [[0, 0], [1, 1], [2, 2]].filter(([c, r]) => c < reels && r < rows);
-      for (const [c, r] of use) place(c, r, s0);
+      for (const [c, r] of use) placeWin(c, r, s0);
     } else if (pattern === 'ways') {
       for (let c = 0; c < n0; c++) {
         const k = rows > 1 && rng() < (outcome === 'big' ? 0.7 : 0.35) ? 2 : 1;

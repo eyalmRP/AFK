@@ -2,7 +2,7 @@
 // the stretch of its timeline to loop. The editor renders them with the
 // real renderer at a small size. Pure: projects and time windows only.
 
-import { defaultProject, candyProject, holdSpinProject, wheelProject, newRound, SPIN_PRESETS } from '../core/defaults.js';
+import { defaultProject, candyProject, holdSpinProject, wheelProject, newRound, SPIN_PRESETS, AGAIN_SEGMENT } from '../core/defaults.js';
 
 const SIZE = { width: 480, height: 270, fps: 30 };
 
@@ -109,14 +109,7 @@ export const DEMOS = {
   'frame-rise': { make: () => wheel((p) => Object.assign(p.wheel, { size: 1.55, x: 0.5, y: -0.02, pointer: 'bottom', landing: 'center' })), window: wheelLand },
   'wheel-push': { make: () => wheel((p) => Object.assign(p.wheel, { push: 0.45, landing: 'tease' })), window: (tl) => { const w = R0(tl).pres.wheel; return [w.slowFrom - 0.4, w.spinEnd + 1]; } },
   'wheel-again': {
-    make: () =>
-      wheel(
-        (p) => {
-          p.wheel.segments[1].kind = 'again';
-          p.wheel.segments[1].label = 'SPIN AGAIN';
-        },
-        () => [newRound('wheel', { seed: 3, wheelSegment: 1, wheelThen: 3, wheelLanding: 'center' })]
-      ),
+    make: () => wheel(undefined, () => [newRound('wheel', { seed: 3, wheelSegment: AGAIN_SEGMENT, wheelThen: 3, wheelLanding: 'center' })]),
     window: (tl) => {
       const w = R0(tl).pres.wheel;
       return [w.agains[0].at - 1.4, w.spinEnd + 1];

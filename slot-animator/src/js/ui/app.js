@@ -4,6 +4,7 @@
 
 import {
   defaultProject,
+  classicProject,
   newRound,
   OUTCOMES,
   OUTCOME_BY_ID,
@@ -593,7 +594,7 @@ function projectMenuItems() {
     { id: 'pm-presets', label: 'Start from a preset…', kbd: 'P', hint: `${PRESETS.length} ready-made animations to build on`, run: () => openPresets() },
     { sep: true },
     { id: 'pm-clear', label: 'Clear all rounds', hint: 'Keeps the machine and the art', run: clearRounds },
-    { id: 'pm-reset', label: 'Reset to the demo project', run: () => loadProject(defaultProject(), 'Back to the demo project. Undo brings yours back.') },
+    { id: 'pm-reset', label: 'Reset to the demo project', run: () => loadProject(classicProject(), 'Back to the demo project. Undo brings yours back.') },
     { sep: true },
     { id: 'pm-undo', label: 'Undo', kbd: 'Ctrl Z', run: undo },
     { id: 'pm-redo', label: 'Redo', kbd: 'Ctrl Shift Z', run: redo },
@@ -660,7 +661,7 @@ const SEARCH_ACTIONS = {
   save: () => saveProjectFile(),
   presets: () => openPresets(),
   clear: () => clearRounds(),
-  reset: () => loadProject(defaultProject(), 'Back to the demo project. Undo brings yours back.'),
+  reset: () => loadProject(classicProject(), 'Back to the demo project. Undo brings yours back.'),
   undo: () => undo(),
   redo: () => redo(),
   keys: () => showShortcuts(),
@@ -4648,7 +4649,7 @@ function renderAll() {
 }
 
 export async function start() {
-  state.project = loadSaved() || defaultProject();
+  state.project = loadSaved() || classicProject();
   downloadsP = window.claude?.use ? Promise.resolve(window.claude.use('downloads')).catch(() => null) : Promise.resolve(null);
   buildShell();
   renderAll();

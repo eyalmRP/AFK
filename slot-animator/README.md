@@ -29,8 +29,8 @@ the result as an editable **After Effects project**.
   again), multiplier symbols that fly into the total, expanding wilds,
   extra wilds, sticky wilds through a free spins block (a held cell is cut
   out of its spinning reel; in After Effects a Subtract mask on the reel
-  layer does it), and a free spins
-  counter with a running total.
+  layer does it; a later win drawn through one pays through the wild), and
+  a free spins counter with a running total.
 - Winning symbols: pop in place, jump into the score (they fly one by one
   to the win meter, the win amount, above the reels, the screen centre or
   any spot you click on the preview; each landing counts up the win), or
@@ -93,7 +93,17 @@ the result as an editable **After Effects project**.
     per-cell spins, mobile portrait, free spins with sticky wilds, teases,
     the big win ladder, slot into Hold & Spin, Hold & Spin, a slot wheel
     bonus and three wheel-only framings. It opens by itself on the first
-    visit.
+    visit. Between them they show the newer options, each where it fits:
+    build-up shake (classic, fruit, ways, clusters, cells, portrait, free
+    spins, teases, ladder and the coin and wheel slots), row lines (fruit),
+    jump with a wind-up flight (ways) or an arc (portrait), merge with a
+    wind-up pull one by one (clusters), ambient particles (ways, Hold &
+    Spin, wheel from above), fireworks that run to the end (ladder), Spin
+    again and No win segments (slot wheel bonus, wheel only, close-up),
+    every wheel landing, a centre icon of its own and a label font (wheel
+    from above). The editor opens on the classic preset;
+    `defaultProject()` stays plain because saved projects are filled in
+    from it.
   - Project menu: new project, open and save the project file (Ctrl O,
     Ctrl S), presets, clear all rounds, reset to the demo. Undo and redo
     (Ctrl Z, Ctrl Shift Z) cover every change. Switching the game type keeps

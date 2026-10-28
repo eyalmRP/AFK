@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { defaultProject, wheelProject, newRound } from '../src/js/core/defaults.js';
+import { defaultProject, wheelProject, newRound, DEFAULT_SEGMENTS } from '../src/js/core/defaults.js';
 import { buildTimeline } from '../src/js/core/timeline.js';
 import { computeLayout } from '../src/js/core/layout.js';
 import { evalKeys } from '../src/js/core/keys.js';
@@ -14,9 +14,11 @@ const segDegOf = (p) => 360 / p.wheel.segments.length;
 // The segment under the pointer when the wheel stands at theta.
 const under = (p, theta, P) => Math.floor((((P - theta) % 360) + 360) % 360 / segDegOf(p));
 
+// A plain wheel: prizes only, no icons, no push-in.
 function spins(extra = {}) {
   const p = wheelProject();
-  p.wheel.segments.forEach((s) => (s.icon = null));
+  p.wheel.segments = DEFAULT_SEGMENTS.map((s) => ({ ...s }));
+  p.wheel.push = 0;
   p.rounds = [newRound('wheel', { seed: 1, wheelSegment: 3 }), newRound('wheel', { seed: 2, wheelSegment: 7 }), newRound('wheel', { seed: 3, wheelSegment: 0 })];
   Object.assign(p.wheel, extra);
   return p;
@@ -206,7 +208,7 @@ test('wheel in After Effects: a disc comp of parts, label text in the label font
 test('wheel icons: one on every segment, richer for bigger prizes, and the centre icon', () => {
   const p = wheelProject();
   const segs = p.wheel.segments;
-  assert.ok(segs.every((s) => iconName(s.icon)), 'the wheel preset has an icon on every segment');
+  assert.ok(segs.every((s) => segmentKind(s) === 'none' || iconName(s.icon)), 'the wheel preset has an icon on every segment but its No win');
   const auto = autoIcons(segs);
   assert.equal(auto.length, segs.length);
   const ids = WHEEL_ICONS.map((i) => i.id);
@@ -230,14 +232,16 @@ test('wheel icons in After Effects: every segment icon and the centre icon are p
     const tl = buildTimeline(p);
     const L = computeLayout(p);
     const data = buildAEData(p, tl, L, { titleKeys: [] });
-    assert.equal(data.wheel.icons.length, p.wheel.segments.length);
+    const withIcon = p.wheel.segments.filter((s) => s.icon).length;
+    assert.ok(withIcon >= p.wheel.segments.length - 1);
+    assert.equal(data.wheel.icons.length, withIcon);
     assert.ok(data.assets.wheelCenter);
     const files = new Set([data.assets.wheelSegments, data.assets.wheelHub, data.assets.wheelCenter, data.assets.wheelRing, data.assets.wheelPointer, ...data.wheel.icons.map((i) => i.file)].map((f) => `/pkg/${f}`));
     const { env, log } = createAE({ files });
     runScript(buildAEScript([data]), env);
     const disc = log.comps.find((c) => c.name === 'Wheel Disc');
     const names = disc.layers.list.map((l) => l.name);
-    assert.equal(names.filter((n) => /^Icon \d\d$/.test(n)).length, p.wheel.segments.length);
+    assert.equal(names.filter((n) => /^Icon \d\d$/.test(n)).length, withIcon);
     const round = log.comps.find((c) => /^R01 /.test(c.name)).layers.list.map((l) => l.name);
     assert.equal(names.includes('Wheel Center'), hubSpins, 'turns with the disc');
     assert.equal(round.includes('Wheel Center'), !hubSpins, 'or stays still over it');
@@ -257,7 +261,7 @@ test('wheel icon and text height: automatic by default, placed by hand, sizes fi
   p.wheel.labelHeight = 0.82;
   lay = segmentLayout(p.wheel.segments, R, p);
   for (const it of lay) {
-    assert.ok(Math.abs(it.icon.r - 0.5 * R) < 1e-9 && Math.abs(it.label.r - 0.82 * R) < 1e-9);
+    assert.ok((!it.icon || Math.abs(it.icon.r - 0.5 * R) < 1e-9) && Math.abs(it.label.r - 0.82 * R) < 1e-9);
     assert.ok(it.label.maxLen <= 2 * (0.97 - 0.82) * R + 1e-9, 'the text stays inside the rim');
   }
   // Close to the hub the text shrinks to the wedge's width there.
