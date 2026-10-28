@@ -6,7 +6,7 @@ import { computeLayout } from '../src/js/core/layout.js';
 import { evalKeys } from '../src/js/core/keys.js';
 import { cameraAt } from '../src/js/core/camera.js';
 import { buildAEData, buildAEScript } from '../src/js/core/ae-export.js';
-import { WHEEL_FRAMINGS, WHEEL_LANDINGS, WHEEL_ICONS, SLIP, POINTER_MAX, wheelConfig, pointerAt, pointerDeflection, autoIcons, iconName } from '../src/js/core/wheel.js';
+import { WHEEL_FRAMINGS, WHEEL_LANDINGS, WHEEL_ICONS, SLIP, POINTER_MAX, wheelConfig, pointerAt, pointerDeflection, autoIcons, iconName, segmentLayout } from '../src/js/core/wheel.js';
 import { parseFontNames, fontPostScript, projectFonts } from '../src/js/core/fonts.js';
 import { createAE, runScript } from './ae-mock.js';
 
@@ -245,4 +245,28 @@ test('wheel icons in After Effects: every segment icon and the centre icon are p
     p.wheel.centerIcon = 'none';
     assert.equal(buildAEData(p, tl, L, { titleKeys: [] }).assets.wheelCenter, '');
   }
+});
+
+test('wheel icon and text height: automatic by default, placed by hand, sizes fit the wedge', () => {
+  const p = wheelProject();
+  const L = computeLayout(p);
+  const R = L.wheel.R;
+  let lay = segmentLayout(p.wheel.segments, R, p);
+  assert.ok(Math.abs(lay[0].icon.r - 0.75 * R) < 1e-9 && Math.abs(lay[0].label.r - 0.42 * R) < 1e-9, 'icon near the rim, text towards the hub');
+  p.wheel.iconHeight = 0.5;
+  p.wheel.labelHeight = 0.82;
+  lay = segmentLayout(p.wheel.segments, R, p);
+  for (const it of lay) {
+    assert.ok(Math.abs(it.icon.r - 0.5 * R) < 1e-9 && Math.abs(it.label.r - 0.82 * R) < 1e-9);
+    assert.ok(it.label.maxLen <= 2 * (0.97 - 0.82) * R + 1e-9, 'the text stays inside the rim');
+  }
+  // Close to the hub the text shrinks to the wedge's width there.
+  p.wheel.labelHeight = 0.2;
+  const seg = (Math.PI * 2) / p.wheel.segments.length;
+  for (const it of segmentLayout(p.wheel.segments, R, p)) assert.ok(it.label.px <= 2 * it.label.r * Math.sin(seg / 2) * 0.85 + 1e-9);
+  // After Effects places its text layers at the same height.
+  p.wheel.labelHeight = 0.82;
+  const data = buildAEData(p, buildTimeline(p), L, { titleKeys: [] });
+  assert.ok(data.wheel.labels.every((l) => Math.abs(l.r - 0.82 * R) < 1e-3));
+  assert.ok(data.wheel.icons.every((i) => Math.abs(i.r - 0.5 * R) < 1e-3));
 });

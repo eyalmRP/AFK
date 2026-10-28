@@ -41,7 +41,7 @@ import { loadParticleSprites, drawParticleList } from '../render/particles.js';
 import { PARTICLE_TEMPLATES, TEMPLATE_BY_ID, BUILTIN_PARTICLES, PARTICLE_MOTIONS, PARTICLE_MOMENTS, PARTICLE_LENGTHS, tierParticles, spawnParticles, particleAssetInfo } from '../core/particles.js';
 import { WIN_STYLES, JUMP_TARGETS, MERGE_POINTS, FLIGHT_PATHS, winFxConfig, jumpTarget, mergeTarget } from '../core/winfx.js';
 import { searchFeatures, buildIndex } from './search.js';
-import { WHEEL_FRAMINGS, WHEEL_LANDINGS, POINTER_SIDES, LABEL_PALETTES, WHEEL_ICONS, wheelConfig, iconName, autoIcons } from '../core/wheel.js';
+import { WHEEL_FRAMINGS, WHEEL_LANDINGS, POINTER_SIDES, LABEL_PALETTES, WHEEL_ICONS, wheelConfig, iconName, autoIcons, autoHeights } from '../core/wheel.js';
 import { projectFonts, parseFontNames } from '../core/fonts.js';
 import { renderFrame } from '../render/renderer.js';
 import { decodeCustomSounds, renderSoundtrack, audioBufferToWav } from '../render/audio.js';
@@ -3828,6 +3828,8 @@ function panelWheel() {
   W.art = W.art || { face: null, rim: null, hub: null, pointer: null };
   W.show = W.show || {};
   const cfg = wheelConfig(P);
+  // What the height sliders show until they are moved.
+  const autoH = autoHeights(W.segments.some((s) => s.icon), cfg.show.labels && W.segments.some((s) => String(s.label ?? '') !== ''));
   const list = h('div', { class: 'segments' });
   W.segments.forEach((s, i) => list.append(segmentRow(P, W, s, i)));
   const show = (k) => (v) => {
@@ -3899,8 +3901,18 @@ function panelWheel() {
       'Look',
       selectField({ id: 'w-font', label: 'Label font', value: W.labelFont || '', options: [{ value: '', label: `Display font (${P.effects.font || 'Bungee'})` }, ...projectFonts(P).map((f) => ({ value: f, label: f }))], onChange: (v) => { W.labelFont = v; changed('all'); } }),
       segmented({ id: 'w-label-colour', label: 'Label colour', value: cfg.labelPalette, options: LABEL_PALETTES.map((x) => ({ value: x.id, label: x.label })), onChange: (v) => { W.labelPalette = v; changed('all'); } }),
-      rangeField({ id: 'w-label-size', label: 'Label size', unit: '×', value: cfg.labelSize, min: 0.4, max: 2, step: 0.01, onInput: allChanged('labelSize') }),
+      rangeField({ id: 'w-label-size', label: 'Text size', unit: '×', value: cfg.labelSize, min: 0.4, max: 2, step: 0.01, onInput: allChanged('labelSize') }),
+      rangeField({ id: 'w-label-height', label: 'Text height', unit: '% from hub to rim', value: Math.round((cfg.labelHeight ?? autoH.label) * 100), min: 15, max: 97, step: 1, onInput: (v) => { W.labelHeight = v / 100; changed('all'); } }),
       rangeField({ id: 'w-icon-size', label: 'Icon size', unit: '×', value: cfg.iconSize, min: 0.3, max: 2, step: 0.01, onInput: allChanged('iconSize') }),
+      rangeField({ id: 'w-icon-height', label: 'Icon height', unit: '% from hub to rim', value: Math.round((cfg.iconHeight ?? autoH.icon) * 100), min: 15, max: 97, step: 1, onInput: (v) => { W.iconHeight = v / 100; changed('all'); } }),
+      cfg.iconHeight != null || cfg.labelHeight != null
+        ? button('Automatic heights', () => {
+            W.iconHeight = null;
+            W.labelHeight = null;
+            changed('all');
+            renderPanel();
+          }, { class: 'btn small ghost', id: 'w-heights-auto', title: 'Icons near the rim, text towards the hub, as each segment needs' })
+        : null,
       h(
         'div',
         { class: 'field centre-icon-field' },

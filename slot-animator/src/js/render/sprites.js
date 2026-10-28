@@ -597,13 +597,14 @@ function paintWheel(R, segments, project, art = {}) {
     g.fill();
     g.restore();
   }
+  // Separators run from the centre (under the hub) to the rim.
   if (cfg.show.separators) {
     g.strokeStyle = metalGradient(g, -R, -R, R, R, 'gold');
     g.lineWidth = Math.max(2, R * 0.018);
     for (let k = 0; k < N; k++) {
       const a = -Math.PI / 2 + k * seg;
       g.beginPath();
-      g.moveTo(Math.cos(a) * R * 0.17, Math.sin(a) * R * 0.17);
+      g.moveTo(0, 0);
       g.lineTo(Math.cos(a) * R, Math.sin(a) * R);
       g.stroke();
     }

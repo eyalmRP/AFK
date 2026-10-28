@@ -50,6 +50,10 @@ export function wheelConfig(project) {
     labelPalette: w.labelPalette || 'gold',
     labelSize: clamp(num(w.labelSize, 1), 0.4, 2),
     iconSize: clamp(num(w.iconSize, 1), 0.3, 2),
+    // How far out from the hub icons and labels sit (fraction of the
+    // radius); null places them by what each segment holds.
+    iconHeight: w.iconHeight == null || w.iconHeight === '' ? null : clamp(num(w.iconHeight, 0.75), 0.15, 0.97),
+    labelHeight: w.labelHeight == null || w.labelHeight === '' ? null : clamp(num(w.labelHeight, 0.6), 0.15, 0.97),
     hubSize: clamp(num(w.hubSize, 1), 0.3, 3),
     hubSpins: w.hubSpins !== false,
     // The icon in the middle of the hub: the star unless the hub is your art.
@@ -122,25 +126,40 @@ export function pointerAt(theta, segDeg, pointerAngle, t, kick) {
   return pointerDeflection(theta, segDeg, pointerAngle) + pointerKick(kick, t);
 }
 
+// Where icons and labels sit by default (fractions of the radius): an icon
+// near the rim pushes the label towards the hub.
+export function autoHeights(hasIcon, hasLabel) {
+  return { icon: hasLabel ? 0.75 : 0.62, label: hasIcon ? 0.42 : 0.6 };
+}
+
 // Where each segment's label and icon go on a wheel of radius R. a: the
 // segment's middle direction (deg, 0 = right, clockwise, before the wheel
 // turns). Labels read outwards along the radius; icons stand with their
-// top towards the rim. An icon pushes the label towards the hub.
+// top towards the rim. Icon and text height (distance from the hub) are
+// automatic unless set; sizes shrink to fit the wedge where they sit.
 export function segmentLayout(segments, R, project) {
   const c = wheelConfig(project);
   const N = Math.max(2, segments.length);
   const seg = (Math.PI * 2) / N;
+  const chord = (r) => 2 * r * Math.sin(seg / 2);
   return segments.map((s, k) => {
     const a = -90 + ((k + 0.5) * 360) / N;
     const hasIcon = !!s.icon;
     const hasLabel = c.show.labels && String(s.label ?? '') !== '';
-    const chord = (r) => 2 * r * Math.sin(seg / 2);
+    const auto = autoHeights(hasIcon, hasLabel);
     let icon = null;
     if (hasIcon) {
-      const r = R * (hasLabel ? 0.75 : 0.62);
+      const r = R * (c.iconHeight ?? auto.icon);
       icon = { r, size: Math.min(R * (hasLabel ? 0.24 : 0.34), chord(r) * 0.78) * c.iconSize };
     }
-    const label = hasLabel ? { r: R * (hasIcon ? 0.42 : 0.6), maxLen: R * (hasIcon ? 0.4 : 0.56), px: Math.min(R * 0.15, R * seg * 0.42) * c.labelSize } : null;
+    let label = null;
+    if (hasLabel) {
+      const h = c.labelHeight ?? auto.label;
+      // Room along the radius: between the hub and the rim when placed by
+      // hand, the usual lengths otherwise.
+      const maxLen = c.labelHeight == null ? R * (hasIcon ? 0.4 : 0.56) : R * Math.max(0.12, Math.min(0.56, 2 * Math.min(h - 0.19, 0.97 - h)));
+      label = { r: R * h, maxLen, px: Math.min(R * 0.15, R * seg * 0.42, chord(R * h) * 0.85) * c.labelSize };
+    }
     return { a, icon, label };
   });
 }

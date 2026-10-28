@@ -51,7 +51,7 @@ the result as an editable **After Effects project**.
   through), an icon on every segment (16 built-in icons, or your own; one
   click fills them all, richer for bigger prizes), a centre icon on the hub
   (the star, any icon, your own or none), labels in any font, colour and
-  size. Every
+  size, and the text and icon height (how far out from the hub). Every
   part can be your own art: the face, rim, hub and pointer (Asset Bank ›
   Wheel), and the rim, bulbs, pegs, separators, hub and labels switch off.
   The pointer sits at the top or the bottom, pegs bend it, and the "Almost
