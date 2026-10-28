@@ -1216,13 +1216,17 @@ function drawScatterFx(ctx, scene, R, t) {
       drawRing(ctx, m.x, m.y, a / 0.7, L.cellW * 0.95, res.theme.accent, L.cellW * 0.05);
       const s = 1 + 0.25 * Math.sin(clamp01(a / 0.4) * Math.PI);
       drawGlow(ctx, res, res.theme.accent, m.x, m.y, L.cellW * 1.8, 0.6 * (1 - a / 0.7));
+      // The lit symbol fades into the reel under it (dimmed while another
+      // reel teases) rather than cutting to it.
+      const lit = 1 - clamp01((a - 0.4) / 0.3);
       ctx.save();
+      ctx.globalAlpha *= lit;
       ctx.translate(m.x, m.y);
       ctx.scale(s, s * m.s);
       const sp = res.sym[R.grid[c][r]];
       if (sp) ctx.drawImage(sp.sharp, -L.cellW / 2, -L.cellH / 2, L.cellW, L.cellH);
       ctx.restore();
-      if (R.mult[c][r] != null) drawValueLabel(ctx, scene, R.grid[c][r], R.mult[c][r], m.x, m.y, s);
+      if (R.mult[c][r] != null) drawValueLabel(ctx, scene, R.grid[c][r], R.mult[c][r], m.x, m.y, s, lit);
     }
   }
   if (p.celebrate && t >= p.celebrate.start && t <= p.celebrate.end + 0.4) {
