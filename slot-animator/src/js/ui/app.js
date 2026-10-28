@@ -35,13 +35,13 @@ import { lineColor, generatePaylines } from '../core/paylines.js';
 import { autoAmount, makeContext, defaultPattern, tumbleEnabled } from '../core/outcomes.js';
 import { orderList } from '../core/order.js';
 import { FORMAT_CHOICES } from '../core/ae-export.js';
-import { loadImage, loadWinAnim, buildResources, fontStack, extraSymbolImages, loadWheelArt } from '../render/sprites.js';
+import { loadImage, loadWinAnim, buildResources, fontStack, extraSymbolImages, loadWheelArt, paintWheelIcon } from '../render/sprites.js';
 import { paintBuiltin } from '../render/paint.js';
 import { loadParticleSprites, drawParticleList } from '../render/particles.js';
 import { PARTICLE_TEMPLATES, TEMPLATE_BY_ID, BUILTIN_PARTICLES, PARTICLE_MOTIONS, PARTICLE_MOMENTS, PARTICLE_LENGTHS, tierParticles, spawnParticles, particleAssetInfo } from '../core/particles.js';
 import { WIN_STYLES, JUMP_TARGETS, MERGE_POINTS, FLIGHT_PATHS, winFxConfig, jumpTarget, mergeTarget } from '../core/winfx.js';
 import { searchFeatures, buildIndex } from './search.js';
-import { WHEEL_FRAMINGS, WHEEL_LANDINGS, POINTER_SIDES, LABEL_PALETTES, wheelConfig } from '../core/wheel.js';
+import { WHEEL_FRAMINGS, WHEEL_LANDINGS, POINTER_SIDES, LABEL_PALETTES, WHEEL_ICONS, wheelConfig, iconName, autoIcons } from '../core/wheel.js';
 import { projectFonts, parseFontNames } from '../core/fonts.js';
 import { renderFrame } from '../render/renderer.js';
 import { decodeCustomSounds, renderSoundtrack, audioBufferToWav } from '../render/audio.js';
@@ -3793,26 +3793,12 @@ function segmentRow(P, W, s, i) {
           renderPanel();
         }, { class: 'seg-swatch none', title: 'No colour (the wheel face shows). Click to colour it.', id: `seg-c-${i}` })
       );
-  const iconCell = h(
-    'div',
-    { class: 'seg-icon' },
-    button('', async () => {
-      const [f] = await pickFiles('image/*');
-      if (!f) return;
-      s.icon = await readFileAsDataURL(f);
-      changed('all');
-      renderPanel();
-      renderAssets();
-    }, { class: 'seg-icon-btn', icon: s.icon ? null : 'plus', title: s.icon ? 'Replace the icon' : 'Add an icon', id: `seg-i-${i}` }, s.icon ? h('img', { src: s.icon, alt: '' }) : null),
-    s.icon
-      ? button('', () => {
-          s.icon = null;
-          changed('all');
-          renderPanel();
-          renderAssets();
-        }, { class: 'seg-none-btn', icon: 'x', title: 'Remove the icon', id: `seg-ix-${i}` })
-      : null
-  );
+  const iconCell = iconControl(s.icon, (v) => {
+    s.icon = v;
+    changed('all');
+    renderPanel();
+    renderAssets();
+  }, { id: `seg-i-${i}`, title: `Segment ${i + 1} icon`, cls: 'seg-icon' });
   return h(
     'div',
     { class: 'segment' },
@@ -3853,7 +3839,7 @@ function panelWheel() {
   return [
     section(
       'Segments',
-      h('p', { class: 'hint' }, 'Clockwise from the top. Each wheel round picks its landing segment in the round settings. Clear a colour (×) to let the wheel face show through; add an icon with +.'),
+      h('p', { class: 'hint' }, 'Clockwise from the top. Each wheel round picks its landing segment in the round settings. Clear a colour (×) to let the wheel face show through. Click an icon to pick a built-in one or upload your own.'),
       h('div', { class: 'segment head' }, h('span', null, '#'), h('span', null, 'Fill'), h('span', null, 'Icon'), h('span', null, 'Label'), h('span', null, 'Value'), h('span', null, '')),
       list,
       h(
@@ -3865,6 +3851,7 @@ function panelWheel() {
           renderPanel();
           renderInspector();
         }, { class: 'btn small', icon: 'plus', id: 'seg-add' }),
+        iconsEverywhereButton({ id: 'seg-icons-all' }),
         button('No colours', () => {
           W.segments.forEach((s) => (s.color = null));
           changed('all');
@@ -3914,6 +3901,12 @@ function panelWheel() {
       segmented({ id: 'w-label-colour', label: 'Label colour', value: cfg.labelPalette, options: LABEL_PALETTES.map((x) => ({ value: x.id, label: x.label })), onChange: (v) => { W.labelPalette = v; changed('all'); } }),
       rangeField({ id: 'w-label-size', label: 'Label size', unit: '×', value: cfg.labelSize, min: 0.4, max: 2, step: 0.01, onInput: allChanged('labelSize') }),
       rangeField({ id: 'w-icon-size', label: 'Icon size', unit: '×', value: cfg.iconSize, min: 0.3, max: 2, step: 0.01, onInput: allChanged('iconSize') }),
+      h(
+        'div',
+        { class: 'field centre-icon-field' },
+        h('span', { class: 'label' }, 'Centre icon'),
+        h('div', { class: 'row' }, iconControl(cfg.centerIcon, (v) => { W.centerIcon = v || 'none'; changed('all'); renderPanel(); renderAssets(); }, { id: 'w-centre-icon', title: 'Centre icon', centre: true }), h('span', { class: 'hint' }, 'On the hub; the star by default. In After Effects it is the Wheel Center placeholder.'))
+      ),
       rangeField({ id: 'w-hub-size', label: 'Hub size', unit: '×', value: cfg.hubSize, min: 0.3, max: 3, step: 0.01, onInput: allChanged('hubSize') }),
       toggleField({ id: 'w-hub-spins', label: 'Hub turns with the wheel', checked: cfg.hubSpins, onChange: (v) => { W.hubSpins = v; changed('all'); } }),
       h(
@@ -3974,32 +3967,17 @@ function wheelArtRow(label, key, hint) {
 // Asset Bank: every wheel part and the segment icons.
 function wheelArtSection() {
   const P = state.project;
+  const after = () => {
+    changed('all');
+    renderAssets();
+    if (state.tab === 'wheel') renderPanel();
+  };
+  const W = P.wheel;
   const icons = h(
     'div',
     { class: 'wheel-icons' },
-    P.wheel.segments.map((s, i) =>
-      h(
-        'div',
-        { class: 'wheel-icon' },
-        button('', async () => {
-          const [f] = await pickFiles('image/*');
-          if (!f) return;
-          s.icon = await readFileAsDataURL(f);
-          changed('all');
-          renderAssets();
-          if (state.tab === 'wheel') renderPanel();
-        }, { class: 'seg-icon-btn', icon: s.icon ? null : 'plus', title: `${s.label}: ${s.icon ? 'replace the icon' : 'add an icon'}`, id: `wi-up-${i}` }, s.icon ? h('img', { src: s.icon, alt: '' }) : null),
-        h('span', null, s.label || `#${i + 1}`),
-        s.icon
-          ? button('', () => {
-              s.icon = null;
-              changed('all');
-              renderAssets();
-              if (state.tab === 'wheel') renderPanel();
-            }, { class: 'seg-none-btn', icon: 'x', title: 'Remove the icon', id: `wi-x-${i}` })
-          : null
-      )
-    )
+    h('div', { class: 'wheel-icon centre' }, iconControl(wheelConfig(P).centerIcon, (v) => { W.centerIcon = v || 'none'; after(); }, { id: 'wi-centre', title: 'Centre icon', centre: true }), h('span', null, 'Centre')),
+    W.segments.map((s, i) => h('div', { class: 'wheel-icon' }, iconControl(s.icon, (v) => { s.icon = v; after(); }, { id: `wi-up-${i}`, title: `${s.label || `Segment ${i + 1}`} icon` }), h('span', null, s.label || `#${i + 1}`)))
   );
   return section(
     'Wheel art',
@@ -4008,8 +3986,101 @@ function wheelArtSection() {
     wheelArtRow('Rim', 'rim', 'Square art around the wheel; the disc edge sits at 85% of its width.'),
     wheelArtRow('Hub', 'hub', 'The centre piece. Hub size and whether it turns are in the Wheel tab.'),
     wheelArtRow('Pointer', 'pointer', 'Pointing down, hinged near its top.'),
-    h('div', { class: 'field' }, h('span', { class: 'label' }, 'Segment icons'), icons)
+    h('div', { class: 'field' }, h('span', { class: 'label' }, 'Centre and segment icons'), icons),
+    h('div', { class: 'row' }, iconsEverywhereButton({ id: 'wi-all' }), clearIconsButton({ id: 'wi-clear' }))
   );
+}
+
+// ---------- wheel icons ----------
+// Built-in icons are painted once per session for their thumbnails.
+const iconThumbs = new Map();
+function wheelIconThumb(v) {
+  const id = iconName(v);
+  if (!id) return v;
+  if (!iconThumbs.has(id)) iconThumbs.set(id, paintWheelIcon(id, 96, fontStack(state.project.effects.font)).toDataURL());
+  return iconThumbs.get(id);
+}
+
+// A thumbnail button that opens the icon picker, with a small × to remove.
+// centre: the hub's icon, where "none" is a choice of its own.
+function iconControl(value, onPick, { id, title, cls = '', centre = false }) {
+  const has = value && value !== 'none';
+  const btn = button('', () => openIconPicker(btn, value, onPick, { title, centre }), { class: 'seg-icon-btn', icon: has ? null : 'plus', title: has ? `${title}: change` : `${title}: add`, id }, has ? h('img', { src: wheelIconThumb(value), alt: '' }) : null);
+  return h('div', { class: `icon-ctl ${cls}` }, btn, has ? button('', () => onPick(null), { class: 'seg-none-btn', icon: 'x', title: `${title}: remove`, id: `${id}-x` }) : null);
+}
+
+function closeIconPicker() {
+  if (!el.iconPop) return;
+  el.iconPop.remove();
+  document.removeEventListener('pointerdown', el.iconPopOutside, true);
+  el.iconPop = null;
+}
+
+function openIconPicker(anchor, current, onPick, { title, centre }) {
+  closeIconPicker();
+  const pick = (v) => {
+    closeIconPicker();
+    anchor.focus();
+    onPick(v);
+  };
+  const grid = h(
+    'div',
+    { class: 'icon-pick-grid', role: 'listbox', 'aria-label': title },
+    WHEEL_ICONS.map((ic) =>
+      h('button', { type: 'button', role: 'option', class: `icon-pick${current === `builtin:${ic.id}` ? ' on' : ''}`, 'aria-selected': String(current === `builtin:${ic.id}`), title: ic.label, 'aria-label': ic.label, id: `ip-${ic.id}`, onclick: () => pick(`builtin:${ic.id}`) }, h('img', { src: wheelIconThumb(`builtin:${ic.id}`), alt: '' }))
+    )
+  );
+  el.iconPop = h(
+    'div',
+    { class: 'icon-pop', role: 'dialog', 'aria-label': title, onkeydown: (e) => { if (e.key === 'Escape') { e.stopPropagation(); closeIconPicker(); anchor.focus(); } } },
+    h('p', { class: 'icon-pop-title' }, title),
+    grid,
+    h(
+      'div',
+      { class: 'row' },
+      button('Upload your own', async () => {
+        closeIconPicker();
+        const [f] = await pickFiles('image/*');
+        if (f) onPick(await readFileAsDataURL(f));
+      }, { class: 'btn small', icon: 'upload', id: 'ip-upload' }),
+      current && current !== 'none' ? button(centre ? 'No centre icon' : 'No icon', () => pick(null), { class: 'btn small ghost', id: 'ip-none' }) : null
+    )
+  );
+  document.body.append(el.iconPop);
+  const r = anchor.getBoundingClientRect();
+  const pw = el.iconPop.offsetWidth;
+  const ph = el.iconPop.offsetHeight;
+  el.iconPop.style.left = `${Math.max(8, Math.min(innerWidth - pw - 8, r.left))}px`;
+  el.iconPop.style.top = `${r.bottom + ph + 8 > innerHeight ? Math.max(8, r.top - ph - 6) : r.bottom + 6}px`;
+  el.iconPopOutside = (e) => {
+    if (!el.iconPop?.contains(e.target) && !anchor.contains(e.target)) closeIconPicker();
+  };
+  document.addEventListener('pointerdown', el.iconPopOutside, true);
+  (grid.querySelector('.on') || grid.querySelector('button')).focus();
+}
+
+// Fills every segment without its own uploaded icon, by prize.
+function iconsEverywhereButton({ id }) {
+  return button('Icons on every segment', () => {
+    const W = state.project.wheel;
+    const auto = autoIcons(W.segments);
+    W.segments.forEach((s, i) => {
+      if (!s.icon || iconName(s.icon)) s.icon = auto[i];
+    });
+    changed('all');
+    renderPanel();
+    renderAssets();
+    toast('Every segment has an icon now, richer for bigger prizes. Click one to change it.');
+  }, { class: 'btn small', icon: 'sparkle', id, title: 'Give every segment a built-in icon by its prize (your uploads stay)' });
+}
+
+function clearIconsButton({ id }) {
+  return button('Clear icons', () => {
+    state.project.wheel.segments.forEach((s) => (s.icon = null));
+    changed('all');
+    renderPanel();
+    renderAssets();
+  }, { class: 'btn small ghost', id });
 }
 
 // Asset Bank: uploaded fonts, for titles, counters and wheel labels.

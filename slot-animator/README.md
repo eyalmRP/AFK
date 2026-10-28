@@ -48,7 +48,10 @@ the result as an editable **After Effects project**.
   seamlessly (a 5 s cycle) once they run long. Ambient particles float
   behind the machine for the whole animation.
 - Wheel of Fortune: segments with a colour or none (your wheel face shows
-  through), an icon per segment, labels in any font, colour and size. Every
+  through), an icon on every segment (16 built-in icons, or your own; one
+  click fills them all, richer for bigger prizes), a centre icon on the hub
+  (the star, any icon, your own or none), labels in any font, colour and
+  size. Every
   part can be your own art: the face, rim, hub and pointer (Asset Bank ›
   Wheel), and the rim, bulbs, pegs, separators, hub and labels switch off.
   The pointer sits at the top or the bottom, pegs bend it, and the "Almost
@@ -162,7 +165,8 @@ comp, the round comps place them in time, and a few controls sit on
     counter rolls through).
   - `Wheel/`: `Wheel Disc` is the turning part: your face art, `Wheel
     Segments`, an icon layer per segment icon and a text layer per label
-    (in the label font), plus the hub when it turns. `Wheel Hub`, `Wheel
+    (in the label font), plus the hub and `Wheel Center` (its icon) when it
+    turns. `Wheel Hub`, `Wheel
     Ring`, the bulbs and `Wheel Pointer` (anchored at its pivot) are their
     own placeholders. The pointer's rotation expression reads the disc, so
     retimed spins keep it in step.

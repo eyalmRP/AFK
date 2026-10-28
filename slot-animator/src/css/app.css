@@ -831,8 +831,7 @@ body.dragging * {
 /* Segment colour (or none) and icon cells: a swatch or thumbnail with a
    small clear button on its corner. */
 .seg-color,
-.seg-icon,
-.wheel-icon {
+.icon-ctl {
   position: relative;
   width: 34px;
   height: 30px;
@@ -899,8 +898,7 @@ body.dragging * {
 }
 
 .seg-color:hover .seg-none-btn,
-.seg-icon:hover .seg-none-btn,
-.wheel-icon:hover .seg-none-btn,
+.icon-ctl:hover .seg-none-btn,
 .seg-none-btn:focus-visible {
   opacity: 1;
 }
@@ -918,8 +916,6 @@ body.dragging * {
 }
 
 .wheel-icon {
-  width: auto;
-  height: auto;
   display: grid;
   justify-items: center;
   gap: 3px;
@@ -934,13 +930,78 @@ body.dragging * {
   white-space: nowrap;
 }
 
+.wheel-icon .icon-ctl,
 .wheel-icon .seg-icon-btn {
   width: 48px;
   height: 48px;
 }
 
-.wheel-icon .seg-none-btn {
-  right: calc(50% - 30px);
+.wheel-icon.centre .seg-icon-btn {
+  border-radius: 50%;
+}
+
+.centre-icon-field .row {
+  align-items: center;
+  gap: 10px;
+}
+
+.centre-icon-field .hint {
+  margin: 0;
+}
+
+/* The icon picker: built-in icons, upload, none. */
+.icon-pop {
+  position: fixed;
+  z-index: 90;
+  width: 292px;
+  padding: 10px;
+  background: var(--surface);
+  border: 1px solid var(--line-2);
+  border-radius: 12px;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.55);
+  display: grid;
+  gap: 8px;
+}
+
+.icon-pop-title {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.icon-pick-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+}
+
+.icon-pick {
+  aspect-ratio: 1;
+  padding: 6px;
+  border-radius: 9px;
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+}
+
+.icon-pick img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.icon-pick:hover,
+.icon-pick:focus-visible {
+  border-color: var(--line-2);
+  background: var(--surface-3);
+}
+
+.icon-pick.on {
+  border-color: var(--gold);
+  box-shadow: inset 0 0 0 1px var(--gold);
 }
 
 .toggle-grid {

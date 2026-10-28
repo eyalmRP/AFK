@@ -93,8 +93,9 @@ timing lives in the round comps, and a few controls sit on SLOT CONTROL.
   - Plaques/: the multiplier, prize and hold & spin plaques.
   - Wheel/: Wheel Disc (the turning part: your face art, Wheel Segments,
     an icon layer per segment icon and a text layer per label, and the hub
-    when it turns), Wheel Hub, Wheel Ring, Wheel Bulbs A and B, Wheel
-    Pointer (its anchor is the pivot). Replace any of them with your art.
+    with its centre icon when it turns), Wheel Hub, Wheel Center, Wheel
+    Icon NN, Wheel Ring, Wheel Bulbs A and B, Wheel Pointer (its anchor is
+    the pivot). Replace any of them with your art.
   - Counters/: "Counter Digits", the 0-9 strip every counter rolls
     through. Change its font, colour or style once and every counter
     follows.
@@ -252,6 +253,7 @@ export async function buildAEPackage(scene, images, onProgress) {
       [A.wheelFace, res.wheel.face],
       [A.wheelSegments, res.wheel.segs],
       [A.wheelHub, res.wheel.hub],
+      [A.wheelCenter, res.wheel.center],
       // Only segments with an icon have one (the list has gaps).
       ...Array.from(res.wheel.icons, (c, k) => [A.wheelIcon(k), c || null]),
       [A.wheelRing, res.wheel.ring],

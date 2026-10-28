@@ -4,7 +4,7 @@
 
 import { THEMES } from '../core/defaults.js';
 import { symbolLayout, holdSpinConfig } from '../core/coins.js';
-import { wheelConfig, segmentLayout, labelPalette } from '../core/wheel.js';
+import { wheelConfig, segmentLayout, labelPalette, iconName } from '../core/wheel.js';
 import { paintBuiltin, paintCoinSymbol, paintEmptyCell, metalGradient, roundRect, starPath, sparkle, METALS } from './paint.js';
 
 export function canvas(w, h) {
@@ -61,16 +61,42 @@ export async function loadProjectImages(project) {
   };
 }
 
-// The wheel's uploaded parts and segment icons.
+// The wheel's uploaded parts, segment icons and the centre icon. Built-in
+// icons ("builtin:<id>") are painted; the rest are loaded.
 export async function loadWheelArt(project, load) {
   const a = project.wheel?.art || {};
+  const font = fontStack(project.effects?.font);
+  const icon = (v) => {
+    const id = iconName(v);
+    return id ? paintWheelIcon(id, 256, font) : v && v !== 'none' ? load(v) : null;
+  };
   return {
     face: await load(a.face),
     rim: await load(a.rim),
     hub: await load(a.hub),
     pointer: await load(a.pointer),
-    icons: await Promise.all((project.wheel?.segments || []).map((s) => load(s.icon))),
+    icons: await Promise.all((project.wheel?.segments || []).map((s) => icon(s.icon))),
+    center: await icon(wheelConfig(project).centerIcon),
   };
+}
+
+// A built-in wheel icon: the slot symbols, a coin, or the hub's star.
+export function paintWheelIcon(id, size = 256, font) {
+  if (id === 'coin') return paintCoin(size);
+  if (id === 'star') {
+    const c = canvas(size, size);
+    const g = c.getContext('2d');
+    const r = size * 0.47;
+    starPath(g, size / 2, size / 2, r, r * 0.45, 5);
+    g.fillStyle = '#c4002d';
+    g.fill();
+    g.lineJoin = 'round';
+    g.lineWidth = size * 0.05;
+    g.strokeStyle = '#ffe9a3';
+    g.stroke();
+    return c;
+  }
+  return paintBuiltin(id === 'heart' ? 'candyHeart' : id, size, font);
 }
 
 // The symbols after the project's own (see core/coins.js): the built-in
@@ -639,7 +665,8 @@ function paintWheel(R, segments, project, art = {}) {
     mg.restore();
   });
 
-  // Hub: built-in or uploaded, scaled by the hub size.
+  // Hub: built-in or uploaded, scaled by the hub size; the centre icon (the
+  // star, any built-in icon or your own) sits on it as a part of its own.
   let hub = null;
   if (cfg.show.hub) {
     const hr = R * 0.19 * cfg.hubSize;
@@ -663,21 +690,20 @@ function paintWheel(R, segments, project, art = {}) {
       hg.lineWidth = R * 0.02 * k;
       hg.strokeStyle = '#3a1d00';
       hg.stroke();
-      starPath(hg, 0, 0, R * 0.11 * k, R * 0.05 * k, 5);
-      hg.fillStyle = '#c4002d';
-      hg.fill();
-      hg.lineWidth = R * 0.01 * k;
-      hg.strokeStyle = '#ffe9a3';
-      hg.stroke();
     }
   }
+  const cs = Math.ceil(R * (iconName(cfg.centerIcon) === 'star' ? 0.235 : 0.25) * cfg.hubSize);
+  const center = art.center ? fitInto(art.center, cs, cs) : null;
 
   // Everything that turns, for the preview.
   const [disc, dg] = mk();
   if (face) dg.drawImage(face, -size / 2, -size / 2);
   dg.drawImage(segs, -size / 2, -size / 2);
   dg.drawImage(marks, -size / 2, -size / 2);
-  if (hub && cfg.hubSpins) dg.drawImage(hub, -hub.width / 2, -hub.height / 2);
+  if (cfg.hubSpins) {
+    if (hub) dg.drawImage(hub, -hub.width / 2, -hub.height / 2);
+    if (center) dg.drawImage(center, -center.width / 2, -center.height / 2);
+  }
 
   // Rim: built-in ring with bulb sockets, or uploaded art fitted to the
   // same square (the wheel's edge at 85% of its width).
@@ -723,7 +749,7 @@ function paintWheel(R, segments, project, art = {}) {
   }
 
   const ptr = paintPointer(R, cfg, art.pointer);
-  return { disc, face, segs, hub, icons, labels, ring, pointer: ptr.c, pivotX: ptr.px, pivotY: ptr.py, R, bulbs, discSize: size, ringSize, hubSpins: cfg.hubSpins };
+  return { disc, face, segs, hub, center, icons, labels, ring, pointer: ptr.c, pivotX: ptr.px, pivotY: ptr.py, R, bulbs, discSize: size, ringSize, hubSpins: cfg.hubSpins };
 }
 
 // The pointer, drawn pointing down with its pivot at (px, py). The built-in

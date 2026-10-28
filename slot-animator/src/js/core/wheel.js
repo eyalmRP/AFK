@@ -52,6 +52,8 @@ export function wheelConfig(project) {
     iconSize: clamp(num(w.iconSize, 1), 0.3, 2),
     hubSize: clamp(num(w.hubSize, 1), 0.3, 3),
     hubSpins: w.hubSpins !== false,
+    // The icon in the middle of the hub: the star unless the hub is your art.
+    centerIcon: w.centerIcon ?? (w.art?.hub ? 'none' : 'builtin:star'),
     show: {
       rim: show.rim !== false,
       bulbs: show.bulbs !== false,
@@ -155,3 +157,37 @@ export const LABEL_PALETTES = [
   { id: 'black', label: 'Black', fill: '#16110a', stroke: '#ffffff', flat: true },
 ];
 export const labelPalette = (id) => LABEL_PALETTES.find((p) => p.id === id) || LABEL_PALETTES[0];
+
+// Built-in icons a segment or the hub can show (painted by the renderer).
+// A segment's icon is "builtin:<id>", an uploaded image (data URL) or none.
+export const WHEEL_ICONS = [
+  { id: 'coin', label: 'Coin' },
+  { id: 'star', label: 'Star' },
+  { id: 'cherry', label: 'Cherry' },
+  { id: 'bell', label: 'Bell' },
+  { id: 'bar', label: 'BAR' },
+  { id: 'emerald', label: 'Emerald' },
+  { id: 'ruby', label: 'Ruby' },
+  { id: 'diamond', label: 'Diamond' },
+  { id: 'crown', label: 'Crown' },
+  { id: 'seven', label: 'Lucky 7' },
+  { id: 'heart', label: 'Heart' },
+  { id: 'wild', label: 'Wild' },
+  { id: 'scatter', label: 'Scatter' },
+  { id: 'orb', label: 'Multiplier orb' },
+  { id: 'lollipop', label: 'Lollipop' },
+  { id: 'grapes', label: 'Grapes' },
+];
+
+export const iconName = (v) => (typeof v === 'string' && v.startsWith('builtin:') ? v.slice(8) : null);
+
+// An icon for every segment, by prize: the bigger the value, the richer
+// the icon, the top prize a Lucky 7.
+const LADDER = ['cherry', 'bell', 'bar', 'emerald', 'ruby', 'diamond', 'crown', 'seven'];
+export function autoIcons(segments) {
+  const vals = [...new Set(segments.map((s) => Number(s.value) || 0))].sort((a, b) => a - b);
+  return segments.map((s) => {
+    const r = vals.length > 1 ? vals.indexOf(Number(s.value) || 0) / (vals.length - 1) : 1;
+    return `builtin:${LADDER[Math.round(r * (LADDER.length - 1))]}`;
+  });
+}

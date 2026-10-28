@@ -4,6 +4,7 @@
 
 import { defaultParticles } from './particles.js';
 import { defaultWinFx } from './winfx.js';
+import { autoIcons } from './wheel.js';
 
 export const OUTCOMES = [
   { id: 'none', label: 'No win', list: 'No win', short: 'No win', color: '#56607a' },
@@ -507,6 +508,13 @@ export function wheelProject() {
   p.seed = 91;
   p.machine.title = 'WHEEL OF FORTUNE';
   p.rounds = [newRound('wheel', { seed: 92, wheelSegment: 2 }), newRound('wheel', { seed: 93, wheelSegment: 5 }), newRound('wheel', { seed: 94, wheelSegment: 3 })];
+  withIcons(p);
+  return p;
+}
+
+// An icon on every segment, richer for bigger prizes.
+function withIcons(p) {
+  autoIcons(p.wheel.segments).forEach((v, i) => (p.wheel.segments[i].icon = v));
   return p;
 }
 
@@ -666,7 +674,7 @@ export function slotWheelProject() {
     newRound('small', { seed: 272, lines: [0], count: 3 }),
     newRound('wheel', { seed: 273, wheelSegment: 3 }),
   ];
-  return p;
+  return withIcons(p);
 }
 
 // The wheel on its own, close up: only its top shows, the camera leans in
@@ -689,7 +697,7 @@ export function wheelRiseProject() {
   Object.assign(p.wheel, { framing: 'rise', size: 1.55, x: 0.5, y: -0.02, pointer: 'bottom', landing: 'slip', labelPalette: 'neon' });
   p.wheel.segments = DEFAULT_SEGMENTS.map((s, i) => ({ ...s, color: ['#1a1060', '#3a0f66', '#0c2a5a', '#5a0f4a'][i % 4] }));
   p.rounds = [newRound('wheel', { seed: 292, wheelSegment: 8 }), newRound('wheel', { seed: 293, wheelSegment: 3 })];
-  return p;
+  return withIcons(p);
 }
 
 // Presets for the gallery, grouped. desc says what the animation shows.

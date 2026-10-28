@@ -1399,7 +1399,10 @@ function drawWheel(ctx, scene, R, t) {
     ctx.restore();
   }
   // A hub that stays still sits over the turning disc.
-  if (wh.hub && !wh.hubSpins) ctx.drawImage(wh.hub, -wh.hub.width / 2, -wh.hub.height / 2);
+  if (!wh.hubSpins) {
+    if (wh.hub) ctx.drawImage(wh.hub, -wh.hub.width / 2, -wh.hub.height / 2);
+    if (wh.center) ctx.drawImage(wh.center, -wh.center.width / 2, -wh.center.height / 2);
+  }
   if (wh.ring) ctx.drawImage(wh.ring, -wh.ringSize / 2, -wh.ringSize / 2);
   // Ring bulbs: chase while spinning, blink when landed.
   const landed = t > w.spinEnd;

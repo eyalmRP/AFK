@@ -48,6 +48,7 @@ export const AE_ASSETS = {
     wheelFace: `${dir}/wheel_face.png`,
     wheelSegments: `${dir}/wheel_segments.png`,
     wheelHub: `${dir}/wheel_hub.png`,
+    wheelCenter: `${dir}/wheel_center.png`,
     wheelIcon: (k) => `${dir}/wheel_icon_${String(k + 1).padStart(2, '0')}.png`,
     wheelRing: `${dir}/wheel_ring.png`,
     wheelBulbsA: `${dir}/wheel_bulbs_a.png`,
@@ -471,6 +472,7 @@ export function buildAEData(project, tl, L, extras = {}) {
       wheelFace: project.wheel.art?.face ? A.wheelFace : '',
       wheelSegments: A.wheelSegments,
       wheelHub: wcfg.show.hub ? A.wheelHub : '',
+      wheelCenter: wcfg.centerIcon && wcfg.centerIcon !== 'none' ? A.wheelCenter : '',
       wheelRing: wcfg.show.rim ? A.wheelRing : '',
       wheelBulbsA: wcfg.show.bulbs ? A.wheelBulbsA : '',
       wheelBulbsB: wcfg.show.bulbs ? A.wheelBulbsB : '',
@@ -1862,7 +1864,10 @@ export const AE_SCRIPT = String.raw`// Slot animation rebuilt for After Effects 
         pos(L, [D / 2 + Math.cos(la) * lb.r, D / 2 + Math.sin(la) * lb.r]);
         P(L, "ADBE Rotate Z").setValue(lb.a);
       }
-      if (WH.hubSpins) part("Wheel Hub", DATA.assets.wheelHub);
+      if (WH.hubSpins) {
+        part("Wheel Hub", DATA.assets.wheelHub);
+        part("Wheel Center", DATA.assets.wheelCenter);
+      }
     });
   }
 
@@ -1912,6 +1917,8 @@ export const AE_SCRIPT = String.raw`// Slot animation rebuilt for After Effects 
     if (!WH.hubSpins) {
       var hub = part("Wheel Hub", DATA.assets.wheelHub);
       if (hub) kids.push(hub);
+      var ctr = part("Wheel Center", DATA.assets.wheelCenter);
+      if (ctr) kids.push(ctr);
     }
     var ringL = part("Wheel Ring", DATA.assets.wheelRing);
     if (ringL) kids.push(ringL);

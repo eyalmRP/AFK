@@ -6,7 +6,7 @@ import { computeLayout } from '../src/js/core/layout.js';
 import { evalKeys } from '../src/js/core/keys.js';
 import { cameraAt } from '../src/js/core/camera.js';
 import { buildAEData, buildAEScript } from '../src/js/core/ae-export.js';
-import { WHEEL_FRAMINGS, WHEEL_LANDINGS, SLIP, POINTER_MAX, wheelGeometry, pointerAt, pointerDeflection } from '../src/js/core/wheel.js';
+import { WHEEL_FRAMINGS, WHEEL_LANDINGS, WHEEL_ICONS, SLIP, POINTER_MAX, wheelConfig, pointerAt, pointerDeflection, autoIcons, iconName } from '../src/js/core/wheel.js';
 import { parseFontNames, fontPostScript, projectFonts } from '../src/js/core/fonts.js';
 import { createAE, runScript } from './ae-mock.js';
 
@@ -16,6 +16,7 @@ const under = (p, theta, P) => Math.floor((((P - theta) % 360) + 360) % 360 / se
 
 function spins(extra = {}) {
   const p = wheelProject();
+  p.wheel.segments.forEach((s) => (s.icon = null));
   p.rounds = [newRound('wheel', { seed: 1, wheelSegment: 3 }), newRound('wheel', { seed: 2, wheelSegment: 7 }), newRound('wheel', { seed: 3, wheelSegment: 0 })];
   Object.assign(p.wheel, extra);
   return p;
@@ -199,5 +200,49 @@ test('wheel in After Effects: a disc comp of parts, label text in the label font
       assert.ok(Math.abs(got - want) < 0.05, `${pointer} pointer at ${t}: ${got} vs ${want}`);
     }
     assert.ok(rot.keys.length >= 5, 'the slip keys reach the disc');
+  }
+});
+
+test('wheel icons: one on every segment, richer for bigger prizes, and the centre icon', () => {
+  const p = wheelProject();
+  const segs = p.wheel.segments;
+  assert.ok(segs.every((s) => iconName(s.icon)), 'the wheel preset has an icon on every segment');
+  const auto = autoIcons(segs);
+  assert.equal(auto.length, segs.length);
+  const ids = WHEEL_ICONS.map((i) => i.id);
+  assert.ok(auto.every((v) => ids.includes(iconName(v))));
+  const top = segs.reduce((a, s, i) => (Number(s.value) > Number(segs[a].value) ? i : a), 0);
+  assert.equal(auto[top], 'builtin:seven', 'the top prize is the Lucky 7');
+  const rank = (v) => ['cherry', 'bell', 'bar', 'emerald', 'ruby', 'diamond', 'crown', 'seven'].indexOf(iconName(v));
+  for (let i = 0; i < segs.length; i++) for (let j = 0; j < segs.length; j++) if (Number(segs[i].value) < Number(segs[j].value)) assert.ok(rank(auto[i]) <= rank(auto[j]));
+  // The centre: the star, unless the hub is your own art; "none" removes it.
+  assert.equal(wheelConfig(p).centerIcon, 'builtin:star');
+  p.wheel.art.hub = 'data:image/png;base64,x';
+  assert.equal(wheelConfig(p).centerIcon, 'none');
+  p.wheel.centerIcon = 'builtin:crown';
+  assert.equal(wheelConfig(p).centerIcon, 'builtin:crown');
+});
+
+test('wheel icons in After Effects: every segment icon and the centre icon are parts of their own', () => {
+  for (const hubSpins of [true, false]) {
+    const p = wheelProject();
+    p.wheel.hubSpins = hubSpins;
+    const tl = buildTimeline(p);
+    const L = computeLayout(p);
+    const data = buildAEData(p, tl, L, { titleKeys: [] });
+    assert.equal(data.wheel.icons.length, p.wheel.segments.length);
+    assert.ok(data.assets.wheelCenter);
+    const files = new Set([data.assets.wheelSegments, data.assets.wheelHub, data.assets.wheelCenter, data.assets.wheelRing, data.assets.wheelPointer, ...data.wheel.icons.map((i) => i.file)].map((f) => `/pkg/${f}`));
+    const { env, log } = createAE({ files });
+    runScript(buildAEScript([data]), env);
+    const disc = log.comps.find((c) => c.name === 'Wheel Disc');
+    const names = disc.layers.list.map((l) => l.name);
+    assert.equal(names.filter((n) => /^Icon \d\d$/.test(n)).length, p.wheel.segments.length);
+    const round = log.comps.find((c) => /^R01 /.test(c.name)).layers.list.map((l) => l.name);
+    assert.equal(names.includes('Wheel Center'), hubSpins, 'turns with the disc');
+    assert.equal(round.includes('Wheel Center'), !hubSpins, 'or stays still over it');
+    // With no centre icon, no part.
+    p.wheel.centerIcon = 'none';
+    assert.equal(buildAEData(p, tl, L, { titleKeys: [] }).assets.wheelCenter, '');
   }
 });
