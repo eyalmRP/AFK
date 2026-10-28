@@ -14,6 +14,7 @@ import { jumpTarget, mergeTarget, flightPath, flightAt, bigScaleAt, winFxConfig 
 import { cameraAt, zoomConfig } from '../core/camera.js';
 import { heldCells } from '../core/timeline.js';
 import { pointerAt } from '../core/wheel.js';
+import { teaseWindows, teaseEnv, teaseDim, landLit, landScale, landings, LAND_POP } from '../core/tease.js';
 
 const clamp01 = (x) => (x < 0 ? 0 : x > 1 ? 1 : x);
 const prog = (t, a, b) => clamp01((t - a) / Math.max(1e-6, b - a));
@@ -323,7 +324,7 @@ function winDim(R, t) {
 
 function anticActive(R, t) {
   if (!R) return null;
-  return R.reels.map((ri) => (ri.antic ? env(t, ri.antic.start - 0.05, ri.antic.end + 0.3, 0.2, 0.3) : 0));
+  return R.reels.map((ri) => (ri.antic ? teaseEnv([ri.antic.start, ri.antic.end], t) : 0));
 }
 
 function drawInWindowFx(ctx, scene, R, t) {
@@ -368,10 +369,11 @@ function drawInWindowFx(ctx, scene, R, t) {
   }
   ctx.restore();
   if (any) {
-    const strongest = Math.max(...an);
-    ctx.fillStyle = `rgba(0,0,0,${0.38 * strongest})`;
+    const W = teaseWindows(R);
     an.forEach((a, c) => {
-      if (a > 0) return;
+      const d = teaseDim(W, c, t);
+      if (d <= 0) return;
+      ctx.fillStyle = `rgba(0,0,0,${d})`;
       ctx.fillRect(L.reelX[c], L.winTop, L.cellW, L.winH);
     });
   }
@@ -1204,31 +1206,30 @@ function drawStickies(ctx, scene, t) {
 function drawScatterFx(ctx, scene, R, t) {
   const { L, res, project } = scene;
   const p = R.pres;
-  // Scatter (and trigger coin) landing pops while the reels are still stopping.
-  const coins = R.win.coins || [];
-  const landing = R.win.scatters.concat(coins.map((cn) => [cn.c, cn.r]));
-  for (const [c, r] of landing) {
-    const landT = R.cells ? R.cells[c * scene.tl.rows + r]?.stop : R.reels[c]?.stop;
-    if (landT == null) continue;
+  // Scatters (and trigger coins) pop lit as they land, over the dim of a
+  // tease (core/tease.js); kept lit, they glow on until the tease ends.
+  const W = teaseWindows(R);
+  const keep = !!project.spin?.scatterLit;
+  let tease = 0;
+  if (keep) for (const w of W) tease = Math.max(tease, teaseEnv(w, t));
+  landings(R, scene.tl.rows).forEach(({ c, r, t: landT }, i) => {
     const a = t - landT;
-    if (a >= 0 && a < 0.7) {
-      const m = L.cellCenter(c, r);
-      drawRing(ctx, m.x, m.y, a / 0.7, L.cellW * 0.95, res.theme.accent, L.cellW * 0.05);
-      const s = 1 + 0.25 * Math.sin(clamp01(a / 0.4) * Math.PI);
-      drawGlow(ctx, res, res.theme.accent, m.x, m.y, L.cellW * 1.8, 0.6 * (1 - a / 0.7));
-      // The lit symbol fades into the reel under it (dimmed while another
-      // reel teases) rather than cutting to it.
-      const lit = 1 - clamp01((a - 0.4) / 0.3);
-      ctx.save();
-      ctx.globalAlpha *= lit;
-      ctx.translate(m.x, m.y);
-      ctx.scale(s, s * m.s);
-      const sp = res.sym[R.grid[c][r]];
-      if (sp) ctx.drawImage(sp.sharp, -L.cellW / 2, -L.cellH / 2, L.cellW, L.cellH);
-      ctx.restore();
-      if (R.mult[c][r] != null) drawValueLabel(ctx, scene, R.grid[c][r], R.mult[c][r], m.x, m.y, s, lit);
-    }
-  }
+    const lit = landLit(W, landT, t, keep);
+    if (a < 0 || lit <= 0) return;
+    const m = L.cellCenter(c, r);
+    if (a < LAND_POP) drawRing(ctx, m.x, m.y, a / LAND_POP, L.cellW * 0.95, res.theme.accent, L.cellW * 0.05);
+    const s = landScale(landT, t);
+    const pop = a < LAND_POP ? 0.6 * (1 - a / LAND_POP) : 0;
+    drawGlow(ctx, res, res.theme.accent, m.x, m.y, L.cellW * 1.8, Math.max(pop, (0.3 + 0.12 * Math.sin(t * 6 + i)) * tease));
+    ctx.save();
+    ctx.globalAlpha *= lit;
+    ctx.translate(m.x, m.y);
+    ctx.scale(s, s * m.s);
+    const sp = res.sym[R.grid[c][r]];
+    if (sp) ctx.drawImage(sp.sharp, -L.cellW / 2, -L.cellH / 2, L.cellW, L.cellH);
+    ctx.restore();
+    if (R.mult[c][r] != null) drawValueLabel(ctx, scene, R.grid[c][r], R.mult[c][r], m.x, m.y, s, lit);
+  });
   if (p.celebrate && t >= p.celebrate.start && t <= p.celebrate.end + 0.4) {
     if (coins.length) drawWinCells(ctx, scene, R, t, coins.map((cn) => [cn.c, cn.r]), p.celebrate.start, p.celebrate.end + 0.4, { rays: true, popMul: 1.2, color: res.theme.accent, values: coins.map((cn) => cn.value) });
     else drawWinCells(ctx, scene, R, t, R.win.scatters, p.celebrate.start, p.celebrate.end + 0.4, { rays: true, popMul: 1.4, color: res.theme.accent });

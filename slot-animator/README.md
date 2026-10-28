@@ -22,6 +22,9 @@ the result as an editable **After Effects project**.
   order, or you pick the teased reels yourself. The camera can push in on
   the teased reel (or cell), follow the tease from reel to reel and ease
   back out after it lands (Spin › Anticipation, with the zoom amount).
+  While a reel teases the others dim; scatters and trigger coins pop lit as
+  they land, then fade back into the dim, or, with "Keep scatters lit
+  through the tease", stay lit and glowing until the teased reel lands.
 - Round outcomes: no win, near miss, small, medium, big win (counts through
   your own tiers: titles, thresholds in bets, colours), free spins trigger,
   bonus, wheel of fortune and the free spins total.
@@ -96,7 +99,8 @@ the result as an editable **After Effects project**.
     visit. Between them they show the newer options, each where it fits:
     build-up shake (classic, fruit, ways, clusters, cells, portrait, free
     spins, teases, ladder and the coin and wheel slots), row lines (fruit),
-    jump with a wind-up flight (ways) or an arc (portrait), merge with a
+    scatters kept lit through the tease (every preset with a scatter
+    tease), jump with a wind-up flight (ways) or an arc (portrait), merge with a
     wind-up pull one by one (clusters), ambient particles (ways, Hold &
     Spin, wheel from above), fireworks that run to the end (ladder), Spin
     again and No win segments (slot wheel bonus, wheel only, close-up),
@@ -155,6 +159,7 @@ Everything is a pure function of time, built from one JSON project:
 | `src/js/core/keys.js` | Evaluates those keyframes with the same cubic Bézier After Effects uses, so exported curves play back identically. |
 | `src/js/core/layout.js` | Screen layout shared by the renderer and the exporter. |
 | `src/js/core/wheel.js` | The wheel's framing and screen geometry, pointer side, how pegs bend the pointer and its spring back, the almost-slip landing, and where labels and icons sit on the disc. |
+| `src/js/core/tease.js` | The tease: when the other reels dim, and how a landed scatter's lit copy pops, fades or stays lit. The preview draws with it and the After Effects expressions mirror it. |
 | `src/js/core/fonts.js` | Built-in and uploaded fonts, and the PostScript names After Effects asks for (read from the font file). |
 | `src/js/core/winfx.js` | Winning symbols that jump into the score or merge into one: landing spots and the flight curves the preview and After Effects share. |
 | `src/js/core/particles.js` | Explosion templates and the win emitters: which moment throws which particles, and every particle's flight as a closed form (gravity, air drag, flutter) that the preview and After Effects both evaluate. |
@@ -219,7 +224,9 @@ comp, the round comps place them in time, and a few controls sit on
   round and coloured by group. The `SFX MIX` null holds Master and per-group
   levels in dB (Master includes headroom: After Effects has no compressor).
 - Main comp: background, ambient particles, machine, reels, sticky wilds,
-  coin lock frames, marquee, logo, free spins ribbon and HUD texts, win
+  the tease (a `Tease Dim Rn` solid per reel, scaled by `Dim %`, and a
+  `Scatter Lands Rxx` copy with a shockwave for every scatter or trigger
+  coin that lands, lit by expression), coin lock frames, marquee, logo, free spins ribbon and HUD texts, win
   meter, the round comps, particles that run to the end (`Rxx <template>`),
   a `SCREEN SHAKE` parent null, the flash, vignette, the SFX comp and a
   marker per round. With anticipation zoom on, a `CAMERA` null parents the

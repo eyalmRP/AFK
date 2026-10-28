@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { defaultProject, candyProject, cellsProject, freeSpinsProject, newRound } from '../src/js/core/defaults.js';
+import { defaultProject, candyProject, cellsProject, freeSpinsProject, fruitProject, newRound } from '../src/js/core/defaults.js';
+import { teaseWindows, teaseEnv, teaseDim, landLit, landScale, landings, LAND_POP } from '../src/js/core/tease.js';
 import { buildTimeline, heldCells, STICKY_COVER } from '../src/js/core/timeline.js';
 import { computeLayout } from '../src/js/core/layout.js';
 import { evalKeys } from '../src/js/core/keys.js';
@@ -527,6 +528,54 @@ test('sticky wilds: the held cell stops showing the spinning strip, in the previ
       assert.deepEqual(v, [[0, y0], [data.cellW, y0], [data.cellW, y0 + data.cellH], [0, y0 + data.cellH]]);
       const op = (t) => new Function('time', `return eval(${JSON.stringify(mask.property('ADBE Mask Opacity').expression)})`)(t);
       for (const t of [st.from + 0.1, st.from + STICKY_COVER + 0.01, (st.from + Math.min(st.to, tl.duration)) / 2, Math.min(st.to, tl.duration) + 0.01]) assert.equal(op(t), at(t) ? 100 : 0, `${name} at ${t}`);
+    }
+  }
+});
+
+test('the tease: landed scatters fade into the dim or stay lit through it, never cutting, and After Effects matches', () => {
+  // A ctrl() slider reads 100%.
+  const ev = (expr, t) => new Function('time', 'comp', `return eval(${JSON.stringify(expr)})`)(t, () => ({ layer: () => ({ effect: () => () => 100 }) }));
+  const tr = (L, prop) => L.property('ADBE Transform Group').property(prop).expression;
+  for (const keep of [false, true]) {
+    const p = fruitProject();
+    p.spin.scatterLit = keep;
+    const { tl, log } = run(p);
+    assert.deepEqual(log.alerts, [], log.alerts.join('\n'));
+    const R = tl.rounds.find((r) => r.outcome === 'nearmiss');
+    const W = teaseWindows(R);
+    const lands = landings(R, tl.rows);
+    assert.ok(W.length && lands.length >= 2, 'the near miss teases with scatters already down');
+    const end = Math.max(...W.map((w) => w[1])) + 0.6;
+    for (const l of lands) {
+      // Lit as it lands, then no jump bigger than the fastest fade allows.
+      assert.equal(landLit(W, l.t, l.t, keep), 1);
+      let prev = 1;
+      for (let t = l.t; t < end; t += 1 / 120) {
+        const v = landLit(W, l.t, t, keep);
+        assert.ok(Math.abs(v - prev) <= 0.05, `${keep ? 'kept' : 'faded'} at ${t.toFixed(3)}: ${prev} -> ${v}`);
+        prev = v;
+        const on = W.some((w) => teaseEnv(w, t) >= 1);
+        if (keep && on) assert.equal(v, 1, 'kept lit while the tease runs');
+        if (!keep && t > l.t + LAND_POP) assert.equal(v, 0, 'back to the reel once the pop is over');
+      }
+    }
+    // After Effects: a dim solid per reel and a lit copy per landing, on the same numbers.
+    const main = log.comps.find((c) => c.name === p.name);
+    const all = tl.rounds.flatMap((Q) => teaseWindows(Q)).filter((w) => w[2] >= 0);
+    const times = [];
+    for (let t = W[0][0] - 0.2; t < end; t += 0.037) times.push(t);
+    for (let c = 0; c < tl.reels; c++) {
+      const dim = main.layers.list.find((L) => L.name === `Tease Dim R${c + 1}`);
+      assert.ok(dim, `reel ${c + 1} has a tease dim`);
+      for (const t of times) assert.ok(Math.abs(ev(tr(dim, 'ADBE Opacity'), t) - teaseDim(all, c, t) * 100) < 1e-6, `dim R${c + 1} at ${t}`);
+    }
+    const copies = main.layers.list.filter((L) => L.name === `Scatter Lands R${R.index + 1}`).reverse();
+    assert.equal(copies.length, lands.length);
+    for (const [i, l] of lands.entries()) {
+      for (const t of times) {
+        assert.ok(Math.abs(ev(tr(copies[i], 'ADBE Opacity'), t) - landLit(W, l.t, t, keep) * 100) < 1e-6, `lit copy ${i} at ${t}`);
+        if (t >= l.t) assert.ok(Math.abs(ev(tr(copies[i], 'ADBE Scale'), t)[0] - landScale(l.t, t) * 100) < 1e-6);
+      }
     }
   }
 });

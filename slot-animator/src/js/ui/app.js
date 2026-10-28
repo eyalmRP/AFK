@@ -3612,7 +3612,8 @@ function panelSpin() {
       rangeField({ id: 'spin-ant', label: 'Anticipation extra time', unit: 's', value: sp.anticipation, min: 0, max: 4, step: 0.05, onInput: num(sp, 'anticipation') }),
       rangeField({ id: 'spin-ant-v', label: 'Anticipation crawl speed', unit: 'symbols/s', value: sp.anticipationSpeed, min: 2, max: 20, step: 0.5, onInput: num(sp, 'anticipationSpeed') }),
       toggleField({ id: 'spin-zoom-on', label: 'Zoom in on the anticipation reel', checked: sp.zoomOn !== false, onChange: (v) => { sp.zoomOn = v; changed('timeline'); renderPanel(); }, hint: 'The camera pushes in on the teased reel, follows the tease from reel to reel and eases out after it lands.' }),
-      sp.zoomOn !== false ? rangeField({ id: 'spin-zoom', label: 'Zoom amount', unit: '%', value: Math.round((sp.zoom ?? 0.2) * 100), min: 5, max: 80, step: 1, onInput: (v) => { sp.zoom = v / 100; changed('timeline'); } }) : null
+      sp.zoomOn !== false ? rangeField({ id: 'spin-zoom', label: 'Zoom amount', unit: '%', value: Math.round((sp.zoom ?? 0.2) * 100), min: 5, max: 80, step: 1, onInput: (v) => { sp.zoom = v / 100; changed('timeline'); } }) : null,
+      toggleField({ id: 'spin-scatter-lit', label: 'Keep scatters lit through the tease', checked: !!sp.scatterLit, onChange: (v) => { sp.scatterLit = v; changed('timeline'); }, hint: 'Scatters that land while a reel teases stay lit over the dimmed reels until it lands. Off, they pop and fade back into the dim.' })
     ),
     section(
       'Between rounds',

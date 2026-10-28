@@ -42,6 +42,7 @@ export const TIPS = {
   'spin-ant-v': T('spin', 'Anticipation crawl speed', 'How fast a teased reel crawls while it builds suspense.', 'anticipation'),
   'spin-zoom-on': T('spin', 'Anticipation zoom', 'The camera pushes in on the teased reel, follows it from reel to reel and eases out after it lands.', 'zoom'),
   'spin-zoom': T('spin', 'Zoom amount', 'How far the camera pushes in on a teased reel.', 'zoom'),
+  'spin-scatter-lit': T('spin', 'Keep scatters lit through the tease', 'While a reel teases the others dim. Scatters that already landed stay lit and glowing over the dim until the teased reel lands; off, they pop and fade back into it.', 'scatter-lit'),
   'spin-stop-order': T('spin', 'Stop order', 'Which reel stops first. The tease goes to the reels that stop last.'),
   // Wins
   'sec:wins/win-tiers': T('wins', 'Win tiers', 'Big wins count up through these titles (BIG, MEGA, EPIC...), each from its threshold in bets.', 'tiers'),

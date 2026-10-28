@@ -27,6 +27,7 @@ import { jumpTarget, mergeTarget, flightPath, winFxConfig } from './winfx.js';
 import { zoomConfig, focusPoint, ZOOM_IN, ZOOM_HOLD, ZOOM_OUT, PAN } from './camera.js';
 import { wheelConfig, segmentLayout, labelPalette, POINTER_MAX } from './wheel.js';
 import { fontPostScript } from './fonts.js';
+import { teaseWindows, landings, landUntil, TEASE_DIM, LAND_POP, LAND_FADE, TEASE_LEAD, TEASE_IN, TEASE_TAIL } from './tease.js';
 
 export const AE_ASSETS = {
   shared: {
@@ -186,6 +187,7 @@ export function buildAEData(project, tl, L, extras = {}) {
       ps: spawnParticles(em, L, info.motion, amount).map((q) => [q.b, q.l, q.x, q.y, q.vx, q.vy, q.g, q.k, q.s, q.r0, q.rv, q.f, q.ph, q.sw, q.sf, q.v, q.fo, q.tw].map(r4)),
     };
   };
+  const keepLit = !!project.spin?.scatterLit;
   const rounds = tl.rounds.map((R) => {
     const p = R.pres;
     const o = OUTCOME_BY_ID[R.outcome] || { label: R.outcome };
@@ -216,6 +218,17 @@ export function buildAEData(project, tl, L, extras = {}) {
       pops: R.actors.filter((a) => a.popAt != null).map((a) => ({ x: cellX(a.c), y: cellY(evalKeys(a.keys, a.popAt)), t: r4(a.popAt), color: rgb(lineColor(a.sym + 3)) })),
       scatters: R.win.scatters.map(([c, r]) => ({ x: cellX(c), y: cellY(r), s: R.grid[c][r] })),
       antic: [],
+      // The tease (core/tease.js): its windows [start, end, reel], and what
+      // lands lit while it runs.
+      tease: teaseWindows(R).map(([a, b, c]) => [r4(a), r4(b), c]),
+      lands: landings(R, tl.rows).map((l) => ({
+        x: cellX(l.c),
+        y: cellY(l.r),
+        s: R.grid[l.c][l.r],
+        t: r4(l.t),
+        until: r4(landUntil(teaseWindows(R), l.t, keepLit)),
+        lab: l.coin ? label(R.grid[l.c][l.r], l.coin.value) : null,
+      })),
     };
     if (R.cells) {
       for (const ci of R.cells) if (ci && ci.antic) out.antic.push({ x: cellX(ci.c), y: cellY(ci.r), w: L.cellW, h: L.cellH, start: r4(ci.antic.start), end: r4(ci.antic.end) });
@@ -398,6 +411,8 @@ export function buildAEData(project, tl, L, extras = {}) {
     winW: L.winW,
     winTop: L.winTop,
     winH: L.winH,
+    reelXs: Array.from({ length: tl.reels }, (_, c) => cellX(c)),
+    tease: { keepLit: keepLit ? 1 : 0, dim: TEASE_DIM, pop: LAND_POP, fade: LAND_FADE, lead: TEASE_LEAD, fin: TEASE_IN, tail: TEASE_TAIL },
     rowsTop: r4(L.rowsTop),
     reelX: L.reelX,
     logo: [r4(L.logo.cx), r4(L.logo.cy)],
@@ -705,6 +720,11 @@ export const AE_SCRIPT = String.raw`// Slot animation rebuilt for After Effects 
   function windowsExpr(name, list) {
     var s = "var " + name + " = [", i;
     for (i = 0; i < list.length; i++) s += (i ? "," : "") + "[" + list[i][0] + "," + list[i][1] + "]";
+    return s + "];\n";
+  }
+  function rowsExpr(name, list) {
+    var s = "var " + name + " = [", i;
+    for (i = 0; i < list.length; i++) s += (i ? "," : "") + "[" + list[i].join(",") + "]";
     return s + "];\n";
   }
   var EASE_LIB = "function c01(x){return x<0?0:(x>1?1:x);}\n" +
@@ -1481,6 +1501,7 @@ export const AE_SCRIPT = String.raw`// Slot animation rebuilt for After Effects 
       kids.push(SF);
       if (reels) holdCellMask(reels, st, i);
     }
+    buildTease(kids);
     // Hold & Spin: a glowing frame on every locked coin while the board shows.
     if (DATA.hold) {
       for (i = 0; i < DATA.hold.locks.length; i++) {
@@ -1763,6 +1784,57 @@ export const AE_SCRIPT = String.raw`// Slot animation rebuilt for After Effects 
 
   // ---------- Hold & Spin ----------
   // A coin layer that bounces in at time t, with its value on it.
+  // The tease (core/tease.js): while a reel teases, a black solid dims each
+  // other reel; scatters and trigger coins that land pop lit over the dim,
+  // then fade into it, or stay lit to the end of the tease with "keep
+  // scatters lit". Dim % on SLOT CONTROL scales the dim.
+  function buildTease(kids) {
+    var TE = DATA.tease, TW = [], r, i, t0 = 1e9, t1 = 0;
+    var envFn = "function tEnv(w) { var a = w[0] - " + TE.lead + ", b = w[1] + " + TE.tail + "; if (time < a || time > b) return 0; return Math.min(Math.min(1, (time - a) / " + TE.fin + "), Math.min(1, (b - time) / " + TE.tail + ")); }\n";
+    for (r = 0; r < DATA.rounds.length; r++) {
+      for (i = 0; i < DATA.rounds[r].tease.length; i++) {
+        var w = DATA.rounds[r].tease[i];
+        if (w[2] < 0) continue;
+        TW.push(w);
+        t0 = Math.min(t0, w[0] - TE.lead);
+        t1 = Math.max(t1, w[1] + TE.tail);
+      }
+    }
+    if (TW.length) {
+      for (i = 0; i < DATA.reels; i++) {
+        var td = solid(main, [0, 0, 0], "Tease Dim R" + (i + 1), DATA.cellW, DATA.winH, [DATA.reelXs[i], DATA.winTop + DATA.winH / 2]);
+        P(td, "ADBE Opacity").expression = rowsExpr("TW", TW) + envFn +
+          "var all = 0, own = 0; for (var k = 0; k < TW.length; k++) { var e = tEnv(TW[k]); all = Math.max(all, e); if (TW[k][2] == " + i + ") own = Math.max(own, e); }\n" +
+          "(own > 0 ? 0 : " + TE.dim * 100 + " * all) * " + ctrl("Dim %") + " / 100;";
+        trim(td, t0, t1);
+        kids.push(td);
+      }
+    }
+    for (r = 0; r < DATA.rounds.length; r++) {
+      var RR = DATA.rounds[r];
+      for (i = 0; i < RR.lands.length; i++) {
+        var ld = RR.lands[i];
+        kids.push(ring(main, [ld.x, ld.y], ld.t, DATA.cellW * 0.95, DATA.accent));
+        var LL = inst(main, symComps[ld.s] || symComps[0], (ld.lab ? "Coin Lands R" : "Scatter Lands R") + (r + 1), [ld.x, ld.y], ld.t, ld.until);
+        P(LL, "ADBE Scale").expression = "var u = Math.max(0, Math.min(1, (time - " + ld.t + ") / " + TE.fade + ")); var s = 100 * (1 + 0.25 * Math.sin(u * Math.PI)); [s, s];";
+        var lit = "var a = time - " + ld.t + "; var k = a < 0 ? 0 : (a < " + TE.pop + " ? 1 - Math.max(0, Math.min(1, (a - " + TE.fade + ") / " + (TE.pop - TE.fade) + ")) : 0);\n";
+        if (TE.keepLit && RR.tease.length) lit += rowsExpr("W", RR.tease) + envFn + "if (a >= 0) for (var j = 0; j < W.length; j++) k = Math.max(k, tEnv(W[j]));\n";
+        lit += "100 * k;";
+        P(LL, "ADBE Opacity").expression = lit;
+        glow(LL, DATA.cellW * 0.2, 1.2);
+        kids.push(LL);
+        if (ld.lab) {
+          var lsz = Math.round(DATA.cellH * 0.3);
+          var T = text(main, "Value " + ld.lab[0], ld.lab[0], lsz, [0, 0], [1, 0.9, 0.55]);
+          pos(T, [ld.x, ld.y + ld.lab[1] * DATA.cellH + lsz * 0.36 * ld.lab[2]]);
+          P(T, "ADBE Scale").setValue([ld.lab[2] * 100, ld.lab[2] * 100]);
+          P(T, "ADBE Opacity").expression = lit;
+          T.parent = LL;
+          trim(T, ld.t, ld.until);
+        }
+      }
+    }
+  }
   function coinPop(comp, it, t, dur, lab, name) {
     var L = inst(comp, symComps[it.s] || symComps[0], name, [it.x, it.y], t, t + dur);
     P(L, "ADBE Scale").expression = EASE_LIB + "var k = c01((time - " + t + ") / " + dur + "); var s = 100 * (1 + 0.26 * Math.sin(k * Math.PI)); [s, s];";

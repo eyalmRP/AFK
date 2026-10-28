@@ -27,6 +27,7 @@ export const APPLIES = {
   'spin/reel-timing': { games: SLOT },
   'spin/anticipation': { games: REELS },
   'spin-ant-v': { not: ['cascade'] },
+  'spin-scatter-lit': { games: SLOT },
   // Wins
   'wins/win-tiers': { games: REELS },
   'wins/winning-symbols': { games: SLOT },

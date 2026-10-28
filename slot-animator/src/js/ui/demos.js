@@ -67,6 +67,14 @@ export const DEMOS = {
   blur: { make: () => slot(smallWin, (p) => Object.assign(p.spin, { blur: 1, speed: 34 })), window: spinWin },
   anticipation: { make: () => slot(() => [newRound('none', { seed: 3, antic: [3, 4] })], (p) => (p.spin.zoomOn = false)), window: spinWin },
   zoom: { make: () => slot(() => [newRound('none', { seed: 3, antic: [3, 4] })], (p) => Object.assign(p.spin, { zoomOn: true, zoom: 0.3 })), window: spinWin },
+  'scatter-lit': {
+    make: () => slot(() => [newRound('nearmiss', { seed: 14 })], (p) => Object.assign(p.spin, { scatterLit: true, zoomOn: false })),
+    window: (tl) => {
+      const R = R0(tl);
+      const a = Math.min(...R.win.scatters.map(([c]) => R.reels[c].stop));
+      return [a - 0.4, R.spinEnd + 0.5];
+    },
+  },
   'row-lines': { make: () => slot(smallWin, (p) => (p.machine.rowLines = true)), window: spinWin },
   tiers: { make: () => slot(() => [newRound('big', { seed: 15, lines: [0, 3], count: 5, symbol: 's7', tier: 1 })]), window: (tl) => { const ov = R0(tl).pres.overlay; return [ov.start, ov.countEnd + 0.4]; } },
   'winfx-pop': { make: () => slot(winRound, (p) => (p.winfx.style = 'pop')), window: stepWin },

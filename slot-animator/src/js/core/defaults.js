@@ -330,6 +330,9 @@ function baseProject() {
       anticipationSpeed: 7,
       zoomOn: true,
       zoom: 0.2,
+      // Scatters that land while a reel teases stay lit over the dimmed
+      // reels until the tease ends (core/tease.js).
+      scatterLit: false,
       startOrder: 'ltr',
       stopOrder: 'ltr',
       customStart: [],
@@ -447,6 +450,7 @@ export function defaultProject() {
 export function classicProject() {
   const p = defaultProject();
   p.effects.landShake = true;
+  p.spin.scatterLit = true;
   return withIcons(p);
 }
 
@@ -458,7 +462,7 @@ export function candyProject() {
   p.seed = 21;
   p.grid = { reels: 6, rows: 5, peek: 0, curvature: 0, cellAspect: 0.86 };
   Object.assign(p.machine, { theme: 'candy', title: 'SUGAR TUMBLE', marquee: false, payMode: 'anywhere', minAnywhere: 8, scatterTrigger: 4, decimals: 2 });
-  Object.assign(p.spin, { type: 'cascade', ...SPIN_PRESETS.cascade, blur: 0.6 });
+  Object.assign(p.spin, { type: 'cascade', ...SPIN_PRESETS.cascade, blur: 0.6, scatterLit: true });
   p.effects.font = 'Lilita One';
   p.symbols = CANDY_SYMBOLS.map((s, i) => ({ id: `c${i}`, src: null, winAnim: null, ...s }));
   p.tiers = [
@@ -557,6 +561,7 @@ export function fruitProject() {
   p.seed = 101;
   p.grid = { reels: 3, rows: 3, peek: 0.12, curvature: 0.35, cellAspect: 0.92 };
   Object.assign(p.machine, { theme: 'vegas', title: 'FRUIT CLASSIC', maxLines: 5, rowLines: true });
+  p.spin.scatterLit = true;
   p.effects.font = 'Russo One';
   p.effects.landShake = true;
   p.rounds = [
@@ -575,7 +580,7 @@ export function waysProject() {
   p.name = 'Neon Ways';
   p.seed = 121;
   Object.assign(p.machine, { theme: 'neon', title: 'NEON WAYS', payMode: 'ways' });
-  Object.assign(p.spin, { type: 'stagger', ...SPIN_PRESETS.stagger });
+  Object.assign(p.spin, { type: 'stagger', ...SPIN_PRESETS.stagger, scatterLit: true });
   p.effects.font = 'Russo One';
   Object.assign(p.winfx, { style: 'jump', jumpPath: 'back' });
   p.effects.landShake = true;
@@ -634,6 +639,7 @@ export function freeSpinsProject() {
   p.name = 'Emerald Free Spins';
   p.seed = 181;
   Object.assign(p.machine, { theme: 'emerald', title: 'EMERALD SPINS' });
+  p.spin.scatterLit = true;
   p.effects.font = 'Cinzel Decorative';
   p.effects.landShake = true;
   p.particles.total = { fx: 'fountain', asset: 'gem' };
@@ -656,7 +662,7 @@ export function teaseProject() {
   p.name = 'Neon Tease';
   p.seed = 201;
   Object.assign(p.machine, { theme: 'neon', title: 'NEON TEASE' });
-  Object.assign(p.spin, { type: 'tease', ...SPIN_PRESETS.tease, zoom: 0.28 });
+  Object.assign(p.spin, { type: 'tease', ...SPIN_PRESETS.tease, zoom: 0.28, scatterLit: true });
   p.effects.landShake = true;
   p.rounds = [
     newRound('nearmiss', { seed: 211 }),
@@ -713,6 +719,7 @@ export function slotWheelProject() {
   p.name = 'Royal Wheel Bonus';
   p.seed = 261;
   Object.assign(p.wheel, { framing: 'half', size: 1.55, x: 0.5, y: 1.02, landing: 'slip', push: 0.2, centerIcon: 'builtin:crown' });
+  p.spin.scatterLit = true;
   p.effects.landShake = true;
   withKinds(withIcons(p));
   p.rounds = [
