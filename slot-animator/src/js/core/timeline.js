@@ -290,9 +290,13 @@ export function buildTimeline(project) {
   if (game === 'holdspin') openHold(0, 0, startCoins(hsCfg.startCoins, mulberry32(hashSeed(project.seed, 'hsstart')), 0.3));
   let wheelShown = false;
 
+  // The block ends: its sticky wilds fade out over the next spin.
   const closeBlock = (t) => {
     if (!fs) return;
-    for (const s of stickyOpen.values()) s.to = t;
+    for (const s of stickyOpen.values()) {
+      s.to = t;
+      s.fade = true;
+    }
     stickyOpen = new Map();
     fs.block.end = t;
     fs = null;
@@ -600,6 +604,7 @@ export function buildTimeline(project) {
 
     // ---- boosters: the pots charge, then fire a beam at each boosted cell,
     // one after another; each cell upgrades as its beam hits ----
+    const newStickyValues = [];
     let boost = null;
     if (boostAt.size) {
       const start = spinEnd + 0.08;
@@ -623,6 +628,11 @@ export function buildTimeline(project) {
         // A wild a beam brings sticks from when it hits.
         const landT = boostHit.get(k) ?? (mode === 'cells' ? cellInfo[k].stop : reelInfo[c].stop);
         const s = { c, r, from: landT, to: Infinity, walking: !!fs.walking };
+        // A multiplier wild keeps its x on show for the spin it landed in.
+        if (res.mult[c][r] != null) {
+          s.value = res.mult[c][r];
+          newStickyValues.push(s);
+        }
         stickyOpen.set(k, s);
         stickies.push(s);
         sfx.push({ t: landT + 0.05, type: 'sticky' });
@@ -1126,6 +1136,7 @@ export function buildTimeline(project) {
     }
 
     const next = end + Math.max(0, num(round.hold, 0)) + num(tm.gap, 0.3);
+    for (const s of newStickyValues) s.valueUntil = next;
     // The pots' nameplates show what they caught until the round ends.
     for (const [p, from] of potRound) {
       potShow.push([from, end, p]);
@@ -1219,7 +1230,10 @@ export function buildTimeline(project) {
   for (const k of hsKeys) pushKeys(k, [key(duration, k[k.length - 1].v)]);
   for (const s of stickies) if (!Number.isFinite(s.to)) s.to = duration;
   for (const b of fsBlocks) if (!Number.isFinite(b.end)) b.end = duration;
-  for (const R of rounds) for (const a of R.actors) if (!Number.isFinite(a.tOut)) a.tOut = R.next;
+  // The last round's symbols stay on screen through the outro.
+  rounds.forEach((R, k) => {
+    for (const a of R.actors) if (!Number.isFinite(a.tOut)) a.tOut = k === rounds.length - 1 ? duration : R.next;
+  });
   for (const k of stripKeys) pushKeys(k, [key(duration, k[k.length - 1].v)]);
   sfx.sort((a, b) => a.t - b.t);
   const tl = {

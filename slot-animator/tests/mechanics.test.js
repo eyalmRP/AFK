@@ -232,3 +232,28 @@ test('collector: cash values fly into the collector one by one, on top of the wi
   assert.equal(ev(textExpr(tx), rel(cl.items[0].arrive) - 0.01), '');
   assert.equal(ev(textExpr(tx), rel(cl.items[2].arrive) + 0.01), '$17');
 });
+
+test('the last round of tumbles keeps its symbols on screen through the outro', () => {
+  const p = candyProject();
+  p.rounds = p.rounds.slice(0, 2);
+  const tl = buildTimeline(p);
+  const R = tl.rounds[tl.rounds.length - 1];
+  const t = (R.next + tl.duration) / 2;
+  const showing = R.actors.filter((a) => !a.old && t >= a.tIn && t < a.tOut);
+  assert.equal(showing.length, p.grid.reels * p.grid.rows, 'a symbol in every cell');
+});
+
+test('sticky wilds fade out when the free spins end, and a multiplier wild keeps its x while it sticks', () => {
+  const p = defaultProject();
+  p.rounds = [newRound('freespins', { seed: 1, sticky: true }), newRound('medium', { seed: 5, ...FS, lines: [0], count: 5, wildMults: [3] }), newRound('none', { seed: 6, ...FS }), newRound('fstotal', { seed: 7 })];
+  const { tl, data } = exportAE(p);
+  const end = tl.fsBlocks[0].end;
+  const closing = tl.stickies.filter((s) => s.to === end);
+  assert.ok(closing.length && closing.every((s) => s.fade), 'they fade at the end of the block');
+  const withX = tl.stickies.find((s) => s.value === 3);
+  assert.ok(withX, 'the multiplier wild sticks with its x');
+  assert.equal(withX.valueUntil, tl.rounds[1].next, 'its x shows through the spin it landed in');
+  const ae = data.stickies.find((s) => s.lab);
+  assert.equal(ae.lab[0], 'x3');
+  assert.ok(data.stickies.filter((s) => s.fade).length === closing.length);
+});

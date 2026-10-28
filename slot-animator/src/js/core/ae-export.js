@@ -272,7 +272,7 @@ export function buildAEData(project, tl, L, extras = {}) {
         base: r4(p.mult.base),
         sum: p.mult.sum,
         total: r4(p.mult.total),
-        target: [r4(L.W / 2), r4(L.winTop + L.cellH * 0.55)],
+        target: [r4(L.multTarget.x), r4(L.multTarget.y)],
         items: p.mult.items.map((it) => ({ x: cellX(it.c), y: cellY(it.r), t: r4(it.t), value: it.value })),
       };
     }
@@ -381,7 +381,8 @@ export function buildAEData(project, tl, L, extras = {}) {
       actorsByCol[a.c].push({ s: a.sym, lab: a.mult != null ? label(a.sym, a.mult) : null, tIn: r4(a.tIn), tOut: r4(Math.min(a.tOut, tl.duration)), keys: exportKeys(a.keys), pop: a.popAt != null ? r4(a.popAt) : null });
     }
   }
-  const hideWindows = tl.mode === 'cascade' ? [] : tl.rounds.filter((R) => R.actorsFrom != null).map((R) => [r4(R.actorsFrom), r4(R.next)]);
+  const lastR = tl.rounds[tl.rounds.length - 1];
+  const hideWindows = tl.mode === 'cascade' ? [] : tl.rounds.filter((R) => R.actorsFrom != null).map((R) => [r4(R.actorsFrom), r4(R === lastR ? tl.duration : R.next)]);
   // The wheel: where it sits, its pointer, and what goes on the disc. Labels
   // become text layers; the preview's measured sizes are used when given.
   const WG = L.wheel;
@@ -510,6 +511,11 @@ export function buildAEData(project, tl, L, extras = {}) {
       to: r4(Math.min(s.to, tl.duration)),
       walk: s.walkIn ? [cellX(s.walkIn[0]), cellY(s.walkIn[1])] : null,
       exit: s.exit ? 1 : 0,
+      // Fades out when the free spins end; a multiplier wild's x shows
+      // through the spin it landed in.
+      fade: s.fade && s.to < tl.duration ? 1 : 0,
+      lab: s.value != null ? label(Math.max(0, project.symbols.findIndex((x) => x.role === 'wild')), s.value) : null,
+      labUntil: s.value != null ? r4(Math.min(s.valueUntil ?? s.to, s.to, tl.duration)) : 0,
     })),
     walk: { dur: WILD_WALK, hop: r4(WALK_HOP * L.cellH) },
     // Mystery cards turning over: their cells are cut out of the reels.
@@ -1593,8 +1599,15 @@ export const AE_SCRIPT = String.raw`// Slot animation rebuilt for After Effects 
     for (i = 0; i < DATA.stickies.length; i++) {
       var st = DATA.stickies[i];
       if (DATA.wildSym < 0) break;
-      var SL = inst(main, symComps[DATA.wildSym], (st.walk ? "Walking Wild " : "Sticky Wild ") + (i + 1), [st.x, st.y], st.from, st.to);
-      var SF = frameAt(main, "FX Sticky Frame", DATA.cellW * 0.96, DATA.cellH * 0.96, { stroke: 0.035, round: 0.12, glow: 0.15, color: [1, 0.82, 0.35] }, "Sticky Frame " + (i + 1), [st.x, st.y], st.from, st.to);
+      var stEnd = st.to + (st.fade ? 0.3 : 0);
+      var SL = inst(main, symComps[DATA.wildSym], (st.walk ? "Walking Wild " : "Sticky Wild ") + (i + 1), [st.x, st.y], st.from, stEnd);
+      var SF = frameAt(main, "FX Sticky Frame", DATA.cellW * 0.96, DATA.cellH * 0.96, { stroke: 0.035, round: 0.12, glow: 0.15, color: [1, 0.82, 0.35] }, "Sticky Frame " + (i + 1), [st.x, st.y], st.from, stEnd);
+      if (st.fade) {
+        var fo = "Math.max(0, Math.min(1, 1 - (time - " + st.to + ") / 0.3)) * 100;";
+        P(SL, "ADBE Opacity").expression = fo;
+        P(SF, "ADBE Opacity").expression = fo;
+      }
+      if (st.lab) valueOn(main, SL, st, st.from, st.labUntil);
       if (st.walk) {
         // A walking wild hops in from the reel it left (core/timeline.js walkStep).
         var step = "var x = Math.min(1, Math.max(0, (time - " + st.from + ") / " + DATA.walk.dur + ")); var u = x < 0.5 ? 2 * x * x : 1 - Math.pow(-2 * x + 2, 2) / 2; var hop = Math.sin(u * Math.PI);\n";

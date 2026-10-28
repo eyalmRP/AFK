@@ -117,6 +117,9 @@ export function computeLayout(project) {
     logo,
     // The pots replace the title; the free spins ribbon goes above them.
     pots: potList,
+    // The multiplier plaque: over the top row, or the bottom one when the
+    // pots' nameplates sit on the frame's top edge.
+    multTarget: { x: W / 2, y: potList ? winTop + winH - cellH * 0.55 : winTop + cellH * 0.55 },
     ribbonY: potList ? Math.max(H * 0.035, Math.min(...potList.map((p) => p.top)) * 0.5) : Math.min(frameY - H * 0.025, logo.cy + logo.h * 0.42),
     hud: hud
       ? { x: frameX + frameW * 0.18, y: frameY + frameH + (bottomZone - hudH) * 0.45, w: frameW * 0.64, h: hudH }

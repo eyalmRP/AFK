@@ -54,7 +54,8 @@ function drawGlow(ctx, res, color, x, y, size, alpha) {
   if (alpha <= 0.002) return;
   ctx.save();
   ctx.globalCompositeOperation = 'lighter';
-  ctx.globalAlpha = Math.min(1, alpha);
+  // Within whatever fade the caller has set.
+  ctx.globalAlpha *= Math.min(1, alpha);
   ctx.drawImage(glowSprite(res, color), x - size / 2, y - size / 2, size, size);
   ctx.restore();
 }
@@ -1102,9 +1103,10 @@ function drawPops(ctx, scene, R, t) {
 
 function drawMultPhase(ctx, scene, R, t) {
   const mp = R.pres.mult;
-  if (!mp || t < mp.start || t > mp.end + 0.3) return;
+  // Each multiplier lights up a moment before it flies.
+  if (!mp || t < mp.start - 0.25 || t > mp.end + 0.3) return;
   const { L, res, project } = scene;
-  const target = { x: L.W / 2, y: L.winTop + L.cellH * 0.55 };
+  const target = L.multTarget;
   const a = Math.min(clamp01((t - mp.start) / 0.25), clamp01((mp.end + 0.3 - t) / 0.4));
   let sum = 0;
   for (const it of mp.items) {
@@ -1220,17 +1222,20 @@ function drawStickies(ctx, scene, t) {
   const sp = res.sym[wildIndex(scene)];
   if (!sp) return;
   for (const st of tl.stickies) {
-    if (t < st.from || t >= st.to) continue;
+    // When the free spins end they fade out over the next spin.
+    const out = st.fade ? clamp01(1 - (t - st.to) / 0.3) : t < st.to ? 1 : 0;
+    if (t < st.from || out <= 0) continue;
     const m = wildPose(L, st, t);
     const k = m.k;
     ctx.save();
-    ctx.globalAlpha = m.a;
+    ctx.globalAlpha = m.a * out;
     drawGlow(ctx, res, '#ffcf45', m.x, m.y, L.cellW * 1.4, 0.35 + 0.1 * Math.sin(t * 4));
     ctx.save();
     ctx.translate(m.x, m.y);
     ctx.scale(k, k * m.s);
     ctx.drawImage(sp.sharp, -L.cellW / 2, -L.cellH / 2, L.cellW, L.cellH);
     ctx.restore();
+    if (st.value != null && t < (st.valueUntil ?? st.to)) drawValueLabel(ctx, scene, wildIndex(scene), st.value, m.x, m.y, k);
     ctx.save();
     const fw = L.cellW * 0.96;
     const fh = L.cellH * 0.96 * m.s;
@@ -1720,12 +1725,15 @@ function drawWheel(ctx, scene, R, t) {
   // Segment glow once the wheel has landed: the winner, or a spin again
   // while it says so.
   const again = (w.agains || []).find((g) => t > g.at - 0.2 && t < g.until);
-  if (t > w.spinEnd || again) {
-    const k = again ? clamp01((t - again.at + 0.2) / 0.3) : clamp01((t - w.spinEnd) / 0.3);
+  // The wheel game keeps the wheel: the last prize fades before it spins on.
+  const prev = w.cont ? tl.rounds[R.index - 1]?.pres.wheel : null;
+  const fadePrev = prev && t < R.t0 + 0.4 ? 1 - clamp01((t - R.t0) / 0.4) : 0;
+  if (t > w.spinEnd || again || fadePrev > 0) {
+    const k = again ? clamp01((t - again.at + 0.2) / 0.3) : t > w.spinEnd ? clamp01((t - w.spinEnd) / 0.3) : fadePrev;
     const seg = (Math.PI * 2) / N;
     ctx.save();
     ctx.rotate((theta * Math.PI) / 180);
-    const a0 = -Math.PI / 2 + (again ? again.segment : w.segment) * seg;
+    const a0 = -Math.PI / 2 + (again ? again.segment : t > w.spinEnd ? w.segment : prev.segment) * seg;
     ctx.globalCompositeOperation = 'lighter';
     ctx.globalAlpha = a * k * (0.3 + 0.25 * Math.sin(t * 10));
     ctx.fillStyle = '#ffffff';

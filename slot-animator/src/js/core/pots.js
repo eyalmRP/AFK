@@ -109,9 +109,15 @@ export function placePots(cfg, W, H, topZone, frame, pad) {
   // Never above the top of the screen.
   S = Math.min(S, (frame.y - H * 0.01) / (POT_BOX.bottom - POT_BOX.top - body * cfg.overlap));
   let pitch = S * 1.02 * cfg.spacing;
+  // They stand on the frame: no wider than it (a little overhang), and
+  // never off the screen.
+  // Spread too far, they stop at the frame's edges; still too big, they
+  // shrink.
+  const room = Math.min(W * 0.98, frame.w * 1.04);
+  if (n > 1) pitch = Math.min(pitch, Math.max(S * 0.85, (room - S * 0.94) / (n - 1)));
   const span = (n - 1) * pitch + S * 0.94;
-  if (span > W * 0.98) {
-    const k = (W * 0.98) / span;
+  if (span > room) {
+    const k = room / span;
     S *= k;
     pitch *= k;
   }
