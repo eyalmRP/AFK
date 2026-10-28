@@ -13,10 +13,11 @@ const KNOWN_MATCH = new Set([
   'ADBE Vector Graphic - Fill', 'ADBE Vector Fill Color', 'ADBE Vector Fill Opacity',
   'ADBE Vector Filter - Trim', 'ADBE Vector Trim End',
   'ADBE Drop Shadow-0002', 'ADBE Drop Shadow-0004', 'ADBE Drop Shadow-0005',
+  'ADBE Checkbox Control', 'ADBE Tint', 'ADBE Tint-0002', 'ADBE Tint-0003', 'ADBE Audio Group', 'ADBE Audio Levels',
 ]);
 
 export function createAE({ files = new Set(), fileName = '/pkg/slot.jsx' } = {}) {
-  const log = { comps: [], expressions: [], keys: [], alerts: [], imports: [] };
+  const log = { comps: [], expressions: [], keys: [], alerts: [], imports: [], folders: [] };
 
   class Prop {
     constructor(name, layer) {
@@ -99,12 +100,14 @@ export function createAE({ files = new Set(), fileName = '/pkg/slot.jsx' } = {})
       return this.props.property(n);
     }
     // Like After Effects: in must stay before out, and moving the start time
-    // moves both.
+    // moves both. A precomp layer without time remapping cannot start before
+    // its source starts or run past its end (After Effects would clamp it).
     get inPoint() {
       return this._in;
     }
     set inPoint(v) {
       if (!(v < this._out)) throw new Error(`inPoint ${v} not before outPoint ${this._out} on ${this.name}`);
+      if (this._bounded() && v < this._start - 1e-6) throw new Error(`inPoint ${v} before the start of ${this.source.name} on ${this.name}`);
       this._in = v;
     }
     get outPoint() {
@@ -112,7 +115,11 @@ export function createAE({ files = new Set(), fileName = '/pkg/slot.jsx' } = {})
     }
     set outPoint(v) {
       if (!(v > this._in)) throw new Error(`outPoint ${v} not after inPoint ${this._in} on ${this.name}`);
+      if (this._bounded() && v > this._start + this.source.duration + 1e-6) throw new Error(`outPoint ${v} past the end of ${this.source.name} (${this._start} + ${this.source.duration}) on ${this.name}`);
       this._out = v;
+    }
+    _bounded() {
+      return !!(this.source && this.source.layers && !this._tr);
     }
     get startTime() {
       return this._start;
@@ -130,6 +137,7 @@ export function createAE({ files = new Set(), fileName = '/pkg/slot.jsx' } = {})
       return this._tr;
     }
     moveToEnd() {}
+    moveToBeginning() {}
   }
 
   class Layers {
@@ -185,6 +193,7 @@ export function createAE({ files = new Set(), fileName = '/pkg/slot.jsx' } = {})
       addFolder: (name) => {
         const f = { name };
         items.push(f);
+        log.folders.push(f);
         return f;
       },
       addComp: (...a) => {

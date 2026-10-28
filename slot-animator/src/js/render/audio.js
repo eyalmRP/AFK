@@ -1,7 +1,8 @@
 // The sound track: every cue the timeline emits (reel stops, anticipation,
 // tumble pops, count-up ticks, big win stings, coins, wheel pegs) is
 // synthesised offline with Web Audio into one buffer, so it lines up with the
-// animation to the sample. Any cue can be replaced by an uploaded sound.
+// animation to the sample. Any cue can be replaced by an uploaded sound. The
+// After Effects package renders each distinct cue as its own clip instead.
 
 import { SOUND_EVENTS } from '../core/defaults.js';
 import { mulberry32, hash01 } from '../core/rng.js';
@@ -88,6 +89,24 @@ export async function renderSoundtrack(tl, project, custom = new Map()) {
   src.connect(master).connect(comp).connect(ac.destination);
   src.start(0);
   return ac.startRendering();
+}
+
+// One cue on its own, unmixed (group levels and the master are applied in
+// After Effects), with the silent tail trimmed off.
+export async function renderCue(cue, custom = new Map()) {
+  const length = Math.ceil(tailOf(cue, custom) * SR);
+  const buf = await renderChunk([{ ...cue, t: 0 }], 0, length, { mix: {} }, custom);
+  let last = 0;
+  for (let c = 0; c < buf.numberOfChannels; c++) {
+    const d = buf.getChannelData(c);
+    for (let i = d.length - 1; i > last; i--) {
+      if (Math.abs(d[i]) > 0.0005) {
+        last = i;
+        break;
+      }
+    }
+  }
+  return { buffer: buf, duration: Math.min(buf.duration, (last + 1) / SR + 0.02) };
 }
 
 function renderChunk(list, offset, length, sound, custom) {

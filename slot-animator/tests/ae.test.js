@@ -6,6 +6,7 @@ import { computeLayout } from '../src/js/core/layout.js';
 import { evalKeys } from '../src/js/core/keys.js';
 import { buildAEData, buildAEScript, AE_ASSETS, AE_SCRIPT, exportFormats, projectForFormat, parseFormat } from '../src/js/core/ae-export.js';
 import { formatPrize } from '../src/js/core/coins.js';
+import { sfxCues, toDb } from '../src/js/core/sfx.js';
 import { createAE, runScript } from './ae-mock.js';
 
 const TITLE_KEYS = (p) => [...p.tiers.map((t) => t.id), 'total', 'bonus', 'freespins', 'wheel', 'nearmiss'];
@@ -17,7 +18,7 @@ function exportProject(project, { formats = null, winFrames = null } = {}) {
     const p = projectForFormat(project, fmt);
     const L = computeLayout(p);
     const dir = `assets/${fmt[0]}x${fmt[1]}`;
-    return { L, data: buildAEData(p, tl, L, { assetDir: dir, titleKeys: TITLE_KEYS(p), hasBulbs: true, soundFile: AE_ASSETS.shared.sound, winFrames }) };
+    return { L, data: buildAEData(p, tl, L, { assetDir: dir, titleKeys: TITLE_KEYS(p), hasBulbs: true, sfx: true, sfxHeadroom: -2, winFrames }) };
   });
   return { tl, list, src: buildAEScript(list.map((x) => x.data)) };
 }
@@ -34,7 +35,7 @@ function allAssetPaths(list) {
       out.add(s.file);
       if (s.win) s.win.frames.forEach((f) => out.add(f));
     }
-    if (data.sound) out.add(data.sound);
+    if (data.sfx) data.sfx.clips.forEach((f) => out.add(f));
   }
   return new Set([...out].map((p) => `/pkg/${p}`));
 }
@@ -69,7 +70,7 @@ test('AE script runs against the mock DOM for every preset, without errors or mi
     const names = log.comps.map((c) => c.name);
     assert.ok(names.includes(p.name), `${p.name} main comp`);
     assert.ok(names.includes('Symbols Atlas'));
-    assert.ok(names.includes('Odometer Digits'));
+    assert.ok(names.includes('Counter Digits'));
     // One editable comp and one win comp per symbol.
     for (const s of list[0].data.symbols) {
       assert.ok(names.some((n) => n.startsWith('Symbol ') && n.endsWith(` ${s.name}`)), `symbol comp ${s.name}`);
@@ -77,7 +78,8 @@ test('AE script runs against the mock DOM for every preset, without errors or mi
     }
     // Every expression parses as JavaScript.
     for (const e of log.expressions) assert.doesNotThrow(() => new Function(e.expr), `${e.comp} / ${e.layer} / ${e.prop}`);
-    assert.ok(log.imports.some((f) => f.endsWith('soundtrack.wav')));
+    assert.ok(names.includes('SFX'));
+    assert.ok(log.imports.some((f) => /\/assets\/sfx\/(reelStop|drop)_01\.wav$/.test(f)));
   }
 });
 
@@ -186,13 +188,13 @@ test('AE tumble layers follow the preview actors and cover the whole cascade', (
   }
 });
 
-test('AE counters: big win odometer reads the overlay keys, HUD meter reads the slot control', () => {
+test('AE counters: big win counter reads the overlay keys, HUD meter reads the slot control', () => {
   const p = defaultProject();
   const { log } = run(p);
-  const odos = log.comps.filter((c) => / Odometer$/.test(c.name));
-  assert.ok(odos.some((c) => c.name === 'Win Meter Odometer'));
-  assert.ok(odos.length >= 2);
-  const valueExprs = log.expressions.filter((e) => e.layer === 'ODO CTRL');
+  const rigs = log.comps.filter((c) => / Counter$/.test(c.name));
+  assert.ok(rigs.some((c) => c.name === 'Win Meter Counter'));
+  assert.ok(rigs.length >= 2);
+  const valueExprs = log.expressions.filter((e) => e.layer === 'COUNTER CTRL');
   assert.ok(valueExprs.some((e) => /SLOT CONTROL/.test(e.expr) && /Meter/.test(e.expr)));
   assert.ok(valueExprs.some((e) => /WIN CTRL/.test(e.expr)));
   // Each referenced comp exists.
@@ -203,13 +205,13 @@ test('AE counters: big win odometer reads the overlay keys, HUD meter reads the 
   }
 });
 
-test('AE odometer digits roll to the counted value', () => {
+test('AE counter digits roll to the counted value', () => {
   const p = defaultProject();
   p.machine.decimals = 2;
   const { log, tl } = run(p);
-  const oc = log.comps.find((c) => c.name === 'Win Meter Odometer');
+  const oc = log.comps.find((c) => c.name === 'Win Meter Counter');
   const digits = oc.layers.list.filter((l) => /^Digit x10\^/.test(l.name));
-  const RH = log.comps.find((c) => c.name === 'Odometer Digits').height / 11;
+  const RH = log.comps.find((c) => c.name === 'Counter Digits').height / 11;
   const max = Math.max(...tl.meterKeys.map((k) => k.v));
   assert.ok(max > 100);
   for (const value of [0, 7.25, Math.floor(max * 33) / 100, max, max * 9.5]) {
@@ -287,7 +289,7 @@ test('AE hold & spin board: every cell lands the preview coin, with its value', 
   const main = log.comps.find((x) => x.name === p.name);
   assert.equal(main.layers.list.filter((l) => /^Coin Lock /.test(l.name)).length, tl.hold.locks.length);
   assert.ok(main.layers.list.some((l) => l.name === 'Respins Counter'));
-  assert.ok(log.comps.some((x) => / Grand Odometer$/.test(x.name)), 'grand counter');
+  assert.ok(log.comps.some((x) => / Grand Counter$/.test(x.name)), 'grand counter');
   assert.ok(log.comps.some((x) => x.name === 'Symbol 16 Empty cell'));
 });
 
@@ -325,4 +327,123 @@ test('AE wheel game: no machine, and the wheel hands over from round to round', 
   const data = list[0].data;
   for (let i = 0; i < 2; i++) assert.ok(Math.abs(fx[i].startTime + fx[i].source.duration - data.rounds[i + 1].start) < 1e-6, 'no gap and no overlap');
   void tl;
+});
+
+test('AE SFX comp: one audio layer per cue at its time, mixed by group on SFX MIX', () => {
+  const p = withExtras(defaultProject());
+  p.sound.mix = { reels: 0.5, wins: 1, coins: 0, bigwin: 1.2, ui: 1 };
+  p.sound.volume = 0.6;
+  const { tl, log, list } = run(p);
+  assert.deepEqual(log.alerts, [], log.alerts.join('\n'));
+  const { clips, events } = sfxCues(tl);
+  const sfx = log.comps.find((c) => c.name === 'SFX');
+  const layers = sfx.layers.list.filter((l) => l.name !== 'SFX MIX');
+  assert.equal(layers.length, events.length);
+  // Layers run in time order from the top, each at its cue's time.
+  const starts = layers.map((l) => l.startTime);
+  assert.deepEqual(starts, [...starts].sort((a, b) => a - b));
+  assert.deepEqual(starts, events.map((e) => Math.round(e.t * 10000) / 10000));
+  // Identical cues share one clip; every clip is imported once.
+  const imported = log.imports.filter((f) => f.includes('/assets/sfx/'));
+  assert.equal(imported.length, clips.length);
+  assert.ok(clips.length < events.length);
+  assert.equal(clips.filter((c) => c.type === 'reelStop').length, p.grid.reels);
+  // Levels: master (with the headroom) plus the layer's group, in dB.
+  const mix = sfx.layers.list.find((l) => l.name === 'SFX MIX');
+  const sliders = Object.fromEntries(mix.property('ADBE Effect Parade').children.map((e) => [e.name, e.property(1).value]));
+  assert.equal(sliders['Master (dB)'], Math.round((toDb(0.6) - 2) * 100) / 100);
+  assert.equal(sliders['Reels (dB)'], toDb(0.5));
+  assert.equal(sliders['Coins (dB)'], -96);
+  const stop = layers.find((l) => /^Reel stop R01$/.test(l.name));
+  assert.ok(stop, 'cue layers are named after the cue and round');
+  const lv = stop.property('ADBE Audio Group').property('ADBE Audio Levels').expression;
+  assert.match(lv, /Master \(dB\)/);
+  assert.match(lv, /Reels \(dB\)/);
+  const mixLayer = { effect: (n) => () => ({ 'Master (dB)': -4, 'Reels (dB)': -6 })[n] };
+  assert.deepEqual(new Function('thisComp', `return eval(${JSON.stringify(lv)})`)({ layer: () => mixLayer }), [-10, -10]);
+  assert.equal(stop.label, 8);
+  const main = log.comps.find((c) => c.name === p.name);
+  assert.ok(main.layers.list.some((l) => l.name === 'SFX' && l.source === sfx));
+  assert.ok(!main.layers.list.some((l) => l.name === 'Sound Track'));
+  // No sound, no SFX comp.
+  void list;
+  const q = defaultProject();
+  const tl2 = buildTimeline(q);
+  const L2 = computeLayout(q);
+  assert.equal(buildAEData(q, tl2, L2, { sfx: false }).sfx, null);
+});
+
+test('AE placeholder comps: art and effect looks are built once and used as layers', () => {
+  const p = withExtras(defaultProject());
+  p.rounds.push(newRound('big', { seed: 70 }), newRound('nearmiss', { seed: 71 }));
+  const { log } = run(p);
+  assert.deepEqual(log.alerts, [], log.alerts.join('\n'));
+  const ph = log.folders.find((f) => f.name === 'Placeholder Comps');
+  assert.ok(ph);
+  const subs = log.folders.filter((f) => f.parentFolder === ph).map((f) => f.name);
+  for (const n of ['Symbols', 'Machine', 'Effects', 'Titles', 'Paylines', 'Counters', 'Plaques', 'Wheel']) assert.ok(subs.includes(n), `folder ${n}`);
+  const byName = (n) => log.comps.filter((c) => c.name === n);
+  for (const n of ['Background', 'Machine Back', 'Machine Frame', 'Marquee Lights', 'Logo', 'Win Meter Panel', 'Vignette', 'FX Shockwave', 'FX Light Rays', 'FX Small Rays', 'FX Coin', 'FX Cell Frame', 'FX Anticipation', 'FX Sticky Frame', 'FX Near Miss', 'Prize Plaque', 'Wheel Disc', 'Wheel Pointer', 'Counter Digits', 'Title nearmiss', 'Title freespins']) {
+    assert.equal(byName(n).length, 1, `one ${n} placeholder`);
+    assert.ok(ph === byName(n)[0].parentFolder.parentFolder, `${n} sits in Placeholder Comps`);
+  }
+  // Every effect layer in the rounds is a use of its placeholder.
+  const rounds = log.comps.filter((c) => /^R\d\d /.test(c.name) && c.parentFolder?.name === 'Rounds');
+  assert.ok(rounds.length >= 5);
+  const uses = (layerName, phName) => rounds.flatMap((c) => c.layers.list).filter((l) => l.name === layerName).every((l) => l.source?.name === phName);
+  const rings = rounds.flatMap((c) => c.layers.list).filter((l) => l.name === 'Shockwave');
+  assert.ok(rings.length > 3);
+  assert.ok(uses('Shockwave', 'FX Shockwave'));
+  assert.ok(uses('Light Rays', 'FX Light Rays'));
+  assert.ok(uses('Cell Frame', 'FX Cell Frame'));
+  // Tinted uses follow the FX Colour switch.
+  const tintExpr = log.expressions.filter((e) => e.prop === 'ADBE Tint-0003');
+  assert.ok(tintExpr.length >= rings.length);
+  assert.ok(tintExpr.every((e) => /effect\("FX Colour"\)/.test(e.expr)));
+  // Paylines are placeholders that draw themselves on.
+  const lines = log.comps.filter((c) => /^Payline \d\d$/.test(c.name));
+  assert.ok(lines.length > 0);
+  assert.equal(new Set(lines.map((c) => c.name)).size, lines.length);
+  // Coin showers are comps of their own, made of FX Coin layers.
+  const showers = log.comps.filter((c) => c.parentFolder?.name === 'Coin Showers');
+  assert.ok(showers.length >= 2);
+  for (const sc of showers) assert.ok(sc.layers.list.every((l) => l.source?.name === 'FX Coin'), sc.name);
+  for (const sc of showers) assert.ok(rounds.some((c) => c.layers.list.some((l) => l.source === sc)), `${sc.name} is used`);
+});
+
+test('AE side controls: SLOT CONTROL sliders exist and every comp/layer/effect an expression names exists', () => {
+  const used = new Set();
+  for (const make of [defaultProject, candyProject, cellsProject]) {
+    const p = withExtras(make());
+    const { log } = run(p);
+    const main = log.comps.find((c) => c.name === p.name);
+    const ctrl = main.layers.list.find((l) => l.name === 'SLOT CONTROL');
+    const fxNames = ctrl.property('ADBE Effect Parade').children.map((e) => e.name);
+    for (const n of ['Meter', 'FS Total', 'Shake %', 'Flash %', 'Dim %', 'Coins %', 'Spin Blur %', 'Win Pop %', 'FX Colour']) assert.ok(fxNames.includes(n), n);
+    const comps = new Map(log.comps.map((c) => [c.name, c]));
+    let refs = 0;
+    for (const e of log.expressions) {
+      for (const m of e.expr.matchAll(/comp\("([^"]+)"\)\.layer\("([^"]+)"\)\.effect\("([^"]+)"\)/g)) {
+        refs++;
+        const c = comps.get(m[1]);
+        assert.ok(c, `comp ${m[1]}`);
+        const L = c.layers.list.find((l) => l.name === m[2]);
+        assert.ok(L, `layer ${m[2]} in ${m[1]}`);
+        assert.ok(L.property('ADBE Effect Parade').children.some((x) => x.name === m[3]), `effect ${m[3]} on ${m[2]}`);
+      }
+    }
+    assert.ok(refs > 50);
+    for (const e of log.expressions) for (const m of e.expr.matchAll(/layer\("SLOT CONTROL"\)\.effect\("([^"]+)"\)/g)) used.add(m[1]);
+  }
+  for (const n of ['Shake %', 'Flash %', 'Dim %', 'Coins %', 'Spin Blur %', 'Win Pop %', 'FX Colour']) assert.ok(used.has(n), `${n} is used`);
+});
+
+test('AE counter rigs: the digit layers last as long as their counter', () => {
+  const p = withExtras(defaultProject());
+  const { log } = run(p);
+  const rigs = log.comps.filter((c) => / Counter$/.test(c.name));
+  assert.ok(rigs.some((c) => c.duration > 10), 'a rig longer than 10 s');
+  for (const rc of rigs) {
+    for (const l of rc.layers.list.filter((x) => /^Digit /.test(x.name))) assert.ok(l.outPoint >= rc.duration - 1e-6, `${rc.name} / ${l.name}`);
+  }
 });

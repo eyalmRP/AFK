@@ -33,9 +33,10 @@ the result as an editable **After Effects project**.
 Exports:
 
 - **After Effects package** (.zip), the main deliverable: an ES3 ExtendScript
-  that rebuilds the animation as a layered, editable project, plus every image
-  and the sound track. Several formats (16:9, 9:16, 1:1, 4:5, 4K) can go in
-  one package; each gets its own comp tree.
+  that rebuilds the animation as a working, editable project built from
+  placeholder comps, plus every image and every sound cue as its own clip.
+  Several formats (16:9, 9:16, 1:1, 4:5, 4K) can go in one package; each gets
+  its own comp tree.
 - **MP4 preview** with sound (WebCodecs H.264, frame by frame).
 - **PNG** of the current frame, the **sound track** (WAV in a zip) and the
   **project file** (.json).
@@ -66,6 +67,7 @@ Everything is a pure function of time, built from one JSON project:
 | `src/js/core/timeline.js` | Schedules every round: reel or cell start/stop times, anticipation, tumble actors, wilds, multipliers, win presentations, the free spins block, the wheel, shakes, flashes and sound cues. Reel motion is stored as After Effects style keyframes (value + speed/influence eases). |
 | `src/js/core/keys.js` | Evaluates those keyframes with the same cubic Bézier After Effects uses, so exported curves play back identically. |
 | `src/js/core/layout.js` | Screen layout shared by the renderer and the exporter. |
+| `src/js/core/sfx.js` | The sound cues as separate clips for the After Effects SFX comp (identical cues share a clip). |
 | `src/js/core/ae-export.js` | Builds the ES3 `.jsx` for After Effects. |
 | `src/js/render/*` | Canvas renderer, built-in sample art (classic and candy sets), effects, the sound synth. |
 | `src/js/export/*` | MP4 encoder and the After Effects zip packager. |
@@ -73,31 +75,54 @@ Everything is a pure function of time, built from one JSON project:
 
 ### After Effects project layout
 
-- `Symbols/Symbol NN <name>`: one comp per symbol. `Symbols/Win NN <name>`:
-  its win animation (a default pop and pulse, or your PNG sequence or sprite
-  sheet frame by frame). `Symbols Atlas` holds one symbol comp per frame.
-  Animate inside a symbol comp and every reel, tumble and win updates.
+Most of the animation is decided in Reel Studio; the AE project is where the
+look gets finished. Every piece of art and every effect is a placeholder
+comp, the round comps place them in time, and a few controls sit on
+`SLOT CONTROL`.
+
+- `Placeholder Comps/`: each built once; every use is a layer of it, so
+  replacing the art or animating inside updates every use.
+  - `Symbols/`: `Symbol NN <name>` per symbol (coins, the orb and the empty
+    cell included), `Win NN <name>` with its win animation (a default pop
+    and pulse, or your PNG sequence or sprite sheet frame by frame), and
+    `Symbols Atlas` with one symbol per frame for the reels.
+  - `Machine/`: background, machine back and frame, `Marquee Lights` (the
+    blink lives inside), logo, win meter panel, vignette.
+  - `Effects/`: `FX Shockwave`, `FX Light Rays`, `FX Small Rays`, `FX Coin`,
+    `FX Cell Frame`, `FX Anticipation`, `FX Tease Cell`, `FX Sticky Frame`,
+    `FX Coin Lock`, `FX Near Miss`, `FX Wild Beam`, `FX Collected`. They are
+    white; each use carries a Tint named `Colour` that follows the
+    `FX Colour` checkbox on `SLOT CONTROL`.
+  - `Titles/` (with the light sweep), `Paylines/` (each draws itself on),
+    `Plaques/`, `Wheel/` and `Counters/Counter Digits` (the 0-9 strip every
+    counter rolls through).
 - `Reels/Reel N` (or `Cell C-R` for per-cell spins): a `CTRL` null with a
   `Spin` slider. Its keys are the start, mid and end phases with the exact
   eases from the preview. Cell layers read the slider and time-remap into
-  `Symbols Atlas`. A Directional Blur adjustment layer reads the slider's
-  velocity. Tumbling symbols are keyframed layers in the same precomps.
-- `Win FX/Rxx ...`: one precomp per presentation: paylines (shape layers with
-  Trim Paths), win comps on the winning cells, cell frames, shockwaves,
-  expanding wilds, multipliers flying into the total, tier titles, coins
-  (expression physics), counters driven by `WIN CTRL > Amount`, the wheel rig.
-- `Hold and Spin/Hold Cell C-R`: one little reel per cell for the coin
-  board, on its own `Spin` slider, with the coin values as text layers; the
-  main comp adds lock frames, the respins counter and the collect total.
-- `Odometers/`: rolling-digit counters made of plain layers. `Odometer
-  Digits` is the 0-9 strip shared by every counter; each counter's
-  `ODO CTRL > Value` reads its source slider. Each column turns as the one
-  below it wraps, like the Odometer plugin, so no plugin is needed.
-- Main comp: background, machine, reels, sticky wilds, marquee, logo, free
-  spins ribbon and HUD texts, win meter (`SLOT CONTROL > Meter` and
-  `FS Total`), a `SCREEN SHAKE` parent null, flashes, vignette, the sound
-  track layer and a marker per round. With "Transparent background" the
-  background and vignette start switched off; render ProRes 4444 with alpha
-  from After Effects.
+  `Symbols Atlas`, so a reel rolls through its strip like an odometer
+  wheel. A Directional Blur adjustment layer reads the slider's velocity.
+  Tumbling symbols are keyframed layers in the same precomps.
+  `Reels/Hold and Spin/Hold Cell C-R`: one little reel per cell for the coin
+  board, with the coin values as text layers.
+- `Rounds/Rxx ...`: one comp per round that shows something, placing the
+  placeholders in time: paylines, win comps on the winning cells, frames,
+  shockwaves, expanding wilds, multipliers flying into the total, titles,
+  counters driven by `WIN CTRL > Amount`, the wheel rig. `Rounds/Coin
+  Showers/` holds each fountain, rain or burst as its own comp (expression
+  physics on `FX Coin` layers).
+- `Counter Rigs/`: rolling-digit money counters made of plain layers; each
+  `COUNTER CTRL > Value` reads its source slider. Each column turns as the
+  one below it wraps, like the Odometer plugin, so no plugin is needed.
+- `Sound/SFX`: one audio layer per cue at its time, named after the cue and
+  round and coloured by group. The `SFX MIX` null holds Master and per-group
+  levels in dB (Master includes headroom: After Effects has no compressor).
+- Main comp: background, machine, reels, sticky wilds, coin lock frames,
+  marquee, logo, free spins ribbon and HUD texts, win meter, the round
+  comps, a `SCREEN SHAKE` parent null, the flash, vignette, the SFX comp and
+  a marker per round. `SLOT CONTROL` holds `Meter`, `FS Total`, `Collect`
+  and the After Effects side controls: `Shake %`, `Flash %`, `Dim %`,
+  `Coins %`, `Spin Blur %`, `Win Pop %` and `FX Colour`. With "Transparent
+  background" the background and vignette start switched off; render
+  ProRes 4444 with alpha from After Effects.
 
 Preview-only: reel curvature and bloom. The AE reels are flat.

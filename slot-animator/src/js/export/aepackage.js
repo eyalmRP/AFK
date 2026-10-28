@@ -1,14 +1,39 @@
 // Builds the After Effects package: the generated .jsx plus every file it
-// imports, zipped. Symbol art, win animations and the sound track are shared;
+// imports, zipped. Symbol art, win animations and the sound cues are shared;
 // machine art, titles and effects are painted once per output format.
 
 import { AE_ASSETS, buildAEData, buildAEScript, exportFormats, projectForFormat } from '../core/ae-export.js';
 import { computeLayout } from '../core/layout.js';
 import { paintHudLayer, paintBulbLayer, paintWheelBulbLayer } from '../render/renderer.js';
 import { canvas, buildResources } from '../render/sprites.js';
-import { decodeCustomSounds, renderSoundtrack, audioBufferToWav } from '../render/audio.js';
+import { decodeCustomSounds, renderCue, audioBufferToWav } from '../render/audio.js';
+import { sfxCues } from '../core/sfx.js';
 
 const MAX_WIN_FRAMES = 240;
+
+// After Effects sums the SFX layers with no compressor, so the master level
+// leaves headroom: the decibels that keep the loudest moment at -1 dBFS.
+function mixHeadroom(rendered, events, sound, duration) {
+  const sr = rendered[0]?.buffer.sampleRate || 48000;
+  const n = Math.ceil(duration * sr) + 1;
+  const mix = [new Float32Array(n), new Float32Array(n)];
+  const vol = Number(sound.volume ?? 0.8);
+  for (const e of events) {
+    const { buffer, duration: d } = rendered[e.clip];
+    const g = vol * Number(sound.mix?.[e.group] ?? 1);
+    if (!(g > 0)) continue;
+    const a = Math.round(e.t * sr);
+    const len = Math.min(Math.round(d * sr), n - a);
+    for (let c = 0; c < 2; c++) {
+      const src = buffer.getChannelData(Math.min(c, buffer.numberOfChannels - 1));
+      const dst = mix[c];
+      for (let i = 0; i < len; i++) dst[a + i] += src[i] * g;
+    }
+  }
+  let peak = 0;
+  for (const ch of mix) for (let i = 0; i < ch.length; i++) peak = Math.max(peak, Math.abs(ch[i]));
+  return peak > 0.891 ? Math.round(20 * Math.log10(0.891 / peak) * 10) / 10 : 0;
+}
 
 function toPNG(c) {
   return new Promise((resolve, reject) => c.toBlob((b) => (b ? resolve(b) : reject(new Error('PNG encode failed'))), 'image/png'));
@@ -27,7 +52,7 @@ function imageCanvas(img, max = 1024) {
   return c;
 }
 
-const README = ({ name, file, formats, sound, transparent, font }) => `${name} - After Effects package
+const README = ({ name, file, formats, sfxClips, headroom, transparent, font }) => `${name} - After Effects package
 =========================================
 
 1. Unzip this folder anywhere. Keep "${file}" next to the "assets" folder.
@@ -36,56 +61,82 @@ const README = ({ name, file, formats, sound, transparent, font }) => `${name} -
 3. The script builds one project folder per format (${formats.join(', ')}).
    Open the main comp and press space to play.
 
-What you get
-- Symbols/
-  - "Symbol 01 <name>" ... one comp per symbol. Open one and animate inside
-    (swap the art, add a glow, a breathing loop): every reel, every tumble
-    and every win that shows the symbol updates.
-  - "Win 01 <name>" ... the symbol's win animation. It plays once from the
-    start, then loops the tail. A PNG sequence or sprite sheet you uploaded
-    is laid out here frame by frame.
-  - "Symbols Atlas": one symbol per frame, used by the reels.
+How the project is organised
+Most of the animation is decided in Reel Studio (outcomes, timing, motion,
+effects). The After Effects project is built so you can finish the look
+there: every piece of art and every effect is a placeholder comp, the
+timing lives in the round comps, and a few controls sit on SLOT CONTROL.
+
+- Placeholder Comps/: the art and the effect looks, each built once. Every
+  use in the animation is a layer of that comp, so replacing the art or
+  animating inside a placeholder updates every use.
+  - Symbols/: "Symbol 01 <name>" ... one comp per symbol (coins, the
+    multiplier orb and the empty cell too). "Win 01 <name>" ... the
+    symbol's win animation: it plays once from the start, then loops the
+    tail; an uploaded PNG sequence or sprite sheet is laid out frame by
+    frame. "Symbols Atlas" holds one symbol per frame for the reels.
+  - Machine/: Background, Machine Back, Machine Frame, Marquee Lights (the
+    bulbs blink inside it, faster during wins), Logo, Win Meter Panel,
+    Vignette.
+  - Effects/: FX Shockwave (a ring that grows and fades in 0.7 s), FX Light
+    Rays, FX Small Rays, FX Coin (every coin in every shower), FX Cell
+    Frame (win highlight), FX Anticipation, FX Tease Cell, FX Sticky Frame,
+    FX Coin Lock, FX Near Miss, FX Wild Beam, FX Collected.
+  - Titles/: "Title <tier>" for each title, with its light sweep.
+  - Paylines/: "Payline NN", each drawing itself on.
+  - Plaques/: the multiplier, prize and hold & spin plaques.
+  - Wheel/: Wheel Disc, Wheel Ring, Wheel Bulbs A and B, Wheel Pointer.
+  - Counters/: "Counter Digits", the 0-9 strip every counter rolls
+    through. Change its font, colour or style once and every counter
+    follows.
+  Effect placeholders are white; each use is tinted to its colour by a
+  "Colour" (Tint) effect. Untick "FX Colour" on SLOT CONTROL to keep the
+  colours of your own effect art.
 - Reels/: one precomp per reel (or per cell for per-cell spins). Each has a
   CTRL null with a "Spin" slider: its keyframes are the start, mid and end
   phases from Reel Studio, with the same speed and influence eases. Open the
-  Graph Editor on that slider to reshape a start or a stop. Tumbling symbols
-  are ordinary keyframed layers in the same precomps.
-- Win FX/: one precomp per round that shows something (paylines, symbol
-  pops, expanding wilds, multipliers, titles, coins, counters, the wheel).
-  Each counter is read from WIN CTRL > Amount in its comp.
-- Odometers/: rolling-digit counters built from plain layers, no plugin
-  needed. "Odometer Digits" holds the 0-9 strip: change its font, colour
-  or style once and every counter follows. Each counter's ODO CTRL > Value
-  reads its source slider; key or pick-whip it to drive the counter
-  yourself. The digits roll like the Odometer plugin (each column turns as
-  the one below it wraps) and tick crisply while counting fast.
-- Hold and Spin/ (when the animation has coins): one comp per cell, "Hold
-  Cell C-R", each a little reel of coins and empty cells on its own Spin
-  slider. The coins are comps in Symbols/ too ("Symbol NN Coin", "Mega coin",
-  "Empty cell"...): restyle one and every cell follows. Their values ride on
-  "Value" text layers. In the main comp, "Coin Lock" frames glow on locked
-  coins, "Respins Counter" counts the respins, and the coins' running total
-  ("Collect", on SLOT CONTROL) rolls on the frame while they are collected;
-  each round's FX comp holds the landings, the collect and the grand.
-- SLOT CONTROL (main comp): "Meter" drives the win meter and "FS Total" the
-  free spins total. SCREEN SHAKE is a parent null whose position expression
-  holds the shake events; the Flash solid holds the flashes.
+  Graph Editor on that slider to reshape a start or a stop. The reel reads
+  its symbols from Symbols Atlas as the slider rolls it, like an odometer
+  wheel. Tumbling symbols are ordinary keyframed layers in the same
+  precomps.
+  - Hold and Spin/ (when the animation has coins): "Hold Cell C-R", one
+    little reel of coins and empty cells per cell, on its own Spin slider,
+    with the coin values on "Value" text layers.
+- Rounds/: one comp per round that shows something. It places the
+  placeholders in time: paylines, win comps on the winning cells, cell
+  frames, shockwaves, expanding wilds, multipliers, titles, the wheel, coin
+  landings and the collect. Move a layer to retime an effect.
+  - Coin Showers/: each coin fountain, rain or burst is a comp of its own,
+    its coins thrown by expressions.
+- Counter Rigs/: the rolling money counters (win meter, big win amounts,
+  the hold & spin collect, the grand). Each COUNTER CTRL > Value reads its
+  source slider (WIN CTRL > Amount in a round comp, SLOT CONTROL in the
+  main comp); key or pick-whip it to drive the counter yourself. Each
+  column turns as the one below it wraps, like the Odometer plugin, so no
+  plugin is needed.
+- Sound/SFX: ${sfxClips ? `every sound cue on its own audio layer at its time (${sfxClips} distinct clips in assets/sfx), named after the cue and its round and coloured by group: Reels blue, Wins green, Coins yellow, Big Win red, UI purple. The SFX MIX null holds the levels in dB: "Master" and one slider per group; every layer reads its two sliders. Mute, move or swap any cue layer.${headroom < 0 ? ` Master includes ${headroom} dB of headroom so the loudest moment stays below 0 dB (After Effects has no compressor).` : ''}` : 'sound was switched off in Reel Studio, so there are no sound cues.'}
+- Main comp: the machine, reels, sticky wilds, coin lock frames, logo, free
+  spins ribbon, HUD texts, the win meter, the round comps, the flash and
+  the SFX comp, with a marker where each round starts. SCREEN SHAKE is a
+  parent null whose position expression holds the shake events.
+- SLOT CONTROL (main comp):
+  - "Meter", "FS Total" (and "Collect" with Hold & Spin) drive the counters.
+  - "Shake %", "Flash %", "Dim %", "Coins %" (thins every coin shower out),
+    "Spin Blur %" and "Win Pop %" scale those effects; 100 is what Reel
+    Studio showed.
+  - "FX Colour": tints the effect placeholders (see above).
 - The wheel game has no machine layers: just the background, the wheel and
-  its prizes, one FX comp per spin handing the wheel to the next.
+  its prizes, one round comp per spin handing the wheel to the next.
 
 Transparency
 - ${transparent ? 'Background and Vignette are switched off in this build.' : 'Switch off the Background and Vignette layers in the main comp.'}
   Then Composition > Add to Render Queue, Output Module: QuickTime, Apple
   ProRes 4444, Channels: RGB + Alpha. That gives a transparent MOV.
 
-Sound
-- ${sound ? '"Sound Track" in the main comp is assets/soundtrack.wav: every reel stop, tumble, count-up and big win cue, in sync with the animation.' : 'Sound was switched off in Reel Studio, so no sound track is included.'}
-
 Notes
 - Fonts: text layers ask for ${font}. Install it (Google Fonts) or change the
-  font on "Odometer Digits" and the text layers.
+  font on "Counter Digits" and the text layers.
 - Reel curvature and bloom are preview-only effects; the AE reels are flat.
-- Markers on the main comp mark where each round starts.
 `;
 
 export async function buildAEPackage(scene, images, onProgress) {
@@ -116,11 +167,22 @@ export async function buildAEPackage(scene, images, onProgress) {
     winFrames[i] = frames;
     winFps[i] = anim.fps;
   }
-  let soundFile = '';
+  // Sound: every distinct cue as its own clip, laid out in the SFX comp.
+  let sfx = false;
+  let sfxHeadroom = 0;
+  let sfxClips = 0;
   if (project.sound?.enabled !== false && typeof OfflineAudioContext !== 'undefined') {
-    const buffer = await renderSoundtrack(tl, project, await decodeCustomSounds(project));
-    dir.file(AE_ASSETS.shared.sound, audioBufferToWav(buffer));
-    soundFile = AE_ASSETS.shared.sound;
+    const custom = await decodeCustomSounds(project);
+    const { clips, events } = sfxCues(tl);
+    const rendered = [];
+    for (const clip of clips) {
+      const r = await renderCue(clip.cue, custom);
+      rendered.push(r);
+      dir.file(AE_ASSETS.shared.sfx(clip.type, clip.n), audioBufferToWav(r.buffer, 0, r.duration));
+    }
+    sfxHeadroom = mixHeadroom(rendered, events, project.sound || {}, tl.duration);
+    sfx = clips.length > 0;
+    sfxClips = clips.length;
   }
   tick(2);
 
@@ -165,7 +227,8 @@ export async function buildAEPackage(scene, images, onProgress) {
         hasLogo: !!res.logo,
         hasBulbs: marquee,
         fontPostScript: `${font}-Regular`,
-        soundFile,
+        sfx,
+        sfxHeadroom,
         titleKeys: Object.keys(res.titles),
       })
     );
@@ -176,7 +239,7 @@ export async function buildAEPackage(scene, images, onProgress) {
   dir.file(file, buildAEScript(dataList));
   dir.file(
     'README.txt',
-    README({ name, file, formats: formats.map(([w, h]) => `${w}x${h}`), sound: !!soundFile, transparent: !!project.output?.transparent, font: `${project.effects.font || 'Bungee'} (PostScript "${font}-Regular")` })
+    README({ name, file, formats: formats.map(([w, h]) => `${w}x${h}`), sfxClips, headroom: sfxHeadroom, transparent: !!project.output?.transparent, font: `${project.effects.font || 'Bungee'} (PostScript "${font}-Regular")` })
   );
   dir.file(`${base}.reelstudio.json`, JSON.stringify(project, null, 2));
   const blob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE', compressionOptions: { level: 6 } }, (m) => onProgress?.(0.9 + (m.percent / 100) * 0.1));

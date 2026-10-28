@@ -2516,14 +2516,15 @@ function panelExport() {
     el.progress,
     section(
       'After Effects project',
-      h('p', null, 'The main export: a zip with a script that rebuilds this animation as a layered, editable After Effects project (2026 or any CC version), plus every image and the sound track.'),
+      h('p', null, 'The main export: a zip with a script that rebuilds this animation as a layered, editable After Effects project (2026 or any CC version), plus every image and every sound cue.'),
       h(
         'ul',
         { class: 'bullets' },
-        h('li', null, 'Every symbol is its own comp, with a win comp for its win animation: animate inside once and every reel and win updates.'),
+        h('li', null, 'Placeholder Comps: every symbol, piece of machine art and effect look (shockwave, light rays, coin, cell frames, plaques, titles, paylines, wheel parts) is its own comp. Replace or animate one and every use updates.'),
         h('li', null, 'Reels (or cells) are precomps driven by one Spin slider with the same start, mid and end keyframes and eases as this preview. Tumbles are keyframed layers.'),
-        h('li', null, 'Each win is its own precomp: lines, pops, wilds, multipliers, tier titles, coins, the wheel.'),
-        h('li', null, 'Counters are rolling odometer rigs built from plain layers, no plugin needed.')
+        h('li', null, 'Each round is its own comp that places those effects in time. Coin showers are comps of their own.'),
+        h('li', null, 'SFX: every sound cue on its own audio layer, coloured by group, with group and master levels on the SFX MIX null.'),
+        h('li', null, 'SLOT CONTROL carries the After Effects side controls: shake, flash, dim, coins, spin blur, win pop and effect colours.')
       ),
       h('div', { class: 'field' }, h('span', { class: 'label' }, `Formats · ${n} selected`), formatPicker(), h('p', { class: 'hint' }, 'Each format gets its own comp tree, laid out for that size. The symbol art is shared.')),
       toggleField({ id: 'x-transparent', label: 'Transparent background', checked: !!P.output.transparent, onChange: (v) => { P.output.transparent = v; save(); }, hint: 'Switches the background and vignette layers off, ready to render ProRes 4444 with alpha from After Effects.' }),
