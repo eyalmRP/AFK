@@ -12,6 +12,7 @@ import { canvas, paintTitle } from './sprites.js';
 import { drawEmitter } from './particles.js';
 import { jumpTarget, mergeTarget, flightPath, flightAt, bigScaleAt, winFxConfig } from '../core/winfx.js';
 import { cameraAt, zoomConfig } from '../core/camera.js';
+import { heldCells } from '../core/timeline.js';
 import { pointerAt } from '../core/wheel.js';
 
 const clamp01 = (x) => (x < 0 ? 0 : x > 1 ? 1 : x);
@@ -239,11 +240,20 @@ function drawMachineReels(ctx, scene, R, t) {
   const popDur = Number(project.timing.tumblePop) || 0.36;
   const useActors = R && R.actorsFrom != null && t >= R.actorsFrom;
   const byCol = useActors ? actorsByCol(R, tl.reels) : null;
+  // A cell held by a sticky wild is cut out of its reel: the strip spins on
+  // behind the machine, not through the wild.
+  const held = heldCells(tl, t);
   for (let c = 0; c < tl.reels; c++) {
     ctx.save();
     ctx.beginPath();
     ctx.rect(L.reelX[c], L.winTop, L.cellW, L.winH);
-    ctx.clip();
+    for (const hc of held) {
+      if (hc.c !== c) continue;
+      const y0 = L.mapY(L.rowsTop + hc.r * L.cellH).y;
+      const y1 = L.mapY(L.rowsTop + (hc.r + 1) * L.cellH).y;
+      ctx.rect(L.reelX[c], y0, L.cellW, y1 - y0);
+    }
+    ctx.clip('evenodd');
     if (useActors) {
       for (const a of byCol[c]) if (t >= a.tIn && t < a.tOut) drawActor(ctx, scene, a, t, blurK, popDur);
     } else if (tl.mode === 'cascade') {
@@ -251,6 +261,7 @@ function drawMachineReels(ctx, scene, R, t) {
       for (let r = 0; r < tl.rows; r++) drawSymbol(ctx, scene, grid[c][r], c, r, 0);
     } else if (tl.mode === 'cells') {
       for (let r = 0; r < tl.rows; r++) {
+        if (held.some((hc) => hc.c === c && hc.r === r)) continue;
         const si = c * tl.rows + r;
         const keys = tl.stripKeys[si];
         const P = evalKeys(keys, t);

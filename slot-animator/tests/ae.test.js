@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { defaultProject, candyProject, cellsProject, newRound } from '../src/js/core/defaults.js';
-import { buildTimeline } from '../src/js/core/timeline.js';
+import { defaultProject, candyProject, cellsProject, freeSpinsProject, newRound } from '../src/js/core/defaults.js';
+import { buildTimeline, heldCells, STICKY_COVER } from '../src/js/core/timeline.js';
 import { computeLayout } from '../src/js/core/layout.js';
 import { evalKeys } from '../src/js/core/keys.js';
 import { buildAEData, buildAEScript, AE_ASSETS, AE_SCRIPT, exportFormats, projectForFormat, parseFormat } from '../src/js/core/ae-export.js';
@@ -498,4 +498,35 @@ test('AE particles: every emitter is a comp whose layers move exactly like the p
   // Particle art: one placeholder per asset, with every variant.
   const conf = log.comps.find((c) => c.name === 'Particle Confetti');
   assert.equal(conf.layers.list.length, 8);
+});
+
+test('sticky wilds: the held cell stops showing the spinning strip, in the preview and in After Effects', () => {
+  const cases = [freeSpinsProject()];
+  const q = cellsProject();
+  q.rounds = [newRound('freespins', { seed: 5, sticky: true }), newRound('small', { seed: 6, free: true, extraWilds: 2 }), newRound('none', { seed: 7, free: true }), newRound('fstotal', { seed: 8 })];
+  cases.push(q);
+  for (const p of cases) {
+    const { tl, log, list } = run(p);
+    assert.deepEqual(log.alerts, [], log.alerts.join('\n'));
+    assert.ok(tl.stickies.length >= 1);
+    const { data } = list[0];
+    for (const [i, st] of tl.stickies.entries()) {
+      // While it pops in, the strip still shows; then the cell is cut out until the block ends.
+      const at = (t) => heldCells(tl, t).some((h) => h.c === st.c && h.r === st.r);
+      assert.equal(at(st.from + 0.1), false);
+      assert.equal(at(st.from + STICKY_COVER + 0.01), true);
+      assert.equal(at(Math.min(st.to, tl.duration) + 0.01), false);
+      const main = log.comps.find((c) => c.name === p.name);
+      const name = p.spin.type === 'cells' ? `Cell ${st.c + 1}-${st.r + 1}` : `Reel ${st.c + 1}`;
+      const layer = main.layers.list.find((l) => l.name === name);
+      const mask = layer.property('ADBE Mask Parade').children.find((m) => m.name === `Sticky ${i + 1}`);
+      assert.ok(mask, `${name} has a mask for sticky ${i + 1}`);
+      assert.equal(mask.maskMode, 'subtract');
+      const v = mask.property('ADBE Mask Shape').value.vertices;
+      const y0 = p.spin.type === 'cells' ? 0 : data.rowsTop - data.winTop + st.r * data.cellH;
+      assert.deepEqual(v, [[0, y0], [data.cellW, y0], [data.cellW, y0 + data.cellH], [0, y0 + data.cellH]]);
+      const op = (t) => new Function('time', `return eval(${JSON.stringify(mask.property('ADBE Mask Opacity').expression)})`)(t);
+      for (const t of [st.from + 0.1, st.from + STICKY_COVER + 0.01, (st.from + Math.min(st.to, tl.duration)) / 2, Math.min(st.to, tl.duration) + 0.01]) assert.equal(op(t), at(t) ? 100 : 0, `${name} at ${t}`);
+    }
+  }
 });

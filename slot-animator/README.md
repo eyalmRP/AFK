@@ -27,7 +27,9 @@ the result as an editable **After Effects project**.
   bonus, wheel of fortune and the free spins total.
 - Features: tumble chains (winners pop, survivors fall, refills drop and pay
   again), multiplier symbols that fly into the total, expanding wilds,
-  extra wilds, sticky wilds through a free spins block, and a free spins
+  extra wilds, sticky wilds through a free spins block (a held cell is cut
+  out of its spinning reel; in After Effects a Subtract mask on the reel
+  layer does it), and a free spins
   counter with a running total.
 - Winning symbols: pop in place, jump into the score (they fly one by one
   to the win meter, the win amount, above the reels, the screen centre or

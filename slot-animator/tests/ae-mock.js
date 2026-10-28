@@ -14,6 +14,7 @@ const KNOWN_MATCH = new Set([
   'ADBE Vector Filter - Trim', 'ADBE Vector Trim End',
   'ADBE Drop Shadow-0002', 'ADBE Drop Shadow-0004', 'ADBE Drop Shadow-0005',
   'ADBE Checkbox Control', 'ADBE Tint', 'ADBE Tint-0002', 'ADBE Tint-0003', 'ADBE Audio Group', 'ADBE Audio Levels',
+  'ADBE Mask Parade', 'ADBE Mask Atom', 'ADBE Mask Shape', 'ADBE Mask Opacity',
 ]);
 
 export function createAE({ files = new Set(), fileName = '/pkg/slot.jsx' } = {}) {
@@ -239,6 +240,7 @@ export function createAE({ files = new Set(), fileName = '/pkg/slot.jsx' } = {})
     },
     KeyframeInterpolationType: { BEZIER: 6613, HOLD: 6614, LINEAR: 6612 },
     BlendingMode: { ADD: 'add', SCREEN: 'screen', NORMAL: 'normal' },
+    MaskMode: { ADD: 'add', SUBTRACT: 'subtract' },
     ParagraphJustification: { CENTER_JUSTIFY: 'center' },
     Shape: function Shape() {},
     MarkerValue: function MarkerValue(c) {

@@ -517,7 +517,8 @@ export function buildTimeline(project) {
       hsInfo = { kind: 'respin', tSpin, cells: cellsI, before, after: hs.counter, hits: cellsI.filter((x) => x.hit).length, coins: hs.locked.size, full: hs.full };
     }
 
-    // ---- sticky wilds: held cells shown from the moment they land ----
+    // ---- sticky wilds: held cells shown from the moment they land; once
+    // the wild has popped in, its cell is cut out of the spinning strip ----
     if (fs && round.free && !noSpin && ctx.wildSym != null) {
       for (const [c, r] of win.wilds) {
         const k = K(c, r);
@@ -1027,3 +1028,12 @@ export function fsBlockAt(tl, t) {
 }
 
 export { LINE_WINS, BIG_WINS, SCATTER_WINS, tumbleEnabled };
+
+// How long after a sticky wild lands its cell stops showing the reel strip
+// (the wild has popped in on top by then).
+export const STICKY_COVER = 0.45;
+
+// The cells held by sticky wilds at time t, whose strip is hidden.
+export function heldCells(tl, t) {
+  return (tl.stickies || []).filter((s) => t >= s.from + STICKY_COVER && t < s.to);
+}

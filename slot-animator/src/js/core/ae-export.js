@@ -17,6 +17,7 @@
 // The script is ES3 so every After Effects version's ExtendScript runs it.
 
 import { normInf, evalKeys } from './keys.js';
+import { STICKY_COVER } from './timeline.js';
 import { lineColor } from './paylines.js';
 import { OUTCOME_BY_ID } from './defaults.js';
 import { holdSpinConfig, isCoinSym, formatPrize, COIN_GLOW } from './coins.js';
@@ -409,7 +410,7 @@ export function buildAEData(project, tl, L, extras = {}) {
     meterKeys: exportKeys(tl.meterKeys),
     fsTotalKeys: exportKeys(tl.fsTotalKeys),
     fsBlocks: tl.fsBlocks.map((b) => [r4(b.start), r4(Math.min(b.end, tl.duration)), b.n, b.rounds.map((r) => [r4(r.t0), r.index == null ? -1 : r.index, r.total ? 1 : 0])]),
-    stickies: tl.stickies.map((s) => ({ x: cellX(s.c), y: cellY(s.r), from: r4(s.from), to: r4(Math.min(s.to, tl.duration)) })),
+    stickies: tl.stickies.map((s) => ({ c: s.c, r: s.r, x: cellX(s.c), y: cellY(s.r), from: r4(s.from), cover: r4(s.from + STICKY_COVER), to: r4(Math.min(s.to, tl.duration)) })),
     shakes: tl.shakes.map((s) => [r4(s.t), r4(s.amp * (Number(project.effects.shake) || 0) * L.cellW * 0.09), r4(s.dur)]),
     flashes: tl.flashes.map((f) => [r4(f.t), r4(f.amp * (Number(project.effects.flash) || 0)), r4(f.dur)]),
     rounds,
@@ -973,6 +974,26 @@ export const AE_SCRIPT = String.raw`// Slot animation rebuilt for After Effects 
       trim(L, a.tIn, a.tOut);
     }
   }
+  // While a sticky wild holds a cell, a Subtract mask cuts that cell out of
+  // its reel (or its own little reel), so the strip spins on unseen.
+  function holdCellMask(layers, st, i) {
+    var j;
+    for (j = 0; j < layers.length; j++) {
+      var Ly = layers[j], y0;
+      if (Ly.name === "Reel " + (st.c + 1) || Ly.name === "Tumble " + (st.c + 1)) y0 = DATA.rowsTop - DATA.winTop + st.r * DATA.cellH;
+      else if (Ly.name === "Cell " + (st.c + 1) + "-" + (st.r + 1)) y0 = 0;
+      else continue;
+      var mk = Ly.property("ADBE Mask Parade").addProperty("ADBE Mask Atom");
+      mk.name = "Sticky " + (i + 1);
+      mk.maskMode = MaskMode.SUBTRACT;
+      var shp = new Shape();
+      shp.vertices = [[0, y0], [DATA.cellW, y0], [DATA.cellW, y0 + DATA.cellH], [0, y0 + DATA.cellH]];
+      shp.closed = true;
+      mk.property("ADBE Mask Shape").setValue(shp);
+      mk.property("ADBE Mask Opacity").expression = "(time >= " + st.cover + " && time < " + st.to + ") ? 100 : 0;";
+    }
+  }
+
   function buildReels() {
     var out = [], c, r;
     var hasActors = function (cc) { return DATA.actors[cc] && DATA.actors[cc].length; };
@@ -1455,6 +1476,7 @@ export const AE_SCRIPT = String.raw`// Slot animation rebuilt for After Effects 
       var SF = frameAt(main, "FX Sticky Frame", DATA.cellW * 0.96, DATA.cellH * 0.96, { stroke: 0.035, round: 0.12, glow: 0.15, color: [1, 0.82, 0.35] }, "Sticky Frame " + (i + 1), [st.x, st.y], st.from, st.to);
       kids.push(SL);
       kids.push(SF);
+      if (reels) holdCellMask(reels, st, i);
     }
     // Hold & Spin: a glowing frame on every locked coin while the board shows.
     if (DATA.hold) {
