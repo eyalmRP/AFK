@@ -41,7 +41,7 @@ import { paintBuiltin, paintPot } from '../render/paint.js';
 import { loadParticleSprites, drawParticleList } from '../render/particles.js';
 import { PARTICLE_TEMPLATES, TEMPLATE_BY_ID, BUILTIN_PARTICLES, PARTICLE_MOTIONS, PARTICLE_MOMENTS, PARTICLE_LENGTHS, tierParticles, spawnParticles, particleAssetInfo } from '../core/particles.js';
 import { WIN_STYLES, JUMP_TARGETS, MERGE_POINTS, FLIGHT_PATHS, winFxConfig, jumpTarget, mergeTarget } from '../core/winfx.js';
-import { POT_ARTS, POT_AIMS, BOOST_KINDS, BEAM_CURVES, defaultPots, potsConfig } from '../core/pots.js';
+import { POT_ARTS, POT_AIMS, POT_ROLES, BOOST_KINDS, BEAM_CURVES, defaultPots, potsConfig, potsCollect, potsUpgrade, ownerOf } from '../core/pots.js';
 import { searchFeatures, buildIndex } from './search.js';
 import { APPLIES, notApplying } from './applies.js';
 import { TIPS, tipEntries } from './tips.js';
@@ -588,7 +588,7 @@ async function openProjectFile() {
   const [f] = await pickFiles('application/json,.json');
   if (!f) return;
   try {
-    loadProject(migrate(JSON.parse(await f.text())), `Opened ${f.name}.`);
+    loadProject(checkedProject(JSON.parse(await f.text())), `Opened ${f.name}.`);
   } catch (e) {
     toast(`Could not open ${f.name}: ${e.message}`, 'error', 6000);
   }
@@ -1081,14 +1081,19 @@ function showShortcuts() {
 
 // ---------- persistence ----------
 
+// A saved value fills in the default; a missing, null or wrongly typed one
+// (a list where a list belongs, a section where a section belongs) keeps it.
 function deepMerge(a, b) {
-  if (Array.isArray(b)) return b;
-  if (b && typeof b === 'object') {
-    const out = { ...(a && typeof a === 'object' && !Array.isArray(a) ? a : {}) };
-    for (const k of Object.keys(b)) out[k] = a && typeof a[k] === 'object' && a[k] && !Array.isArray(a[k]) ? deepMerge(a[k], b[k]) : b[k];
+  const isObj = (x) => x && typeof x === 'object' && !Array.isArray(x);
+  if (b === undefined || b === null) return a === undefined ? b : a;
+  if (Array.isArray(a)) return Array.isArray(b) ? b : a;
+  if (isObj(a)) {
+    if (!isObj(b)) return a;
+    const out = { ...a };
+    for (const k of Object.keys(b)) out[k] = deepMerge(a[k], b[k]);
     return out;
   }
-  return b === undefined ? a : b;
+  return b;
 }
 
 // Version 1 projects had fixed Big / Mega / Epic outcomes; version 2 has one
@@ -1108,6 +1113,7 @@ function upgradeV1(p) {
 }
 
 function migrate(p) {
+  if (!p || typeof p !== 'object' || Array.isArray(p) || !['rounds', 'grid', 'machine', 'symbols'].some((k) => k in p)) throw new Error('this is not a Reel Studio project');
   const out = deepMerge(defaultProject(), upgradeV1(p) || {});
   if (!Array.isArray(out.symbols) || !out.symbols.length) out.symbols = defaultProject().symbols;
   out.symbols = out.symbols.map((s) => ({ winAnim: null, ...s }));
@@ -1121,13 +1127,32 @@ function migrate(p) {
   return out;
 }
 
+// A project read from a file or storage, checked by building it once.
+function checkedProject(raw) {
+  const p = migrate(raw);
+  buildTimeline(p);
+  computeLayout(p);
+  return p;
+}
+
+// The saved project. One that no longer builds is put aside (under
+// "<key>-unreadable") and the editor starts from the demo.
+let savedBroken = false;
 function loadSaved() {
   for (const k of [STORE_KEY, OLD_STORE_KEY]) {
+    let s = null;
     try {
-      const s = localStorage.getItem(k);
-      if (s) return migrate(JSON.parse(s));
+      s = localStorage.getItem(k);
+      if (s) return checkedProject(JSON.parse(s));
     } catch {
-      // try the next key
+      if (s) {
+        savedBroken = true;
+        try {
+          localStorage.setItem(`${k}-unreadable`, s);
+        } catch {
+          // storage full: nothing more to keep
+        }
+      }
     }
   }
   return null;
@@ -2101,6 +2126,9 @@ function countField(id, pattern, value, onInput) {
 function boostField(r, set, cur, tumbles) {
   const P = state.project;
   const cfg = potsConfig(P);
+  if (cfg.on && !potsUpgrade(cfg)) {
+    return [h('div', { class: 'field', id: 'ri-boost' }, h('span', { class: 'label' }, 'Boosters'), h('p', { class: 'hint' }, 'No pot upgrades cells: set one to Upgrades or Both in Machine → Pots above the machine.'))];
+  }
   if (!cfg.on) {
     return [
       h('div', { class: 'field', id: 'ri-boost' }, h('span', { class: 'label' }, 'Boosters'), h('p', { class: 'hint' }, 'Pots above the machine fire beams that upgrade cells. Turn the pots on to add them.'), button('Turn on the pots', () => turnOnPots(), { class: 'btn small', icon: 'plus', id: 'ri-boost-pots' })),
@@ -2996,19 +3024,36 @@ function potsSettings() {
     renderPanel();
     renderInspector();
   };
-  const on = toggleField({ id: 'm-pots', label: 'Pots above the machine', checked: !!T.enabled, onChange: all('enabled'), hint: 'A pot of gold, a pot of gems and a pot of fruits stand on the frame. They fire beams that upgrade cells (Boosters in the round inspector) and catch the win when winners beam up into them (Wins → Beam to the pots). They take the title\'s place.' });
+  const on = toggleField({ id: 'm-pots', label: 'Pots above the machine', checked: !!T.enabled, onChange: all('enabled'), hint: 'A pot of gold, a pot of gems and a pot of fruits stand on the frame. They collect wins (winners beam up into them) and upgrade cells (they fire boosters). They take the title\'s place.' });
   if (!T.enabled) return section('Pots above the machine', on);
+  const W = winFxConfig(P);
   return section(
     'Pots above the machine',
     on,
     segmented({ id: 'm-pots-count', label: 'Pots', value: cfg.count, options: [1, 2, 3].map((n) => ({ value: n, label: String(n) })), onChange: (v) => all('count')(Number(v)) }),
     ...T.items.slice(0, cfg.count).map((it, i) => potRow(it, i)),
+    h('h4', { class: 'insp-sub' }, 'What they do'),
+    toggleField({
+      id: 'm-pots-collect',
+      label: 'Winners beam up into the pots',
+      checked: W.style === 'collect',
+      onChange: (v) => {
+        P.winfx = { ...W, style: v ? 'collect' : 'pop' };
+        changed('timeline');
+        renderPanel();
+        renderInspector();
+      },
+      hint: potsCollect(cfg) ? 'Collect: the same as Wins → Winning symbols → Beam to pots; a round can still pick its own.' : 'No pot collects: set one to Collects or Both above.',
+    }),
+    h('p', { class: 'hint', id: 'm-pots-boost-hint' }, potsUpgrade(cfg) ? 'Upgrade: add Boosters to a round in the round inspector. After its spin the pots fire them at cells.' : 'No pot upgrades: set one to Upgrades or Both above for boosters.'),
+    cfg.count > 1 ? selectField({ id: 'm-pots-aim', label: 'Which pot fires or catches', value: cfg.aim, options: potAims(cfg.count), onChange: (v) => all('aim')(v), hint: cfg.aim === 'type' ? null : 'Nearest: each cell goes to the pot above its reels. By symbol: each symbol has its pot.' }) : null,
+    cfg.count > 1 && cfg.aim === 'type' ? ownerTable(cfg) : null,
+    h('h4', { class: 'insp-sub' }, 'Where they stand'),
     rangeField({ id: 'm-pots-band', label: 'Room above the machine', unit: '× height', value: cfg.band, min: 0.15, max: 0.45, step: 0.01, onInput: num(T, 'band', 'all'), hint: 'The machine scales down to make room.' }),
     rangeField({ id: 'm-pots-size', label: 'Pot size', value: cfg.size, min: 0.5, max: 1.8, step: 0.05, onInput: num(T, 'size', 'all') }),
     rangeField({ id: 'm-pots-spacing', label: 'Spacing', value: cfg.spacing, min: 0.6, max: 2.5, step: 0.05, onInput: num(T, 'spacing', 'all'), hint: '1 stands them side by side; less overlaps them.' }),
     rangeField({ id: 'm-pots-overlap', label: 'Hidden behind the frame', value: cfg.overlap, min: 0, max: 0.8, step: 0.01, onInput: num(T, 'overlap', 'all') }),
     toggleField({ id: 'm-pots-plates', label: 'Nameplates show what each pot caught', checked: cfg.plates, onChange: num(T, 'plates', 'timeline') }),
-    cfg.count > 1 ? selectField({ id: 'm-pots-aim', label: 'Which pot fires or catches', value: cfg.aim, options: potAims(cfg.count), onChange: num(T, 'aim', 'timeline'), hint: 'Nearest: each cell goes to the pot above its reels.' }) : null,
     h('h4', { class: 'insp-sub' }, 'Beams'),
     segmented({ id: 'm-beam-curve', label: 'Curve', value: cfg.beam.curve, options: BEAM_CURVES.map((c) => ({ value: c.id, label: c.label })), onChange: num(T.beam, 'curve', 'timeline') }),
     rangeField({ id: 'm-beam-bend', label: 'Bend', value: cfg.beam.bend, min: 0, max: 1.5, step: 0.05, onInput: num(T.beam, 'bend') }),
@@ -3053,8 +3098,60 @@ function potRow(it, i) {
         changed('all');
         renderPanel();
       }, { class: 'icon-btn tiny', icon: 'upload', title: it.src ? 'Replace the art' : 'Upload your own pot art', id: `m-pot-up-${i}` }),
-      it.src ? button('', () => { it.src = null; changed('all'); renderPanel(); }, { class: 'icon-btn tiny', icon: 'dice', title: 'Back to the painted pot', id: `m-pot-paint-${i}` }) : null
+      it.src ? button('', () => { it.src = null; changed('all'); renderPanel(); }, { class: 'icon-btn tiny', icon: 'dice', title: 'Back to the painted pot', id: `m-pot-paint-${i}` }) : null,
+      h('select', { id: `m-pot-role-${i}`, class: 'pot-role', 'aria-label': `${it.name}: what it does`, onchange: (e) => {
+        it.role = e.target.value;
+        changed('timeline');
+        renderPanel();
+        renderInspector();
+      } }, POT_ROLES.map((r) => h('option', { value: r.id, selected: (it.role || 'both') === r.id }, r.label)))
     )
+  );
+}
+
+// By symbol: which pot each symbol goes to. Auto follows the pots' art
+// (gems to the pot of gems, fruit to the pot of fruits, the rest to gold).
+function ownerTable(cfg) {
+  const P = state.project;
+  const T = P.pots;
+  const lay = symbolLayout(P);
+  const rows = P.symbols.map((s, i) => [s.id, s.name, i, s.role]).filter(([, , , role]) => role === 'normal' || role === 'wild' || role === 'multiplier');
+  if (lay.virtualOrb) rows.push(['orb', 'Multiplier (built-in)', lay.orbSym]);
+  rows.push(['cash', 'Cash', lay.coinBase]);
+  const auto = { ...cfg, owners: {} };
+  return h(
+    'div',
+    { class: 'field', id: 'm-pot-owners' },
+    h('span', { class: 'label' }, 'Each symbol\'s pot'),
+    h(
+      'div',
+      { class: 'owner-grid' },
+      rows.map(([key, name, sym]) => {
+        const a = ownerOf(P, auto, key);
+        const cur = T.owners?.[key];
+        const thumb = h('canvas', { class: 'owner-thumb', width: 56, height: 56 });
+        const img = state.images?.symbols?.[sym];
+        if (img) {
+          const k = Math.min(56 / (img.naturalWidth || img.width), 56 / (img.naturalHeight || img.height));
+          const w = (img.naturalWidth || img.width) * k;
+          const hh = (img.naturalHeight || img.height) * k;
+          thumb.getContext('2d').drawImage(img, (56 - w) / 2, (56 - hh) / 2, w, hh);
+        }
+        const sel = h(
+          'select',
+          { id: `m-pot-owner-${key}`, 'aria-label': `${name}: its pot`, onchange: (e) => {
+            const owners = { ...(T.owners || {}) };
+            if (e.target.value === '') delete owners[key];
+            else owners[key] = Number(e.target.value);
+            T.owners = owners;
+            changed('timeline');
+          } },
+          [h('option', { value: '', selected: cur == null }, `Auto: ${a >= 0 ? cfg.items[a].name : 'nearest pot'}`), ...cfg.items.map((it, p) => h('option', { value: p, selected: cur === p }, it.name)), h('option', { value: -1, selected: cur === -1 }, 'Nearest pot')]
+        );
+        return h('div', { class: 'owner-row' }, thumb, h('span', { class: 'owner-name' }, name), sel);
+      })
+    ),
+    h('p', { class: 'hint' }, 'A winner beams up to its symbol\'s pot; a booster comes from the pot of the symbol it makes. When that pot does not collect (or upgrade), the nearest one that does takes it.')
   );
 }
 
@@ -4168,8 +4265,10 @@ function winSymbolsSection() {
     );
   } else if (W.style === 'collect') {
     parts.push(
-      potsConfig(P).on
-        ? h('p', { class: 'hint' }, 'The beams\' curve, thickness and timing are in Machine → Pots above the machine.')
+      potsCollect(potsConfig(P))
+        ? h('p', { class: 'hint' }, 'Which pot each winner goes to, and the beams\' curve, thickness and timing, are in Machine → Pots above the machine.')
+        : potsConfig(P).on
+        ? h('p', { class: 'hint' }, 'No pot collects, so winners pop in place. Set a pot to Collects or Both in Machine → Pots above the machine.')
         : h('div', { class: 'field' }, h('p', { class: 'hint' }, 'The pots are off, so winners pop in place.'), button('Turn on the pots', () => turnOnPots(), { class: 'btn small', icon: 'plus', id: 'wf-pots-on' }))
     );
   } else if (W.style === 'merge') {
@@ -4791,12 +4890,16 @@ async function startAE() {
   if (state.busy || !state.scene) return;
   try {
     setBusy('ae', 0, 'Building the After Effects package…');
-    const { blob, filename, formats } = await buildAEPackage(state.scene, state.images, (p) => setBusy('ae', p, `Building the After Effects package… ${Math.round(p * 100)}%`));
+    abortCtl = new AbortController();
+    const { blob, filename, formats } = await buildAEPackage(state.scene, state.images, (p) => setBusy('ae', p, `Building the After Effects package… ${Math.round(p * 100)}%`), abortCtl.signal);
+    abortCtl = null;
     setBusy(null);
     if (await saveFile(filename, blob)) toast(`The package holds ${formats} format${formats === 1 ? '' : 's'}. Run the .jsx from File → Scripts → Run Script File.`, 'info', 6000);
   } catch (e) {
-    console.error(e);
+    abortCtl = null;
     setBusy(null);
+    if (e.name === 'AbortError') return toast('After Effects package cancelled.', 'info', 3000);
+    console.error(e);
     toast(`Could not build the package: ${e.message}`, 'error', 7000);
   }
 }
@@ -4899,6 +5002,7 @@ export async function start() {
   await rebuild('all');
   renderPanel();
   recordNow();
+  if (savedBroken) toast('Your last project could not be opened, so the demo is loaded. The old data is kept aside in this browser.', 'warn', 8000);
   // The Asset Bank reopens where it was left.
   if (ui.bank.open) {
     const wasMin = ui.bank.min;

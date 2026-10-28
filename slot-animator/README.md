@@ -65,8 +65,13 @@ the result as an editable **After Effects project**.
     uploaded art and a colour for its beams, glow and nameplate. Beams are
     saber beams: a simple arc by default or an S-curve, with bend,
     thickness, travel time and the time between beams. Each cell goes to
-    the nearest pot (the pot above its reels) unless the pots take turns
-    or one pot does it all (per project, with a per-round override).
+    the nearest pot (the pot above its reels), or by symbol (each symbol
+    has its pot: by default gems to the pot of gems, fruit to the pot of
+    fruits, the rest to the pot of gold; a table reassigns them), or the
+    pots take turns, or one pot does it all (per project, with a per-round
+    override). Each pot collects wins, upgrades cells, or both; a pot that
+    does not do something passes it to the nearest one that does. The
+    section also holds the switch for winners beaming up into the pots.
   - Boosters (round inspector, with the pots on): after the spin lands
     the pots charge up and fire beams at cells one by one, sweeping across
     the machine; each cell lands as a low symbol and, as its beam hits,

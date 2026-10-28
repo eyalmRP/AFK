@@ -723,16 +723,18 @@ export function potsProject() {
   p.name = 'Pots of Plenty';
   p.seed = 341;
   Object.assign(p.machine, { theme: 'royal', title: 'POTS OF PLENTY' });
-  p.pots.enabled = true;
+  // Each winner beams to its symbol's pot: cherries to the fruits, diamonds
+  // to the gems, sevens and wilds to the gold.
+  Object.assign(p.pots, { enabled: true, aim: 'type' });
   p.winfx.style = 'collect';
   p.effects.landShake = true;
   p.spin.scatterLit = true;
   p.rounds = [
     newRound('none', { seed: 351 }),
-    newRound('small', { seed: 352, lines: [0], count: 3 }),
+    newRound('small', { seed: 352, lines: [0], count: 3, symbol: 's0' }),
     newRound('none', { seed: 353, boosts: [{ kind: 'upgrade' }, { kind: 'wild' }] }),
-    newRound('medium', { seed: 354, lines: [1, 2], count: 4, boosts: [{ kind: 'wild' }, { kind: 'upgrade' }] }),
-    newRound('big', { seed: 355, lines: [0, 3], count: 5, tier: 1, boosts: [{ kind: 'upgrade' }, { kind: 'mult', value: 3 }, { kind: 'wild' }] }),
+    newRound('medium', { seed: 354, lines: [1, 2], count: 4, symbol: 's5', boosts: [{ kind: 'wild' }, { kind: 'upgrade' }] }),
+    newRound('big', { seed: 355, lines: [0, 3], count: 5, tier: 1, symbol: 's7', boosts: [{ kind: 'upgrade' }, { kind: 'mult', value: 3 }, { kind: 'wild' }] }),
   ];
   return p;
 }
@@ -848,7 +850,7 @@ export const PRESETS = [
   { id: 'freespins', group: 'Features', label: 'Free spins with sticky wilds', desc: 'Scatters trigger, wilds stick while their reels spin on, a retrigger adds spins, the total counts up.', make: freeSpinsProject },
   { id: 'cash', group: 'Features', label: 'Cash collector', desc: 'Cash coins land with values; in free spins a collector takes them all, and a retrigger adds spins.', make: cashCollectorProject },
   { id: 'mystery', group: 'Features', label: 'Mystery and walking wilds', desc: 'Mystery blocks reveal wins, wilds carry multipliers, and in free spins wilds walk off reel by reel.', make: mysteryWalkProject },
-  { id: 'pots', group: 'Features', label: 'Pots and beams', desc: 'Pots of gold, gems and fruits fire beams that upgrade cells into a win; winners beam back up into them.', make: potsProject },
+  { id: 'pots', group: 'Features', label: 'Pots and beams', desc: 'Pots of gold, gems and fruits fire beams that upgrade cells into a win; winners beam up to their own pot: cherries to the fruits, diamonds to the gems, sevens to the gold.', make: potsProject },
   { id: 'tease', group: 'Features', label: 'Near misses and teases', desc: 'Reels tease with the camera pushing in, then a big win.', make: teaseProject },
   { id: 'ladder', group: 'Features', label: 'Big win ladder', desc: 'Small, medium, then every big win title; the fireworks run to the end.', make: ladderProject },
   { id: 'slot-hs', group: 'Hold & Spin', label: 'Slot into Hold & Spin', desc: 'Coins land on the reels and carry onto the board.', make: slotHoldSpinProject },

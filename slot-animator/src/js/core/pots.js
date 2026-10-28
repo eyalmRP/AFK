@@ -27,9 +27,17 @@ export const BEAM_CURVES = [
   { id: 's', label: 'S-curve' },
 ];
 
+// What a pot does: catch winners' beams, fire boosters, or both.
+export const POT_ROLES = [
+  { id: 'both', label: 'Collects and upgrades', short: 'Both' },
+  { id: 'collect', label: 'Collects wins', short: 'Collects' },
+  { id: 'upgrade', label: 'Upgrades cells', short: 'Upgrades' },
+];
+
 // Which pot fires at (or catches from) a cell.
 export const POT_AIMS = [
   { id: 'nearest', label: 'Nearest pot' },
+  { id: 'type', label: 'By symbol' },
   { id: 'turns', label: 'Pots take turns' },
   { id: '0', label: 'First pot only' },
   { id: '1', label: 'Second pot only' },
@@ -49,7 +57,10 @@ export function defaultPots() {
     overlap: 0.35,
     plates: true,
     aim: 'nearest',
-    items: POT_ARTS.map((a) => ({ art: a.id, name: a.label, color: a.color, src: null })),
+    items: POT_ARTS.map((a) => ({ art: a.id, name: a.label, color: a.color, src: null, role: 'both' })),
+    // By symbol: symbol id (or orb, mystery, collector, cash) -> pot index,
+    // -1 for none. Symbols not listed go to the pot of their family.
+    owners: {},
     beam: { curve: 'arc', bend: 0.5, width: 1, travel: 0.32, stagger: 0.2 },
   };
 }
@@ -62,7 +73,11 @@ const num = (v, d) => (v == null || v === '' || Number.isNaN(Number(v)) ? d : Nu
 export function potsConfig(project) {
   const d = defaultPots();
   const p = project.pots || {};
-  const items = d.items.map((it, i) => ({ ...it, ...((p.items || [])[i] || {}) }));
+  const items = d.items.map((it, i) => {
+    const o = { ...it, ...((p.items || [])[i] || {}) };
+    if (!POT_ROLES.some((r) => r.id === o.role)) o.role = 'both';
+    return o;
+  });
   const beam = { ...d.beam, ...(p.beam || {}) };
   const count = clamp(Math.round(num(p.count, d.count)), 1, 3);
   return {
@@ -75,6 +90,7 @@ export function potsConfig(project) {
     plates: p.plates !== false,
     aim: POT_AIMS.some((a) => a.id === String(p.aim)) ? String(p.aim) : 'nearest',
     items: items.slice(0, count),
+    owners: { ...(p.owners || {}) },
     beam: {
       curve: BEAM_CURVES.some((c) => c.id === beam.curve) ? beam.curve : 'arc',
       bend: clamp(num(beam.bend, 0.5), 0, 1.5),
@@ -93,6 +109,65 @@ export function potFor(aim, n, c, reels, i) {
   if (aim === 'turns') return i % n;
   if (aim === '0' || aim === '1' || aim === '2') return Math.min(n - 1, Number(aim));
   return Math.min(n - 1, Math.floor(((c + 0.5) / reels) * n));
+}
+
+// Whether any pot catches winners, or fires boosters.
+export const potsCollect = (cfg) => cfg.on && cfg.items.some((it) => it.role !== 'upgrade');
+export const potsUpgrade = (cfg) => cfg.on && cfg.items.some((it) => it.role !== 'collect');
+
+// By symbol: the family each built-in symbol belongs to. A symbol goes to
+// the pot whose art is its family unless it is given another pot.
+const FAMILY = {
+  gold: ['seven', 'bar', 'bell', 'crown', 'wild', 'orb', 'scatter', 'mystery', 'collector', 'cash'],
+  gems: ['diamond', 'emerald', 'ruby', 'candyBlue', 'candyGreen', 'candyPurple', 'candyHeart', 'lollipop'],
+  fruit: ['cherry', 'banana', 'grapes', 'watermelon', 'apple'],
+};
+
+// The owner key of symbol index `sym`: a project symbol's id, or the
+// built-in multiplier, mystery block, collector or cash coin.
+export function symbolKey(project, lay, sym) {
+  if (sym == null || sym < 0) return null;
+  if (sym < project.symbols.length) return project.symbols[sym].id;
+  if (sym === lay.orbSym) return 'orb';
+  if (sym === lay.mysterySym) return 'mystery';
+  if (sym === lay.collectorSym) return 'collector';
+  if (sym >= lay.coinBase && sym < lay.coinBase + lay.coinCount) return 'cash';
+  return null;
+}
+
+// The pot a symbol belongs to by default: the pot with its family's art.
+export function familyPot(cfg, art) {
+  const fam = Object.keys(FAMILY).find((f) => FAMILY[f].includes(art));
+  return fam ? cfg.items.findIndex((it) => it.art === fam) : -1;
+}
+
+// The pot a symbol key belongs to (-1: none).
+export function ownerOf(project, cfg, key) {
+  if (key == null) return -1;
+  const set = cfg.owners[key];
+  if (set != null && set !== '' && !Number.isNaN(Number(set))) return Number(set) < cfg.count ? Number(set) : -1;
+  const s = project.symbols.find((x) => x.id === key);
+  return familyPot(cfg, s ? s.builtin || (s.role === 'wild' ? 'wild' : null) : key);
+}
+
+// Which pot serves a cell for `need` ('collect' or 'upgrade'): only pots
+// that do that; by symbol the owner of `sym`'s key, else the nearest such
+// pot; or in turns, or one pot. -1 when no pot does it.
+export function pickPot(cfg, need, aim, c, reels, i, owner = -1) {
+  const can = cfg.items.map((it) => it.role === 'both' || it.role === need);
+  const ok = can.map((v, p) => (v ? p : -1)).filter((p) => p >= 0);
+  if (!ok.length) return -1;
+  const near = () => {
+    const z = potFor('nearest', cfg.count, c, reels, i);
+    return ok.reduce((b, p) => (Math.abs(p - z) < Math.abs(b - z) ? p : b), ok[0]);
+  };
+  if (aim === 'type') return owner >= 0 && can[owner] ? owner : near();
+  if (aim === 'turns') return ok[i % ok.length];
+  if (aim === '0' || aim === '1' || aim === '2') {
+    const p = Math.min(cfg.count - 1, Number(aim));
+    return can[p] ? p : near();
+  }
+  return near();
 }
 
 // Pot art box, in units of the pot image's size S (centred at 0,0): the

@@ -794,6 +794,37 @@ body.dragging * {
   min-width: 0;
 }
 
+.pot-fields {
+  flex-wrap: wrap;
+}
+
+.pot-fields .pot-role {
+  flex: 1 1 100%;
+}
+
+.owner-grid {
+  display: grid;
+  gap: 4px;
+}
+
+.owner-row {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) minmax(0, 1.3fr);
+  align-items: center;
+  gap: 8px;
+}
+
+.owner-thumb {
+  width: 28px;
+  height: 28px;
+}
+
+.owner-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .pot-fields input[type='color'] {
   width: 30px;
   height: 26px;

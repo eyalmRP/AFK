@@ -18,7 +18,7 @@ import { scheduleParticles } from './particles.js';
 import { winFxConfig, winStyleOf, scheduleWinFx } from './winfx.js';
 import { scheduleCamera } from './camera.js';
 import { wheelConfig, wheelLandings, segmentKind, SLIP } from './wheel.js';
-import { potsConfig, potFor } from './pots.js';
+import { potsConfig, pickPot, ownerOf, symbolKey } from './pots.js';
 
 export const STRIP_PAD = 4;
 
@@ -192,6 +192,8 @@ export function buildTimeline(project) {
   const potCharges = [];
   const potShow = [];
   const potValueKeys = Array.from({ length: potCfg.count }, () => [key(0, 0, { hold: true })]);
+  // By symbol: the pot a symbol belongs to.
+  const potOf = (sym) => ownerOf(project, potCfg, symbolKey(project, ctx.lay, sym));
   const rounds = [];
   let prevGrid = initialGrid;
   let prevMult = initialGrid.map((col) => col.map(() => null));
@@ -612,7 +614,7 @@ export function buildTimeline(project) {
       const fireAt = start + BOOST.charge;
       const items = win.boosts.map((b, j) => {
         const fire = fireAt + j * Math.max(0.12, potCfg.beam.stagger);
-        return { ...b, pot: potFor(aim, potCfg.count, b.c, reels, j), fire, hit: fire + potCfg.beam.travel };
+        return { ...b, pot: pickPot(potCfg, 'upgrade', aim, b.c, reels, j, potOf(b.to)), fire, hit: fire + potCfg.beam.travel };
       });
       boost = { start, chargeEnd: fireAt, items, end: items[items.length - 1].hit + BOOST.after };
     }
@@ -798,7 +800,7 @@ export function buildTimeline(project) {
         // nameplate and the win meter count the winner's share in.
         const aim = round.potAim && round.potAim !== 'auto' ? String(round.potAim) : potCfg.aim;
         const n = wfx.arrive.length;
-        wfx.pots = step.cells.map(([c], j) => potFor(aim, potCfg.count, c, reels, j));
+        wfx.pots = step.cells.map(([c], j) => pickPot(potCfg, 'collect', aim, c, reels, j, potOf(cellSyms[j])));
         pres.beams = (pres.beams || []).concat(step.cells.map(([c, r], j) => ({ pot: wfx.pots[j], c, r, up: true, fire: wfx.launch[j], travel: wfx.travel })));
         // Catches too close together count up in one sweep instead.
         const gap = n > 1 ? wfx.arrive[1] - wfx.arrive[0] : 1;

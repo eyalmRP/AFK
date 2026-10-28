@@ -314,3 +314,49 @@ test('the Pots and beams preset uses both features', () => {
   assert.ok(tl.rounds.some((R) => R.pres.boost && R.pres.steps?.length), 'boosters that make a win');
   assert.ok(tl.rounds.some((R) => R.pres.steps?.[0]?.fx?.style === 'collect'), 'winners beam into the pots');
 });
+
+test('pot roles: a pot that only collects never fires; one that only upgrades never catches', () => {
+  const p = withPots(defaultProject());
+  p.winfx.style = 'collect';
+  p.pots.items = [{ role: 'collect' }, { role: 'upgrade' }, { role: 'both' }];
+  p.rounds = [newRound('big', { seed: 55, lines: [0, 3], count: 5, boosts: [{ kind: 'wild' }, { kind: 'upgrade' }, { kind: 'upgrade' }] })];
+  const tl = buildTimeline(p);
+  const R = tl.rounds[0];
+  assert.ok(R.pres.boost.items.every((it) => it.pot !== 0), 'the collecting pot does not fire');
+  assert.ok(R.pres.steps.every((st) => st.fx.pots.every((pot) => pot !== 1)), 'the upgrading pot does not catch');
+  for (const h of tl.pots.hits) assert.ok(h[2] ? h[1] !== 0 : h[1] !== 1);
+  // No pot collects: winners pop. No pot upgrades: no boosters.
+  p.pots.items = [{ role: 'upgrade' }, { role: 'upgrade' }, { role: 'upgrade' }];
+  assert.equal(buildTimeline(p).rounds[0].pres.steps[0].fx, null);
+  p.pots.items = [{ role: 'collect' }, { role: 'collect' }, { role: 'collect' }];
+  assert.equal(buildTimeline(p).rounds[0].pres.boost, undefined);
+});
+
+test('by symbol: each winner beams to its symbol\'s pot and each booster comes from the pot of what it makes', () => {
+  const p = withPots(defaultProject(), { aim: 'type' });
+  p.winfx.style = 'collect';
+  const id = (b) => p.symbols.find((s) => s.builtin === b).id;
+  p.rounds = [
+    newRound('small', { seed: 12, lines: [0], count: 3, symbol: id('cherry') }),
+    newRound('medium', { seed: 13, lines: [1], count: 4, symbol: id('diamond'), boosts: [{ kind: 'upgrade' }, { kind: 'wild' }, { kind: 'cash', value: 5 }] }),
+    newRound('small', { seed: 14, lines: [2], count: 3, symbol: id('seven') }),
+  ];
+  const tl = buildTimeline(p);
+  const wild = p.symbols.findIndex((s) => s.role === 'wild');
+  const potOfSym = (s) => (s === wild ? 0 : p.symbols[s].builtin === 'cherry' ? 2 : p.symbols[s].builtin === 'diamond' ? 1 : 0);
+  for (const R of tl.rounds) for (const st of R.pres.steps) st.fx.pots.forEach((pot, j) => assert.equal(pot, potOfSym(st.cellSyms[j]), `${R.outcome} winner ${j}`));
+  const items = tl.rounds[1].pres.boost.items;
+  assert.equal(items.find((it) => it.kind === 'upgrade').pot, 1, 'upgrading to a diamond: the pot of gems');
+  assert.equal(items.find((it) => it.kind === 'wild').pot, 0, 'a wild: the pot of gold');
+  assert.equal(items.find((it) => it.kind === 'cash').pot, 0, 'cash: the pot of gold');
+  // Reassign cherries to the gems pot; an owner that does not collect hands over to the nearest pot that does.
+  p.pots.owners = { [id('cherry')]: 1 };
+  assert.ok(buildTimeline(p).rounds[0].pres.steps[0].fx.pots.every((pot) => pot === 1));
+  p.pots.items = [{}, { role: 'upgrade' }, {}];
+  const R0 = buildTimeline(p).rounds[0];
+  // The gems pot's reel zone goes to the nearest collecting pot (a tie picks the first).
+  R0.pres.steps[0].fx.pots.forEach((pot, j) => {
+    const zone = potFor('nearest', 3, R0.pres.steps[0].cells[j][0], 5, j);
+    assert.equal(pot, zone === 1 ? 0 : zone);
+  });
+});

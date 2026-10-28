@@ -1,4 +1,4 @@
-import { potsConfig } from './pots.js';
+import { potsConfig, potsCollect } from './pots.js';
 
 // Winning symbols: how the winners of a win step behave once they light up.
 //   pop     - they pop and pulse in their cells (the classic look),
@@ -65,12 +65,12 @@ export function winFxConfig(project) {
 }
 
 // The style a round uses: its own pick, or the project's.
-// Beaming to the pots needs the pots; without them winners pop.
+// Beaming to the pots needs a pot that collects; without one winners pop.
 export function winStyleOf(project, round) {
   const own = round && round.winStyle;
   let s = own && own !== 'auto' && WIN_STYLES.some((x) => x.id === own) ? own : winFxConfig(project).style;
   if (!WIN_STYLES.some((x) => x.id === s)) s = 'pop';
-  return s === 'collect' && !potsConfig(project).on ? 'pop' : s;
+  return s === 'collect' && !potsCollect(potsConfig(project)) ? 'pop' : s;
 }
 
 const POP_HOLD = 0.32;

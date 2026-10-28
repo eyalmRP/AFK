@@ -81,8 +81,12 @@ timing lives in the round comps, and a few controls sit on SLOT CONTROL.
     Vignette.
   - Effects/: FX Shockwave (a ring that grows and fades in 0.7 s), FX Light
     Rays, FX Small Rays, FX Cell Frame (win highlight), FX Anticipation,
-    FX Tease Cell, FX Sticky Frame, FX Coin Lock, FX Near Miss, FX Wild
-    Beam, FX Collected.
+    FX Tease Cell, FX Sticky Frame, FX Coin Lock, FX Special Coin Lock,
+    FX Near Miss, FX Wild Beam, FX Collected, FX Mystery Glow, FX
+    Collector Glow, FX Pot Glow, FX Boost Target, FX Boost Flash, FX Beam
+    Head and FX Cell Shade.
+  - Pots/: "Pot 1 <name>" ... the art of each pot above the machine.
+    Replace it with your own and every use follows.
   - Particles/: "Particle <name>" for each particle the win explosions
     throw (gold coin, stars, confetti, your own art...). A set of variants
     holds one per frame and each particle picks one; an animated particle
@@ -116,6 +120,18 @@ timing lives in the round comps, and a few controls sit on SLOT CONTROL.
   placeholders in time: paylines, win comps on the winning cells, cell
   frames, shockwaves, expanding wilds, multipliers, titles, the wheel, coin
   landings and the collect. Move a layer to retime an effect.
+  Mystery blocks turn over as "Mystery Block" then "Mystery Reveal"
+  layers; the collector takes each cash value as a flying text layer.
+  Boosters: "Boost Target" marks a cell in its pot's colour, "Boost From"
+  trembles until the beam hits, the new symbol pops and "Boost Flash"
+  bursts. Beams are "Beam Down n" (a pot firing) and "Beam Up n" (a
+  winner beaming to its pot) shape layers: a Bezier path drawn on by Trim
+  Paths, soft strokes in the pot's colour round a white core, with a
+  "Beam Head n" glow riding on the head. Edit the path to reshape a beam.
+  A winner that beams to its pot darkens under a "Drained n" shade.
+  While a cell is held (a sticky or walking wild, a mystery block turning,
+  a booster landing) a "Sticky n" or "Reveal n" mask cuts it out of its
+  reel.
   Winning symbols that jump into the score are "Jump <symbol>" layers and
   ones that merge are "Pull <symbol>" layers plus a "Merged <symbol>": their
   position, scale and opacity expressions hold the flight from Reel Studio
@@ -134,9 +150,15 @@ timing lives in the round comps, and a few controls sit on SLOT CONTROL.
   column turns as the one below it wraps, like the Odometer plugin, so no
   plugin is needed.
 - Sound/SFX: ${sfxClips ? `every sound cue on its own audio layer at its time (${sfxClips} distinct clips in assets/sfx), named after the cue and its round and coloured by group: Reels blue, Wins green, Coins yellow, Big Win red, UI purple. The SFX MIX null holds the levels in dB: "Master" and one slider per group; every layer reads its two sliders. Mute, move or swap any cue layer.${headroom < 0 ? ` Master includes ${headroom} dB of headroom so the loudest moment stays below 0 dB (After Effects has no compressor).` : ''}` : 'sound was switched off in Reel Studio, so there are no sound cues.'}
-- Main comp: the machine, reels, sticky wilds, coin lock frames, logo, free
-  spins ribbon, HUD texts, the win meter, the round comps, the flash and
-  the SFX comp, with a marker where each round starts. SCREEN SHAKE is a
+- Main comp: the machine, reels, sticky wilds and walking wilds (each step
+  hops in from the reel it left), the tease ("Tease Dim Rn" over the
+  other reels and a lit "Scatter Lands" copy of every scatter that
+  lands), coin lock frames, logo, free spins ribbon, HUD texts, the win
+  meter, the round comps, the flash and the SFX comp, with a marker where
+  each round starts. With pots above the machine: each "Pot n" stands
+  behind the frame with a "Charge Light" copy, squashing as it catches
+  and kicking as it fires; over the frame its "Glow" and its nameplate
+  ("Pot n Plate" and a counter reading the "Pot n" slider). SCREEN SHAKE is a
   parent null whose position expression holds the shake events. Ambient
   particles ("Ambient <template>") sit right above the background, and
   particles set to run to the end ("Rxx <template>") above the round
@@ -144,7 +166,8 @@ timing lives in the round comps, and a few controls sit on SLOT CONTROL.
   and the background: its position and scale expressions push in on the
   teased reel and ease back out.
 - SLOT CONTROL (main comp):
-  - "Meter", "FS Total" (and "Collect" with Hold & Spin) drive the counters.
+  - "Meter", "FS Total" (and "Collect" with Hold & Spin, "Pot 1" to "Pot 3"
+    with pots) drive the counters.
   - "Shake %", "Flash %", "Dim %", "Particles %" (thins every explosion
     out), "Spin Blur %", "Win Pop %" and "Zoom %" (the anticipation
     zoom) scale those effects; 100 is what Reel Studio showed.
@@ -170,7 +193,7 @@ function usedFonts(project) {
   return fams.map((f) => `${f} (PostScript "${fontPostScript(project, f)}"${(project.fonts || []).some((u) => u.family === f) ? ', in fonts/' : ''})`).join(' and ');
 }
 
-export async function buildAEPackage(scene, images, onProgress) {
+export async function buildAEPackage(scene, images, onProgress, signal = null) {
   const JSZip = window.JSZip;
   if (!JSZip) throw new Error('The zip library did not load. Check your connection and reload the page.');
   const { project, tl } = scene;
@@ -182,7 +205,9 @@ export async function buildAEPackage(scene, images, onProgress) {
   const steps = formats.length + 2;
   let step = 0;
   const tick = (k = 1) => onProgress?.(Math.min(0.9, ((step += k) / steps) * 0.9));
+  // Cancel stops the build at the next file.
   const png = async (path, c) => {
+    if (signal?.aborted) throw new DOMException('Cancelled', 'AbortError');
     if (c) dir.file(path, await toPNG(c));
   };
 
@@ -305,6 +330,7 @@ export async function buildAEPackage(scene, images, onProgress) {
     README({ name, file, formats: formats.map(([w, h]) => `${w}x${h}`), sfxClips, headroom: sfxHeadroom, transparent: !!project.output?.transparent, font: usedFonts(project) })
   );
   dir.file(`${base}.reelstudio.json`, JSON.stringify(project, null, 2));
+  if (signal?.aborted) throw new DOMException('Cancelled', 'AbortError');
   const blob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE', compressionOptions: { level: 6 } }, (m) => onProgress?.(0.9 + (m.percent / 100) * 0.1));
   return { blob, filename: `${base}_AfterEffects.zip`, formats: formats.length };
 }

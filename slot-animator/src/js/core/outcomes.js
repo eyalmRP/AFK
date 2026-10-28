@@ -9,7 +9,7 @@ import { wheelLandings, segmentKind } from './wheel.js';
 import { LINE_WINS, SCATTER_WINS } from './defaults.js';
 import { keyOf, cloneGrid, lineRuns, waysWins, anywhereWins, clusterWins, componentAt, collapse, countSymbols } from './grid.js';
 import { symbolLayout, holdSpinConfig, pickCoinValue, coinTypeIndex, isCoinSym } from './coins.js';
-import { potsConfig, BOOST_KINDS } from './pots.js';
+import { potsConfig, potsUpgrade, BOOST_KINDS } from './pots.js';
 
 const SPECIAL_ROLES = ['wild', 'scatter', 'bonus', 'multiplier', 'mystery', 'collector'];
 
@@ -264,7 +264,7 @@ export function resolveRound(ctx, project, round, rng, carry = {}) {
   const multValues = (round.multipliers || []).map(Number).filter((v) => v > 0);
   const mysteryN = Math.max(0, Math.round(Number(round.mystery)) || 0);
   // Boosters need the pots above the machine to fire them.
-  const boostList = potsConfig(project).on ? (round.boosts || []).map((b) => (typeof b === 'string' ? { kind: b } : b)).filter((b) => b && BOOST_KINDS.some((k) => k.id === b.kind)).slice(0, 12) : [];
+  const boostList = potsUpgrade(potsConfig(project)) ? (round.boosts || []).map((b) => (typeof b === 'string' ? { kind: b } : b)).filter((b) => b && BOOST_KINDS.some((k) => k.id === b.kind)).slice(0, 12) : [];
   const boostKeys = new Set();
   const boostMults = [];
 

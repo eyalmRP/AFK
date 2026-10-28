@@ -35,7 +35,16 @@ export function computeLayout(project) {
   const frameW = winW + 2 * pad;
   const frameH = winH + 2 * pad;
   const frameX = Math.round((W - frameW) / 2);
-  const frameY = Math.round(topZone + (availH - frameH) / 2);
+  let frameY = Math.round(topZone + (availH - frameH) / 2);
+  // With pots, a machine that does not fill the height (portrait, square)
+  // rises so the pots, the ribbon above them and the machine sit centred
+  // together instead of leaving the space above the pots empty.
+  if (pots.on) {
+    const first = placePots(pots, W, H, topZone, { x: frameX, y: frameY, w: frameW, h: frameH }, Math.round(cellW * padK));
+    const top = Math.min(...first.map((pt) => pt.top)) - H * 0.07;
+    const below = H - (frameY + frameH + bottomZone);
+    if (top > below) frameY = Math.round(frameY - (top - below) / 2);
+  }
   const winX = frameX + pad;
   const winTop = frameY + pad;
   const reelX = Array.from({ length: reels }, (_, c) => winX + c * (cellW + gap));
