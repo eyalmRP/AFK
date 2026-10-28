@@ -21,12 +21,14 @@ import { lineColor } from './paylines.js';
 import { OUTCOME_BY_ID } from './defaults.js';
 import { holdSpinConfig, isCoinSym, formatPrize, COIN_GLOW } from './coins.js';
 import { sfxCues, SFX_GROUPS, toDb } from './sfx.js';
+import { particleAssetInfo, spawnParticles, TEMPLATE_BY_ID } from './particles.js';
 
 export const AE_ASSETS = {
   shared: {
     symbol: (i) => `assets/symbols/symbol_${String(i + 1).padStart(2, '0')}.png`,
     winFrame: (i, k) => `assets/symbols/win_${String(i + 1).padStart(2, '0')}_${String(k + 1).padStart(3, '0')}.png`,
     sfx: (type, n) => `assets/sfx/${type}_${String(n).padStart(2, '0')}.wav`,
+    particle: (id, k) => `assets/particles/${String(id).replace(/[^a-z0-9_-]/gi, '_')}_${String(k + 1).padStart(2, '0')}.png`,
   },
   format: (dir) => ({
     background: `${dir}/background.png`,
@@ -37,7 +39,6 @@ export const AE_ASSETS = {
     hud: `${dir}/hud_panel.png`,
     logo: `${dir}/logo.png`,
     vignette: `${dir}/vignette.png`,
-    coin: `${dir}/coin.png`,
     rays: `${dir}/rays.png`,
     raysSmall: `${dir}/rays_small.png`,
     wheelDisc: `${dir}/wheel_disc.png`,
@@ -134,6 +135,10 @@ export function buildAEData(project, tl, L, extras = {}) {
   // on a multiplier; a coin's prize sits in its middle.
   const label = (sym, v) => (isCoinSym(lay, sym) ? [clean(formatPrize(v, cur, dec)), labelled[sym - lay.coinBase] ? -0.1 : 0, 0.7] : [`x${v}`, 0.2, 1]);
   const labelsOf = (strip, values) => [...values.entries()].map(([j, v]) => [j, ...label(strip[j], v)]);
+  // Particle art used by the emitters, in order of first use.
+  const amount = Number(project.effects.coins ?? 1);
+  const partAssets = usedParticleAssets(tl, project);
+  const particleIndex = (id) => Math.max(0, partAssets.findIndex((a) => a.id === particleAssetInfo(project, id).id));
 
   const rounds = tl.rounds.map((R) => {
     const p = R.pres;
@@ -170,7 +175,19 @@ export function buildAEData(project, tl, L, extras = {}) {
     } else {
       R.reels.forEach((ri, c) => ri.antic && out.antic.push({ x: cellX(c), y: r4(L.winTop + L.winH / 2), w: r4(L.cellW * 1.06), h: r4(L.winH * 1.02), start: r4(ri.antic.start), end: r4(ri.antic.end) }));
     }
-    if (p.coinBurst) out.coinBurst = { start: r4(p.coinBurst.start), n: p.coinBurst.count };
+    out.particles = (p.particles || []).map((em) => {
+      const info = particleAssetInfo(project, em.asset);
+      const tpl = TEMPLATE_BY_ID[em.fx];
+      return {
+        name: clean(em.moment === 'tier' ? `${em.label} ${tpl.name}` : tpl.name),
+        moment: em.moment,
+        layer: em.layer,
+        a: particleIndex(em.asset),
+        start: r4(em.start),
+        cut: r4(em.cut),
+        ps: spawnParticles(em, L, info.motion, amount).map((q) => [q.b, q.l, q.x, q.y, q.vx, q.vy, q.g, q.k, q.s, q.r0, q.rv, q.f, q.ph, q.sw, q.sf, q.v, q.fo, q.tw].map(r4)),
+      };
+    });
     if (p.expand) {
       out.expand = {
         start: r4(p.expand.start),
@@ -338,7 +355,6 @@ export function buildAEData(project, tl, L, extras = {}) {
     titlePx: extras.titlePx || Math.round(Math.min(L.W * 0.11, L.H * 0.16)),
     odo: { size: odoSize, dw: Math.round(odoSize * 0.8), sw: Math.round(odoSize * 0.38), rh: Math.round(odoSize * 1.3) },
     wheel: { cx: r4(L.W / 2), cy: r4(L.H * 0.54), R: wheelR, segDeg: r4(360 / Math.max(2, project.wheel.segments.length)), n: project.wheel.segments.length },
-    maxCoins: 60,
     transparent: project.output?.transparent ? 1 : 0,
     game: tl.game,
     hold: tl.hold.windows.length
@@ -356,6 +372,7 @@ export function buildAEData(project, tl, L, extras = {}) {
         }
       : null,
     sfx: extras.sfx ? sfxData(tl, project, extras.sfxHeadroom || 0) : null,
+    particles: { assets: partAssets.map((a) => ({ name: clean(a.name), files: a.files, count: a.count, anim: a.anim ? 1 : 0, fps: a.fps, motion: a.motion, blend: a.motion === 'glow' ? 'add' : 'normal' })) },
     assets: {
       background: A.background,
       back: A.back,
@@ -365,7 +382,6 @@ export function buildAEData(project, tl, L, extras = {}) {
       hud: L.hud ? A.hud : '',
       logo: extras.hasLogo === false ? '' : A.logo,
       vignette: A.vignette,
-      coin: A.coin,
       rays: A.rays,
       raysSmall: A.raysSmall,
       wheelDisc: A.wheelDisc,
@@ -376,6 +392,17 @@ export function buildAEData(project, tl, L, extras = {}) {
       titles: Object.fromEntries((extras.titleKeys || []).map((k) => [k, A.title(k)])),
     },
   };
+}
+
+// The particle assets the emitters use, with the files the package holds
+// for each (one PNG per variant or animation frame).
+export function usedParticleAssets(tl, project) {
+  const out = [];
+  for (const em of tl.emitters || []) {
+    const info = particleAssetInfo(project, em.asset);
+    if (!out.some((a) => a.id === info.id)) out.push({ ...info, files: Array.from({ length: info.count }, (_, k) => AE_ASSETS.shared.particle(info.id, k)) });
+  }
+  return out;
 }
 
 // The SFX comp: one layer per cue, named after the cue and its round, set
@@ -935,42 +962,109 @@ export const AE_SCRIPT = String.raw`// Slot animation rebuilt for After Effects 
   }
 
   // ---------- effects building blocks ----------
-  // Coin showers: one comp per shower ("R05 Big Win Coin Fountain"), its
-  // coins are layers of the "FX Coin" placeholder thrown by expressions.
-  // SLOT CONTROL > Coins % thins every shower out.
-  function coins(comp, o, name) {
-    var coin = imagePH("FX Coin", "Effects", DATA.assets.coin);
-    if (!coin) return null;
-    var n = Math.min(o.n, DATA.maxCoins), i;
-    var span = Math.max(0.05, o.end - o.start);
-    var dur = span + o.life + 0.2;
-    var sc = addComp(RBASE + " " + name + SUFFIX, W, H, dur, dir("showers", "Coin Showers", fRounds));
-    sc.motionBlur = true;
-    for (i = 0; i < n; i++) {
-      var L = sc.layers.add(coin);
-      L.name = "Coin " + (i + 1);
-      var pre = "seedRandom(" + (o.seed * 1000 + i) + ", true);\n" +
-        "var birth = " + span + " * ((" + i + " + random()) / " + n + ");\n" +
-        "var age = time - birth;\n";
-      if (o.mode === "rain") {
-        pre += "var x0 = random(0, thisComp.width); var y0 = -60; var vx = 0; var vy = thisComp.height * random(0.25, 0.55); var g = thisComp.height * 0.9;\n";
-      } else {
-        pre += "var vx = (random() - 0.5) * thisComp.width * " + o.spread + "; var vy = -thisComp.height * random(" + o.vy0 + ", " + (o.vy0 + o.vy1) + ");\n" +
-          "var x0 = " + o.x + " + (random() - 0.5) * " + o.w + "; var y0 = " + o.y + "; var g = thisComp.height * " + o.g + ";\n";
-      }
-      pre += "var spin = random(5, 14); var ph = random(0, 6.28); var sz = random(52, 108) * " + o.scale + "; var r0 = random(-35, 35); var rv = random(-90, 90);\n";
-      P(L, "ADBE Position").expression = pre + "age < 0 ? [-9999, -9999] : [x0 + vx * age, y0 + vy * age + 0.5 * g * age * age];";
-      P(L, "ADBE Scale").expression = pre + "var f = Math.abs(Math.cos(age * spin + ph)); [sz * Math.max(0.1, f), sz];";
-      P(L, "ADBE Rotate Z").expression = pre + "r0 + rv * age;";
-      P(L, "ADBE Opacity").expression = pre + "var life = " + o.life + "; var on = " + i + " + 0.5 < " + n + " * " + ctrl("Coins %") + " / 100;\n" +
-        "(!on || age < 0 || age > life) ? 0 : Math.min(100, (life - age) / 0.35 * 100, age / 0.06 * 100);";
-      L.motionBlur = true;
+  // ---------- win particles ----------
+  // Each particle asset is a placeholder ("Particle Confetti": one variant
+  // or animation frame per frame). Each emitter is a comp of its own in
+  // Rounds/Particles whose layers are uses of that placeholder, moved by
+  // expressions that hold the very particles the preview draws.
+  // SLOT CONTROL > Particles % thins every emitter out.
+  var fParticleArt = null;
+  function particlePH(ai) {
+    var A = DATA.particles.assets[ai], k;
+    if (!A) return null;
+    var key = "Particle " + A.name;
+    if (PH.hasOwnProperty(key)) return PH[key];
+    if (!fParticleArt) fParticleArt = folder("Particles", fShared);
+    var items = [], w = 4, h = 4;
+    for (k = 0; k < A.files.length; k++) {
+      var it = imp(A.files[k], fParticleArt);
+      if (!it) continue;
+      items.push(it);
+      w = Math.max(w, it.width);
+      h = Math.max(h, it.height);
     }
-    var SL = comp.layers.add(sc);
-    SL.name = name;
-    SL.startTime = o.start;
-    if (o.start < 0) SL.inPoint = 0;
-    return SL;
+    if (!items.length) { PH[key] = null; return null; }
+    var F = A.anim ? A.fps : FPS;
+    var c = ph(key, "Particles", w, h, Math.max(items.length / F, 1 / FPS), function (pc) {
+      for (k = 0; k < items.length; k++) {
+        var L = pc.layers.add(items[k]);
+        L.name = A.name + " " + (k + 1);
+        pos(L, [w / 2, h / 2]);
+        L.startTime = k / F;
+        L.outPoint = (k + 1) / F;
+      }
+    });
+    c.comment = PH_NOTE + (A.anim ? " One animation frame per frame." : " One variant per frame; each particle picks one.");
+    return c;
+  }
+  // Particle q: [b, l, x, y, vx, vy, g, k, s, r0, rv, f, ph, sw, sf, v, fo, tw]
+  // (core/particles.js). "a" is the particle's age in the emitter comp.
+  function particlePos(q) {
+    var e = q[7] > 0.001 ?
+      "var e = (1 - Math.exp(-" + q[7] + " * a)) / " + q[7] + ";\nvar x = " + q[2] + " + " + q[4] + " * e;\nvar y = " + q[3] + " + " + (q[6] / q[7]) + " * a + " + (q[5] - q[6] / q[7]) + " * e;\n" :
+      "var x = " + q[2] + " + " + q[4] + " * a;\nvar y = " + q[3] + " + " + q[5] + " * a + " + (0.5 * q[6]) + " * a * a;\n";
+    if (q[13]) e += "x += " + q[13] + " * Math.sin(a * " + q[14] + " + " + q[12] + ");\n";
+    return e + "(a < 0 || a > " + q[1] + ") ? [-9999, -9999] : [x, y];";
+  }
+  function particleScale(q, motion, S) {
+    var w = "var w = Math.max(0.08, Math.abs(Math.cos(a * " + q[11] + " + " + q[12] + ")));\n";
+    var e = motion === "flip" ? w + "var sx = w, sy = 1;\n" : motion === "flutter" ? w + "var sx = 1, sy = w;\n" :
+      motion === "glow" ? "var sx = 1 - 0.65 * a / " + q[1] + ", sy = sx;\n" : motion === "spin" ? "var sx = 0.4 + 0.6 * Math.min(1, Math.max(0, a) / 0.15), sy = sx;\n" : "var sx = 1, sy = 1;\n";
+    if (q[17]) e += "var tw = Math.max(0, Math.sin(Math.PI * a / " + q[1] + ")); sx *= tw; sy *= tw;\n";
+    return e + "[" + S + " * sx, " + S + " * sy];";
+  }
+  function particleOpacity(q, i, n) {
+    var al = q[17] ? "Math.max(0, Math.sin(Math.PI * a / " + q[1] + "))" : "Math.max(0, Math.min(1, a / 0.06, (" + q[1] + " - a) / " + q[16] + "))";
+    return "var on = " + i + " + 0.5 < " + n + " * " + ctrl("Particles %") + " / 100;\n(!on || a < 0 || a > " + q[1] + ") ? 0 : 100 * " + al + ";";
+  }
+  function emitter(comp, em, P0) {
+    var A = DATA.particles.assets[em.a];
+    var src = A ? particlePH(em.a) : null;
+    if (!src || !em.ps.length) return null;
+    var dur = Math.max(0.1, em.cut - em.start + 0.05), i;
+    var ec = addComp(RBASE + " " + em.name + SUFFIX, W, H, dur, dir("particles", "Particles", fRounds));
+    ec.motionBlur = A.blend !== "add";
+    var S0 = 100 / Math.max(src.width, src.height);
+    var F = A.anim ? A.fps : FPS, N = Math.max(1, A.count);
+    for (i = 0; i < em.ps.length; i++) {
+      var q = em.ps[i];
+      var pre = "var a = time - " + r4(q[0] - em.start) + ";\n";
+      var L = ec.layers.add(src);
+      L.name = em.name + " " + (i + 1);
+      L.timeRemapEnabled = true;
+      L.outPoint = dur;
+      if (A.blend === "add") L.blendingMode = BlendingMode.ADD;
+      else L.motionBlur = true;
+      P(L, "ADBE Position").expression = pre + particlePos(q);
+      P(L, "ADBE Rotate Z").expression = pre + q[9] + " + " + q[10] + " * a;";
+      P(L, "ADBE Scale").expression = pre + particleScale(q, A.motion, r4(q[8] * S0));
+      P(L, "ADBE Opacity").expression = pre + particleOpacity(q, i, em.ps.length);
+      L.property("ADBE Time Remapping").expression = A.anim ?
+        pre + "var f = (Math.floor(Math.max(0, a) * " + F + ") + " + q[15] + ") % " + N + ";\n(f + 0.5) / " + F + ";" :
+        "(" + (q[15] % N) + " + 0.5) / " + F + ";";
+    }
+    var EL = comp.layers.add(ec);
+    EL.name = em.name;
+    EL.startTime = em.start - P0;
+    if (EL.startTime < 0) EL.inPoint = 0;
+    P(EL, "ADBE Opacity").expression = "100 * Math.max(0, Math.min(1, (" + r4(em.cut - P0) + " - time) / 0.3));";
+    return EL;
+  }
+  function r4(x) { return Math.round(x * 10000) / 10000; }
+  // The round's emitters on one layer ("under" a presentation's title, or
+  // "over" everything), optionally only some moments.
+  function emitters(comp, R, layer, moments) {
+    var i, j;
+    for (i = 0; i < (R.particles || []).length; i++) {
+      var em = R.particles[i];
+      if (em.layer !== layer) continue;
+      if (moments) {
+        var ok = false;
+        for (j = 0; j < moments.length; j++) if (moments[j] === em.moment) ok = true;
+        if (!ok) continue;
+      }
+      emitter(comp, em, R.start);
+    }
   }
   // A white ring that grows and fades in 0.7 s; each use is scaled and tinted.
   var RING_R = 250;
@@ -1142,7 +1236,7 @@ export const AE_SCRIPT = String.raw`// Slot animation rebuilt for After Effects 
   // ---------- main comp ----------
   // The main comp and SLOT CONTROL come first: expressions everywhere read
   // the After Effects side controls on it.
-  var AE_CONTROLS = ["Shake %", "Flash %", "Dim %", "Coins %", "Spin Blur %", "Win Pop %"];
+  var AE_CONTROLS = ["Shake %", "Flash %", "Dim %", "Particles %", "Spin Blur %", "Win Pop %"];
   function createMain() {
     main = proj.items.addComp(mainName, W, H, 1, DUR, FPS);
     main.parentFolder = top;
@@ -1340,7 +1434,7 @@ export const AE_SCRIPT = String.raw`// Slot animation rebuilt for After Effects 
   function buildRound(R) {
     var P0 = R.start, len = Math.max(0.6, (R.fxEnd !== null && R.fxEnd !== undefined ? R.fxEnd : R.next + 0.6) - P0), i, k;
     var hs = R.holdspin && (R.holdspin.hits.length || R.holdspin.tease.length);
-    var hasFx = R.steps.length || R.overlay || R.banner || R.wheel || R.celebrate || R.nearmiss || R.expand || R.mult || R.pops.length || hs || R.collect || R.grand;
+    var hasFx = R.steps.length || R.overlay || R.banner || R.wheel || R.celebrate || R.nearmiss || R.expand || R.mult || R.pops.length || hs || R.collect || R.grand || R.particles.length;
     if (!hasFx) return null;
     RBASE = "R" + pad2(R.index + 1) + " " + R.label;
     var comp = addComp(RBASE + SUFFIX, W, H, len, fRounds);
@@ -1390,7 +1484,6 @@ export const AE_SCRIPT = String.raw`// Slot animation rebuilt for After Effects 
       var pp = R.pops[i];
       ring(comp, [pp.x, pp.y], rel(pp.t), DATA.cellW * 0.8, pp.color);
     }
-    if (R.coinBurst) coins(comp, { n: R.coinBurst.n, start: rel(R.coinBurst.start), end: rel(R.coinBurst.start) + 0.5, x: W / 2, y: winC[1], w: DATA.winW * 0.3, spread: 0.7, vy0: 0.8, vy1: 0.5, g: 2.6, life: 1.8, scale: 1, seed: 40 + R.index }, "Coin Burst");
     if (R.mult) buildMult(comp, R, rel);
     if (R.celebrate) popCells(comp, R.scatters, rel(R.celebrate.start), rel(R.celebrate.end) + 0.4, true, false);
     if (R.nearmiss) {
@@ -1408,6 +1501,7 @@ export const AE_SCRIPT = String.raw`// Slot animation rebuilt for After Effects 
     if (R.overlay) buildBigWin(comp, R, rel);
     if (R.banner) buildBanner(comp, R, rel);
     if (R.wheel) buildWheel(comp, R, rel);
+    emitters(comp, R, "over");
     var L = main.layers.add(comp);
     L.startTime = P0;
     L.name = RBASE;
@@ -1448,8 +1542,7 @@ export const AE_SCRIPT = String.raw`// Slot animation rebuilt for After Effects 
     darkLayer(comp, a, b, 72);
     rays(comp, [cx, cy], a, b, 100 * H * 1.7 / 1024, 12.6, 60);
     rays(comp, [cx, cy], a, b, 70 * H * 1.7 / 1024, -20, 35);
-    coins(comp, { n: 70 * ov.tiers.length, start: rel(ov.countStart) - 0.2, end: rel(ov.countEnd), x: cx, y: H * 1.02, w: W * 0.25, spread: 1.0, vy0: 1.15, vy1: 0.6, g: 2.6, life: 2.4, scale: 1.25, seed: 90 + R.index }, "Coin Fountain");
-    if (ov.tiers.length > 1) coins(comp, { n: 60 * (ov.tiers.length - 1), start: rel(ov.tierTimes[1]), end: rel(ov.countEnd) + 0.4, mode: "rain", life: 2.6, scale: 1.1, seed: 140 + R.index }, "Coin Rain");
+    emitters(comp, R, "under", ["tier", "total"]);
     for (i = 0; i < ov.tiers.length; i++) {
       var ta = rel(ov.tierTimes[i]);
       var tb = i + 1 < ov.tiers.length ? rel(ov.tierTimes[i + 1]) : b;
@@ -1517,7 +1610,7 @@ export const AE_SCRIPT = String.raw`// Slot animation rebuilt for After Effects 
     darkLayer(comp, a, b, 70);
     rays(comp, [cx, cy], a, b, 100 * H * 1.8 / 1024, 17, 60);
     ring(comp, [cx, cy], a, H * 0.8, [1, 0.7, 0.1]);
-    coins(comp, { n: 70, start: a + 0.1, end: rel(G.countEnd), mode: "rain", life: 2.6, scale: 1.1, seed: 520 + R.index }, "Coin Rain");
+    emitters(comp, R, "under", ["grand"]);
     var T = titleLayer(comp, "grand", [cx, cy - H * 0.06], a, b, W * 0.9);
     if (T) fadeKeys(T, a, b, 0.05, 0.5);
     winCtrl(comp, G.keys, -R.start, "GRAND CTRL");
@@ -1547,7 +1640,6 @@ export const AE_SCRIPT = String.raw`// Slot animation rebuilt for After Effects 
       var od = counters(comp, [cx, cy + H * 0.16], Math.round(DATA.titlePx * 0.6), R.amount);
       fadeKeys(od, a, b, 0.3, 0.5);
     }
-    coins(comp, { n: 80, start: a + 0.1, end: a + 0.9, x: cx, y: H * 1.02, w: W * 0.3, spread: 1.0, vy0: 1.1, vy1: 0.5, g: 2.6, life: 2.2, scale: 1, seed: 200 + R.index }, "Coin Fountain");
   }
 
   function buildWheel(comp, R, rel) {
@@ -1618,7 +1710,7 @@ export const AE_SCRIPT = String.raw`// Slot animation rebuilt for After Effects 
     var title = titleLayer(comp, "wheel", [cx, cy - Rr * 1.28], inA, rel(w.spinStart) + 1.1, W * 0.9);
     if (title) fadeKeys(title, inA, rel(w.spinStart) + 1.1, 0.3, 0.5);
     var pa = rel(w.prizeStart);
-    coins(comp, { n: 110, start: pa, end: pa + 1.2, x: cx, y: H * 1.03, w: W * 0.5, spread: 1.2, vy0: 1.1, vy1: 0.55, g: 2.6, life: 2.4, scale: 1.2, seed: 260 + R.index }, "Coin Fountain");
+    emitters(comp, R, "under", ["wheel"]);
     ring(comp, [cx, cy], pa, Rr * 1.6, DATA.accent);
     // The plaque leaves before the next spin in the wheel game.
     var pEnd = Math.min(outB, rel(w.plaqueEnd));

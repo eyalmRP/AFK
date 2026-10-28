@@ -416,7 +416,7 @@ function paintLogo(L, project, theme, img) {
   return paintTitle(text, font, px, theme.metal === 'neon' ? 'aqua' : theme.metal === 'chrome' ? 'silver' : theme.metal === 'rose' ? 'rose' : 'gold');
 }
 
-function paintCoin(size) {
+export function paintCoin(size) {
   const c = canvas(size, size);
   const g = c.getContext('2d');
   const r = size / 2;
@@ -716,7 +716,7 @@ export function buildResources(project, L, images) {
     coinLabelled: holdSpinConfig(project).coins.map((c) => !!c.label && !c.src),
     coinPalettes: holdSpinConfig(project).coins.map((c) => c.palette || 'gold'),
     titlePx,
-    coin: paintCoin(Math.round(L.cellW * 0.5)),
+    particles: images.particles || new Map(),
     glow: paintGlow(256),
     rays: paintRays(1024, 18, 'rgba(255,220,140,0.75)'),
     raysSmall: paintRays(512, 12, 'rgba(255,240,200,0.8)'),

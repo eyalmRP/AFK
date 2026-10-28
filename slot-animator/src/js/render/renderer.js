@@ -9,6 +9,7 @@ import { lineColor } from '../core/paylines.js';
 import { hash01 } from '../core/rng.js';
 import { sparkle, roundRect } from './paint.js';
 import { canvas, paintTitle } from './sprites.js';
+import { drawEmitter } from './particles.js';
 
 const clamp01 = (x) => (x < 0 ? 0 : x > 1 ? 1 : x);
 const prog = (t, a, b) => clamp01((t - a) / Math.max(1e-6, b - a));
@@ -909,45 +910,14 @@ function drawRing(ctx, x, y, a, maxR, color, width) {
   ctx.restore();
 }
 
-function drawCoins(ctx, scene, t, o) {
-  const { L, res } = scene;
-  const amount = Number(scene.project.effects.coins) || 0;
-  if (amount <= 0) return;
-  const n = Math.round(o.n * amount);
-  const size0 = L.cellW * 0.4 * (o.scale || 1);
-  ctx.save();
-  for (let i = 0; i < n; i++) {
-    const birth = o.start + (o.end - o.start) * ((i + hash01(i, o.salt)) / n);
-    const age = t - birth;
-    const life = o.life || 2.2;
-    if (age < 0 || age > life) continue;
-    let x;
-    let y;
-    if (o.mode === 'rain') {
-      x = hash01(i, o.salt + 1) * L.W;
-      y = -size0 + (L.H * 0.25 + hash01(i, o.salt + 2) * L.H * 0.3) * age + 0.5 * L.H * 0.9 * age * age;
-    } else {
-      const vx = (hash01(i, o.salt + 3) - 0.5) * L.W * (o.spread || 0.9);
-      const vy = -L.H * ((o.vy0 || 1.1) + hash01(i, o.salt + 4) * (o.vy1 || 0.7));
-      x = o.x + (hash01(i, o.salt + 5) - 0.5) * (o.w || 0) + vx * age;
-      y = o.y + vy * age + 0.5 * L.H * (o.g || 2.6) * age * age;
-    }
-    if (y > L.H + size0) continue;
-    const flip = Math.cos(age * (5 + 9 * hash01(i, o.salt + 6)) + hash01(i, o.salt + 7) * 6.28);
-    const sz = size0 * (0.65 + 0.7 * hash01(i, o.salt + 8));
-    ctx.globalAlpha = Math.min(1, (life - age) / 0.35, age / 0.06);
-    const fw = Math.max(sz * 0.1, sz * Math.abs(flip));
-    ctx.save();
-    ctx.translate(x, y);
-    ctx.rotate((hash01(i, o.salt + 9) - 0.5) * 1.2 + age * (hash01(i, o.salt + 10) - 0.5) * 3);
-    ctx.drawImage(res.coin, -fw / 2, -sz / 2, fw, sz);
-    if (Math.abs(flip) < 0.35) {
-      ctx.fillStyle = flip < 0 ? '#7a4a0a' : '#c9901f';
-      ctx.fillRect(-sz * 0.045, -sz * 0.47, sz * 0.09, sz * 0.94);
-    }
-    ctx.restore();
-  }
-  ctx.restore();
+// Win particles from the round's emitters (core/particles.js). "under"
+// ones are drawn by their presentation, behind its title and counter.
+function drawRoundParticles(ctx, scene, R, t, moments) {
+  for (const em of R.pres.particles || []) if (em.layer === 'under' && moments.includes(em.moment)) drawEmitter(ctx, scene, em, t);
+}
+
+function drawOverParticles(ctx, scene, t) {
+  for (const em of scene.tl.emitters || []) if (em.layer === 'over' && t >= em.start && t <= em.cut) drawEmitter(ctx, scene, em, t);
 }
 
 function drawSparkleField(ctx, scene, t, o) {
@@ -996,9 +966,6 @@ function drawSteps(ctx, scene, R, t) {
       const s2 = 0.4 + 0.6 * ease.outBack(clamp01((t - st.start - 0.15) / 0.45));
       drawCentered(ctx, img, cx, cy - k * L.cellH * 0.5, s2, a);
     }
-  }
-  if (p.coinBurst) {
-    drawCoins(ctx, scene, t, { start: p.coinBurst.start, end: p.coinBurst.start + 0.5, n: p.coinBurst.count, x: L.W / 2, y: L.winCY, w: L.winW * 0.3, salt: 40 + R.index, spread: 0.7, vy0: 0.8, vy1: 0.5, life: 1.8 });
   }
 }
 
@@ -1237,11 +1204,8 @@ function drawBigWin(ctx, scene, R, t) {
     drawCentered(ctx, res.rays, cx, cy, rs * 0.7, 0.35 * a * rays, -t * 0.35);
     ctx.restore();
   }
-  // Coins: a fountain for every tier, and a coin shower from mega up.
-  drawCoins(ctx, scene, t, { start: ov.countStart - 0.2, end: ov.countEnd, n: 70 * ov.tiers.length, x: cx, y: L.H * 1.02, w: L.W * 0.25, salt: 90 + R.index, spread: 1.0, vy0: 1.15, vy1: 0.6, life: 2.4, scale: 1.25 });
-  if (ov.tiers.length > 1) {
-    drawCoins(ctx, scene, t, { start: ov.tierTimes[1], end: ov.countEnd + 0.4, n: 60 * (ov.tiers.length - 1), mode: 'rain', salt: 140 + R.index, life: 2.6, scale: 1.1 });
-  }
+  // Particles: each tier's template, stacking as the count climbs.
+  drawRoundParticles(ctx, scene, R, t, ['tier', 'total']);
   ov.tierTimes.slice(1).forEach((tt) => drawRing(ctx, cx, cy, (t - tt) / 0.7, L.H * 0.75, col, L.H * 0.02));
   const title = res.titles[name];
   const at = t - tStart;
@@ -1303,7 +1267,6 @@ function drawBanner(ctx, scene, R, t) {
     drawOdometer(ctx, res, v, cx, cy + L.H * 0.16, Math.round(res.titlePx * 0.6), { currency: project.machine.currency || '', decimals: project.machine.decimals | 0, rate: evalVelocity(tl.meterKeys, t) });
     ctx.restore();
   }
-  drawCoins(ctx, scene, t, { start: b.start + 0.1, end: b.start + 0.9, n: 80, x: cx, y: L.H * 1.02, w: L.W * 0.3, salt: 200 + R.index, spread: 1.0, vy0: 1.1, vy1: 0.5, life: 2.2 });
   drawSparkleField(ctx, scene, t, { n: 22, start: b.start, x: cx, y: cy, w: L.W * 0.6, h: L.H * 0.4, size: L.cellW * 0.15, alpha: a, salt: 400 });
 }
 
@@ -1408,7 +1371,7 @@ function drawWheel(ctx, scene, R, t) {
   const titleA = a * titleIn * (1 - clamp01((t - w.spinStart - 0.6) / 0.5));
   drawCentered(ctx, res.titles.wheel, cx, cy - wh.R * 1.28 * sc, 0.5 + 0.5 * ease.outBack(tIn), titleA);
   if (t > w.prizeStart) {
-    drawCoins(ctx, scene, t, { start: w.prizeStart, end: w.prizeStart + 1.2, n: 110, x: cx, y: L.H * 1.03, w: L.W * 0.5, salt: 260 + R.index, spread: 1.2, vy0: 1.1, vy1: 0.55, life: 2.4, scale: 1.2 });
+    drawRoundParticles(ctx, scene, R, t, ['wheel']);
     drawRing(ctx, cx, cy, (t - w.prizeStart) / 0.8, wh.R * 1.6, res.theme.accent, wh.R * 0.05);
     const k = ease.outBack(clamp01((t - w.prizeStart) / 0.5)) * clamp01((w.plaqueEnd - t) / 0.35);
     const pw = wh.R * 1.5;
@@ -1637,7 +1600,7 @@ function drawGrand(ctx, scene, R, t) {
     ctx.restore();
   }
   drawRing(ctx, cx, cy, (t - g.start) / 0.8, L.H * 0.8, '#ffb21a', L.H * 0.022);
-  drawCoins(ctx, scene, t, { start: g.start + 0.1, end: g.countEnd, n: 70, mode: 'rain', salt: 520 + R.index, life: 2.6, scale: 1.1 });
+  drawRoundParticles(ctx, scene, R, t, ['grand']);
   const title = res.titles.grand;
   const s = (0.15 + 0.85 * ease.outElastic(clamp01((t - g.start) / 0.8))) * (1 + 0.03 * Math.sin(t * 5));
   const fit = title ? Math.min(1, (L.W * 0.9) / title.width) : 1;
@@ -1749,6 +1712,7 @@ export function renderFrame(ctx, scene, t, opts = {}) {
     drawBanner(ctx, scene, R, t);
     drawWheel(ctx, scene, R, t);
   }
+  drawOverParticles(ctx, scene, t);
   ctx.setTransform(base, 0, 0, base, 0, 0);
   drawFlashes(ctx, scene, t);
   ctx.drawImage(res.vignette, 0, 0);

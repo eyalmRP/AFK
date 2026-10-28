@@ -37,11 +37,13 @@ import { orderList } from '../core/order.js';
 import { FORMAT_CHOICES } from '../core/ae-export.js';
 import { loadImage, loadWinAnim, buildResources, fontStack, extraSymbolImages } from '../render/sprites.js';
 import { paintBuiltin } from '../render/paint.js';
+import { loadParticleSprites, drawParticleList } from '../render/particles.js';
+import { PARTICLE_TEMPLATES, TEMPLATE_BY_ID, BUILTIN_PARTICLES, PARTICLE_MOTIONS, PARTICLE_MOMENTS, tierParticles, spawnParticles, particleAssetInfo } from '../core/particles.js';
 import { renderFrame } from '../render/renderer.js';
 import { decodeCustomSounds, renderSoundtrack, audioBufferToWav } from '../render/audio.js';
 import { exportMP4, frameToPNG, canEncodeVideo } from '../export/video.js';
 import { buildAEPackage } from '../export/aepackage.js';
-import { h, clear, rangeField, selectField, segmented, toggleField, textField, section, button, readFileAsDataURL, pickFiles } from './dom.js';
+import { h, clear, icon, rangeField, selectField, segmented, toggleField, textField, section, button, readFileAsDataURL, pickFiles } from './dom.js';
 
 const STORE_KEY = 'reel-studio-project-v2';
 const OLD_STORE_KEY = 'reel-studio-project-v1';
@@ -89,6 +91,291 @@ const imageCache = new Map();
 const animCache = new WeakMap();
 let ctx = null;
 let downloadsP = null;
+
+// ---------- layout preferences (this browser only, not the project) ----------
+
+const UI_KEY = 'reel-studio-ui-v1';
+const PANEL_DEFAULT = { left: 330, right: 352 };
+const PANEL_MIN = { left: 260, right: 280 };
+const STAGE_MIN = 420;
+const ui = loadUI();
+
+function loadUI() {
+  const d = { ...PANEL_DEFAULT, bank: { open: false, min: false, x: null, y: null, w: 760, h: 660, filter: 'all' } };
+  try {
+    const s = JSON.parse(localStorage.getItem(UI_KEY) || 'null');
+    if (s) return { ...d, ...s, bank: { ...d.bank, ...(s.bank || {}) } };
+  } catch {
+    // private mode or blocked storage: defaults
+  }
+  return d;
+}
+
+function saveUI() {
+  try {
+    localStorage.setItem(UI_KEY, JSON.stringify(ui));
+  } catch {
+    // not kept; the layout still works
+  }
+}
+
+// Side panel widths: drag the splitters, or focus one and use the arrow
+// keys (Shift for bigger steps, Home/End for the limits). Double-click resets.
+function panelMax(side) {
+  const other = side === 'left' ? ui.right : ui.left;
+  return Math.max(PANEL_MIN[side], Math.min(760, window.innerWidth - other - STAGE_MIN - 64));
+}
+
+function applyWidths() {
+  for (const side of ['left', 'right']) ui[side] = Math.round(Math.min(panelMax(side), Math.max(PANEL_MIN[side], ui[side])));
+  el.work.style.setProperty('--left-w', `${ui.left}px`);
+  el.work.style.setProperty('--right-w', `${ui.right}px`);
+  for (const sp of el.splitters) {
+    sp.setAttribute('aria-valuenow', ui[sp.dataset.side]);
+    sp.setAttribute('aria-valuemax', panelMax(sp.dataset.side));
+  }
+}
+
+function splitter(side) {
+  const label = side === 'left' ? 'Resize the settings panel' : 'Resize the spin rounds panel';
+  const sp = h('div', { class: `splitter ${side}`, role: 'separator', tabindex: 0, 'aria-orientation': 'vertical', 'aria-label': label, 'aria-valuemin': PANEL_MIN[side], 'aria-valuenow': ui[side], title: `${label}. Drag, or double-click to reset.` });
+  sp.dataset.side = side;
+  const dir = side === 'left' ? 1 : -1;
+  const done = () => {
+    saveUI();
+    if (state.tab === 'spin') drawMotionGraph();
+  };
+  sp.addEventListener('pointerdown', (e) => {
+    if (e.button !== 0) return;
+    e.preventDefault();
+    sp.setPointerCapture(e.pointerId);
+    const x0 = e.clientX;
+    const w0 = ui[side];
+    document.body.classList.add('resizing');
+    sp.classList.add('drag');
+    const move = (ev) => {
+      ui[side] = w0 + (ev.clientX - x0) * dir;
+      applyWidths();
+    };
+    const up = () => {
+      sp.removeEventListener('pointermove', move);
+      sp.removeEventListener('pointerup', up);
+      sp.removeEventListener('pointercancel', up);
+      document.body.classList.remove('resizing');
+      sp.classList.remove('drag');
+      done();
+    };
+    sp.addEventListener('pointermove', move);
+    sp.addEventListener('pointerup', up);
+    sp.addEventListener('pointercancel', up);
+  });
+  sp.addEventListener('dblclick', () => {
+    ui[side] = PANEL_DEFAULT[side];
+    applyWidths();
+    done();
+  });
+  sp.addEventListener('keydown', (e) => {
+    const step = e.shiftKey ? 64 : 16;
+    let w = ui[side];
+    if (e.key === 'ArrowLeft') w -= step * dir;
+    else if (e.key === 'ArrowRight') w += step * dir;
+    else if (e.key === 'Home') w = PANEL_MIN[side];
+    else if (e.key === 'End') w = panelMax(side);
+    else return;
+    e.preventDefault();
+    ui[side] = w;
+    applyWidths();
+    done();
+  });
+  return sp;
+}
+
+// ---------- Asset Bank: a floating window over the editor ----------
+
+const BANK_FILTERS = [
+  ['all', 'All'],
+  ['symbols', 'Symbols'],
+  ['coins', 'Coins'],
+  ['particles', 'Particles'],
+  ['scene', 'Scene'],
+];
+const narrow = () => window.matchMedia('(max-width: 760px)').matches;
+
+function buildBank() {
+  el.bankBody = h('div', { class: 'bank-body' });
+  el.bankFilter = h('div', { class: 'bank-filter', role: 'tablist', 'aria-label': 'Asset types' });
+  el.bankMin = button('', () => setBankMin(!ui.bank.min), { class: 'icon-btn tiny', icon: 'minus', id: 'bank-min', title: 'Minimise' });
+  const head = h(
+    'header',
+    { class: 'bank-head' },
+    h('span', { class: 'bank-drag', 'aria-hidden': 'true' }, icon('grid')),
+    h('h2', { id: 'bank-title' }, 'Asset Bank'),
+    el.bankFilter,
+    h('div', { class: 'bank-tools' }, el.bankMin, button('', () => closeBank(), { class: 'icon-btn tiny', icon: 'x', id: 'bank-close', title: 'Close (Esc)' }))
+  );
+  const grip = h('div', { class: 'bank-resize', 'aria-hidden': 'true', title: 'Resize' });
+  el.bank = h('section', { class: 'bank', id: 'asset-bank', role: 'dialog', 'aria-modal': 'false', 'aria-labelledby': 'bank-title', hidden: true }, head, el.bankBody, grip);
+  // Move by the title bar, resize from the corner.
+  const drag = (e, onMove) => {
+    if (e.button !== 0 || narrow()) return;
+    e.preventDefault();
+    const t = e.currentTarget;
+    t.setPointerCapture(e.pointerId);
+    const x0 = e.clientX;
+    const y0 = e.clientY;
+    const b0 = { ...ui.bank };
+    document.body.classList.add('dragging');
+    const move = (ev) => {
+      onMove(b0, ev.clientX - x0, ev.clientY - y0);
+      placeBank();
+    };
+    const up = () => {
+      t.removeEventListener('pointermove', move);
+      t.removeEventListener('pointerup', up);
+      t.removeEventListener('pointercancel', up);
+      document.body.classList.remove('dragging');
+      saveUI();
+    };
+    t.addEventListener('pointermove', move);
+    t.addEventListener('pointerup', up);
+    t.addEventListener('pointercancel', up);
+  };
+  head.addEventListener('pointerdown', (e) => {
+    if (e.target.closest('button, select, input, [role="tab"]')) return;
+    drag(e, (b0, dx, dy) => {
+      ui.bank.x = b0.x + dx;
+      ui.bank.y = b0.y + dy;
+    });
+  });
+  head.addEventListener('dblclick', (e) => {
+    if (!e.target.closest('button, [role="tab"]')) setBankMin(!ui.bank.min);
+  });
+  grip.addEventListener('pointerdown', (e) =>
+    drag(e, (b0, dx, dy) => {
+      ui.bank.w = b0.w + dx;
+      ui.bank.h = b0.h + dy;
+    })
+  );
+  el.bank.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      e.stopPropagation();
+      closeBank();
+    }
+  });
+  return el.bank;
+}
+
+function placeBank() {
+  const st = el.bank.style;
+  if (narrow()) {
+    st.left = st.top = st.width = st.height = '';
+    return;
+  }
+  const B = ui.bank;
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  B.w = Math.round(Math.max(360, Math.min(B.w, vw - 16)));
+  B.h = Math.round(Math.max(260, Math.min(B.h, vh - 16)));
+  if (B.x == null || B.y == null) {
+    B.x = vw - B.w - 20;
+    B.y = 70;
+  }
+  // Keep the title bar on screen.
+  B.x = Math.round(Math.min(vw - 140, Math.max(140 - B.w, B.x)));
+  B.y = Math.round(Math.min(vh - 44, Math.max(0, B.y)));
+  st.left = `${B.x}px`;
+  st.top = `${B.y}px`;
+  st.width = `${B.w}px`;
+  st.height = B.min ? '' : `${B.h}px`;
+}
+
+function setBankMin(v) {
+  ui.bank.min = v;
+  el.bank.classList.toggle('min', v);
+  el.bankMin.title = v ? 'Restore' : 'Minimise';
+  el.bankMin.setAttribute('aria-label', el.bankMin.title);
+  clear(el.bankMin, icon(v ? 'window' : 'minus'));
+  placeBank();
+  saveUI();
+}
+
+function openBank(filter, focus = true) {
+  if (filter) ui.bank.filter = filter;
+  ui.bank.open = true;
+  el.bank.hidden = false;
+  el.bankBtn.setAttribute('aria-expanded', 'true');
+  el.bankBtn.classList.add('on');
+  if (ui.bank.min) setBankMin(false);
+  placeBank();
+  renderBank();
+  if (focus) el.bank.querySelector('.bank-filter [aria-selected="true"]')?.focus();
+  saveUI();
+}
+
+function closeBank() {
+  const had = el.bank.contains(document.activeElement);
+  ui.bank.open = false;
+  el.bank.hidden = true;
+  el.bankBtn.setAttribute('aria-expanded', 'false');
+  el.bankBtn.classList.remove('on');
+  if (had) el.bankBtn.focus();
+  saveUI();
+}
+
+function toggleBank() {
+  if (ui.bank.open) closeBank();
+  else openBank();
+}
+
+function bankFilters() {
+  const game = gameOf();
+  return BANK_FILTERS.filter(([k]) => !(k === 'symbols' && game !== 'slot') && !(k === 'coins' && game === 'wheel'));
+}
+
+function renderBank() {
+  if (!el.bank || el.bank.hidden) return;
+  const filters = bankFilters();
+  if (!filters.some(([k]) => k === ui.bank.filter)) ui.bank.filter = 'all';
+  clear(
+    el.bankFilter,
+    filters.map(([k, label]) =>
+      h('button', {
+        type: 'button',
+        role: 'tab',
+        id: `bank-f-${k}`,
+        class: ui.bank.filter === k ? 'on' : '',
+        'aria-selected': String(ui.bank.filter === k),
+        tabindex: ui.bank.filter === k ? 0 : -1,
+        onclick: () => {
+          ui.bank.filter = k;
+          saveUI();
+          renderBank();
+          document.getElementById(`bank-f-${k}`)?.focus();
+        },
+        onkeydown: (e) => {
+          const i = filters.findIndex(([f]) => f === k);
+          const d = e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : 0;
+          if (!d) return;
+          e.preventDefault();
+          const next = filters[(i + d + filters.length) % filters.length][0];
+          ui.bank.filter = next;
+          saveUI();
+          renderBank();
+          document.getElementById(`bank-f-${next}`)?.focus();
+        },
+      }, label)
+    )
+  );
+  const scroll = el.bankBody.scrollTop;
+  clear(el.bankBody, panelAssets(ui.bank.filter));
+  el.bankBody.scrollTop = scroll;
+  refreshThumbs();
+}
+
+// Anything that changes the assets redraws the bank.
+function renderAssets() {
+  renderBank();
+}
 
 // ---------- persistence ----------
 
@@ -212,6 +499,7 @@ async function loadImages(project) {
     background: await optImage(project.assets.background),
     frame: await optImage(project.assets.frame),
     logo: await optImage(project.assets.logo),
+    particles: await loadParticleSprites(project, (src) => optImage(src).then((i) => i || Promise.reject(new Error('bad image')))),
   };
 }
 
@@ -236,7 +524,7 @@ async function rebuild(kind = 'all') {
     renderTimeline();
     refreshList();
     if (state.tab === 'spin') drawMotionGraph();
-    if (state.tab === 'assets' && kind === 'all') refreshThumbs();
+    if (ui.bank.open && kind === 'all') refreshThumbs();
     draw();
     scheduleSound();
   } catch (e) {
@@ -455,19 +743,31 @@ function buildShell() {
       h(
         'div',
         { class: 'top-actions' },
+        (el.bankBtn = button('Asset Bank', toggleBank, { class: 'btn', icon: 'grid', id: 'top-bank', title: 'Symbols, coins, particles and scene art in their own window (B)' })),
         button('Preview MP4', goExport(startMP4), { class: 'btn', icon: 'film', id: 'top-mp4', title: 'Render a quick MP4 preview with sound' }),
         button('After Effects', goExport(startAE), { class: 'btn primary', icon: 'download', id: 'top-ae', title: 'Download the After Effects project package' })
       )
     ),
-    h(
+    (el.work = h(
       'div',
       { class: 'work' },
       h('aside', { class: 'side left', 'aria-label': 'Settings' }, el.tabs, el.panel),
+      splitter('left'),
       h('main', { class: 'stage' }, el.viewport, el.timeline),
+      splitter('right'),
       h('aside', { class: 'side right', 'aria-label': 'Spin rounds' }, el.sequence)
-    ),
+    )),
+    buildBank(),
     el.toasts
   );
+  el.splitters = [...el.work.querySelectorAll('.splitter')];
+  el.bankBtn.setAttribute('aria-controls', 'asset-bank');
+  el.bankBtn.setAttribute('aria-expanded', 'false');
+  applyWidths();
+  window.addEventListener('resize', () => {
+    applyWidths();
+    if (ui.bank.open) placeBank();
+  });
   new ResizeObserver(() => fitCanvas()).observe(el.viewport);
   document.addEventListener('keydown', onKey);
 }
@@ -486,7 +786,9 @@ function onKey(e) {
   if (e.code === 'Space') {
     e.preventDefault();
     togglePlay();
-  } else if (e.key === 'ArrowRight') seek(state.t + (e.shiftKey ? 1 : fd));
+  } else if ((e.key === 'b' || e.key === 'B') && !e.metaKey && !e.ctrlKey && !e.altKey) toggleBank();
+  else if (e.key === 'Escape' && ui.bank.open) closeBank();
+  else if (e.key === 'ArrowRight') seek(state.t + (e.shiftKey ? 1 : fd));
   else if (e.key === 'ArrowLeft') seek(state.t - (e.shiftKey ? 1 : fd));
   else if (e.key === 'Home') seek(playRange()[0]);
 }
@@ -1375,6 +1677,24 @@ function renderInspector() {
     );
   }
 
+  // Win particles: the Effects tab's pick for this moment, or the round's own.
+  if (!['none', 'nearmiss', 'respin'].includes(r.outcome)) {
+    const rp = r.particles || { fx: 'auto', asset: 'auto' };
+    const setP = (k) => (v) => {
+      r.particles = { fx: 'auto', asset: 'auto', ...(r.particles || {}), [k]: v };
+      changed(kind);
+      renderInspector();
+    };
+    parts.push(
+      h(
+        'div',
+        { class: 'row2' },
+        h('div', { class: 'field' }, h('label', { class: 'label', for: 'ri-pfx' }, 'Win particles'), h('select', { id: 'ri-pfx', onchange: (e) => setP('fx')(e.target.value) }, h('option', { value: 'auto', selected: (rp.fx || 'auto') === 'auto' }, 'Auto (Effects tab)'), templateOptions(rp.fx || 'auto'))),
+        selectField({ id: 'ri-passet', label: 'Particle', value: rp.asset || 'auto', options: [{ value: 'auto', label: 'Auto' }, ...particleAssetChoices()], onChange: setP('asset') })
+      )
+    );
+  }
+
   // Spin timing and order for this round (nothing spins in a collect, or in
   // the wheel game's machine).
   const spins = r.outcome !== 'collect' && gameOf() !== 'wheel' && !(gameOf() === 'holdspin' && r.outcome === 'wheel');
@@ -1456,7 +1776,6 @@ function renderInspector() {
 
 const TABS = [
   ['machine', 'Machine'],
-  ['assets', 'Assets'],
   ['spin', 'Spin'],
   ['effects', 'Effects'],
   ['wheel', 'Wheel'],
@@ -1486,10 +1805,9 @@ function renderTabs() {
 }
 
 function renderPanel() {
-  const fn = { assets: panelAssets, machine: panelMachine, spin: panelSpin, effects: panelEffects, wheel: panelWheel, sound: panelSound, export: panelExport }[state.tab];
+  const fn = { machine: panelMachine, spin: panelSpin, effects: panelEffects, wheel: panelWheel, sound: panelSound, export: panelExport }[state.tab] || panelMachine;
   clear(el.panel, fn());
   if (state.tab === 'spin') drawMotionGraph();
-  if (state.tab === 'assets') refreshThumbs();
 }
 
 function num(obj, key, kind = 'timeline', after) {
@@ -1696,17 +2014,17 @@ function coinTile(ct, i) {
         if (!f) return;
         ct.src = await readFileAsDataURL(f);
         changed('all');
-        renderPanel();
+        renderAssets();
       }, { class: 'icon-btn tiny', icon: 'upload', title: ct.src ? 'Replace art' : 'Upload coin art', id: `coin-up-${ct.id}` }),
       ct.src
-        ? button('', () => { ct.src = null; changed('all'); renderPanel(); }, { class: 'icon-btn tiny', icon: 'dice', title: 'Back to the painted coin', id: `coin-paint-${ct.id}` })
+        ? button('', () => { ct.src = null; changed('all'); renderAssets(); }, { class: 'icon-btn tiny', icon: 'dice', title: 'Back to the painted coin', id: `coin-paint-${ct.id}` })
         : null,
       i > 0
         ? button('', () => {
             coins.splice(i, 1);
             P.rounds.forEach((r) => (r.specials = (r.specials || []).filter((id) => id !== ct.id)));
             changed('all');
-            renderPanel();
+            renderAssets();
             renderInspector();
           }, { class: 'icon-btn tiny', icon: 'x', title: 'Remove this coin type', id: `coin-del-${ct.id}` })
         : null
@@ -1729,7 +2047,7 @@ function coinSection() {
       ? button('Add a coin type', () => {
           H.coins.push({ id: `coin${Date.now().toString(36)}`, name: 'Bonus coin', label: 'BONUS', palette: COIN_PALETTES[H.coins.length % COIN_PALETTES.length], values: [25], src: null });
           changed('all');
-          renderPanel();
+          renderAssets();
         }, { class: 'btn small', icon: 'plus', id: 'coin-add' })
       : null,
     h(
@@ -1745,18 +2063,20 @@ function coinSection() {
           if (!f) return;
           H.emptySrc = await readFileAsDataURL(f);
           changed('all');
-          renderPanel();
+          renderAssets();
         }, { class: 'btn small', id: 'coin-empty-up' }),
-        H.emptySrc ? button('Clear', () => { H.emptySrc = null; changed('all'); renderPanel(); }, { class: 'btn small ghost', id: 'coin-empty-clear' }) : null
+        H.emptySrc ? button('Clear', () => { H.emptySrc = null; changed('all'); renderAssets(); }, { class: 'btn small ghost', id: 'coin-empty-clear' }) : null
       )
     )
   );
 }
 
-function panelAssets() {
+function panelAssets(filter = 'all') {
   const P = state.project;
   el.thumbs = [];
+  el.pthumbs = [];
   const game = gameOf();
+  const show = (k) => filter === 'all' || filter === k;
   const tiles = h('div', { class: 'symbols' });
   P.symbols.forEach((s, i) => tiles.append(symbolTile(s, i)));
   const useSet = (set, name) =>
@@ -1764,18 +2084,19 @@ function panelAssets() {
       P.symbols = set.map((s, i) => ({ id: `${set === CANDY_SYMBOLS ? 'c' : 's'}${i}`, src: null, winAnim: null, ...s }));
       P.rounds.forEach((r) => (r.symbol = 'auto'));
       changed('all');
-      renderPanel();
+      renderAssets();
       renderInspector();
     }, { class: 'btn ghost small', id: `a-set-${set === CANDY_SYMBOLS ? 'candy' : 'classic'}` });
   return [
-    game !== 'slot' ? null : section(
+    game !== 'slot' || !show('symbols') ? null : section(
       'Symbols',
       h('p', { class: 'hint' }, 'PNGs with transparent backgrounds work best; each symbol is fitted to its cell. Give one symbol each the Wild, Scatter and Multiplier roles. Weight sets how often it shows up as filler. In After Effects every symbol becomes its own comp.'),
       tiles,
       h('div', { class: 'row' }, button('Add symbol images', addSymbols, { class: 'btn', icon: 'upload', id: 'a-add' }), useSet(BUILTIN_SYMBOLS, 'Classic set'), useSet(CANDY_SYMBOLS, 'Candy set'))
     ),
-    game === 'wheel' ? null : coinSection(),
-    section(
+    game === 'wheel' || !show('coins') ? null : coinSection(),
+    show('particles') ? particleArtSection() : null,
+    !show('scene') ? null : section(
       'Scene art',
       assetRow('Background', 'background', 'Full-screen image behind the machine.'),
       assetRow('Frame overlay', 'frame', 'PNG drawn over the reels. Leave the window transparent.'),
@@ -1786,6 +2107,305 @@ function panelAssets() {
   ];
 }
 
+// ---------- win particles: art (Asset Bank) ----------
+
+const motionLabel = (m) => PARTICLE_MOTIONS.find((x) => x.id === m)?.label || m;
+
+function particleThumb(id) {
+  const c = h('canvas', { class: 'thumb', width: 96, height: 96 });
+  el.pthumbs.push([c, id]);
+  return c;
+}
+
+function refreshParticleThumbs() {
+  for (const [c, id] of el.pthumbs || []) {
+    const sp = state.images?.particles?.get(id);
+    const g = c.getContext('2d');
+    g.clearRect(0, 0, 96, 96);
+    if (!sp) continue;
+    // Up to four variants or frames, so a set reads as a set.
+    const n = Math.min(4, sp.frames.length);
+    const cell = n > 1 ? 46 : 84;
+    sp.frames.slice(0, n).forEach((f, k) => {
+      const s = cell / Math.max(f.width, f.height);
+      const cx = n > 1 ? 25 + (k % 2) * 46 : 48;
+      const cy = n > 1 ? 25 + Math.floor(k / 2) * 46 : 48;
+      g.drawImage(f, cx - (f.width * s) / 2, cy - (f.height * s) / 2, f.width * s, f.height * s);
+    });
+  }
+}
+
+function forgetParticleAsset(id) {
+  const P = state.project;
+  const fix = (o) => o && o.asset === id && (o.asset = 'coin');
+  for (const m of PARTICLE_MOMENTS) fix(P.particles[m.id]);
+  for (const t of P.tiers) fix(t.particles);
+  for (const r of P.rounds) if (r.particles?.asset === id) r.particles.asset = 'auto';
+}
+
+async function addParticleArt() {
+  const files = await pickFiles('image/png,image/webp,image/gif,image/svg+xml', true);
+  if (!files.length) return;
+  const P = state.project;
+  const id = `p${Date.now().toString(36)}`;
+  const name = files[0].name.replace(/\.[^.]+$/, '').replace(/[_-]?\d+$/, '').slice(0, 24) || 'Particle';
+  if (files.length > 1) {
+    files.sort((a, b) => byName.compare(a.name, b.name));
+    const srcs = [];
+    for (const f of files.slice(0, 120)) srcs.push(await readFileAsDataURL(f));
+    P.particles.assets.push({ id, name, kind: 'frames', srcs, fps: 24, motion: 'spin' });
+    toast(`${name}: a ${srcs.length}-frame particle. Each particle plays it from a random frame.`);
+  } else {
+    P.particles.assets.push({ id, name, kind: 'image', src: await readFileAsDataURL(files[0]), motion: 'spin' });
+    toast(`${name} added. Pick it for a win moment in Effects → Win particles.`);
+  }
+  changed('all');
+  renderAssets();
+  if (state.tab === 'effects') renderPanel();
+}
+
+function particleTile(a) {
+  const P = state.project;
+  const builtin = !a.kind;
+  const info = particleAssetInfo(P, a.id);
+  const edit = (k, min, max) =>
+    h('label', { class: 'mini', for: `pa-${k}-${a.id}` }, h('span', null, k), h('input', { type: 'number', id: `pa-${k}-${a.id}`, min, max, step: 1, value: a[k], onchange: (e) => {
+      a[k] = Math.min(max, Math.max(min, Number(e.target.value) || min));
+      e.target.value = a[k];
+      if (a.kind === 'sheet' && (k === 'cols' || k === 'rows')) a.count = a.cols * a.rows;
+      changed('all');
+      if (k === 'cols' || k === 'rows') renderAssets();
+    } }));
+  const what = builtin ? `Built-in · ${info.count > 1 ? `${info.count} variants` : 'one image'}` : a.kind === 'image' ? 'Still image' : `${info.count} frames · ${a.fps} fps`;
+  return h(
+    'div',
+    { class: 'sym ptile' },
+    particleThumb(a.id),
+    h(
+      'div',
+      { class: 'sym-fields' },
+      builtin
+        ? h('strong', { class: 'ptile-name' }, a.name)
+        : h('input', { type: 'text', id: `pa-name-${a.id}`, value: a.name, 'aria-label': 'Particle name', onchange: (e) => { a.name = e.target.value.slice(0, 24) || 'Particle'; changed('timeline'); if (state.tab === 'effects') renderPanel(); } }),
+      h('span', { class: 'hint' }, what),
+      builtin
+        ? h('span', { class: 'hint' }, motionLabel(info.motion))
+        : h('select', { id: `pa-motion-${a.id}`, 'aria-label': 'How it moves', onchange: (e) => { a.motion = e.target.value; changed('all'); } }, PARTICLE_MOTIONS.map((m) => h('option', { value: m.id, selected: info.motion === m.id }, m.label))),
+      a.kind === 'sheet' ? h('div', { class: 'sym-anim on' }, edit('cols', 1, 32), edit('rows', 1, 32), edit('count', 1, 256), edit('fps', 1, 60)) : null,
+      a.kind === 'frames' ? h('div', { class: 'sym-anim on' }, edit('fps', 1, 60)) : null,
+      a.kind === 'image'
+        ? button('It is a sprite sheet', async () => {
+            const img = await loadImageSafe(a.src);
+            const cols = Math.max(1, Math.round((img?.naturalWidth || 1) / (img?.naturalHeight || 1)));
+            Object.assign(a, { kind: 'sheet', cols, rows: 1, count: cols, fps: 24 });
+            changed('all');
+            renderAssets();
+          }, { class: 'btn small ghost', id: `pa-sheet-${a.id}`, title: 'Read this image as a grid of animation frames' })
+        : null,
+      a.kind === 'sheet'
+        ? button('Still image', () => {
+            a.kind = 'image';
+            changed('all');
+            renderAssets();
+          }, { class: 'btn small ghost', id: `pa-still-${a.id}` })
+        : null
+    ),
+    builtin
+      ? null
+      : h(
+          'div',
+          { class: 'sym-actions' },
+          button('', () => {
+            P.particles.assets = P.particles.assets.filter((x) => x !== a);
+            forgetParticleAsset(a.id);
+            changed('all');
+            renderAssets();
+            if (state.tab === 'effects') renderPanel();
+            renderInspector();
+          }, { class: 'icon-btn tiny', icon: 'x', title: `Remove ${a.name}`, id: `pa-del-${a.id}` })
+        )
+  );
+}
+
+function loadImageSafe(src) {
+  return optImage(src);
+}
+
+function particleArtSection() {
+  const P = state.project;
+  const tiles = h('div', { class: 'symbols' });
+  for (const b of BUILTIN_PARTICLES) tiles.append(particleTile({ id: b.id, name: b.name }));
+  for (const a of P.particles.assets) tiles.append(particleTile(a));
+  return section(
+    'Win particles',
+    h('p', { class: 'hint' }, 'The art the win explosions throw. Upload one PNG for a still particle, several PNGs for an animated one (a spinning coin, a flapping banknote), or one sprite sheet. Pick which particle each win moment uses in Effects → Win particles. In After Effects each particle is a placeholder comp.'),
+    tiles,
+    h('div', { class: 'row' }, button('Add particle art', addParticleArt, { class: 'btn', icon: 'upload', id: 'pa-add' }), button('Win particles settings', () => { state.tab = 'effects'; renderTabs(); renderPanel(); document.getElementById('fx-particles')?.scrollIntoView({ block: 'start' }); }, { class: 'btn ghost small', icon: 'sparkle', id: 'pa-goto' }))
+  );
+}
+
+// ---------- win particles: live mini previews ----------
+
+const minis = new Set();
+let miniRAF = 0;
+const reducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+function miniCanvas(get, cls = 'pfx-mini', w = 160, hgt = 90) {
+  const c = h('canvas', { class: cls, width: w * 2, height: hgt * 2, 'aria-hidden': 'true' });
+  // Each preview runs at its own phase, so they never all restart together.
+  minis.add({ c, get, key: '', phase: (minis.size * 0.618) % 1 });
+  if (!miniRAF) miniRAF = requestAnimationFrame(tickMinis);
+  return c;
+}
+
+function miniLayout(W, H) {
+  const u = W * 0.2;
+  return { W, H, cellW: u, cellH: u, winX: W * 0.2, winW: W * 0.6, winTop: H * 0.22, winH: H * 0.56, winCY: H * 0.5, portrait: false, cellCenter: (c) => ({ x: W * (0.35 + 0.15 * c), y: H * 0.5 }) };
+}
+
+let miniLast = 0;
+function tickMinis(now) {
+  miniRAF = 0;
+  let any = false;
+  const draw = now - miniLast > 30;
+  if (draw) miniLast = now;
+  for (const m of minis) {
+    if (!m.c.isConnected) {
+      minis.delete(m);
+      continue;
+    }
+    any = true;
+    if (draw) drawMini(m, now / 1000);
+  }
+  if (any && !reducedMotion()) miniRAF = requestAnimationFrame(tickMinis);
+}
+
+function drawMini(m, time) {
+  const cfg = m.get() || { fx: 'none' };
+  const sprite = state.images?.particles?.get(cfg.asset) || state.images?.particles?.get('coin');
+  const c = m.c;
+  const g = c.getContext('2d');
+  const tpl = TEMPLATE_BY_ID[cfg.fx];
+  const key = `${cfg.fx}|${cfg.asset}|${sprite ? sprite.frames.length : 0}|${sprite?.motion}`;
+  if (m.key !== key) {
+    m.key = key;
+    m.list = [];
+    m.period = 2;
+    if (tpl && sprite) {
+      const short = tpl.kind === 'short';
+      const em = { fx: cfg.fx, start: 0.15, end: short ? 0.15 : 3.4, focus: cfg.focus || { kind: 'screen' }, seed: 4242 };
+      m.list = spawnParticles(em, miniLayout(c.width, c.height), sprite.motion, 0.75);
+      // Continuous ones loop while still flowing, fading out before the restart.
+      m.period = short ? Math.min(5, Math.max(...m.list.map((p) => p.b + p.l), 1) + 0.35) : em.end + 0.6;
+      m.fade = short ? 0 : 0.5;
+    }
+  }
+  g.clearRect(0, 0, c.width, c.height);
+  if (!tpl || !sprite) {
+    g.fillStyle = 'rgba(164,156,184,0.55)';
+    g.font = `600 ${Math.round(c.height * 0.16)}px "Instrument Sans", system-ui, sans-serif`;
+    g.textAlign = 'center';
+    g.textBaseline = 'middle';
+    g.fillText('No particles', c.width / 2, c.height / 2);
+    return;
+  }
+  const t = reducedMotion() ? m.period * 0.5 : (time + m.phase * m.period) % m.period;
+  drawParticleList(g, sprite, m.list, t, m.fade ? Math.min(1, (m.period - t) / m.fade) : 1);
+}
+
+// ---------- win particles: settings (Effects tab) ----------
+
+function templateOptions(cur, withNone = true) {
+  return [
+    withNone ? h('option', { value: 'none', selected: cur === 'none' }, 'None') : null,
+    h('optgroup', { label: 'Short' }, PARTICLE_TEMPLATES.filter((t) => t.kind === 'short').map((t) => h('option', { value: t.id, selected: cur === t.id }, t.name))),
+    h('optgroup', { label: 'Continuous' }, PARTICLE_TEMPLATES.filter((t) => t.kind === 'continuous').map((t) => h('option', { value: t.id, selected: cur === t.id }, t.name))),
+  ];
+}
+
+function particleAssetChoices() {
+  const P = state.project;
+  return [...BUILTIN_PARTICLES.map((b) => ({ value: b.id, label: b.name })), ...P.particles.assets.map((a) => ({ value: a.id, label: a.name }))];
+}
+
+function particleRow(id, label, hint, get, set) {
+  const cur = get() || { fx: 'none', asset: 'coin' };
+  const assets = particleAssetChoices();
+  return h(
+    'div',
+    { class: 'pfx-row' },
+    miniCanvas(get, 'pfx-mini', 112, 63),
+    h(
+      'div',
+      { class: 'pfx-fields' },
+      h('div', { class: 'pfx-label' }, h('strong', null, label), hint ? h('span', { class: 'hint' }, hint) : null),
+      h(
+        'div',
+        { class: 'pfx-selects' },
+        h('select', { id: `${id}-fx`, 'aria-label': `${label}: explosion`, onchange: (e) => { set({ ...cur, fx: e.target.value }); renderPanel(); } }, templateOptions(cur.fx)),
+        h('select', { id: `${id}-asset`, 'aria-label': `${label}: particle`, disabled: cur.fx === 'none', onchange: (e) => set({ ...get(), asset: e.target.value }) }, assets.map((o) => h('option', { value: o.value, selected: cur.asset === o.value }, o.label)))
+      )
+    )
+  );
+}
+
+const MOMENTS_BY_GAME = {
+  slot: ['small', 'medium', 'feature', 'wheel', 'total', 'grand'],
+  holdspin: ['feature', 'total', 'grand', 'wheel'],
+  wheel: ['wheel'],
+};
+
+function particleSettings() {
+  const P = state.project;
+  const fx = P.effects;
+  const game = gameOf();
+  const rows = [];
+  if (game === 'slot' || game === 'holdspin') {
+    P.tiers.forEach((t, i) =>
+      rows.push(particleRow(`pfx-tier-${t.id}`, t.title, i === 0 ? 'Big win tiers stack: each starts when its title lands' : null, () => tierParticles(P, i), (v) => {
+        t.particles = v;
+        changed('timeline');
+      }))
+    );
+  }
+  for (const m of PARTICLE_MOMENTS.filter((x) => (MOMENTS_BY_GAME[game] || MOMENTS_BY_GAME.slot).includes(x.id))) {
+    rows.push(particleRow(`pfx-${m.id}`, m.label, m.hint, () => P.particles[m.id], (v) => {
+      P.particles[m.id] = v;
+      changed('timeline');
+    }));
+  }
+  return h(
+    'section',
+    { class: 'group', id: 'fx-particles' },
+    h('h3', null, 'Win particles'),
+    h('p', { class: 'hint' }, 'Pick an explosion and a particle for every win moment. Short explosions fire once; continuous ones keep going until the moment ends. A round can use its own in the round inspector. Particle art lives in the Asset Bank.'),
+    h('div', { class: 'pfx-rows' }, rows),
+    rangeField({ id: 'fx-coins', label: 'Particle amount', value: fx.coins, min: 0, max: 2, step: 0.01, onInput: num(fx, 'coins') }),
+    button('Open the Asset Bank', () => openBank('particles'), { class: 'btn small ghost', icon: 'grid', id: 'pfx-bank' })
+  );
+}
+
+// Every template with a live preview.
+const GALLERY_ASSET = { cannons: 'confetti', popper: 'confetti', fireworks: 'star', shimmer: 'sparkle', spiral: 'sparkle', magnet: 'ember', ring: 'gem', rain: 'confetti' };
+
+function templateGallery() {
+  return section(
+    'Explosion templates',
+    h(
+      'div',
+      { class: 'pfx-gallery' },
+      PARTICLE_TEMPLATES.map((t) =>
+        h(
+          'figure',
+          { class: 'pfx-card' },
+          miniCanvas(() => ({ fx: t.id, asset: GALLERY_ASSET[t.id] || 'coin' }), 'pfx-mini', 160, 90),
+          h('figcaption', null, h('strong', null, t.name), h('span', { class: `pfx-kind ${t.kind}` }, t.kind === 'short' ? 'Short' : 'Continuous'), h('span', { class: 'hint' }, t.desc))
+        )
+      )
+    )
+  );
+}
+
 function thumbCanvas(idx) {
   const c = h('canvas', { class: 'thumb', width: 96, height: 96 });
   el.thumbs.push([c, idx]);
@@ -1793,6 +2413,7 @@ function thumbCanvas(idx) {
 }
 
 function refreshThumbs() {
+  refreshParticleThumbs();
   if (!el.thumbs || !state.images) return;
   el.thumbs.forEach(([c, i]) => {
     const img = state.images.symbols[i];
@@ -1827,7 +2448,7 @@ async function uploadWinAnim(s) {
     toast(`${s.name}: sprite sheet read as ${cols} frame${cols === 1 ? '' : 's'} in one row. Adjust the grid if it is laid out differently.`, 'info', 5000);
   }
   changed('all');
-  renderPanel();
+  renderAssets();
 }
 
 function winAnimControls(s) {
@@ -1840,7 +2461,7 @@ function winAnimControls(s) {
       if (a.kind === 'sheet' && (k === 'cols' || k === 'rows')) a.count = a.cols * a.rows;
       animCache.delete(a);
       changed('all');
-      if (k === 'cols' || k === 'rows') renderPanel();
+      if (k === 'cols' || k === 'rows') renderAssets();
     } }));
   return h(
     'div',
@@ -1851,7 +2472,7 @@ function winAnimControls(s) {
     button('', () => {
       s.winAnim = null;
       changed('all');
-      renderPanel();
+      renderAssets();
     }, { class: 'icon-btn tiny', icon: 'x', title: 'Remove the win animation', id: `sym-anim-del-${s.id}` })
   );
 }
@@ -1894,7 +2515,7 @@ function symbolTile(s, i) {
           if (r.symbol === s.id) r.symbol = 'auto';
         });
         changed('all');
-        renderPanel();
+        renderAssets();
         renderInspector();
       }, { class: 'icon-btn tiny', icon: 'x', title: 'Remove symbol', id: `sym-del-${s.id}` })
     )
@@ -1908,7 +2529,7 @@ async function addSymbols() {
     state.project.symbols.push({ id: `u${Date.now().toString(36)}${Math.floor(Math.random() * 1e4)}`, name: f.name.replace(/\.[^.]+$/, '').slice(0, 24), role: 'normal', tier: 'low', weight: 8, src: await readFileAsDataURL(f), winAnim: null });
   }
   changed('all');
-  renderPanel();
+  renderAssets();
   renderInspector();
   toast(`Added ${files.length} symbol${files.length === 1 ? '' : 's'}.`);
 }
@@ -1929,13 +2550,13 @@ function assetRow(label, key, hint) {
         if (!f) return;
         P.assets[key] = await readFileAsDataURL(f);
         changed('all');
-        renderPanel();
+        renderAssets();
       }, { class: 'btn small', id: `asset-up-${key}` }),
       has
         ? button('Clear', () => {
             P.assets[key] = null;
             changed('all');
-            renderPanel();
+            renderAssets();
           }, { class: 'btn small ghost', id: `asset-clear-${key}` })
         : null
     )
@@ -2191,6 +2812,8 @@ function panelEffects() {
   const titles = fx.titles;
   return [
     section('Win tiers', tierEditor()),
+    particleSettings(),
+    templateGallery(),
     section(
       'Win typography',
       selectField({ id: 'fx-font', label: 'Display font', value: fx.font, options: FONTS.map((f) => ({ value: f, label: f })), onChange: num(fx, 'font', 'all') }),
@@ -2214,7 +2837,6 @@ function panelEffects() {
       rangeField({ id: 'fx-pop', label: 'Winning symbol pop', value: fx.popScale, min: 0, max: 0.4, step: 0.01, onInput: num(fx, 'popScale') }),
       rangeField({ id: 'fx-line', label: 'Payline glow', value: fx.lineGlow, min: 0, max: 1.5, step: 0.01, onInput: num(fx, 'lineGlow') }),
       rangeField({ id: 'fx-spark', label: 'Sparkles', value: fx.sparkles, min: 0, max: 2, step: 0.01, onInput: num(fx, 'sparkles') }),
-      rangeField({ id: 'fx-coins', label: 'Coins', value: fx.coins, min: 0, max: 2, step: 0.01, onInput: num(fx, 'coins') }),
       rangeField({ id: 'fx-rays', label: 'Light rays', value: fx.rays, min: 0, max: 1.5, step: 0.01, onInput: num(fx, 'rays') }),
       rangeField({ id: 'fx-shake', label: 'Screen shake', value: fx.shake, min: 0, max: 2, step: 0.01, onInput: num(fx, 'shake') }),
       rangeField({ id: 'fx-flash', label: 'Flashes', value: fx.flash, min: 0, max: 1.5, step: 0.01, onInput: num(fx, 'flash') }),
@@ -2522,9 +3144,9 @@ function panelExport() {
         { class: 'bullets' },
         h('li', null, 'Placeholder Comps: every symbol, piece of machine art and effect look (shockwave, light rays, coin, cell frames, plaques, titles, paylines, wheel parts) is its own comp. Replace or animate one and every use updates.'),
         h('li', null, 'Reels (or cells) are precomps driven by one Spin slider with the same start, mid and end keyframes and eases as this preview. Tumbles are keyframed layers.'),
-        h('li', null, 'Each round is its own comp that places those effects in time. Coin showers are comps of their own.'),
+        h('li', null, 'Each round is its own comp that places those effects in time. Every particle explosion is a comp of its own, its particles flying exactly as in this preview.'),
         h('li', null, 'SFX: every sound cue on its own audio layer, coloured by group, with group and master levels on the SFX MIX null.'),
-        h('li', null, 'SLOT CONTROL carries the After Effects side controls: shake, flash, dim, coins, spin blur, win pop and effect colours.')
+        h('li', null, 'SLOT CONTROL carries the After Effects side controls: shake, flash, dim, particles, spin blur, win pop and effect colours.')
       ),
       h('div', { class: 'field' }, h('span', { class: 'label' }, `Formats · ${n} selected`), formatPicker(), h('p', { class: 'hint' }, 'Each format gets its own comp tree, laid out for that size. The symbol art is shared.')),
       toggleField({ id: 'x-transparent', label: 'Transparent background', checked: !!P.output.transparent, onChange: (v) => { P.output.transparent = v; save(); }, hint: 'Switches the background and vignette layers off, ready to render ProRes 4444 with alpha from After Effects.' }),
@@ -2595,6 +3217,12 @@ export async function start() {
   await withTimeout(Promise.all(['Bungee', 'Instrument Sans'].map((f) => document.fonts.load(`32px "${f}"`).catch(() => null))), 3000);
   await rebuild('all');
   renderPanel();
+  // The Asset Bank reopens where it was left.
+  if (ui.bank.open) {
+    const wasMin = ui.bank.min;
+    openBank(null, false);
+    if (wasMin) setBankMin(true);
+  }
   requestAnimationFrame((n) => {
     lastNow = n;
     loop(n);

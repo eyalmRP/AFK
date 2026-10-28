@@ -1,7 +1,8 @@
 # Reel Studio
 
 A browser tool for animating slot machine wins. Upload symbol art (and per
-symbol win animations), set up the reels and how the machine pays, sequence
+symbol win animations) into the Asset Bank, set up the reels and how the
+machine pays, sequence
 the spin rounds, tune the start/mid/end motion and the reel order, and export
 the result as an editable **After Effects project**.
 
@@ -26,9 +27,21 @@ the result as an editable **After Effects project**.
   again), multiplier symbols that fly into the total, expanding wilds,
   extra wilds, sticky wilds through a free spins block, and a free spins
   counter with a running total.
+- Win particles: 14 explosion templates, short (small, medium and big
+  bursts, ring blast, confetti cannons, party popper, magnet) or continuous
+  (fountain from below, geyser, rain, side streams, fireworks, spiral,
+  shimmer). Each win moment and each big win tier picks a template and a
+  particle (gold coin, stars, sparkle, gems, confetti, embers, casino chips,
+  or your own still or animated art); any round can override both. Big win
+  tiers stack as the count climbs.
 - Sound: every cue (reel stops, anticipation, pops, count-up ticks, stings,
   coins, wheel pegs) is synthesised in sync with the animation; any cue can
   be replaced with your own file. It plays with the preview.
+
+- Editor: the side panels resize (drag a divider, or focus it and use the
+  arrow keys; double-click resets) and remember their widths. The Asset
+  Bank (symbols, coins, particles, scene art) is a floating window you can
+  move, resize and minimise (B toggles it); on phones it is a bottom sheet.
 
 Exports:
 
@@ -67,6 +80,7 @@ Everything is a pure function of time, built from one JSON project:
 | `src/js/core/timeline.js` | Schedules every round: reel or cell start/stop times, anticipation, tumble actors, wilds, multipliers, win presentations, the free spins block, the wheel, shakes, flashes and sound cues. Reel motion is stored as After Effects style keyframes (value + speed/influence eases). |
 | `src/js/core/keys.js` | Evaluates those keyframes with the same cubic Bézier After Effects uses, so exported curves play back identically. |
 | `src/js/core/layout.js` | Screen layout shared by the renderer and the exporter. |
+| `src/js/core/particles.js` | Explosion templates and the win emitters: which moment throws which particles, and every particle's flight as a closed form (gravity, air drag, flutter) that the preview and After Effects both evaluate. |
 | `src/js/core/sfx.js` | The sound cues as separate clips for the After Effects SFX comp (identical cues share a clip). |
 | `src/js/core/ae-export.js` | Builds the ES3 `.jsx` for After Effects. |
 | `src/js/render/*` | Canvas renderer, built-in sample art (classic and candy sets), effects, the sound synth. |
@@ -96,6 +110,8 @@ comp, the round comps place them in time, and a few controls sit on
   - `Titles/` (with the light sweep), `Paylines/` (each draws itself on),
     `Plaques/`, `Wheel/` and `Counters/Counter Digits` (the 0-9 strip every
     counter rolls through).
+  - `Particles/Particle <name>`: the particle art, one variant (or
+    animation frame) per frame.
 - `Reels/Reel N` (or `Cell C-R` for per-cell spins): a `CTRL` null with a
   `Spin` slider. Its keys are the start, mid and end phases with the exact
   eases from the preview. Cell layers read the slider and time-remap into
@@ -107,9 +123,10 @@ comp, the round comps place them in time, and a few controls sit on
 - `Rounds/Rxx ...`: one comp per round that shows something, placing the
   placeholders in time: paylines, win comps on the winning cells, frames,
   shockwaves, expanding wilds, multipliers flying into the total, titles,
-  counters driven by `WIN CTRL > Amount`, the wheel rig. `Rounds/Coin
-  Showers/` holds each fountain, rain or burst as its own comp (expression
-  physics on `FX Coin` layers).
+  counters driven by `WIN CTRL > Amount`, the wheel rig. `Rounds/Particles/`
+  holds every win explosion as its own comp: one layer per particle, a use
+  of its particle placeholder, with expressions that reproduce the
+  preview's flight exactly.
 - `Counter Rigs/`: rolling-digit money counters made of plain layers; each
   `COUNTER CTRL > Value` reads its source slider. Each column turns as the
   one below it wraps, like the Odometer plugin, so no plugin is needed.
@@ -121,7 +138,7 @@ comp, the round comps place them in time, and a few controls sit on
   comps, a `SCREEN SHAKE` parent null, the flash, vignette, the SFX comp and
   a marker per round. `SLOT CONTROL` holds `Meter`, `FS Total`, `Collect`
   and the After Effects side controls: `Shake %`, `Flash %`, `Dim %`,
-  `Coins %`, `Spin Blur %`, `Win Pop %` and `FX Colour`. With "Transparent
+  `Particles %`, `Spin Blur %`, `Win Pop %` and `FX Colour`. With "Transparent
   background" the background and vignette start switched off; render
   ProRes 4444 with alpha from After Effects.
 

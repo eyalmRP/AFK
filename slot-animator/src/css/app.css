@@ -463,8 +463,51 @@ input[type='color'] {
   flex: 1;
   min-height: 0;
   display: grid;
-  grid-template-columns: 330px minmax(0, 1fr) 352px;
-  gap: 10px;
+  grid-template-columns: var(--left-w, 330px) 12px minmax(0, 1fr) 12px var(--right-w, 352px);
+  gap: 0;
+}
+
+/* Drag (or arrow-key) handles between the panels and the stage. */
+.splitter {
+  position: relative;
+  cursor: col-resize;
+  touch-action: none;
+  border-radius: 6px;
+}
+
+.splitter::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 4px;
+  height: 44px;
+  transform: translate(-50%, -50%);
+  border-radius: 2px;
+  background: var(--line-2);
+  transition: background 0.15s, height 0.15s;
+}
+
+.splitter:hover::before,
+.splitter:focus-visible::before,
+.splitter.drag::before {
+  background: var(--gold);
+  height: 88px;
+}
+
+.splitter:focus-visible {
+  outline-offset: -2px;
+}
+
+body.resizing,
+body.resizing * {
+  cursor: col-resize !important;
+  user-select: none;
+}
+
+body.dragging,
+body.dragging * {
+  user-select: none;
 }
 
 .side {
@@ -1354,7 +1397,7 @@ input[type='color'] {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  z-index: 20;
+  z-index: 50;
   max-width: min(420px, calc(100vw - 32px));
 }
 
@@ -1405,6 +1448,7 @@ input[type='color'] {
   .work {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     grid-template-areas: 'stage stage' 'left right';
+    gap: 10px;
   }
 
   .stage {
@@ -1452,6 +1496,16 @@ input[type='color'] {
     margin-left: auto;
   }
 
+  /* Icon-only secondary actions; the label stays for screen readers. */
+  .top-actions .btn:not(.primary) span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+
   .tl-legend {
     display: none;
   }
@@ -1475,4 +1529,301 @@ input[type='color'] {
 .asset-thumb canvas {
   width: 40px;
   height: 40px;
+}
+
+/* ---------- Asset Bank: a floating window ---------- */
+
+.btn.on {
+  border-color: rgba(244, 197, 91, 0.6);
+  color: var(--gold-2);
+}
+
+.bank {
+  position: fixed;
+  z-index: 40;
+  left: calc(100vw - 780px);
+  top: 70px;
+  width: 760px;
+  height: 660px;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border: 1px solid var(--line-2);
+  border-radius: 14px;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(244, 197, 91, 0.06);
+  overflow: hidden;
+}
+
+.bank[hidden] {
+  display: none !important;
+}
+
+.bank.min {
+  height: auto !important;
+}
+
+.bank.min .bank-body,
+.bank.min .bank-resize {
+  display: none;
+}
+
+.bank-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 8px 8px 12px;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface-2);
+  cursor: grab;
+  touch-action: none;
+}
+
+body.dragging .bank-head {
+  cursor: grabbing;
+}
+
+.bank-drag {
+  color: var(--gold);
+  display: flex;
+}
+
+.bank-head h2 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.bank-filter {
+  display: flex;
+  gap: 2px;
+  margin-left: 6px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  min-width: 0;
+  flex: 1;
+}
+
+.bank-filter button {
+  border: 0;
+  background: transparent;
+  color: var(--faint);
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 5px 9px;
+  border-radius: 999px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.bank-filter button:hover {
+  color: var(--text);
+}
+
+.bank-filter button.on {
+  background: rgba(244, 197, 91, 0.14);
+  color: var(--gold-2);
+}
+
+.bank-tools {
+  display: flex;
+  gap: 4px;
+  margin-left: auto;
+}
+
+.bank-body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+/* Wide bank: tiles flow in columns. */
+.bank-body .symbols {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 8px;
+}
+
+.bank-resize {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 18px;
+  height: 18px;
+  cursor: nwse-resize;
+  touch-action: none;
+  background: linear-gradient(135deg, transparent 50%, var(--line-2) 50%, var(--line-2) 58%, transparent 58%, transparent 70%, var(--line-2) 70%, var(--line-2) 78%, transparent 78%);
+}
+
+.ptile .ptile-name {
+  font-size: 13.5px;
+}
+
+.ptile select {
+  padding: 4px 6px;
+  font-size: 12.5px;
+}
+
+/* ---------- win particles ---------- */
+
+.pfx-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.pfx-row {
+  display: grid;
+  grid-template-columns: 112px minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+  padding: 6px;
+  border-radius: 10px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+}
+
+.pfx-mini {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: 7px;
+  background: radial-gradient(ellipse at 50% 35%, #2a2140, #0d0915 75%);
+}
+
+.pfx-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+
+.pfx-label {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.pfx-label strong {
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pfx-label .hint {
+  font-size: 11.5px;
+}
+
+.pfx-selects {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 5px;
+}
+
+/* A wider panel or the bank has room for both pickers on one line. */
+@container (min-width: 420px) {
+  .pfx-selects {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.pfx-rows {
+  container-type: inline-size;
+}
+
+.pfx-selects select {
+  padding: 4px 6px;
+  font-size: 12.5px;
+}
+
+.pfx-gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
+  gap: 8px;
+}
+
+.pfx-card {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 6px;
+  border-radius: 10px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+}
+
+.pfx-card figcaption {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 12.5px;
+}
+
+.pfx-card .hint {
+  font-size: 11.5px;
+  line-height: 1.35;
+}
+
+.pfx-kind {
+  align-self: flex-start;
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 1px 6px;
+  border-radius: 999px;
+}
+
+.pfx-kind.short {
+  background: rgba(63, 176, 255, 0.16);
+  color: #8fd0ff;
+}
+
+.pfx-kind.continuous {
+  background: rgba(61, 220, 151, 0.14);
+  color: #7ff0bd;
+}
+
+@media (max-width: 1240px) {
+  .splitter {
+    display: none;
+  }
+}
+
+/* Phones: the bank becomes a bottom sheet. */
+@media (max-width: 760px) {
+  .bank {
+    left: 0 !important;
+    right: 0;
+    top: auto !important;
+    bottom: 0;
+    width: 100% !important;
+    height: 78vh !important;
+    border-radius: 16px 16px 0 0;
+  }
+
+  .bank-head {
+    cursor: default;
+    flex-wrap: wrap;
+  }
+
+  .bank-filter {
+    order: 3;
+    flex-basis: 100%;
+    margin-left: 0;
+  }
+
+  .bank-resize {
+    display: none;
+  }
+
+  .bank-body .symbols {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }

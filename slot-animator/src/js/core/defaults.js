@@ -2,6 +2,8 @@
 // plain JSON: it can be saved, loaded and diffed, and fully determines the
 // animation.
 
+import { defaultParticles } from './particles.js';
+
 export const OUTCOMES = [
   { id: 'none', label: 'No win', list: 'No win', short: 'No win', color: '#56607a' },
   { id: 'nearmiss', label: 'Near miss', list: 'Near miss', short: 'Near miss', color: '#8d7cf0' },
@@ -209,9 +211,9 @@ export function defaultHoldSpin() {
 
 export function defaultTiers() {
   return [
-    { id: 'tier1', title: 'BIG WIN', x: 15, palette: 'gold' },
-    { id: 'tier2', title: 'MEGA WIN', x: 40, palette: 'fire' },
-    { id: 'tier3', title: 'EPIC WIN', x: 80, palette: 'violet' },
+    { id: 'tier1', title: 'BIG WIN', x: 15, palette: 'gold', particles: { fx: 'fountain', asset: 'coin' } },
+    { id: 'tier2', title: 'MEGA WIN', x: 40, palette: 'fire', particles: { fx: 'rain', asset: 'coin' } },
+    { id: 'tier3', title: 'EPIC WIN', x: 80, palette: 'violet', particles: { fx: 'fireworks', asset: 'star' } },
   ];
 }
 
@@ -383,6 +385,7 @@ function baseProject() {
     },
     output: { transparent: false, formats: ['1920x1080'] },
     holdspin: defaultHoldSpin(),
+    particles: defaultParticles(),
     symbols: BUILTIN_SYMBOLS.map((s, i) => ({ id: `s${i}`, src: null, winAnim: null, ...s })),
     assets: { background: null, frame: null, logo: null },
     rounds: [],
@@ -414,10 +417,11 @@ export function candyProject() {
   p.effects.font = 'Lilita One';
   p.symbols = CANDY_SYMBOLS.map((s, i) => ({ id: `c${i}`, src: null, winAnim: null, ...s }));
   p.tiers = [
-    { id: 'tier1', title: 'NICE WIN', x: 10, palette: 'rose' },
-    { id: 'tier2', title: 'MEGA WIN', x: 30, palette: 'fire' },
-    { id: 'tier3', title: 'SENSATIONAL', x: 75, palette: 'violet' },
+    { id: 'tier1', title: 'NICE WIN', x: 10, palette: 'rose', particles: { fx: 'fountain', asset: 'gem' } },
+    { id: 'tier2', title: 'MEGA WIN', x: 30, palette: 'fire', particles: { fx: 'cannons', asset: 'confetti' } },
+    { id: 'tier3', title: 'SENSATIONAL', x: 75, palette: 'violet', particles: { fx: 'fireworks', asset: 'star' } },
   ];
+  Object.assign(p.particles, { small: { fx: 'burst-s', asset: 'star' }, medium: { fx: 'burst-m', asset: 'gem' }, total: { fx: 'rain', asset: 'confetti' } });
   const fs = { free: true };
   p.rounds = [
     newRound('none', { seed: 31 }),

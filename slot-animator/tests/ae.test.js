@@ -7,6 +7,7 @@ import { evalKeys } from '../src/js/core/keys.js';
 import { buildAEData, buildAEScript, AE_ASSETS, AE_SCRIPT, exportFormats, projectForFormat, parseFormat } from '../src/js/core/ae-export.js';
 import { formatPrize } from '../src/js/core/coins.js';
 import { sfxCues, toDb } from '../src/js/core/sfx.js';
+import { particleAt, particleAssetInfo } from '../src/js/core/particles.js';
 import { createAE, runScript } from './ae-mock.js';
 
 const TITLE_KEYS = (p) => [...p.tiers.map((t) => t.id), 'total', 'bonus', 'freespins', 'wheel', 'nearmiss'];
@@ -36,6 +37,7 @@ function allAssetPaths(list) {
       if (s.win) s.win.frames.forEach((f) => out.add(f));
     }
     if (data.sfx) data.sfx.clips.forEach((f) => out.add(f));
+    data.particles.assets.forEach((a) => a.files.forEach((f) => out.add(f)));
   }
   return new Set([...out].map((p) => `/pkg/${p}`));
 }
@@ -381,9 +383,9 @@ test('AE placeholder comps: art and effect looks are built once and used as laye
   const ph = log.folders.find((f) => f.name === 'Placeholder Comps');
   assert.ok(ph);
   const subs = log.folders.filter((f) => f.parentFolder === ph).map((f) => f.name);
-  for (const n of ['Symbols', 'Machine', 'Effects', 'Titles', 'Paylines', 'Counters', 'Plaques', 'Wheel']) assert.ok(subs.includes(n), `folder ${n}`);
+  for (const n of ['Symbols', 'Machine', 'Effects', 'Titles', 'Paylines', 'Counters', 'Plaques', 'Wheel', 'Particles']) assert.ok(subs.includes(n), `folder ${n}`);
   const byName = (n) => log.comps.filter((c) => c.name === n);
-  for (const n of ['Background', 'Machine Back', 'Machine Frame', 'Marquee Lights', 'Logo', 'Win Meter Panel', 'Vignette', 'FX Shockwave', 'FX Light Rays', 'FX Small Rays', 'FX Coin', 'FX Cell Frame', 'FX Anticipation', 'FX Sticky Frame', 'FX Near Miss', 'Prize Plaque', 'Wheel Disc', 'Wheel Pointer', 'Counter Digits', 'Title nearmiss', 'Title freespins']) {
+  for (const n of ['Background', 'Machine Back', 'Machine Frame', 'Marquee Lights', 'Logo', 'Win Meter Panel', 'Vignette', 'FX Shockwave', 'FX Light Rays', 'FX Small Rays', 'FX Cell Frame', 'FX Anticipation', 'FX Sticky Frame', 'FX Near Miss', 'Prize Plaque', 'Wheel Disc', 'Wheel Pointer', 'Counter Digits', 'Title nearmiss', 'Title freespins']) {
     assert.equal(byName(n).length, 1, `one ${n} placeholder`);
     assert.ok(ph === byName(n)[0].parentFolder.parentFolder, `${n} sits in Placeholder Comps`);
   }
@@ -404,11 +406,12 @@ test('AE placeholder comps: art and effect looks are built once and used as laye
   const lines = log.comps.filter((c) => /^Payline \d\d$/.test(c.name));
   assert.ok(lines.length > 0);
   assert.equal(new Set(lines.map((c) => c.name)).size, lines.length);
-  // Coin showers are comps of their own, made of FX Coin layers.
-  const showers = log.comps.filter((c) => c.parentFolder?.name === 'Coin Showers');
-  assert.ok(showers.length >= 2);
-  for (const sc of showers) assert.ok(sc.layers.list.every((l) => l.source?.name === 'FX Coin'), sc.name);
-  for (const sc of showers) assert.ok(rounds.some((c) => c.layers.list.some((l) => l.source === sc)), `${sc.name} is used`);
+  // Particle emitters are comps of their own, made of particle placeholder layers.
+  const ems = log.comps.filter((c) => c.parentFolder?.name === 'Particles' && c.parentFolder.parentFolder?.name === 'Rounds');
+  assert.ok(ems.length >= 3);
+  for (const ec of ems) assert.ok(ec.layers.list.every((l) => /^Particle /.test(l.source?.name) && l.source.parentFolder.parentFolder === ph), ec.name);
+  for (const ec of ems) assert.ok(rounds.some((c) => c.layers.list.some((l) => l.source === ec)), `${ec.name} is used`);
+  assert.equal(byName('Particle Confetti').length, 1);
 });
 
 test('AE side controls: SLOT CONTROL sliders exist and every comp/layer/effect an expression names exists', () => {
@@ -419,7 +422,7 @@ test('AE side controls: SLOT CONTROL sliders exist and every comp/layer/effect a
     const main = log.comps.find((c) => c.name === p.name);
     const ctrl = main.layers.list.find((l) => l.name === 'SLOT CONTROL');
     const fxNames = ctrl.property('ADBE Effect Parade').children.map((e) => e.name);
-    for (const n of ['Meter', 'FS Total', 'Shake %', 'Flash %', 'Dim %', 'Coins %', 'Spin Blur %', 'Win Pop %', 'FX Colour']) assert.ok(fxNames.includes(n), n);
+    for (const n of ['Meter', 'FS Total', 'Shake %', 'Flash %', 'Dim %', 'Particles %', 'Spin Blur %', 'Win Pop %', 'FX Colour']) assert.ok(fxNames.includes(n), n);
     const comps = new Map(log.comps.map((c) => [c.name, c]));
     let refs = 0;
     for (const e of log.expressions) {
@@ -435,7 +438,7 @@ test('AE side controls: SLOT CONTROL sliders exist and every comp/layer/effect a
     assert.ok(refs > 50);
     for (const e of log.expressions) for (const m of e.expr.matchAll(/layer\("SLOT CONTROL"\)\.effect\("([^"]+)"\)/g)) used.add(m[1]);
   }
-  for (const n of ['Shake %', 'Flash %', 'Dim %', 'Coins %', 'Spin Blur %', 'Win Pop %', 'FX Colour']) assert.ok(used.has(n), `${n} is used`);
+  for (const n of ['Shake %', 'Flash %', 'Dim %', 'Particles %', 'Spin Blur %', 'Win Pop %', 'FX Colour']) assert.ok(used.has(n), `${n} is used`);
 });
 
 test('AE counter rigs: the digit layers last as long as their counter', () => {
@@ -446,4 +449,50 @@ test('AE counter rigs: the digit layers last as long as their counter', () => {
   for (const rc of rigs) {
     for (const l of rc.layers.list.filter((x) => /^Digit /.test(x.name))) assert.ok(l.outPoint >= rc.duration - 1e-6, `${rc.name} / ${l.name}`);
   }
+});
+
+test('AE particles: every emitter is a comp whose layers move exactly like the preview particles', () => {
+  const p = defaultProject();
+  p.rounds = [newRound('small', { seed: 1 }), newRound('big', { seed: 3, tier: 2 }), newRound('freespins', { seed: 4 })];
+  p.particles.small = { fx: 'spiral', asset: 'ember' };
+  const { tl, log, list } = run(p);
+  assert.deepEqual(log.alerts, [], log.alerts.join('\n'));
+  const data = list[0].data;
+  const ctrlStub = { layer: () => ({ effect: () => () => ({ value: 100, valueOf: () => 100 }) }) };
+  const evalAt = (expr, time) => new Function('time', 'comp', 'thisComp', `return eval(${JSON.stringify(expr)})`)(time, () => ctrlStub, { frameDuration: 1 / tl.fps });
+  let checked = 0;
+  for (const em of tl.emitters) {
+    const R = data.rounds.find((r) => r.index === em.round);
+    const ed = R.particles.find((x) => x.start === Math.round(em.start * 1e4) / 1e4 && x.moment === em.moment);
+    assert.ok(ed, `${em.id} exported`);
+    const comp = log.comps.find((c) => c.name.endsWith(` ${ed.name}`) && c.name.startsWith(`R${String(em.round + 1).padStart(2, '0')} `));
+    assert.ok(comp, `${em.id} comp`);
+    const layers = comp.layers.list.slice().reverse();
+    assert.equal(layers.length, ed.ps.length);
+    const motion = particleAssetInfo(p, em.asset).motion;
+    for (const [i, L] of layers.entries()) {
+      if (i % 7) continue;
+      const q = ed.ps[i];
+      const part = { b: q[0], l: q[1], x: q[2], y: q[3], vx: q[4], vy: q[5], g: q[6], k: q[7], s: q[8], r0: q[9], rv: q[10], f: q[11], ph: q[12], sw: q[13], sf: q[14], v: q[15], fo: q[16], tw: q[17] };
+      for (const f of [0.15, 0.5, 0.85]) {
+        const t = part.b + part.l * f;
+        const local = t - ed.start;
+        const want = particleAt(part, t, motion);
+        const tr = L.property('ADBE Transform Group');
+        const xy = evalAt(tr.property('ADBE Position').expression, local);
+        assert.ok(Math.abs(xy[0] - want.x) < 0.05 && Math.abs(xy[1] - want.y) < 0.05, `${comp.name} #${i} position`);
+        assert.ok(Math.abs(evalAt(tr.property('ADBE Rotate Z').expression, local) - want.rot) < 1e-3);
+        const sc = evalAt(tr.property('ADBE Scale').expression, local);
+        assert.ok(Math.abs(sc[0] / sc[1] - want.sx / want.sy) < 1e-3, 'scale shape');
+        assert.ok(Math.abs(evalAt(tr.property('ADBE Opacity').expression, local) - want.alpha * 100) < 0.05, 'opacity');
+        checked++;
+      }
+      // Before birth the layer is invisible.
+      assert.equal(evalAt(L.property('ADBE Transform Group').property('ADBE Opacity').expression, part.b - ed.start - 0.01), 0);
+    }
+  }
+  assert.ok(checked > 60, `checked ${checked}`);
+  // Particle art: one placeholder per asset, with every variant.
+  const conf = log.comps.find((c) => c.name === 'Particle Confetti');
+  assert.equal(conf.layers.list.length, 8);
 });

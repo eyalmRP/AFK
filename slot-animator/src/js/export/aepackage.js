@@ -2,7 +2,7 @@
 // imports, zipped. Symbol art, win animations and the sound cues are shared;
 // machine art, titles and effects are painted once per output format.
 
-import { AE_ASSETS, buildAEData, buildAEScript, exportFormats, projectForFormat } from '../core/ae-export.js';
+import { AE_ASSETS, buildAEData, buildAEScript, exportFormats, projectForFormat, usedParticleAssets } from '../core/ae-export.js';
 import { computeLayout } from '../core/layout.js';
 import { paintHudLayer, paintBulbLayer, paintWheelBulbLayer } from '../render/renderer.js';
 import { canvas, buildResources } from '../render/sprites.js';
@@ -79,9 +79,14 @@ timing lives in the round comps, and a few controls sit on SLOT CONTROL.
     bulbs blink inside it, faster during wins), Logo, Win Meter Panel,
     Vignette.
   - Effects/: FX Shockwave (a ring that grows and fades in 0.7 s), FX Light
-    Rays, FX Small Rays, FX Coin (every coin in every shower), FX Cell
-    Frame (win highlight), FX Anticipation, FX Tease Cell, FX Sticky Frame,
-    FX Coin Lock, FX Near Miss, FX Wild Beam, FX Collected.
+    Rays, FX Small Rays, FX Cell Frame (win highlight), FX Anticipation,
+    FX Tease Cell, FX Sticky Frame, FX Coin Lock, FX Near Miss, FX Wild
+    Beam, FX Collected.
+  - Particles/: "Particle <name>" for each particle the win explosions
+    throw (gold coin, stars, confetti, your own art...). A set of variants
+    holds one per frame and each particle picks one; an animated particle
+    holds its frames in order and each particle plays it from a random
+    frame. Replace the art here and every explosion follows.
   - Titles/: "Title <tier>" for each title, with its light sweep.
   - Paylines/: "Payline NN", each drawing itself on.
   - Plaques/: the multiplier, prize and hold & spin plaques.
@@ -106,8 +111,11 @@ timing lives in the round comps, and a few controls sit on SLOT CONTROL.
   placeholders in time: paylines, win comps on the winning cells, cell
   frames, shockwaves, expanding wilds, multipliers, titles, the wheel, coin
   landings and the collect. Move a layer to retime an effect.
-  - Coin Showers/: each coin fountain, rain or burst is a comp of its own,
-    its coins thrown by expressions.
+  - Particles/: every win explosion (small burst, fountain, rain, confetti
+    cannons, fireworks...) is a comp of its own. Each layer is one
+    particle: a use of its Particle placeholder whose position, rotation,
+    scale and opacity expressions hold the exact flight it has in Reel
+    Studio (gravity, air drag, flutter). Slide the comp to retime it.
 - Counter Rigs/: the rolling money counters (win meter, big win amounts,
   the hold & spin collect, the grand). Each COUNTER CTRL > Value reads its
   source slider (WIN CTRL > Amount in a round comp, SLOT CONTROL in the
@@ -121,9 +129,9 @@ timing lives in the round comps, and a few controls sit on SLOT CONTROL.
   parent null whose position expression holds the shake events.
 - SLOT CONTROL (main comp):
   - "Meter", "FS Total" (and "Collect" with Hold & Spin) drive the counters.
-  - "Shake %", "Flash %", "Dim %", "Coins %" (thins every coin shower out),
-    "Spin Blur %" and "Win Pop %" scale those effects; 100 is what Reel
-    Studio showed.
+  - "Shake %", "Flash %", "Dim %", "Particles %" (thins every explosion
+    out), "Spin Blur %" and "Win Pop %" scale those effects; 100 is what
+    Reel Studio showed.
   - "FX Colour": tints the effect placeholders (see above).
 - The wheel game has no machine layers: just the background, the wheel and
   its prizes, one round comp per spin handing the wheel to the next.
@@ -167,6 +175,14 @@ export async function buildAEPackage(scene, images, onProgress) {
     winFrames[i] = frames;
     winFps[i] = anim.fps;
   }
+  // Particle art: one PNG per variant or animation frame, shared by every
+  // format (the emitters scale it).
+  for (const a of usedParticleAssets(tl, project)) {
+    const sprite = images.particles?.get(a.id);
+    if (!sprite) continue;
+    for (const [k, file] of a.files.entries()) if (sprite.frames[k]) await png(file, sprite.frames[k]);
+  }
+
   // Sound: every distinct cue as its own clip, laid out in the SFX comp.
   let sfx = false;
   let sfxHeadroom = 0;
@@ -205,7 +221,6 @@ export async function buildAEPackage(scene, images, onProgress) {
       [A.hud, L.hud ? paintHudLayer(sc) : null],
       [A.logo, res.logo],
       [A.vignette, res.vignette],
-      [A.coin, res.coin],
       [A.rays, res.rays],
       [A.raysSmall, res.raysSmall],
       [A.wheelDisc, res.wheel.disc],

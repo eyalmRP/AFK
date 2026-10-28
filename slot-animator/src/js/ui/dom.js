@@ -101,7 +101,7 @@ export function section(title, ...children) {
 }
 
 export function button(label, onClick, opts = {}) {
-  return h('button', { type: 'button', class: opts.class || 'btn', id: opts.id, title: opts.title, disabled: opts.disabled, onclick: onClick }, opts.icon ? icon(opts.icon) : null, label ? h('span', null, label) : null);
+  return h('button', { type: 'button', class: opts.class || 'btn', id: opts.id, title: opts.title, 'aria-label': label ? null : opts.title, disabled: opts.disabled, onclick: onClick }, opts.icon ? icon(opts.icon) : null, label ? h('span', null, label) : null);
 }
 
 const ICONS = {
@@ -123,6 +123,10 @@ const ICONS = {
   x: 'M6.4 5L12 10.6 17.6 5 19 6.4 13.4 12l5.6 5.6-1.4 1.4-5.6-5.6L6.4 19 5 17.6 10.6 12 5 6.4z',
   sound: 'M3 9h4l5-4v14l-5-4H3zM15 8.5a5 5 0 010 7l-1.4-1.4a3 3 0 000-4.2zM17.8 5.7a9 9 0 010 12.6l-1.4-1.4a7 7 0 000-9.8z',
   mute: 'M3 9h4l5-4v14l-5-4H3zM15.2 9.4l1.4-1.4 2.1 2.1 2.1-2.1 1.4 1.4-2.1 2.1 2.1 2.1-1.4 1.4-2.1-2.1-2.1 2.1-1.4-1.4 2.1-2.1z',
+  grid: 'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z',
+  minus: 'M5 11h14v2H5z',
+  window: 'M4 5h16v14H4zm2 4v8h12V9z',
+  sparkle: 'M12 2l1.8 6.2L20 10l-6.2 1.8L12 18l-1.8-6.2L4 10l6.2-1.8zM19 15l.9 2.1L22 18l-2.1.9L19 21l-.9-2.1L16 18l2.1-.9z',
 };
 
 export function icon(name) {

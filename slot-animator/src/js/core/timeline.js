@@ -14,6 +14,7 @@ import { orderList, ranksOf, cellOrderList } from './order.js';
 import { keyOf } from './grid.js';
 import { LINE_WINS, BIG_WINS, SCATTER_WINS, GAME_OUTCOMES } from './defaults.js';
 import { holdSpinConfig, pickCoinValue, coinTypeIndex } from './coins.js';
+import { scheduleParticles } from './particles.js';
 
 export const STRIP_PAD = 4;
 
@@ -906,7 +907,7 @@ export function buildTimeline(project) {
   for (const R of rounds) for (const a of R.actors) if (!Number.isFinite(a.tOut)) a.tOut = R.next;
   for (const k of stripKeys) pushKeys(k, [key(duration, k[k.length - 1].v)]);
   sfx.sort((a, b) => a.t - b.t);
-  return {
+  const tl = {
     duration,
     fps: project.canvas.fps,
     reels,
@@ -936,6 +937,9 @@ export function buildTimeline(project) {
     game,
     hold: { strips: hsStrips, keys: hsKeys, values: hsVals, windows: hsWindows, locks: hsLocks, counterKeys: hsCounterKeys, collectKeys, respins: hsCfg.respins },
   };
+  // Win particles for every round (R.pres.particles), all in tl.emitters.
+  tl.emitters = scheduleParticles(tl, project);
+  return tl;
 }
 
 // How much of the Hold & Spin board shows at time t (0 = the machine's reels).
