@@ -45,7 +45,9 @@ the result as an editable **After Effects project**.
 
 - Editor:
   - Feature search (Ctrl K or /): every control, section and command, found
-    by name, by the words people use for it ("confetti", "fly to score",
+    by name, by its label as it reads in the editor (labels, options and
+    hints are read from the panels themselves, so new controls are found
+    too), by the words people use for it ("confetti", "fly to score",
     "magnet") or despite a typo. Picking one opens its tab or the Asset
     Bank, selects a fitting round, unfolds the section and highlights it.
   - Project menu: new project, open and save the project file (Ctrl O,

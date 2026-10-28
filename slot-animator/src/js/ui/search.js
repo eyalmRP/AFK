@@ -290,6 +290,39 @@ function wordScore(q, list) {
   return { s: best, via };
 }
 
+// Adds the labels read from the live editor to the index. A label of a
+// control the index already lists becomes one of its search words; every
+// other labelled control becomes an entry of its own. The same control seen
+// for several round outcomes is one entry that knows all of them.
+export function buildIndex(harvested, list = FEATURES) {
+  const byId = new Map();
+  const out = list.map((f) => {
+    const c = { ...f };
+    const id = f.go.id || f.go.top;
+    if (id) byId.set(id, c);
+    return c;
+  });
+  const seen = new Map();
+  for (const h of harvested) {
+    if (!h || !h.title) continue;
+    const same = byId.get(h.go.id);
+    if (same) {
+      for (const extra of [h.title, h.keys]) if (extra && !norm(same.keys || '').includes(norm(extra))) same.keys = `${same.keys || ''} ${extra}`;
+      continue;
+    }
+    const key = `${norm(h.title)}|${h.where}`;
+    const prev = seen.get(key);
+    if (prev) {
+      if (Array.isArray(prev.go.round) && Array.isArray(h.go.round)) prev.go.round = [...new Set([...prev.go.round, ...h.go.round])];
+      continue;
+    }
+    const entry = { ...h, go: { ...h.go } };
+    seen.set(key, entry);
+    out.push(entry);
+  }
+  return out;
+}
+
 const prepared = new WeakMap();
 function prep(f) {
   let p = prepared.get(f);

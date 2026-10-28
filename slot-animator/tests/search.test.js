@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { searchFeatures, FEATURES, SYNONYMS, POPULAR } from '../src/js/ui/search.js';
+import { searchFeatures, buildIndex, FEATURES, SYNONYMS, POPULAR } from '../src/js/ui/search.js';
 
 const top = (q, n = 3) => searchFeatures(q).slice(0, n).map((r) => r.feature.title);
 
@@ -47,4 +47,22 @@ test('feature search index points at controls that exist in the editor', () => {
   assert.ok(FEATURES.length > 100);
   assert.ok(SYNONYMS.every((g) => g.length >= 2));
   assert.equal(new Set(FEATURES.map((f) => f.title)).size, FEATURES.length, 'titles are unique');
+});
+
+test('feature search: labels read from the editor join the index', () => {
+  const harvested = [
+    { title: 'Also tease the last reel to stop', where: 'Round inspector', keys: '', go: { round: ['none'], id: 'ri-tease' } },
+    { title: 'Also tease the last reel to stop', where: 'Round inspector', keys: '', go: { round: ['small'], id: 'ri-tease' } },
+    // A label of a control the index already lists becomes a search word.
+    { title: 'Win meter under the reels', where: 'Machine › Look', keys: 'hud strip under the frame', go: { tab: 'machine', id: 'm-hud' } },
+  ];
+  const index = buildIndex(harvested);
+  const tease = index.filter((f) => f.go.id === 'ri-tease');
+  assert.equal(tease.length, 1, 'one entry for every outcome');
+  assert.deepEqual(tease[0].go.round, ['none', 'small']);
+  assert.equal(searchFeatures('last reel', index)[0].feature.title, 'Also tease the last reel to stop');
+  assert.ok(searchFeatures('strip under the frame', index).some((r) => r.feature.go.id === 'm-hud'));
+  // The shared index is left as it was.
+  assert.ok(!FEATURES.some((f) => f.go.id === 'ri-tease'));
+  assert.ok(!/strip/.test(FEATURES.find((f) => f.go.id === 'm-hud').keys));
 });

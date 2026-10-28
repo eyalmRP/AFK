@@ -40,7 +40,7 @@ import { paintBuiltin } from '../render/paint.js';
 import { loadParticleSprites, drawParticleList } from '../render/particles.js';
 import { PARTICLE_TEMPLATES, TEMPLATE_BY_ID, BUILTIN_PARTICLES, PARTICLE_MOTIONS, PARTICLE_MOMENTS, tierParticles, spawnParticles, particleAssetInfo } from '../core/particles.js';
 import { WIN_STYLES, JUMP_TARGETS, MERGE_POINTS, winFxConfig, jumpTarget, mergeTarget } from '../core/winfx.js';
-import { searchFeatures } from './search.js';
+import { searchFeatures, buildIndex } from './search.js';
 import { renderFrame } from '../render/renderer.js';
 import { decodeCustomSounds, renderSoundtrack, audioBufferToWav } from '../render/audio.js';
 import { exportMP4, frameToPNG, canEncodeVideo } from '../export/video.js';
@@ -702,6 +702,110 @@ function goToFeature(f) {
   });
 }
 
+// Every labelled control in the editor, read from the panels themselves:
+// each settings tab, the Asset Bank, the quick sequence and the round
+// inspector for every outcome of this game. Rendered off screen; the
+// editor's own references are put back afterwards.
+function labelOf(c, root) {
+  if (c.classList.contains('seg')) return c.closest('.field')?.querySelector(':scope > .label')?.textContent || c.getAttribute('aria-label');
+  const lab = c.id ? root.querySelector(`label[for="${CSS.escape(c.id)}"]`) : null;
+  // A card button (name plus description): its name is the first part.
+  const parts = c.tagName === 'BUTTON' ? [...c.children].filter((x) => x.tagName !== 'svg' && x.textContent.trim()) : [];
+  const btn = parts.length > 1 ? parts[0].textContent : c.tagName === 'BUTTON' ? c.textContent : '';
+  const text = (lab ? lab.textContent : '') || c.getAttribute('aria-label') || btn || '';
+  return text.replace(/\s+/g, ' ').trim();
+}
+
+function describeOf(c) {
+  const parts = c.tagName === 'BUTTON' ? [...c.children].filter((x) => x.tagName !== 'svg' && x.textContent.trim()) : [];
+  return parts.slice(1).map((x) => x.textContent).join(' ');
+}
+
+function harvestFrom(root, base) {
+  const out = [];
+  for (const c of root.querySelectorAll('input[id], select[id], textarea[id], button[id], .seg[id]')) {
+    if (/-num$/.test(c.id) || c.type === 'file') continue;
+    const inSeg = c.tagName === 'BUTTON' && c.parentElement?.classList.contains('seg');
+    const title = labelOf(c, root);
+    if (!title || title.length < 2) continue;
+    const sec = c.closest('section.group')?.querySelector(':scope > h3')?.textContent?.trim();
+    const group = inSeg ? labelOf(c.parentElement, root) : '';
+    const hint = c.closest('.field')?.querySelector(':scope > .hint')?.textContent || '';
+    const opts = c.tagName === 'SELECT' ? [...c.options].slice(0, 14).map((o) => o.textContent).join(' ') : '';
+    out.push({ title, where: [base.where, sec, group].filter(Boolean).join(' › '), keys: [group, hint, opts, c.title || '', describeOf(c)].filter(Boolean).join(' '), go: { ...base.go, id: c.id } });
+  }
+  for (const h3 of root.querySelectorAll('section.group > h3')) {
+    const t = h3.textContent.trim();
+    if (t) out.push({ title: t, where: base.where, keys: 'section', go: { ...base.go, section: slugOf(t) } });
+  }
+  return out;
+}
+
+function harvestLabels() {
+  const keep = { ...el };
+  // Panels tidy the project as they render (default lists and the like):
+  // harvest on a copy so search never changes it. Images stay shared.
+  const real = state.project;
+  state.project = fromSnapshot(snapshot());
+  const P = state.project;
+  const keepSel = state.sel;
+  const out = [];
+  const take = (fn, base) => {
+    try {
+      const box = h('div', null, fn());
+      out.push(...harvestFrom(box, base));
+    } catch {
+      // A panel that cannot render off screen is simply not indexed.
+    }
+  };
+  try {
+    const panels = { machine: panelMachine, spin: panelSpin, wins: panelWins, effects: panelEffects, wheel: panelWheel, sound: panelSound, export: panelExport };
+    const tabLabel = Object.fromEntries(TABS.map(([k, l]) => [k, l]));
+    for (const [k, fn] of Object.entries(panels)) take(fn, { where: tabLabel[k], go: { tab: k } });
+    take(() => panelAssets('all'), { where: 'Asset Bank', go: { bank: 'all' } });
+    take(builderCard, { where: 'Rounds › Quick sequence', go: { section: 'seq/quick-sequence' } });
+    for (const o of GAME_OUTCOMES[gameOf()] || GAME_OUTCOMES.slot) {
+      P.rounds = [newRound(o)];
+      state.sel = 0;
+      el.inspector = h('div');
+      try {
+        renderInspector();
+        out.push(...harvestFrom(el.inspector, { where: `Round inspector (${OUTCOME_BY_ID[o]?.label || o})`, go: { round: [o] } }));
+      } catch {
+        // skip this outcome
+      }
+    }
+  } finally {
+    state.project = real;
+    state.sel = keepSel;
+    for (const k of Object.keys(el)) if (!(k in keep)) delete el[k];
+    Object.assign(el, keep);
+  }
+  // Inspector controls read the same for every outcome: one entry each.
+  return out.map((e) => (e.go.round ? { ...e, where: 'Round inspector' } : e));
+}
+
+// The harvested index is kept and rebuilt in idle time after changes, so
+// the search opens at once.
+let searchIndex = null;
+let indexTimer = null;
+
+function invalidateSearchIndex() {
+  searchIndex = null;
+  clearTimeout(indexTimer);
+  indexTimer = setTimeout(function build() {
+    if (searchIndex) return;
+    if (state.playing || state.busy) {
+      indexTimer = setTimeout(build, 2000);
+      return;
+    }
+    const idle = window.requestIdleCallback || ((f) => setTimeout(f, 0));
+    idle(() => {
+      if (!searchIndex) searchIndex = buildIndex(harvestLabels());
+    });
+  }, 1500);
+}
+
 function closeSearch() {
   if (!el.search) return;
   el.search.remove();
@@ -710,13 +814,14 @@ function closeSearch() {
 
 function openSearch() {
   if (el.search) return el.searchInput.focus();
+  const index = searchIndex || (searchIndex = buildIndex(harvestLabels()));
   let results = [];
   let active = 0;
   const list = h('ul', { class: 'search-results', id: 'search-results', role: 'listbox', 'aria-label': 'Features' });
   const input = h('input', { type: 'search', id: 'search-input', placeholder: 'Search features: try “confetti”, “fly to score”, “save”…', autocomplete: 'off', spellcheck: 'false', role: 'combobox', 'aria-expanded': 'true', 'aria-controls': 'search-results', 'aria-autocomplete': 'list' });
   el.searchInput = input;
   const paint = () => {
-    results = searchFeatures(input.value);
+    results = searchFeatures(input.value, index);
     active = Math.min(active, Math.max(0, results.length - 1));
     clear(
       list,
@@ -885,6 +990,7 @@ let rebuildVersion = 0;
 function changed(kind = 'all') {
   save();
   recordSoon();
+  invalidateSearchIndex();
   clearTimeout(rebuildTimer);
   state.pendingKind = state.pendingKind === 'all' || kind === 'all' ? 'all' : 'timeline';
   rebuildTimer = setTimeout(() => {
@@ -3822,6 +3928,7 @@ function toast(msg, kind = 'info', ms = 3600) {
 }
 
 function renderAll() {
+  invalidateSearchIndex();
   renderTransport();
   renderTabs();
   renderPanel();
