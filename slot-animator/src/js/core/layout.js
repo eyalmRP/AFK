@@ -2,6 +2,8 @@
 // the win meter and the marquee bulbs sit. Pure math, shared by the canvas
 // renderer and the After Effects exporter so both place things identically.
 
+import { wheelGeometry } from './wheel.js';
+
 const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 
 export function computeLayout(project) {
@@ -115,5 +117,6 @@ export function computeLayout(project) {
     mapY,
     cellCenter,
     center: { x: W / 2, y: winCY },
+    wheel: wheelGeometry(project, W, H),
   };
 }

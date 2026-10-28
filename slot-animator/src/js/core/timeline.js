@@ -17,6 +17,7 @@ import { holdSpinConfig, pickCoinValue, coinTypeIndex } from './coins.js';
 import { scheduleParticles } from './particles.js';
 import { winFxConfig, winStyleOf, scheduleWinFx } from './winfx.js';
 import { scheduleCamera } from './camera.js';
+import { wheelConfig, SLIP } from './wheel.js';
 
 export const STRIP_PAD = 4;
 
@@ -741,43 +742,67 @@ export function buildTimeline(project) {
       const inEnd = inStart + 0.9;
       const spinStart = cont ? tcur + 0.35 : inEnd + 0.15;
       const spinDur = Math.max(2, num(tm.wheelSpin, 5.8));
-      const spinEnd2 = spinStart + spinDur;
       const segDeg = 360 / N;
       const landing = round.wheelLanding || project.wheel.landing || 'tease';
+      const slip = landing === 'slip';
+      // Almost slips: the wheel creeps into the next peg, the pointer
+      // strains, then the wheel rolls back into the winning segment.
+      const spinEnd2 = spinStart + spinDur + (slip ? SLIP.creep + SLIP.roll : 0);
       let off = 0;
       if (landing === 'tease') off = rng() < 0.5 ? -0.42 : 0.42;
       else if (landing === 'random') off = (rng() - 0.5) * 0.7;
+      else if (slip) off = 0.5 - SLIP.peak;
+      // The pointer reads the segment under it, at the top or at the bottom.
+      const P = wheelConfig(project).pointer === 'bottom' ? 180 : 0;
       const targetLocal = (segment + 0.5 + off) * segDeg;
       const turns = Math.max(1, num(project.wheel.turns, 5));
-      const delta = (((-targetLocal - wheelAngle) % 360) + 360) % 360;
+      const delta = (((P - targetLocal - wheelAngle) % 360) + 360) % 360;
       const total = turns * 360 + delta;
+      const creepDeg = slip ? (SLIP.peak - SLIP.creepFrom) * segDeg : 0;
+      const rollDeg = slip ? (SLIP.peak - SLIP.rest) * segDeg : 0;
       const windup = 12;
       const accel = 0.6;
       const decel = spinDur - 0.45 - accel;
-      const Y = (total + windup) / (1 + (0.3 * 2.2) / decel);
+      const Y = (total - creepDeg + windup) / (1 + (0.3 * 2.2) / decel);
       const vmax = (2.2 * Y) / decel;
       const a0 = wheelAngle;
+      const mainEnd = spinStart + spinDur;
+      const vc = slip ? (2 * creepDeg) / SLIP.creep : 0;
       const wk = [
         key(spinStart, a0, { outInf: 0.5 }),
         key(spinStart + 0.45, a0 - windup, { inInf: 0.5, outInf: 0.5 }),
         key(spinStart + 0.45 + accel, a0 - windup + 0.3 * vmax, { inSpeed: vmax, outSpeed: vmax, outInf: 0.16 }),
-        key(spinEnd2, a0 + total, { inInf: 0.62 }),
+        key(mainEnd, a0 + total - creepDeg, { inInf: 0.62, inSpeed: vc, outSpeed: vc, outInf: 0.3 }),
       ];
+      if (slip) wk.push(key(mainEnd + SLIP.creep, a0 + total, { inInf: 0.6, outInf: 0.45 }), key(spinEnd2, a0 + total - rollDeg, { inInf: 0.55 }));
       pushKeys(wheelKeys, wk);
       // A tick every time a peg passes the pointer.
-      let lastSeg = Math.floor((a0 - windup) / segDeg);
+      let lastSeg = Math.floor((a0 - windup - P) / segDeg);
       for (let t = spinStart + 0.45; t <= spinEnd2; t += 1 / 240) {
-        const s2 = Math.floor(evalKeys(wheelKeys, t) / segDeg);
+        const s2 = Math.floor((evalKeys(wheelKeys, t) - P) / segDeg);
         if (s2 !== lastSeg) {
           sfx.push({ t, type: 'wheelTick' });
           lastSeg = s2;
         }
       }
-      wheelAngle = a0 + total;
+      // The peg lets go of the pointer as the wheel rolls back: it springs
+      // past straight (a tick as it snaps free).
+      let kick = null;
+      if (slip) {
+        for (let t = mainEnd + SLIP.creep; t <= spinEnd2; t += 1 / 240) {
+          const u = ((((evalKeys(wheelKeys, t) - P) / segDeg) % 1) + 1) % 1;
+          if (u < 0.78) {
+            kick = { t, amp: SLIP.kick };
+            sfx.push({ t, type: 'wheelTick' });
+            break;
+          }
+        }
+      }
+      wheelAngle = a0 + total - rollDeg;
       const countStart = spinEnd2 + 0.65;
       const countEnd = countStart + 2.2;
       const outStart = keepOn ? countEnd + 1000 : countEnd + 1.3;
-      pres.wheel = { inStart, inEnd, spinStart, spinEnd: spinEnd2, prizeStart: spinEnd2 + 0.25, countStart, countEnd, outStart, outEnd: outStart + 0.8, segment, amount: win.amount, cont, titleIn: tcur, plaqueEnd: keepOn ? countEnd + 1.3 : outStart + 0.8 };
+      pres.wheel = { inStart, inEnd, spinStart, spinEnd: spinEnd2, prizeStart: spinEnd2 + 0.25, countStart, countEnd, outStart, outEnd: outStart + 0.8, segment, amount: win.amount, cont, titleIn: tcur, plaqueEnd: keepOn ? countEnd + 1.3 : outStart + 0.8, landing, slowFrom: slip ? mainEnd - 1.2 : spinEnd2 - 1.6, kick };
       wheelShown = wheelGame;
       pres.meter = { start: countStart, end: countEnd };
       pushKeys(meterKeys, [key(countStart, 0, { outSpeed: (win.amount / 2.2) * 1.25 }), key(countEnd, win.amount, { inInf: 0.6, hold: true })]);

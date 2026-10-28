@@ -4,6 +4,7 @@
 
 import { THEMES } from '../core/defaults.js';
 import { symbolLayout, holdSpinConfig } from '../core/coins.js';
+import { wheelConfig, segmentLayout, labelPalette } from '../core/wheel.js';
 import { paintBuiltin, paintCoinSymbol, paintEmptyCell, metalGradient, roundRect, starPath, sparkle, METALS } from './paint.js';
 
 export function canvas(w, h) {
@@ -56,6 +57,19 @@ export async function loadProjectImages(project) {
     background: await opt(project.assets.background),
     frame: await opt(project.assets.frame),
     logo: await opt(project.assets.logo),
+    wheel: await loadWheelArt(project, opt),
+  };
+}
+
+// The wheel's uploaded parts and segment icons.
+export async function loadWheelArt(project, load) {
+  const a = project.wheel?.art || {};
+  return {
+    face: await load(a.face),
+    rim: await load(a.rim),
+    hub: await load(a.hub),
+    pointer: await load(a.pointer),
+    icons: await Promise.all((project.wheel?.segments || []).map((s) => load(s.icon))),
   };
 }
 
@@ -490,17 +504,51 @@ function paintRays(size, count, color) {
   return c;
 }
 
-function paintWheel(R, segments, font) {
+// An image fitted inside (contain) or over (cover) a w x h box, centred.
+function fitInto(img, w, h, cover = false) {
+  const c = canvas(w, h);
+  const s = (cover ? Math.max : Math.min)(w / img.width, h / img.height);
+  c.getContext('2d').drawImage(img, (w - img.width * s) / 2, (h - img.height * s) / 2, img.width * s, img.height * s);
+  return c;
+}
+
+// The Wheel of Fortune in parts, so each can be replaced: the face (your
+// art under the segments), the segments (wedges, separators, pegs), icons
+// and labels, the hub, the rim with its bulbs, and the pointer. "disc" is
+// everything that turns, put together for the preview.
+// art: { face, rim, hub, pointer, icons[] } loaded images (or null).
+function paintWheel(R, segments, project, art = {}) {
+  const cfg = wheelConfig(project);
+  const font = fontStack(cfg.labelFont || project.effects.font);
   const N = Math.max(2, segments.length);
   const seg = (Math.PI * 2) / N;
   const size = Math.ceil(R * 2 + 8);
-  const disc = canvas(size, size);
-  const g = disc.getContext('2d');
-  g.translate(size / 2, size / 2);
+  const mk = () => {
+    const c = canvas(size, size);
+    const g = c.getContext('2d');
+    g.translate(size / 2, size / 2);
+    return [c, g];
+  };
+
+  // Face: uploaded art over the whole disc, clipped to the circle.
+  let face = null;
+  if (art.face) {
+    const [c, g] = mk();
+    g.beginPath();
+    g.arc(0, 0, R, 0, Math.PI * 2);
+    g.clip();
+    g.drawImage(fitInto(art.face, R * 2, R * 2, true), -R, -R);
+    face = c;
+  }
+
+  // Segments: coloured wedges (an uncoloured one lets the face show),
+  // separators and pegs.
+  const [segs, g] = mk();
   for (let k = 0; k < N; k++) {
+    const col = segments[k].color;
+    if (!col) continue;
     const a0 = -Math.PI / 2 + k * seg;
     const a1 = a0 + seg;
-    const col = segments[k].color || '#a01030';
     const rg = g.createRadialGradient(0, 0, R * 0.1, 0, 0, R);
     rg.addColorStop(0, shade(col, -0.55));
     rg.addColorStop(0.55, col);
@@ -523,112 +571,180 @@ function paintWheel(R, segments, font) {
     g.fill();
     g.restore();
   }
-  // Separators.
-  g.strokeStyle = metalGradient(g, -R, -R, R, R, 'gold');
-  g.lineWidth = Math.max(2, R * 0.018);
-  for (let k = 0; k < N; k++) {
-    const a = -Math.PI / 2 + k * seg;
-    g.beginPath();
-    g.moveTo(Math.cos(a) * R * 0.17, Math.sin(a) * R * 0.17);
-    g.lineTo(Math.cos(a) * R, Math.sin(a) * R);
-    g.stroke();
-  }
-  // Labels, reading outward along the radius.
-  for (let k = 0; k < N; k++) {
-    const a = -Math.PI / 2 + (k + 0.5) * seg;
-    const label = String(segments[k].label ?? '');
-    g.save();
-    g.rotate(a);
-    let px = Math.min(R * 0.15, R * seg * 0.42);
-    g.font = `${px}px ${font}`;
-    const maxLen = R * 0.56;
-    const mw = g.measureText(label).width;
-    if (mw > maxLen) {
-      px *= maxLen / mw;
-      g.font = `${px}px ${font}`;
+  if (cfg.show.separators) {
+    g.strokeStyle = metalGradient(g, -R, -R, R, R, 'gold');
+    g.lineWidth = Math.max(2, R * 0.018);
+    for (let k = 0; k < N; k++) {
+      const a = -Math.PI / 2 + k * seg;
+      g.beginPath();
+      g.moveTo(Math.cos(a) * R * 0.17, Math.sin(a) * R * 0.17);
+      g.lineTo(Math.cos(a) * R, Math.sin(a) * R);
+      g.stroke();
     }
-    g.textAlign = 'center';
-    g.textBaseline = 'middle';
-    g.lineJoin = 'round';
-    g.translate(R * 0.6, 0);
-    g.lineWidth = px * 0.22;
-    g.strokeStyle = 'rgba(20,6,0,0.9)';
-    g.strokeText(label, 0, 0);
-    g.fillStyle = metalGradient(g, 0, -px * 0.5, 0, px * 0.5, 'gold');
-    g.fillText(label, 0, 0);
-    g.restore();
   }
-  // Pegs.
-  for (let k = 0; k < N; k++) {
-    const a = -Math.PI / 2 + k * seg;
-    const x = Math.cos(a) * R * 0.94;
-    const y = Math.sin(a) * R * 0.94;
-    const pg = g.createRadialGradient(x - R * 0.008, y - R * 0.01, 1, x, y, R * 0.03);
-    pg.addColorStop(0, '#ffffff');
-    pg.addColorStop(0.4, '#ffd65a');
-    pg.addColorStop(1, '#6b4206');
-    g.fillStyle = pg;
-    g.beginPath();
-    g.arc(x, y, R * 0.028, 0, Math.PI * 2);
-    g.fill();
+  if (cfg.show.pegs) {
+    for (let k = 0; k < N; k++) {
+      const a = -Math.PI / 2 + k * seg;
+      const x = Math.cos(a) * R * 0.94;
+      const y = Math.sin(a) * R * 0.94;
+      const pg = g.createRadialGradient(x - R * 0.008, y - R * 0.01, 1, x, y, R * 0.03);
+      pg.addColorStop(0, '#ffffff');
+      pg.addColorStop(0.4, '#ffd65a');
+      pg.addColorStop(1, '#6b4206');
+      g.fillStyle = pg;
+      g.beginPath();
+      g.arc(x, y, R * 0.028, 0, Math.PI * 2);
+      g.fill();
+    }
   }
-  // Hub.
-  const hub = g.createRadialGradient(-R * 0.05, -R * 0.06, R * 0.01, 0, 0, R * 0.19);
-  hub.addColorStop(0, '#fffbe0');
-  hub.addColorStop(0.45, '#ffcf45');
-  hub.addColorStop(1, '#7a4a05');
-  g.fillStyle = hub;
-  g.beginPath();
-  g.arc(0, 0, R * 0.17, 0, Math.PI * 2);
-  g.fill();
-  g.lineWidth = R * 0.02;
-  g.strokeStyle = '#3a1d00';
-  g.stroke();
-  starPath(g, 0, 0, R * 0.11, R * 0.05, 5);
-  g.fillStyle = '#c4002d';
-  g.fill();
-  g.lineWidth = R * 0.01;
-  g.strokeStyle = '#ffe9a3';
-  g.stroke();
 
-  // Static outer ring.
+  // Icons and labels.
+  const layout = segmentLayout(segments, R, project);
+  const pal = labelPalette(cfg.labelPalette);
+  const icons = [];
+  const labels = [];
+  const [marks, mg] = mk();
+  layout.forEach((it, k) => {
+    const rad = (it.a * Math.PI) / 180;
+    const img = art.icons?.[k];
+    if (it.icon && img) {
+      const ic = fitInto(img, it.icon.size, it.icon.size);
+      icons[k] = ic;
+      mg.save();
+      mg.rotate(rad);
+      mg.translate(it.icon.r, 0);
+      mg.rotate(Math.PI / 2);
+      mg.drawImage(ic, -ic.width / 2, -ic.height / 2);
+      mg.restore();
+    }
+    if (!it.label) return;
+    const text = String(segments[k].label);
+    let px = it.label.px;
+    mg.font = `${px}px ${font}`;
+    const mw = mg.measureText(text).width;
+    if (mw > it.label.maxLen) px *= it.label.maxLen / mw;
+    labels[k] = { text, px, r: it.label.r, a: it.a };
+    mg.save();
+    mg.rotate(rad);
+    mg.translate(it.label.r, 0);
+    mg.font = `${px}px ${font}`;
+    mg.textAlign = 'center';
+    mg.textBaseline = 'middle';
+    mg.lineJoin = 'round';
+    mg.lineWidth = px * 0.22;
+    mg.strokeStyle = pal.stroke;
+    mg.strokeText(text, 0, 0);
+    mg.fillStyle = pal.flat ? pal.fill : metalGradient(mg, 0, -px * 0.5, 0, px * 0.5, pal.id);
+    mg.fillText(text, 0, 0);
+    mg.restore();
+  });
+
+  // Hub: built-in or uploaded, scaled by the hub size.
+  let hub = null;
+  if (cfg.show.hub) {
+    const hr = R * 0.19 * cfg.hubSize;
+    const hs = Math.ceil(hr * 2 + 4);
+    hub = canvas(hs, hs);
+    const hg = hub.getContext('2d');
+    hg.translate(hs / 2, hs / 2);
+    if (art.hub) {
+      const f = fitInto(art.hub, hr * 2, hr * 2);
+      hg.drawImage(f, -f.width / 2, -f.height / 2);
+    } else {
+      const k = cfg.hubSize;
+      const hb = hg.createRadialGradient(-R * 0.05 * k, -R * 0.06 * k, R * 0.01 * k, 0, 0, R * 0.19 * k);
+      hb.addColorStop(0, '#fffbe0');
+      hb.addColorStop(0.45, '#ffcf45');
+      hb.addColorStop(1, '#7a4a05');
+      hg.fillStyle = hb;
+      hg.beginPath();
+      hg.arc(0, 0, R * 0.17 * k, 0, Math.PI * 2);
+      hg.fill();
+      hg.lineWidth = R * 0.02 * k;
+      hg.strokeStyle = '#3a1d00';
+      hg.stroke();
+      starPath(hg, 0, 0, R * 0.11 * k, R * 0.05 * k, 5);
+      hg.fillStyle = '#c4002d';
+      hg.fill();
+      hg.lineWidth = R * 0.01 * k;
+      hg.strokeStyle = '#ffe9a3';
+      hg.stroke();
+    }
+  }
+
+  // Everything that turns, for the preview.
+  const [disc, dg] = mk();
+  if (face) dg.drawImage(face, -size / 2, -size / 2);
+  dg.drawImage(segs, -size / 2, -size / 2);
+  dg.drawImage(marks, -size / 2, -size / 2);
+  if (hub && cfg.hubSpins) dg.drawImage(hub, -hub.width / 2, -hub.height / 2);
+
+  // Rim: built-in ring with bulb sockets, or uploaded art fitted to the
+  // same square (the wheel's edge at 85% of its width).
   const ringSize = Math.ceil(R * 2.36);
-  const ring = canvas(ringSize, ringSize);
-  const rg2 = ring.getContext('2d');
-  rg2.translate(ringSize / 2, ringSize / 2);
-  rg2.save();
-  rg2.shadowColor = 'rgba(0,0,0,0.7)';
-  rg2.shadowBlur = R * 0.08;
-  rg2.beginPath();
-  rg2.arc(0, 0, R * 1.15, 0, Math.PI * 2);
-  rg2.arc(0, 0, R * 0.985, 0, Math.PI * 2, true);
-  rg2.fillStyle = metalGradient(rg2, -R, -R, R, R, 'gold');
-  rg2.fill();
-  rg2.restore();
-  rg2.lineWidth = R * 0.012;
-  rg2.strokeStyle = 'rgba(40,18,0,0.9)';
-  for (const rr of [R * 1.15, R * 0.985, R * 1.07]) {
-    rg2.beginPath();
-    rg2.arc(0, 0, rr, 0, Math.PI * 2);
-    rg2.stroke();
-  }
+  let ring = null;
   const bulbs = [];
-  const nb = Math.max(16, N * 2);
-  for (let i = 0; i < nb; i++) {
-    const a = -Math.PI / 2 + (i / nb) * Math.PI * 2 + Math.PI / nb;
-    bulbs.push({ x: Math.cos(a) * R * 1.07, y: Math.sin(a) * R * 1.07 });
-    rg2.fillStyle = 'rgba(0,0,0,0.6)';
-    rg2.beginPath();
-    rg2.arc(Math.cos(a) * R * 1.07, Math.sin(a) * R * 1.07, R * 0.034, 0, Math.PI * 2);
-    rg2.fill();
+  if (cfg.show.rim) {
+    ring = canvas(ringSize, ringSize);
+    const rg2 = ring.getContext('2d');
+    if (art.rim) rg2.drawImage(fitInto(art.rim, ringSize, ringSize), 0, 0);
+    else {
+      rg2.translate(ringSize / 2, ringSize / 2);
+      rg2.save();
+      rg2.shadowColor = 'rgba(0,0,0,0.7)';
+      rg2.shadowBlur = R * 0.08;
+      rg2.beginPath();
+      rg2.arc(0, 0, R * 1.15, 0, Math.PI * 2);
+      rg2.arc(0, 0, R * 0.985, 0, Math.PI * 2, true);
+      rg2.fillStyle = metalGradient(rg2, -R, -R, R, R, 'gold');
+      rg2.fill();
+      rg2.restore();
+      rg2.lineWidth = R * 0.012;
+      rg2.strokeStyle = 'rgba(40,18,0,0.9)';
+      for (const rr of [R * 1.15, R * 0.985, R * 1.07]) {
+        rg2.beginPath();
+        rg2.arc(0, 0, rr, 0, Math.PI * 2);
+        rg2.stroke();
+      }
+    }
+  }
+  if (cfg.show.bulbs) {
+    const nb = Math.max(16, N * 2);
+    const sockets = ring && !art.rim ? ring.getContext('2d') : null;
+    for (let i = 0; i < nb; i++) {
+      const a = -Math.PI / 2 + (i / nb) * Math.PI * 2 + Math.PI / nb;
+      bulbs.push({ x: Math.cos(a) * R * 1.07, y: Math.sin(a) * R * 1.07 });
+      if (!sockets) continue;
+      sockets.fillStyle = 'rgba(0,0,0,0.6)';
+      sockets.beginPath();
+      sockets.arc(Math.cos(a) * R * 1.07, Math.sin(a) * R * 1.07, R * 0.034, 0, Math.PI * 2);
+      sockets.fill();
+    }
   }
 
-  // Pointer (flapper), pivot at top centre of its canvas.
-  const pw = Math.ceil(R * 0.26);
-  const ph = Math.ceil(R * 0.34);
-  const pointer = canvas(pw, ph);
-  const pg = pointer.getContext('2d');
-  pg.translate(pw / 2, ph * 0.22);
+  const ptr = paintPointer(R, cfg, art.pointer);
+  return { disc, face, segs, hub, icons, labels, ring, pointer: ptr.c, pivotX: ptr.px, pivotY: ptr.py, R, bulbs, discSize: size, ringSize, hubSpins: cfg.hubSpins };
+}
+
+// The pointer, drawn pointing down with its pivot at (px, py). The built-in
+// one gets room for its shadow so nothing is cut off; uploaded art is
+// fitted to the same height and pivots at its "pivot" fraction from the top.
+function paintPointer(R, cfg, img) {
+  const k = cfg.pointerSize;
+  const pw = R * 0.26 * k;
+  const ph = R * 0.34 * k;
+  if (img) {
+    const h = ph * 1.05;
+    const w = Math.max(4, (img.width / img.height) * h);
+    const c = fitInto(img, w, h);
+    return { c, px: c.width / 2, py: c.height * cfg.pivot };
+  }
+  const pad = R * 0.05 * k;
+  const c = canvas(pw + pad * 2, ph + pad * 2 + pw * 0.12);
+  const pg = c.getContext('2d');
+  const px = c.width / 2;
+  const py = pad + pw * 0.44;
+  pg.translate(px, py);
   const shape = () => {
     pg.beginPath();
     pg.moveTo(0, ph * 0.72);
@@ -639,14 +755,14 @@ function paintWheel(R, segments, font) {
   };
   pg.save();
   pg.shadowColor = 'rgba(0,0,0,0.6)';
-  pg.shadowBlur = R * 0.03;
-  pg.shadowOffsetY = R * 0.015;
+  pg.shadowBlur = R * 0.03 * k;
+  pg.shadowOffsetY = R * 0.015 * k;
   shape();
   pg.fillStyle = metalGradient(pg, -pw / 2, 0, pw / 2, ph, 'gold');
   pg.fill();
   pg.restore();
   shape();
-  pg.lineWidth = R * 0.012;
+  pg.lineWidth = R * 0.012 * k;
   pg.strokeStyle = '#3a1d00';
   pg.stroke();
   const gem = pg.createRadialGradient(-pw * 0.06, -ph * 0.08, 1, 0, -ph * 0.04, pw * 0.22);
@@ -657,8 +773,7 @@ function paintWheel(R, segments, font) {
   pg.beginPath();
   pg.arc(0, -ph * 0.04, pw * 0.2, 0, Math.PI * 2);
   pg.fill();
-
-  return { disc, ring, pointer, R, bulbs, pivotY: ph * 0.22, discSize: size, ringSize };
+  return { c, px, py };
 }
 
 export function shade(hex, amt) {
@@ -698,7 +813,6 @@ export function buildResources(project, L, images) {
   make('nearmiss', 'silver', 0.55);
   make('holdspin', 'gold', 0.8);
   make('grand', 'fire', 1.05);
-  const wheelR = Math.round(Math.min(L.H * 0.36, L.W * 0.4));
   const segs = project.wheel.segments.length >= 2 ? project.wheel.segments : [{ label: '?', value: 0 }, { label: '?', value: 0 }];
   return {
     theme,
@@ -720,7 +834,7 @@ export function buildResources(project, L, images) {
     glow: paintGlow(256),
     rays: paintRays(1024, 18, 'rgba(255,220,140,0.75)'),
     raysSmall: paintRays(512, 12, 'rgba(255,240,200,0.8)'),
-    wheel: paintWheel(wheelR, segs, font),
+    wheel: paintWheel(L.wheel.R, segs, project, images.wheel || {}),
     digitCache: new Map(),
     titleCache: new Map(),
   };

@@ -38,6 +38,7 @@ function allAssetPaths(list) {
     }
     if (data.sfx) data.sfx.clips.forEach((f) => out.add(f));
     data.particles.assets.forEach((a) => a.files.forEach((f) => out.add(f)));
+    data.wheel.icons.forEach((i) => out.add(i.file));
   }
   return new Set([...out].map((p) => `/pkg/${p}`));
 }

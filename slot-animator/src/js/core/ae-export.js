@@ -24,6 +24,8 @@ import { sfxCues, SFX_GROUPS, toDb } from './sfx.js';
 import { particleAssetInfo, spawnParticles, TEMPLATE_BY_ID } from './particles.js';
 import { jumpTarget, mergeTarget, flightPath, winFxConfig } from './winfx.js';
 import { zoomConfig, focusPoint, ZOOM_IN, ZOOM_HOLD, ZOOM_OUT, PAN } from './camera.js';
+import { wheelConfig, segmentLayout, labelPalette, POINTER_MAX } from './wheel.js';
+import { fontPostScript } from './fonts.js';
 
 export const AE_ASSETS = {
   shared: {
@@ -43,7 +45,10 @@ export const AE_ASSETS = {
     vignette: `${dir}/vignette.png`,
     rays: `${dir}/rays.png`,
     raysSmall: `${dir}/rays_small.png`,
-    wheelDisc: `${dir}/wheel_disc.png`,
+    wheelFace: `${dir}/wheel_face.png`,
+    wheelSegments: `${dir}/wheel_segments.png`,
+    wheelHub: `${dir}/wheel_hub.png`,
+    wheelIcon: (k) => `${dir}/wheel_icon_${String(k + 1).padStart(2, '0')}.png`,
     wheelRing: `${dir}/wheel_ring.png`,
     wheelBulbsA: `${dir}/wheel_bulbs_a.png`,
     wheelBulbsB: `${dir}/wheel_bulbs_b.png`,
@@ -282,6 +287,7 @@ export function buildAEData(project, tl, L, extras = {}) {
         plaqueEnd: r4(Math.min(w.plaqueEnd ?? w.outEnd, w.outEnd)),
         cont: w.cont ? 1 : 0,
         keys: exportKeys(tl.wheelKeys, w.spinStart, w.spinEnd),
+        kick: w.kick ? [r4(w.kick.t), w.kick.amp] : null,
       };
     }
     return out;
@@ -315,7 +321,40 @@ export function buildAEData(project, tl, L, extras = {}) {
     }
   }
   const hideWindows = tl.mode === 'cascade' ? [] : tl.rounds.filter((R) => R.actorsFrom != null).map((R) => [r4(R.actorsFrom), r4(R.next)]);
-  const wheelR = extras.wheelR || Math.round(Math.min(L.H * 0.36, L.W * 0.4));
+  // The wheel: where it sits, its pointer, and what goes on the disc. Labels
+  // become text layers; the preview's measured sizes are used when given.
+  const WG = L.wheel;
+  const wcfg = wheelConfig(project);
+  const wsegs = project.wheel.segments;
+  const wlay = segmentLayout(wsegs, WG.R, project);
+  const wpal = labelPalette(wcfg.labelPalette);
+  const wheelData = {
+    cx: r4(WG.cx),
+    cy: r4(WG.cy),
+    R: WG.R,
+    segDeg: r4(360 / Math.max(2, wsegs.length)),
+    n: wsegs.length,
+    disc: Math.ceil(WG.R * 2 + 8),
+    pointerAngle: WG.pointerAngle,
+    pivot: [r4(WG.pivot.x), r4(WG.pivot.y)],
+    anchor: extras.wheelPivot ? extras.wheelPivot.map(r4) : null,
+    max: POINTER_MAX,
+    title: [r4(WG.title.x), r4(WG.title.y)],
+    plaque: [r4(WG.plaque.x), r4(WG.plaque.y), r4(WG.plaque.R)],
+    hubSpins: wcfg.hubSpins ? 1 : 0,
+    font: fontPostScript(project, wcfg.labelFont || project.effects.font),
+    fill: rgb(wpal.fill),
+    stroke: rgb(wpal.stroke),
+    labels: wlay
+      .map((it, k) => {
+        if (!it.label) return null;
+        const text = String(wsegs[k].label);
+        const est = it.label.px * Math.min(1, it.label.maxLen / Math.max(1, text.length * 0.62 * it.label.px));
+        return { text: clean(text), a: r4(it.a), r: r4(it.label.r), px: r4(extras.wheelLabels?.[k]?.px ?? est) };
+      })
+      .filter(Boolean),
+    icons: wlay.map((it, k) => (it.icon && wsegs[k].icon ? { k, a: r4(it.a), r: r4(it.icon.r), file: A.wheelIcon(k) } : null)).filter(Boolean),
+  };
   const odoSize = 120;
   const hud = L.hud
     ? {
@@ -383,7 +422,7 @@ export function buildAEData(project, tl, L, extras = {}) {
     font: extras.fontPostScript || 'Bungee-Regular',
     titlePx: extras.titlePx || Math.round(Math.min(L.W * 0.11, L.H * 0.16)),
     odo: { size: odoSize, dw: Math.round(odoSize * 0.8), sw: Math.round(odoSize * 0.38), rh: Math.round(odoSize * 1.3) },
-    wheel: { cx: r4(L.W / 2), cy: r4(L.H * 0.54), R: wheelR, segDeg: r4(360 / Math.max(2, project.wheel.segments.length)), n: project.wheel.segments.length },
+    wheel: wheelData,
     transparent: project.output?.transparent ? 1 : 0,
     game: tl.game,
     hold: tl.hold.windows.length
@@ -414,7 +453,7 @@ export function buildAEData(project, tl, L, extras = {}) {
           windows: tl.camera.map((w) => [r4(w.start), r4(w.end), w.foci.map((f) => {
             const p = f.r == null ? focusPoint(L, f) : { x: cellX(f.c), y: cellY(f.r) };
             return [r4(f.t), r4(p.x), r4(p.y)];
-          })]),
+          }), r4(w.amount ?? zoomConfig(project).amount)]),
         }
       : null,
     particles: { assets: partAssets.map((a) => ({ name: clean(a.name), files: a.files, count: a.count, anim: a.anim ? 1 : 0, fps: a.fps, motion: a.motion, blend: a.motion === 'glow' ? 'add' : 'normal' })) },
@@ -429,10 +468,12 @@ export function buildAEData(project, tl, L, extras = {}) {
       vignette: A.vignette,
       rays: A.rays,
       raysSmall: A.raysSmall,
-      wheelDisc: A.wheelDisc,
-      wheelRing: A.wheelRing,
-      wheelBulbsA: A.wheelBulbsA,
-      wheelBulbsB: A.wheelBulbsB,
+      wheelFace: project.wheel.art?.face ? A.wheelFace : '',
+      wheelSegments: A.wheelSegments,
+      wheelHub: wcfg.show.hub ? A.wheelHub : '',
+      wheelRing: wcfg.show.rim ? A.wheelRing : '',
+      wheelBulbsA: wcfg.show.bulbs ? A.wheelBulbsA : '',
+      wheelBulbsB: wcfg.show.bulbs ? A.wheelBulbsB : '',
       wheelPointer: A.wheelPointer,
       titles: Object.fromEntries((extras.titleKeys || []).map((k) => [k, A.title(k)])),
     },
@@ -1524,7 +1565,7 @@ export const AE_SCRIPT = String.raw`// Slot animation rebuilt for After Effects 
       for (ci = 0; ci < C.windows.length; ci++) {
         var wd = C.windows[ci], fs = "[", fj;
         for (fj = 0; fj < wd[2].length; fj++) fs += (fj ? "," : "") + "[" + wd[2][fj].join(",") + "]";
-        cw += (ci ? "," : "") + "[" + wd[0] + "," + wd[1] + "," + fs + "]]";
+        cw += (ci ? "," : "") + "[" + wd[0] + "," + wd[1] + "," + fs + "]," + wd[3] + "]";
       }
       var camE = cw + "];\nfunction sm(x) { x = x < 0 ? 0 : (x > 1 ? 1 : x); return x * x * (3 - 2 * x); }\n" +
         "var z = 1, fx = " + W / 2 + ", fy = " + H / 2 + ";\n" +
@@ -1532,7 +1573,7 @@ export const AE_SCRIPT = String.raw`// Slot animation rebuilt for After Effects 
         "  var k = sm((time - w[0]) / " + C.times[0] + ") * (1 - sm((time - w[1] - " + C.times[1] + ") / " + C.times[2] + "));\n" +
         "  var F = w[2]; fx = F[0][1]; fy = F[0][2];\n" +
         "  for (var j = 1; j < F.length; j++) { var b = sm((time - F[j][0]) / " + C.times[3] + "); if (b <= 0) continue; fx += (F[j][1] - fx) * b; fy += (F[j][2] - fy) * b; }\n" +
-        "  z = 1 + " + C.amount + " * k * " + ctrl("Zoom %") + " / 100; break; }\n";
+        "  z = 1 + w[3] * k * " + ctrl("Zoom %") + " / 100; break; }\n";
       P(cam, "ADBE Position").expression = camE + "[fx * (1 - z) + " + W / 2 + " * z, fy * (1 - z) + " + H / 2 + " * z];";
       P(cam, "ADBE Scale").expression = camE + "[z * 100, z * 100];";
     }
@@ -1780,6 +1821,51 @@ export const AE_SCRIPT = String.raw`// Slot animation rebuilt for After Effects 
     }
   }
 
+  // The turning part of the wheel as one placeholder comp: your face art,
+  // the segments, an icon layer per segment that has one and a text layer
+  // per label (font, size and colour editable), and the hub when it turns.
+  function wheelDiscPH() {
+    var WH = DATA.wheel, D = WH.disc;
+    return ph("Wheel Disc", "Wheel", D, D, DUR + 2, function (c) {
+      var i, L;
+      var part = function (key, rel2) {
+        var src = imagePH(key, "Wheel", rel2);
+        return src ? inst(c, src, key, [D / 2, D / 2]) : null;
+      };
+      part("Wheel Face", DATA.assets.wheelFace);
+      part("Wheel Segments", DATA.assets.wheelSegments);
+      for (i = 0; i < WH.icons.length; i++) {
+        var ic = WH.icons[i], ia = ic.a * Math.PI / 180;
+        var isrc = imagePH("Wheel Icon " + pad2(ic.k + 1), "Wheel", ic.file);
+        if (!isrc) continue;
+        L = inst(c, isrc, "Icon " + pad2(ic.k + 1), [D / 2 + Math.cos(ia) * ic.r, D / 2 + Math.sin(ia) * ic.r]);
+        P(L, "ADBE Rotate Z").setValue(ic.a + 90);
+      }
+      for (i = 0; i < WH.labels.length; i++) {
+        var lb = WH.labels[i], la = lb.a * Math.PI / 180;
+        L = c.layers.addText(lb.text);
+        L.name = "Label " + (i + 1) + " " + lb.text;
+        var prop = L.property("ADBE Text Properties").property("ADBE Text Document");
+        var td = prop.value;
+        td.fontSize = lb.px;
+        td.applyFill = true;
+        td.fillColor = WH.fill;
+        td.applyStroke = true;
+        td.strokeColor = WH.stroke;
+        td.strokeWidth = Math.max(1, Math.round(lb.px * 0.22));
+        td.strokeOverFill = false;
+        td.justification = ParagraphJustification.CENTER_JUSTIFY;
+        try { td.font = WH.font; } catch (e) { try { td.font = DATA.font; } catch (e2) {} }
+        prop.setValue(td);
+        // Turn about the middle of the text, reading outwards.
+        P(L, "ADBE Anchor Point").setValue([0, -lb.px * 0.36]);
+        pos(L, [D / 2 + Math.cos(la) * lb.r, D / 2 + Math.sin(la) * lb.r]);
+        P(L, "ADBE Rotate Z").setValue(lb.a);
+      }
+      if (WH.hubSpins) part("Wheel Hub", DATA.assets.wheelHub);
+    });
+  }
+
   function buildWheel(comp, R, rel) {
     var w = R.wheel, WH = DATA.wheel, i, s;
     var inA = rel(w.inStart), inB = rel(w.inEnd), outA = rel(w.outStart), outB = rel(w.outEnd);
@@ -1802,7 +1888,7 @@ export const AE_SCRIPT = String.raw`// Slot animation rebuilt for After Effects 
     rig.name = "WHEEL RIG";
     pos(rig, [cx, cy]);
     var part = function (key, rel2, xy) { return inst(comp, imagePH(key, "Wheel", rel2), key, xy || [cx, cy]); };
-    var disc = part("Wheel Disc", DATA.assets.wheelDisc);
+    var disc = inst(comp, wheelDiscPH(), "Wheel Disc", [cx, cy]);
     var kids = [];
     if (disc) {
       var rot = P(disc, "ADBE Rotate Z");
@@ -1822,21 +1908,30 @@ export const AE_SCRIPT = String.raw`// Slot animation rebuilt for After Effects 
       P(wedge, "ADBE Opacity").expression = "var a = time - " + rel(w.spinEnd) + "; a < 0 ? 0 : Math.min(1, a / 0.3) * (30 + 25 * Math.sin(time * 10));";
       wedge.parent = disc;
     }
+    // A hub that stays still sits over the turning disc.
+    if (!WH.hubSpins) {
+      var hub = part("Wheel Hub", DATA.assets.wheelHub);
+      if (hub) kids.push(hub);
+    }
     var ringL = part("Wheel Ring", DATA.assets.wheelRing);
     if (ringL) kids.push(ringL);
     var wa = part("Wheel Bulbs A", DATA.assets.wheelBulbsA);
     var wb = part("Wheel Bulbs B", DATA.assets.wheelBulbsB);
     if (wa) { wa.blendingMode = BlendingMode.ADD; P(wa, "ADBE Opacity").expression = "Math.floor(time * (time > " + rel(w.spinEnd) + " ? 8 : 3)) % 2 == 0 ? 100 : 15;"; kids.push(wa); }
     if (wb) { wb.blendingMode = BlendingMode.ADD; P(wb, "ADBE Opacity").expression = "Math.floor(time * (time > " + rel(w.spinEnd) + " ? 8 : 3)) % 2 == 1 ? 100 : 15;"; kids.push(wb); }
-    var ptr = part("Wheel Pointer", DATA.assets.wheelPointer, [cx, cy - Rr * 1.1]);
+    // The pointer pivots where the art says; it reads the disc's rotation
+    // (pegs bend it) and, after an almost-slip, springs back past straight.
+    var ptr = part("Wheel Pointer", DATA.assets.wheelPointer, WH.pivot);
     if (ptr) {
       var pw = ptr.source.width, ph2 = ptr.source.height;
-      P(ptr, "ADBE Anchor Point").setValue([pw / 2, ph2 * 0.22]);
-      pos(ptr, [cx, cy - Rr * 1.1]);
+      P(ptr, "ADBE Anchor Point").setValue(WH.anchor || [pw / 2, ph2 * 0.2]);
+      pos(ptr, WH.pivot);
       ptr.name = "Pointer";
-      P(ptr, "ADBE Rotate Z").expression = "var th = thisComp.layer(\"Wheel Disc\").transform.rotation.value; var seg = " + WH.segDeg + ";\n" +
-        "var u = ((th / seg) % 1 + 1) % 1; var w = 0.22, mx = 26, b = 0.3;\n" +
-        "u > 1 - w ? -mx * ((u - (1 - w)) / w) : (u < b ? -mx * Math.pow(1 - u / b, 2) * Math.cos(u / b * Math.PI * 1.5) : 0);";
+      var kick = w.kick ? "var k = time - " + rel(w.kick[0]) + "; if (k > 0 && k <= 1.6) d += " + w.kick[1] + " * Math.exp(-k * 5.5) * Math.sin(k * Math.PI * 2 * 2.2);\n" : "";
+      P(ptr, "ADBE Rotate Z").expression = "var th = thisComp.layer(\"Wheel Disc\").transform.rotation.value; var seg = " + WH.segDeg + ", P = " + WH.pointerAngle + ";\n" +
+        "var u = (((th - P) / seg) % 1 + 1) % 1; var w = 0.22, mx = " + WH.max + ", b = 0.3;\n" +
+        "var d = u > 1 - w ? -mx * ((u - (1 - w)) / w) : (u < b ? -mx * Math.pow(1 - u / b, 2) * Math.cos(u / b * Math.PI * 1.5) : 0);\n" +
+        kick + "P + d;";
       kids.push(ptr);
     }
     for (i = 0; i < kids.length; i++) {
@@ -1845,21 +1940,21 @@ export const AE_SCRIPT = String.raw`// Slot animation rebuilt for After Effects 
     }
     P(rig, "ADBE Scale").expression = EASE_LIB + tInE + " var tOut = c01((time - " + outA + ") / " + Math.max(0.01, outB - outA) + ");\n" +
       "var s = (0.3 + 0.7 * outBack(tIn)) * (1 - 0.35 * inCubic(tOut)) * 100; [s, s];";
-    var title = titleLayer(comp, "wheel", [cx, cy - Rr * 1.28], inA, rel(w.spinStart) + 1.1, W * 0.9);
+    var title = titleLayer(comp, "wheel", WH.title, inA, rel(w.spinStart) + 1.1, W * 0.9);
     if (title) fadeKeys(title, inA, rel(w.spinStart) + 1.1, 0.3, 0.5);
-    var pa = rel(w.prizeStart);
+    var pa = rel(w.prizeStart), PL = WH.plaque, Rp = PL[2];
     emitters(comp, R, "under", ["wheel"]);
-    ring(comp, [cx, cy], pa, Rr * 1.6, DATA.accent);
+    ring(comp, [PL[0], PL[1]], pa, Rp * 1.6, DATA.accent);
     // The plaque leaves before the next spin in the wheel game.
     var pEnd = Math.min(outB, rel(w.plaqueEnd));
-    var pl = inst(comp, plaquePH("Prize Plaque", Rr * 1.5, Rr * 0.62, Rr * 0.15, 96, [0.91, 0.73, 0.29], Math.max(2, Rr * 0.03)), "Prize Plaque", [cx, cy], pa, pEnd);
+    var pl = inst(comp, plaquePH("Prize Plaque", Rp * 1.5, Rp * 0.62, Rp * 0.15, 96, [0.91, 0.73, 0.29], Math.max(2, Rp * 0.03)), "Prize Plaque", [PL[0], PL[1]], pa, pEnd);
     var popE = EASE_LIB + "var k = outBack(c01((time - " + pa + ") / 0.5)) * 100; [k, k];";
     P(pl, "ADBE Scale").expression = popE;
-    var lbl = text(comp, "Prize Label", w.label, Math.round(Rr * 0.2), [cx, cy - Rr * 0.1]);
+    var lbl = text(comp, "Prize Label", w.label, Math.round(Rp * 0.2), [PL[0], PL[1] - Rp * 0.1]);
     P(lbl, "ADBE Scale").expression = popE;
     trim(lbl, pa, pEnd);
     winCtrl(comp, countKeys(rel(w.countStart), rel(w.countEnd), R.amount));
-    var od = counters(comp, [cx, cy + Rr * 0.12], Math.round(Rr * 0.14), R.amount);
+    var od = counters(comp, [PL[0], PL[1] + Rp * 0.12], Math.round(Rp * 0.14), R.amount);
     trim(od, pa, pEnd);
     var fadeOut = envExpr + "env * 100 * c01((" + pEnd + " - time) / 0.35);";
     P(pl, "ADBE Opacity").expression = fadeOut;

@@ -35,12 +35,14 @@ import { lineColor, generatePaylines } from '../core/paylines.js';
 import { autoAmount, makeContext, defaultPattern, tumbleEnabled } from '../core/outcomes.js';
 import { orderList } from '../core/order.js';
 import { FORMAT_CHOICES } from '../core/ae-export.js';
-import { loadImage, loadWinAnim, buildResources, fontStack, extraSymbolImages } from '../render/sprites.js';
+import { loadImage, loadWinAnim, buildResources, fontStack, extraSymbolImages, loadWheelArt } from '../render/sprites.js';
 import { paintBuiltin } from '../render/paint.js';
 import { loadParticleSprites, drawParticleList } from '../render/particles.js';
 import { PARTICLE_TEMPLATES, TEMPLATE_BY_ID, BUILTIN_PARTICLES, PARTICLE_MOTIONS, PARTICLE_MOMENTS, PARTICLE_LENGTHS, tierParticles, spawnParticles, particleAssetInfo } from '../core/particles.js';
 import { WIN_STYLES, JUMP_TARGETS, MERGE_POINTS, FLIGHT_PATHS, winFxConfig, jumpTarget, mergeTarget } from '../core/winfx.js';
 import { searchFeatures, buildIndex } from './search.js';
+import { WHEEL_FRAMINGS, WHEEL_LANDINGS, POINTER_SIDES, LABEL_PALETTES, wheelConfig } from '../core/wheel.js';
+import { projectFonts, parseFontNames } from '../core/fonts.js';
 import { renderFrame } from '../render/renderer.js';
 import { decodeCustomSounds, renderSoundtrack, audioBufferToWav } from '../render/audio.js';
 import { exportMP4, frameToPNG, canEncodeVideo } from '../export/video.js';
@@ -49,7 +51,6 @@ import { h, clear, icon, rangeField, selectField, segmented, toggleField, textFi
 
 const STORE_KEY = 'reel-studio-project-v2';
 const OLD_STORE_KEY = 'reel-studio-project-v1';
-const FONTS = ['Bungee', 'Lilita One', 'Russo One', 'Cinzel Decorative'];
 const FORMATS = [
   ['1920x1080', 'Landscape HD · 1920 × 1080'],
   ['3840x2160', 'Landscape 4K · 3840 × 2160'],
@@ -75,7 +76,8 @@ const state = {
   loop: true,
   solo: false,
   speed: 1,
-  soundOn: true,
+  // The preview starts muted; exports always carry the sound.
+  soundOn: false,
   tab: 'machine',
   scene: null,
   images: null,
@@ -118,6 +120,16 @@ function saveUI() {
     localStorage.setItem(UI_KEY, JSON.stringify(ui));
   } catch {
     // not kept; the layout still works
+  }
+}
+
+function storageWorks() {
+  try {
+    localStorage.setItem(`${UI_KEY}-probe`, '1');
+    localStorage.removeItem(`${UI_KEY}-probe`);
+    return true;
+  } catch {
+    return false;
   }
 }
 
@@ -199,7 +211,9 @@ const BANK_FILTERS = [
   ['symbols', 'Symbols'],
   ['coins', 'Coins'],
   ['particles', 'Particles'],
+  ['wheel', 'Wheel'],
   ['scene', 'Scene'],
+  ['fonts', 'Fonts'],
 ];
 const narrow = () => window.matchMedia('(max-width: 760px)').matches;
 
@@ -389,7 +403,7 @@ const SECTION_OPEN = {
   spin: ['spin-type', 'motion-curve', 'anticipation'],
   wins: ['win-tiers', 'winning-symbols', 'win-particles'],
   effects: ['intensity'],
-  wheel: ['segments', 'spin'],
+  wheel: ['segments', 'framing', 'pointer', 'look', 'spin'],
   sound: ['sound-track'],
   export: ['after-effects-project', 'quick-preview-mp4'],
   seq: [],
@@ -561,8 +575,7 @@ function projectMenuItems() {
     { id: 'pm-new', label: 'New project', hint: 'Default machine, no rounds', run: newProject },
     { id: 'pm-open', label: 'Open project file…', kbd: 'Ctrl O', run: openProjectFile },
     { id: 'pm-save', label: 'Save project file', kbd: 'Ctrl S', hint: 'Downloads a .json you can open again', run: saveProjectFile },
-    { sep: true, label: 'Start from a preset' },
-    ...PRESETS.map((p) => ({ id: `pm-preset-${p.id}`, label: p.label, run: () => loadProject(p.make(), `Loaded ${p.label}. Undo brings your project back.`) })),
+    { id: 'pm-presets', label: 'Start from a preset…', kbd: 'P', hint: `${PRESETS.length} ready-made animations to build on`, run: () => openPresets() },
     { sep: true },
     { id: 'pm-clear', label: 'Clear all rounds', hint: 'Keeps the machine and the art', run: clearRounds },
     { id: 'pm-reset', label: 'Reset to the demo project', run: () => loadProject(defaultProject(), 'Back to the demo project. Undo brings yours back.') },
@@ -630,7 +643,7 @@ const SEARCH_ACTIONS = {
   new: () => newProject(),
   open: () => openProjectFile(),
   save: () => saveProjectFile(),
-  presets: () => el.pmBtn.click(),
+  presets: () => openPresets(),
   clear: () => clearRounds(),
   reset: () => loadProject(defaultProject(), 'Back to the demo project. Undo brings yours back.'),
   undo: () => undo(),
@@ -879,6 +892,132 @@ function openSearch() {
   input.focus();
 }
 
+// ---------- presets gallery ----------
+// Every preset as a card with a frame of its own animation, grouped by
+// kind. Picking one replaces the project (undo brings it back).
+
+const presetShots = new Map();
+
+// A telling moment of a preset: the last round's big moment.
+function presetMoment(tl) {
+  const R = tl.rounds[tl.rounds.length - 1];
+  if (!R) return 0.5;
+  const p = R.pres;
+  if (p.wheel) return p.wheel.spinEnd - 0.9;
+  // The machine with its winners lit beats a title that covers it.
+  if (p.steps?.length) return p.steps[0].start + 0.55;
+  if (p.collect) return p.collect.start + 0.9;
+  if (p.overlay) return p.overlay.tierTimes[p.overlay.tierTimes.length - 1] + 0.6;
+  return R.spinEnd + 0.2;
+}
+
+async function presetShot(pr) {
+  if (presetShots.has(pr.id)) return presetShots.get(pr.id);
+  // Painted small: the layout scales with the canvas, and it is quicker.
+  const project = pr.make();
+  const port = project.canvas.height > project.canvas.width;
+  project.canvas = { ...project.canvas, width: port ? 360 : 640, height: port ? 640 : 360 };
+  const tl = buildTimeline(project);
+  const L = computeLayout(project);
+  const images = await loadImages(project);
+  const res = buildResources(project, L, images);
+  const big = document.createElement('canvas');
+  big.width = L.W;
+  big.height = L.H;
+  renderFrame(big.getContext('2d'), { project, tl, L, res }, presetMoment(tl));
+  const c = document.createElement('canvas');
+  c.width = 384;
+  c.height = 216;
+  const g = c.getContext('2d');
+  g.fillStyle = '#07050c';
+  g.fillRect(0, 0, c.width, c.height);
+  const k = Math.min(c.width / L.W, c.height / L.H);
+  g.drawImage(big, (c.width - L.W * k) / 2, (c.height - L.H * k) / 2, L.W * k, L.H * k);
+  const url = c.toDataURL('image/jpeg', 0.82);
+  presetShots.set(pr.id, url);
+  return url;
+}
+
+function presetTags(pr) {
+  const p = pr.make();
+  const game = GAMES.find((g) => g.id === p.game)?.label || p.game;
+  const tags = [game];
+  if (p.game !== 'wheel') tags.push(`${p.grid.reels}×${p.grid.rows}`);
+  if (p.game === 'slot') tags.push(PAY_MODES.find((m) => m.id === p.machine.payMode)?.label || p.machine.payMode);
+  if (p.canvas.height > p.canvas.width) tags.push('9:16');
+  return tags;
+}
+
+function closePresets(refocus = true) {
+  if (!el.presets) return;
+  el.presets.remove();
+  el.presets = null;
+  if (refocus) document.getElementById('top-presets')?.focus();
+}
+
+function openPresets() {
+  if (el.presets) return;
+  ui.seenPresets = true;
+  saveUI();
+  const groups = [...new Set(PRESETS.map((p) => p.group))];
+  const shots = [];
+  const card = (pr) => {
+    const img = h('img', { alt: '', class: 'preset-shot' });
+    shots.push([img, pr]);
+    return h(
+      'button',
+      {
+        type: 'button',
+        class: 'preset-card',
+        id: `preset-${pr.id}`,
+        onclick: () => {
+          closePresets(false);
+          loadProject(pr.make(), `Started from “${pr.label}”. Undo brings your project back.`);
+        },
+      },
+      h('span', { class: 'preset-frame' }, img),
+      h('strong', null, pr.label),
+      h('span', { class: 'preset-desc' }, pr.desc),
+      h('span', { class: 'preset-tags' }, presetTags(pr).map((t) => h('span', null, t)))
+    );
+  };
+  el.presets = h(
+    'div',
+    { class: 'modal-back presets-back', onpointerdown: (e) => e.target === el.presets && closePresets() },
+    h(
+      'div',
+      { class: 'modal presets', role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'presets-title', onkeydown: (e) => e.key === 'Escape' && (e.stopPropagation(), closePresets()) },
+      h(
+        'header',
+        { class: 'modal-head' },
+        h('div', null, h('h2', { id: 'presets-title' }, 'Start from a preset'), h('p', { class: 'hint' }, 'A ready-made animation to build on: change the art, the rounds and the timing from there. Undo brings your current project back.')),
+        button('', () => closePresets(), { class: 'icon-btn tiny', icon: 'x', id: 'presets-close', title: 'Close (Esc)' })
+      ),
+      h(
+        'div',
+        { class: 'presets-body' },
+        groups.map((g) => h('section', { class: 'preset-group' }, h('h3', null, g), h('div', { class: 'preset-grid' }, PRESETS.filter((p) => p.group === g).map(card))))
+      ),
+      h('footer', { class: 'presets-foot' }, button('Start blank instead', () => { closePresets(false); newProject(); }, { class: 'btn small ghost', id: 'presets-blank' }), h('span', { class: 'hint' }, 'Also in the Project menu. Press P any time.'))
+    )
+  );
+  document.body.append(el.presets);
+  el.presets.querySelector('.preset-card')?.focus();
+  // Thumbnails render one at a time so the window opens at once.
+  (async () => {
+    for (const [img, pr] of shots) {
+      if (!el.presets) return;
+      await new Promise((r) => (window.requestIdleCallback ? requestIdleCallback(r, { timeout: 120 }) : setTimeout(r, 16)));
+      try {
+        img.src = await presetShot(pr);
+        img.classList.add('in');
+      } catch {
+        img.classList.add('in');
+      }
+    }
+  })();
+}
+
 // ---------- keyboard shortcuts ----------
 
 const SHORTCUTS = [
@@ -887,6 +1026,7 @@ const SHORTCUTS = [
   ['← →', 'Step one frame (Shift: one second)'],
   ['Home', 'Back to the start'],
   ['B', 'Asset Bank'],
+  ['P', 'Start from a preset'],
   ['Ctrl Z', 'Undo'],
   ['Ctrl Shift Z  or  Ctrl Y', 'Redo'],
   ['Ctrl S', 'Save the project file'],
@@ -976,7 +1116,7 @@ function save() {
       localStorage.setItem(STORE_KEY, JSON.stringify(state.project));
     } catch {
       if (!state.saveWarned) {
-        toast('This project is too large to keep in the browser automatically. Use Export → Save project.', 'warn', 6000);
+        toast('This project is too large to keep in the browser automatically. Save the project file from the Project menu (Ctrl S).', 'warn', 6000);
         state.saveWarned = true;
       }
     }
@@ -1029,7 +1169,9 @@ function withTimeout(p, ms) {
 
 async function loadImages(project) {
   const font = fontStack(project.effects.font);
-  await withTimeout(document.fonts.load(`64px "${project.effects.font || 'Bungee'}"`).catch(() => null), 2500);
+  await withTimeout(registerFonts(project), 4000);
+  const fams = [project.effects.font || 'Bungee', project.wheel?.labelFont].filter(Boolean);
+  await withTimeout(Promise.all(fams.map((f) => document.fonts.load(`64px "${f}"`).catch(() => null))), 2500);
   const symbols = await Promise.all(project.symbols.map((s) => symbolImage(s, font)));
   // Then the built-in orb (when needed), the Hold & Spin coins and the empty cell.
   symbols.push(...(await extraSymbolImages(project, font, optImage)));
@@ -1040,6 +1182,7 @@ async function loadImages(project) {
     frame: await optImage(project.assets.frame),
     logo: await optImage(project.assets.logo),
     particles: await loadParticleSprites(project, (src) => optImage(src).then((i) => i || Promise.reject(new Error('bad image')))),
+    wheel: await loadWheelArt(project, optImage),
   };
 }
 
@@ -1286,6 +1429,7 @@ function buildShell() {
         'div',
         { class: 'top-left' },
         buildProjectMenu(),
+        button('Presets', () => openPresets(), { class: 'btn', icon: 'sparkle', id: 'top-presets', title: 'Start from a ready-made animation (P)' }),
         (el.undoBtn = button('', undo, { class: 'icon-btn', icon: 'undo', id: 'top-undo', title: 'Undo (Ctrl Z)', disabled: true })),
         (el.redoBtn = button('', redo, { class: 'icon-btn', icon: 'redo', id: 'top-redo', title: 'Redo (Ctrl Shift Z)', disabled: true })),
         (el.searchBtn = h('button', { type: 'button', class: 'search-btn', id: 'top-search', onclick: () => openSearch(), 'aria-haspopup': 'dialog' }, icon('search'), h('span', null, 'Search features'), h('kbd', null, 'Ctrl K')))
@@ -1367,6 +1511,7 @@ function onKey(e) {
     e.preventDefault();
     togglePlay();
   } else if ((e.key === 'b' || e.key === 'B') && !e.metaKey && !e.ctrlKey && !e.altKey) toggleBank();
+  else if ((e.key === 'p' || e.key === 'P') && !e.metaKey && !e.ctrlKey && !e.altKey) openPresets();
   else if (e.key === 'Escape' && ui.bank.open) closeBank();
   else if (e.key === 'ArrowRight') seek(state.t + (e.shiftKey ? 1 : fd));
   else if (e.key === 'ArrowLeft') seek(state.t - (e.shiftKey ? 1 : fd));
@@ -2231,11 +2376,7 @@ function renderInspector() {
         id: 'ri-landing',
         label: 'Landing',
         value: r.wheelLanding || P.wheel.landing,
-        options: [
-          { value: 'center', label: 'Centered' },
-          { value: 'random', label: 'Natural' },
-          { value: 'tease', label: 'Edge tease', hint: 'Creeps right up to the boundary' },
-        ],
+        options: WHEEL_LANDINGS.map((x) => ({ value: x.id, label: x.label, hint: x.hint })),
         onChange: set('wheelLanding'),
       }),
       textField({ id: 'ri-wheel-amount', label: 'Prize amount', type: 'number', value: r.amount ?? '', placeholder: `From segment: ${cur}${autoAmount(ctx2, P, r).toFixed(dec)}`, onChange: set('amount') })
@@ -2449,6 +2590,8 @@ function loadProject(p, msg) {
   toast(msg, 'info', 4000);
 }
 
+const ownRound = (g, r) => (g === 'wheel' ? r.outcome === 'wheel' : g === 'holdspin' ? r.outcome === 'respin' || r.outcome === 'collect' : r.outcome !== 'wheel');
+
 // Switching games keeps the rounds that fit the new game; the others are
 // kept aside and come back when you switch back.
 function setGame(g) {
@@ -2458,10 +2601,14 @@ function setGame(g) {
   state.stash = state.stash || {};
   state.stash[from] = P.rounds;
   P.game = g;
+  // Rounds carry over only when some are the new game's own kind: a wheel
+  // spin alone (allowed as a bonus in the other games) does not make a
+  // Hold & Spin or slot animation.
   let rounds = state.stash[g] || P.rounds.filter((r) => GAME_OUTCOMES[g].includes(r.outcome));
-  if (!rounds.length) {
+  if (!rounds.some((r) => ownRound(g, r))) {
     if (g === 'wheel') rounds = [newRound('wheel', { wheelSegment: 2 }), newRound('wheel', { wheelSegment: 5 }), newRound('wheel', { wheelSegment: 3 })];
     else if (g === 'holdspin') rounds = holdRounds(P, { start: holdSpinConfig(P).startCoins, finale: 'fill', specials: 1 });
+    else rounds = defaultProject().rounds;
   }
   P.rounds = rounds;
   state.sel = 0;
@@ -2690,6 +2837,7 @@ function panelAssets(filter = 'all') {
     ),
     game === 'wheel' || !show('coins') ? null : coinSection(),
     show('particles') ? particleArtSection() : null,
+    show('wheel') ? wheelArtSection() : null,
     !show('scene') ? null : section(
       'Scene art',
       assetRow('Background', 'background', 'Full-screen image behind the machine.'),
@@ -2698,6 +2846,7 @@ function panelAssets(filter = 'all') {
       toggleField({ id: 'a-builtin', label: 'Draw the built-in frame', checked: P.machine.builtinFrame !== false, onChange: num(P.machine, 'builtinFrame', 'all') }),
       textField({ id: 'a-title', label: 'Title above the reels', value: P.machine.title, onChange: num(P.machine, 'title', 'all') })
     ),
+    show('fonts') ? fontsSection() : null,
   ];
 }
 
@@ -3428,7 +3577,7 @@ function panelWins() {
     templateGallery(),
     section(
       'Titles and font',
-      selectField({ id: 'fx-font', label: 'Display font', value: fx.font, options: FONTS.map((f) => ({ value: f, label: f })), onChange: num(fx, 'font', 'all') }),
+      selectField({ id: 'fx-font', label: 'Display font', value: fx.font, options: projectFonts(P).map((f) => ({ value: f, label: f })), onChange: num(fx, 'font', 'all') }),
       h(
         'div',
         { class: 'row2' },
@@ -3621,47 +3770,107 @@ function previewAWin() {
   if (!state.playing) togglePlay();
 }
 
+// One segment row: number, colour (or none, to show the wheel face), icon,
+// label, value, remove.
+function segmentRow(P, W, s, i) {
+  const colour = s.color
+    ? h(
+        'div',
+        { class: 'seg-color' },
+        h('input', { type: 'color', id: `seg-c-${i}`, value: s.color, 'aria-label': `Segment ${i + 1} colour`, onchange: (e) => { s.color = e.target.value; changed('all'); } }),
+        button('', () => {
+          s.color = null;
+          changed('all');
+          renderPanel();
+        }, { class: 'seg-none-btn', icon: 'x', title: 'No colour: show the wheel face here', id: `seg-nc-${i}` })
+      )
+    : h(
+        'div',
+        { class: 'seg-color' },
+        button('', () => {
+          s.color = SEG_COLOURS[i % SEG_COLOURS.length];
+          changed('all');
+          renderPanel();
+        }, { class: 'seg-swatch none', title: 'No colour (the wheel face shows). Click to colour it.', id: `seg-c-${i}` })
+      );
+  const iconCell = h(
+    'div',
+    { class: 'seg-icon' },
+    button('', async () => {
+      const [f] = await pickFiles('image/*');
+      if (!f) return;
+      s.icon = await readFileAsDataURL(f);
+      changed('all');
+      renderPanel();
+      renderAssets();
+    }, { class: 'seg-icon-btn', icon: s.icon ? null : 'plus', title: s.icon ? 'Replace the icon' : 'Add an icon', id: `seg-i-${i}` }, s.icon ? h('img', { src: s.icon, alt: '' }) : null),
+    s.icon
+      ? button('', () => {
+          s.icon = null;
+          changed('all');
+          renderPanel();
+          renderAssets();
+        }, { class: 'seg-none-btn', icon: 'x', title: 'Remove the icon', id: `seg-ix-${i}` })
+      : null
+  );
+  return h(
+    'div',
+    { class: 'segment' },
+    h('span', { class: 'seg-n' }, i + 1),
+    colour,
+    iconCell,
+    h('input', { type: 'text', id: `seg-l-${i}`, value: s.label, 'aria-label': `Segment ${i + 1} label`, onchange: (e) => { s.label = e.target.value; changed('all'); refreshList(); } }),
+    h('input', { type: 'number', id: `seg-v-${i}`, value: s.value, 'aria-label': `Segment ${i + 1} value`, onchange: (e) => { s.value = Number(e.target.value) || 0; changed('timeline'); } }),
+    button('', () => {
+      if (W.segments.length <= 3) return toast('A wheel needs at least three segments.', 'warn');
+      W.segments.splice(i, 1);
+      P.rounds.forEach((r) => {
+        if (r.wheelSegment >= W.segments.length) r.wheelSegment = W.segments.length - 1;
+      });
+      changed('all');
+      renderPanel();
+      renderInspector();
+    }, { class: 'icon-btn tiny', icon: 'x', title: 'Remove segment', id: `seg-del-${i}` })
+  );
+}
+
+const SEG_COLOURS = ['#b3123b', '#1f3fbf', '#0e8a4f', '#6a1fb8'];
+
 function panelWheel() {
   const P = state.project;
   const W = P.wheel;
+  W.art = W.art || { face: null, rim: null, hub: null, pointer: null };
+  W.show = W.show || {};
+  const cfg = wheelConfig(P);
   const list = h('div', { class: 'segments' });
-  W.segments.forEach((s, i) => {
-    list.append(
-      h(
-        'div',
-        { class: 'segment' },
-        h('span', { class: 'seg-n' }, i + 1),
-        h('input', { type: 'color', id: `seg-c-${i}`, value: s.color || '#b3123b', 'aria-label': `Segment ${i + 1} colour`, onchange: (e) => { s.color = e.target.value; changed('all'); } }),
-        h('input', { type: 'text', id: `seg-l-${i}`, value: s.label, 'aria-label': `Segment ${i + 1} label`, onchange: (e) => { s.label = e.target.value; changed('all'); refreshList(); } }),
-        h('input', { type: 'number', id: `seg-v-${i}`, value: s.value, 'aria-label': `Segment ${i + 1} value`, onchange: (e) => { s.value = Number(e.target.value) || 0; changed('timeline'); } }),
-        button('', () => {
-          if (W.segments.length <= 3) return toast('A wheel needs at least three segments.', 'warn');
-          W.segments.splice(i, 1);
-          P.rounds.forEach((r) => {
-            if (r.wheelSegment >= W.segments.length) r.wheelSegment = W.segments.length - 1;
-          });
-          changed('all');
-          renderPanel();
-          renderInspector();
-        }, { class: 'icon-btn tiny', icon: 'x', title: 'Remove segment', id: `seg-del-${i}` })
-      )
-    );
-  });
+  W.segments.forEach((s, i) => list.append(segmentRow(P, W, s, i)));
+  const show = (k) => (v) => {
+    W.show[k] = v;
+    changed('all');
+  };
+  const framing = W.framing && WHEEL_FRAMINGS.some((f) => f.id === W.framing) ? W.framing : 'custom';
+  const allChanged = (key) => num(W, key, 'all');
   return [
     section(
       'Segments',
-      h('p', { class: 'hint' }, 'Clockwise from the top. Each wheel round picks its landing segment in the round settings.'),
-      h('div', { class: 'segment head' }, h('span', null, '#'), h('span', null, 'Colour'), h('span', null, 'Label'), h('span', null, 'Value'), h('span', null, '')),
+      h('p', { class: 'hint' }, 'Clockwise from the top. Each wheel round picks its landing segment in the round settings. Clear a colour (×) to let the wheel face show through; add an icon with +.'),
+      h('div', { class: 'segment head' }, h('span', null, '#'), h('span', null, 'Fill'), h('span', null, 'Icon'), h('span', null, 'Label'), h('span', null, 'Value'), h('span', null, '')),
       list,
       h(
         'div',
         { class: 'row' },
         button('Add segment', () => {
-          W.segments.push({ label: '100', value: 100, color: ['#b3123b', '#1f3fbf', '#0e8a4f', '#6a1fb8'][W.segments.length % 4] });
+          W.segments.push({ label: '100', value: 100, color: SEG_COLOURS[W.segments.length % 4] });
           changed('all');
           renderPanel();
           renderInspector();
         }, { class: 'btn small', icon: 'plus', id: 'seg-add' }),
+        button('No colours', () => {
+          W.segments.forEach((s) => (s.color = null));
+          changed('all');
+          renderPanel();
+          if (!W.art.face) toast('Segments are clear. Add a wheel face in the Asset Bank to show behind them.');
+        }, { class: 'btn small ghost', id: 'seg-clear-colours', title: 'Clear every segment colour so the wheel face shows' }),
         button('Default segments', () => {
           W.segments = DEFAULT_SEGMENTS.map((s) => ({ ...s }));
           changed('all');
@@ -3671,12 +3880,203 @@ function panelWheel() {
       )
     ),
     section(
+      'Framing',
+      h('p', { class: 'hint' }, 'The wheel can be bigger than the screen: show only its top half, a close-up, or hang it from above with the pointer at the bottom.'),
+      segmented({
+        id: 'w-framing',
+        label: 'Framing',
+        value: framing,
+        options: [...WHEEL_FRAMINGS.map((f) => ({ value: f.id, label: f.label })), { value: 'custom', label: 'Custom' }],
+        onChange: (v) => {
+          W.framing = v;
+          const f = WHEEL_FRAMINGS.find((x) => x.id === v);
+          if (f) Object.assign(W, { size: f.size, x: f.x, y: f.y }, f.pointer ? { pointer: f.pointer } : {});
+          changed('all');
+          renderPanel();
+        },
+      }),
+      rangeField({ id: 'w-size', label: 'Zoom', unit: '×', value: cfg.size, min: 0.4, max: 3, step: 0.01, onInput: (v) => { W.size = v; W.framing = 'custom'; changed('all'); } }),
+      rangeField({ id: 'w-x', label: 'Centre across', unit: '% of width', value: Math.round(cfg.x * 100), min: -50, max: 150, step: 1, onInput: (v) => { W.x = v / 100; W.framing = 'custom'; changed('timeline'); } }),
+      rangeField({ id: 'w-y', label: 'Centre down', unit: '% of height', value: Math.round(cfg.y * 100), min: -80, max: 180, step: 1, onInput: (v) => { W.y = v / 100; W.framing = 'custom'; changed('timeline'); } }),
+      rangeField({ id: 'w-push', label: 'Push in on the pointer as it slows', unit: '%', value: Math.round(cfg.push * 100), min: 0, max: 80, step: 1, hint: '0 keeps the camera still. In After Effects the CAMERA null does it, scaled by Zoom %.', onInput: (v) => { W.push = v / 100; changed('timeline'); } })
+    ),
+    section(
+      'Pointer',
+      segmented({ id: 'w-pointer', label: 'Side', value: cfg.pointer, options: POINTER_SIDES.map((x) => ({ value: x.id, label: x.label })), onChange: (v) => { W.pointer = v; changed('all'); } }),
+      rangeField({ id: 'w-ptr-size', label: 'Pointer size', unit: '×', value: cfg.pointerSize, min: 0.4, max: 2.5, step: 0.01, onInput: allChanged('pointerSize') }),
+      wheelArtRow('Pointer art', 'pointer', 'Draw it pointing down; at the bottom it is turned over.'),
+      W.art.pointer ? rangeField({ id: 'w-pivot', label: 'Pivot from the top', unit: '% of height', value: Math.round(cfg.pivot * 100), min: 0, max: 100, step: 1, hint: 'Where your pointer hinges; pegs bend it about this point.', onInput: (v) => { W.pivot = v / 100; changed('all'); } }) : null,
+      h('p', { class: 'hint' }, 'Pegs bend the pointer as they pass. With "Almost slips" landing the wheel creeps into the next peg, nearly tips over, rolls back, and the pointer springs past straight before it settles.')
+    ),
+    section(
+      'Look',
+      selectField({ id: 'w-font', label: 'Label font', value: W.labelFont || '', options: [{ value: '', label: `Display font (${P.effects.font || 'Bungee'})` }, ...projectFonts(P).map((f) => ({ value: f, label: f }))], onChange: (v) => { W.labelFont = v; changed('all'); } }),
+      segmented({ id: 'w-label-colour', label: 'Label colour', value: cfg.labelPalette, options: LABEL_PALETTES.map((x) => ({ value: x.id, label: x.label })), onChange: (v) => { W.labelPalette = v; changed('all'); } }),
+      rangeField({ id: 'w-label-size', label: 'Label size', unit: '×', value: cfg.labelSize, min: 0.4, max: 2, step: 0.01, onInput: allChanged('labelSize') }),
+      rangeField({ id: 'w-icon-size', label: 'Icon size', unit: '×', value: cfg.iconSize, min: 0.3, max: 2, step: 0.01, onInput: allChanged('iconSize') }),
+      rangeField({ id: 'w-hub-size', label: 'Hub size', unit: '×', value: cfg.hubSize, min: 0.3, max: 3, step: 0.01, onInput: allChanged('hubSize') }),
+      toggleField({ id: 'w-hub-spins', label: 'Hub turns with the wheel', checked: cfg.hubSpins, onChange: (v) => { W.hubSpins = v; changed('all'); } }),
+      h(
+        'div',
+        { class: 'toggle-grid' },
+        toggleField({ id: 'w-show-labels', label: 'Labels', checked: cfg.show.labels, onChange: show('labels') }),
+        toggleField({ id: 'w-show-separators', label: 'Separators', checked: cfg.show.separators, onChange: show('separators') }),
+        toggleField({ id: 'w-show-pegs', label: 'Pegs', checked: cfg.show.pegs, onChange: show('pegs') }),
+        toggleField({ id: 'w-show-hub', label: 'Hub', checked: cfg.show.hub, onChange: show('hub') }),
+        toggleField({ id: 'w-show-rim', label: 'Rim', checked: cfg.show.rim, onChange: show('rim') }),
+        toggleField({ id: 'w-show-bulbs', label: 'Rim bulbs', checked: cfg.show.bulbs, onChange: show('bulbs') })
+      ),
+      button('Replace the wheel art', () => openBank('wheel'), { class: 'btn small ghost', icon: 'grid', id: 'w-bank' })
+    ),
+    section(
       'Spin',
       rangeField({ id: 'w-turns', label: 'Full turns', value: W.turns, min: 1, max: 12, step: 1, onInput: num(W, 'turns') }),
-      segmented({ id: 'w-landing', label: 'Default landing', value: W.landing, options: [{ value: 'center', label: 'Centered' }, { value: 'random', label: 'Natural' }, { value: 'tease', label: 'Edge tease' }], onChange: num(W, 'landing') }),
+      segmented({ id: 'w-landing', label: 'Default landing', value: W.landing, options: WHEEL_LANDINGS.map((x) => ({ value: x.id, label: x.label, hint: x.hint })), onChange: num(W, 'landing') }),
       toggleField({ id: 'w-bet', label: 'Multiply segment values by the bet', checked: W.multiplyByBet, onChange: num(W, 'multiplyByBet') })
     ),
   ];
+}
+
+// An uploaded wheel part (face, rim, hub, pointer): thumbnail, upload or
+// replace, clear back to the built-in one.
+function wheelArtRow(label, key, hint) {
+  const W = state.project.wheel;
+  W.art = W.art || {};
+  const has = !!W.art[key];
+  return h(
+    'div',
+    { class: 'asset-row' },
+    h('div', { class: 'asset-thumb' }, has ? h('img', { src: W.art[key], alt: '' }) : h('span', null, key === 'face' ? 'None' : 'Built-in')),
+    h('div', { class: 'asset-text' }, h('strong', null, label), h('span', { class: 'hint' }, hint)),
+    h(
+      'div',
+      { class: 'asset-actions' },
+      button(has ? 'Replace' : 'Upload', async () => {
+        const [f] = await pickFiles('image/*');
+        if (!f) return;
+        W.art[key] = await readFileAsDataURL(f);
+        changed('all');
+        renderAssets();
+        if (state.tab === 'wheel') renderPanel();
+      }, { class: 'btn small', id: `wart-up-${key}` }),
+      has
+        ? button('Clear', () => {
+            W.art[key] = null;
+            changed('all');
+            renderAssets();
+            if (state.tab === 'wheel') renderPanel();
+          }, { class: 'btn small ghost', id: `wart-clear-${key}` })
+        : null
+    )
+  );
+}
+
+// Asset Bank: every wheel part and the segment icons.
+function wheelArtSection() {
+  const P = state.project;
+  const icons = h(
+    'div',
+    { class: 'wheel-icons' },
+    P.wheel.segments.map((s, i) =>
+      h(
+        'div',
+        { class: 'wheel-icon' },
+        button('', async () => {
+          const [f] = await pickFiles('image/*');
+          if (!f) return;
+          s.icon = await readFileAsDataURL(f);
+          changed('all');
+          renderAssets();
+          if (state.tab === 'wheel') renderPanel();
+        }, { class: 'seg-icon-btn', icon: s.icon ? null : 'plus', title: `${s.label}: ${s.icon ? 'replace the icon' : 'add an icon'}`, id: `wi-up-${i}` }, s.icon ? h('img', { src: s.icon, alt: '' }) : null),
+        h('span', null, s.label || `#${i + 1}`),
+        s.icon
+          ? button('', () => {
+              s.icon = null;
+              changed('all');
+              renderAssets();
+              if (state.tab === 'wheel') renderPanel();
+            }, { class: 'seg-none-btn', icon: 'x', title: 'Remove the icon', id: `wi-x-${i}` })
+          : null
+      )
+    )
+  );
+  return section(
+    'Wheel art',
+    h('p', { class: 'hint' }, 'Every part of the wheel can be your own art. In After Effects each is a placeholder comp in Placeholder Comps/Wheel.'),
+    wheelArtRow('Wheel face', 'face', 'Square art for the whole disc. It turns with the wheel and shows through segments with no colour.'),
+    wheelArtRow('Rim', 'rim', 'Square art around the wheel; the disc edge sits at 85% of its width.'),
+    wheelArtRow('Hub', 'hub', 'The centre piece. Hub size and whether it turns are in the Wheel tab.'),
+    wheelArtRow('Pointer', 'pointer', 'Pointing down, hinged near its top.'),
+    h('div', { class: 'field' }, h('span', { class: 'label' }, 'Segment icons'), icons)
+  );
+}
+
+// Asset Bank: uploaded fonts, for titles, counters and wheel labels.
+function fontsSection() {
+  const P = state.project;
+  P.fonts = P.fonts || [];
+  const rows = P.fonts.map((f) =>
+    h(
+      'div',
+      { class: 'font-row' },
+      h('span', { class: 'font-sample', style: `font-family: "${f.family}", sans-serif` }, f.family),
+      h('span', { class: 'hint' }, f.ps || ''),
+      button('', () => {
+        P.fonts = P.fonts.filter((x) => x !== f);
+        if (P.effects.font === f.family) P.effects.font = 'Bungee';
+        if (P.wheel.labelFont === f.family) P.wheel.labelFont = '';
+        changed('all');
+        renderAssets();
+        renderPanel();
+      }, { class: 'icon-btn tiny', icon: 'x', title: `Remove ${f.family}`, id: `font-del-${f.id}` })
+    )
+  );
+  return section(
+    'Fonts',
+    h('p', { class: 'hint' }, 'Upload TTF or OTF fonts to use for the titles, counters and wheel labels. They ship in the After Effects package; install them there.'),
+    rows.length ? h('div', { class: 'font-rows' }, rows) : h('p', { class: 'hint' }, 'Built-in: Bungee, Lilita One, Russo One, Cinzel Decorative.'),
+    button('Upload fonts', addFonts, { class: 'btn small', icon: 'upload', id: 'font-add' })
+  );
+}
+
+async function addFonts() {
+  const files = await pickFiles('.ttf,.otf,.woff,.woff2,font/ttf,font/otf,font/woff,font/woff2', true);
+  if (!files.length) return;
+  const P = state.project;
+  P.fonts = P.fonts || [];
+  for (const f of files) {
+    const buf = await f.arrayBuffer();
+    const names = parseFontNames(buf);
+    const base = f.name.replace(/\.[^.]+$/, '');
+    const family = (names?.family || base.replace(/[-_](regular|bold|black|italic)$/i, '').replace(/[-_]+/g, ' ')).slice(0, 48);
+    if (P.fonts.some((x) => x.family === family)) continue;
+    P.fonts.push({ id: `f${Date.now().toString(36)}${P.fonts.length}`, family, ps: names?.postscript || '', file: f.name, src: await readFileAsDataURL(f) });
+    toast(`${family} added. Pick it as the display font or the wheel label font.`);
+  }
+  changed('all');
+  renderAssets();
+  renderPanel();
+}
+
+// Uploaded fonts are registered with the page once each.
+const fontFaces = new Map();
+async function registerFonts(project) {
+  for (const f of project.fonts || []) {
+    if (fontFaces.has(f.id)) continue;
+    const m = /^data:[^;,]*;base64,(.*)$/.exec(f.src || '');
+    if (!m) continue;
+    try {
+      const bin = atob(m[1]);
+      const bytes = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+      const face = new FontFace(f.family, bytes.buffer);
+      fontFaces.set(f.id, face.load().then((ff) => document.fonts.add(ff)).catch(() => null));
+    } catch {
+      fontFaces.set(f.id, Promise.resolve(null));
+    }
+  }
+  await Promise.all([...fontFaces.values()]);
 }
 
 // ---------- sound ----------
@@ -3972,5 +4372,7 @@ export async function start() {
   });
   state.playing = !matchMedia('(prefers-reduced-motion: reduce)').matches;
   renderTransport();
+  // The presets gallery shows itself once, where the browser remembers that.
+  if (!ui.seenPresets && storageWorks()) setTimeout(() => openPresets(), 700);
   window.reelStudio = { state, rebuild, renderFrame, audio };
 }

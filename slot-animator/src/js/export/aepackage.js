@@ -8,6 +8,7 @@ import { paintHudLayer, paintBulbLayer, paintWheelBulbLayer } from '../render/re
 import { canvas, buildResources } from '../render/sprites.js';
 import { decodeCustomSounds, renderCue, audioBufferToWav } from '../render/audio.js';
 import { sfxCues } from '../core/sfx.js';
+import { fontPostScript } from '../core/fonts.js';
 
 const MAX_WIN_FRAMES = 240;
 
@@ -90,7 +91,10 @@ timing lives in the round comps, and a few controls sit on SLOT CONTROL.
   - Titles/: "Title <tier>" for each title, with its light sweep.
   - Paylines/: "Payline NN", each drawing itself on.
   - Plaques/: the multiplier, prize and hold & spin plaques.
-  - Wheel/: Wheel Disc, Wheel Ring, Wheel Bulbs A and B, Wheel Pointer.
+  - Wheel/: Wheel Disc (the turning part: your face art, Wheel Segments,
+    an icon layer per segment icon and a text layer per label, and the hub
+    when it turns), Wheel Hub, Wheel Ring, Wheel Bulbs A and B, Wheel
+    Pointer (its anchor is the pivot). Replace any of them with your art.
   - Counters/: "Counter Digits", the 0-9 strip every counter rolls
     through. Change its font, colour or style once and every counter
     follows.
@@ -153,10 +157,17 @@ Transparency
   ProRes 4444, Channels: RGB + Alpha. That gives a transparent MOV.
 
 Notes
-- Fonts: text layers ask for ${font}. Install it (Google Fonts) or change the
-  font on "Counter Digits" and the text layers.
+- Fonts: text layers ask for ${font}. Install them (Google Fonts, or the
+  files in fonts/) or change the font on "Counter Digits", the wheel labels
+  in "Wheel Disc" and the other text layers.
 - Reel curvature and bloom are preview-only effects; the AE reels are flat.
 `;
+
+// The fonts the text layers ask for, for the README.
+function usedFonts(project) {
+  const fams = [project.effects.font || 'Bungee', project.wheel?.labelFont].filter((f, i, a) => f && a.indexOf(f) === i);
+  return fams.map((f) => `${f} (PostScript "${fontPostScript(project, f)}"${(project.fonts || []).some((u) => u.family === f) ? ', in fonts/' : ''})`).join(' and ');
+}
 
 export async function buildAEPackage(scene, images, onProgress) {
   const JSZip = window.JSZip;
@@ -213,7 +224,11 @@ export async function buildAEPackage(scene, images, onProgress) {
   }
   tick(2);
 
-  const font = (project.effects.font || 'Bungee').replace(/\s+/g, '');
+  // Uploaded fonts ship with the package; After Effects needs them installed.
+  for (const f of project.fonts || []) {
+    const m = /^data:[^;,]*;base64,(.*)$/.exec(f.src || '');
+    if (m) dir.file(`fonts/${f.file || `${f.family}.ttf`}`, m[1], { base64: true });
+  }
   const marquee = project.machine.marquee && project.machine.builtinFrame !== false;
   const dataList = [];
   for (const fmt of formats) {
@@ -234,10 +249,14 @@ export async function buildAEPackage(scene, images, onProgress) {
       [A.vignette, res.vignette],
       [A.rays, res.rays],
       [A.raysSmall, res.raysSmall],
-      [A.wheelDisc, res.wheel.disc],
+      [A.wheelFace, res.wheel.face],
+      [A.wheelSegments, res.wheel.segs],
+      [A.wheelHub, res.wheel.hub],
+      // Only segments with an icon have one (the list has gaps).
+      ...Array.from(res.wheel.icons, (c, k) => [A.wheelIcon(k), c || null]),
       [A.wheelRing, res.wheel.ring],
-      [A.wheelBulbsA, paintWheelBulbLayer(sc, 0)],
-      [A.wheelBulbsB, paintWheelBulbLayer(sc, 1)],
+      [A.wheelBulbsA, res.wheel.bulbs.length ? paintWheelBulbLayer(sc, 0) : null],
+      [A.wheelBulbsB, res.wheel.bulbs.length ? paintWheelBulbLayer(sc, 1) : null],
       [A.wheelPointer, res.wheel.pointer],
       ...Object.keys(res.titles).map((k) => [A.title(k), res.titles[k]]),
     ];
@@ -247,12 +266,13 @@ export async function buildAEPackage(scene, images, onProgress) {
         assetDir,
         winFrames,
         winFps,
-        wheelR: res.wheel.R,
+        wheelLabels: res.wheel.labels,
+        wheelPivot: [res.wheel.pivotX, res.wheel.pivotY],
         accent: res.theme.accent,
         titlePx: res.titlePx,
         hasLogo: !!res.logo,
         hasBulbs: marquee,
-        fontPostScript: `${font}-Regular`,
+        fontPostScript: fontPostScript(project, project.effects.font),
         sfx,
         sfxHeadroom,
         titleKeys: Object.keys(res.titles),
@@ -265,7 +285,7 @@ export async function buildAEPackage(scene, images, onProgress) {
   dir.file(file, buildAEScript(dataList));
   dir.file(
     'README.txt',
-    README({ name, file, formats: formats.map(([w, h]) => `${w}x${h}`), sfxClips, headroom: sfxHeadroom, transparent: !!project.output?.transparent, font: `${project.effects.font || 'Bungee'} (PostScript "${font}-Regular")` })
+    README({ name, file, formats: formats.map(([w, h]) => `${w}x${h}`), sfxClips, headroom: sfxHeadroom, transparent: !!project.output?.transparent, font: usedFonts(project) })
   );
   dir.file(`${base}.reelstudio.json`, JSON.stringify(project, null, 2));
   const blob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE', compressionOptions: { level: 6 } }, (m) => onProgress?.(0.9 + (m.percent / 100) * 0.1));

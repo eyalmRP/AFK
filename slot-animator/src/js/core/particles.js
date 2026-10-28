@@ -244,7 +244,10 @@ function focusOf(em, L) {
     return { x: sx / n, y: sy / n, w: x1 - x0 + L.cellW, h: y1 - y0 + L.cellH };
   }
   if (f.kind === 'window' && L.winW) return { x: L.winX + L.winW / 2, y: L.winCY, w: L.winW, h: L.winH };
-  if (f.kind === 'wheel') return { x: L.W / 2, y: L.H * 0.54, w: L.H * 0.72, h: L.H * 0.72 };
+  if (f.kind === 'wheel') {
+    const pl = L.wheel ? L.wheel.plaque : { x: L.W / 2, y: L.H * 0.54, R: L.H * 0.36 };
+    return { x: pl.x, y: pl.y, w: pl.R * 2, h: pl.R * 2 };
+  }
   return { x: L.W / 2, y: L.H * (L.portrait ? 0.4 : 0.42), w: L.W * 0.7, h: L.H * 0.5 };
 }
 

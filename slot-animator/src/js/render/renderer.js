@@ -12,6 +12,7 @@ import { canvas, paintTitle } from './sprites.js';
 import { drawEmitter } from './particles.js';
 import { jumpTarget, mergeTarget, flightPath, flightAt, bigScaleAt, winFxConfig } from '../core/winfx.js';
 import { cameraAt, zoomConfig } from '../core/camera.js';
+import { pointerAt } from '../core/wheel.js';
 
 const clamp01 = (x) => (x < 0 ? 0 : x > 1 ? 1 : x);
 const prog = (t, a, b) => clamp01((t - a) / Math.max(1e-6, b - a));
@@ -1340,31 +1341,18 @@ function drawBanner(ctx, scene, R, t) {
   drawSparkleField(ctx, scene, t, { n: 22, start: b.start, x: cx, y: cy, w: L.W * 0.6, h: L.H * 0.4, size: L.cellW * 0.15, alpha: a, salt: 400 });
 }
 
-function pointerDeflection(theta, segDeg) {
-  const u = (((theta / segDeg) % 1) + 1) % 1;
-  const w = 0.22;
-  const max = 26;
-  if (u > 1 - w) return -max * ((u - (1 - w)) / w);
-  const back = 0.3;
-  if (u < back) {
-    const k = u / back;
-    return -max * Math.pow(1 - k, 2) * Math.cos(k * Math.PI * 1.5);
-  }
-  return 0;
-}
-
 function drawWheel(ctx, scene, R, t) {
   const w = R.pres.wheel;
   if (!w || t < w.inStart || t > w.outEnd) return;
   const { L, res, project, tl } = scene;
   const wh = res.wheel;
+  const G = L.wheel;
   const tIn = clamp01((t - w.inStart) / (w.inEnd - w.inStart));
   const tOut = clamp01((t - w.outStart) / (w.outEnd - w.outStart));
   const a = ease.outCubic(tIn) * (1 - ease.inCubic(tOut));
   const wheelGame = tl.game === 'wheel';
   darken(ctx, L, (wheelGame ? 0.3 : 0.86) * a);
-  const cx = L.W / 2;
-  const cy = L.H * 0.54;
+  const { cx, cy } = G;
   const sc = (0.3 + 0.7 * ease.outBack(tIn)) * (1 - 0.35 * ease.inCubic(tOut));
   if (Number(project.effects.rays) > 0) {
     ctx.save();
@@ -1410,13 +1398,13 @@ function drawWheel(ctx, scene, R, t) {
     ctx.fill();
     ctx.restore();
   }
-  ctx.drawImage(wh.ring, -wh.ringSize / 2, -wh.ringSize / 2);
+  // A hub that stays still sits over the turning disc.
+  if (wh.hub && !wh.hubSpins) ctx.drawImage(wh.hub, -wh.hub.width / 2, -wh.hub.height / 2);
+  if (wh.ring) ctx.drawImage(wh.ring, -wh.ringSize / 2, -wh.ringSize / 2);
   // Ring bulbs: chase while spinning, blink when landed.
   const landed = t > w.spinEnd;
   wh.bulbs.forEach((p, i) => {
-    const n = wh.bulbs.length;
     const b = landed ? (i % 2 === Math.floor(t * 8) % 2 ? 1 : 0.2) : 0.25 + 0.75 * Math.pow(0.5 + 0.5 * Math.cos(Math.PI * 2 * (i / 5 - t * (t > w.spinStart ? 2.5 : 0.8))), 6);
-    void n;
     const g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, wh.R * 0.03);
     g.addColorStop(0, '#ffffff');
     g.addColorStop(0.5, b > 0.5 ? '#fff3c4' : '#c9a050');
@@ -1427,28 +1415,30 @@ function drawWheel(ctx, scene, R, t) {
     ctx.fill();
     drawGlow(ctx, res, res.theme.accent, p.x, p.y, wh.R * 0.22, b * 0.55 * a);
   });
-  // Pointer at the top.
-  const def = pointerDeflection(theta, segDeg);
+  // The pointer, at the top or turned over at the bottom; pegs bend it and
+  // it springs back past straight when one lets go.
+  const def = pointerAt(theta, segDeg, G.pointerAngle, t, w.kick);
   ctx.save();
-  ctx.translate(0, -wh.R * 1.1);
-  ctx.rotate((def * Math.PI) / 180);
-  ctx.drawImage(wh.pointer, -wh.pointer.width / 2, -wh.pivotY);
+  ctx.translate(G.pivot.x - cx, G.pivot.y - cy);
+  ctx.rotate(((G.pointerAngle + def) * Math.PI) / 180);
+  ctx.drawImage(wh.pointer, -wh.pivotX, -wh.pivotY);
   ctx.restore();
   ctx.restore();
 
   // Title before the spin; prize plaque after landing.
   const titleIn = w.cont ? clamp01((t - w.titleIn) / 0.3) : 1;
   const titleA = a * titleIn * (1 - clamp01((t - w.spinStart - 0.6) / 0.5));
-  drawCentered(ctx, res.titles.wheel, cx, cy - wh.R * 1.28 * sc, 0.5 + 0.5 * ease.outBack(tIn), titleA);
+  drawCentered(ctx, res.titles.wheel, G.title.x, cy + (G.title.y - cy) * sc, 0.5 + 0.5 * ease.outBack(tIn), titleA);
   if (t > w.prizeStart) {
+    const pl = G.plaque;
     drawRoundParticles(ctx, scene, R, t, ['wheel']);
-    drawRing(ctx, cx, cy, (t - w.prizeStart) / 0.8, wh.R * 1.6, res.theme.accent, wh.R * 0.05);
+    drawRing(ctx, pl.x, pl.y, (t - w.prizeStart) / 0.8, pl.R * 1.6, res.theme.accent, pl.R * 0.05);
     const k = ease.outBack(clamp01((t - w.prizeStart) / 0.5)) * clamp01((w.plaqueEnd - t) / 0.35);
-    const pw = wh.R * 1.5;
-    const ph = wh.R * 0.62;
+    const pw = pl.R * 1.5;
+    const ph = pl.R * 0.62;
     ctx.save();
     ctx.globalAlpha = a;
-    ctx.translate(cx, cy);
+    ctx.translate(pl.x, pl.y);
     ctx.scale(k * sc, k * sc);
     drawGlow(ctx, res, res.theme.accent, 0, 0, pw * 1.8, 0.6);
     roundRect(ctx, -pw / 2, -ph / 2, pw, ph, ph * 0.25);
@@ -1462,12 +1452,12 @@ function drawWheel(ctx, scene, R, t) {
     ctx.stroke();
     ctx.restore();
     const seg = project.wheel.segments[w.segment] || { label: '' };
-    const lbl = cachedTitle(res, 'prize', String(seg.label), Math.round(wh.R * 0.2), 'gold');
-    drawCentered(ctx, lbl, cx, cy - ph * 0.16 * k * sc, k * sc * Math.min(1, (pw * 0.92) / lbl.width), a);
+    const lbl = cachedTitle(res, 'prize', String(seg.label), Math.round(pl.R * 0.2), 'gold');
+    drawCentered(ctx, lbl, pl.x, pl.y - ph * 0.16 * k * sc, k * sc * Math.min(1, (pw * 0.92) / lbl.width), a);
     const v = evalKeys(tl.meterKeys, t);
     ctx.save();
     ctx.globalAlpha = a;
-    drawOdometer(ctx, res, v, cx, cy + ph * 0.2 * k * sc, Math.round(wh.R * 0.14), { currency: project.machine.currency || '', decimals: project.machine.decimals | 0, rate: evalVelocity(tl.meterKeys, t), scale: k * sc });
+    drawOdometer(ctx, res, v, pl.x, pl.y + ph * 0.2 * k * sc, Math.round(pl.R * 0.14), { currency: project.machine.currency || '', decimals: project.machine.decimals | 0, rate: evalVelocity(tl.meterKeys, t), scale: k * sc });
     ctx.restore();
   }
 }

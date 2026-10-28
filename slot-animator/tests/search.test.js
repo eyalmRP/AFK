@@ -22,7 +22,11 @@ test('feature search finds features by name, by synonym and despite typos', () =
   assert.ok(top('magent').includes('Winning symbols merge into one big symbol'));
   assert.ok(top('backgrund').includes('Background image'));
   // The newer controls, in the words people used for them.
-  assert.ok(top('zoom', 2).includes('Zoom in on the anticipation reel'));
+  assert.ok(top('zoom', 4).includes('Zoom in on the anticipation reel'));
+  assert.ok(top('zoom', 4).some((t) => /^Wheel/.test(t)), 'and the wheel zoom');
+  assert.equal(top('ticker')[0].startsWith('Wheel pointer'), true);
+  assert.equal(top('no color')[0], 'Segment with no colour');
+  assert.ok(top('template').includes('Start from a preset'));
   assert.ok(top('camera push in').includes('Zoom in on the anticipation reel'));
   assert.equal(top('one by one')[0], 'Merge all at once or one by one');
   assert.ok(top('all at once').includes('Merge all at once or one by one'));

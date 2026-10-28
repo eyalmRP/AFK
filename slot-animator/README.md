@@ -47,9 +47,22 @@ the result as an editable **After Effects project**.
   shows, until the next round, or to the end of the animation, looping
   seamlessly (a 5 s cycle) once they run long. Ambient particles float
   behind the machine for the whole animation.
+- Wheel of Fortune: segments with a colour or none (your wheel face shows
+  through), an icon per segment, labels in any font, colour and size. Every
+  part can be your own art: the face, rim, hub and pointer (Asset Bank ›
+  Wheel), and the rim, bulbs, pegs, separators, hub and labels switch off.
+  The pointer sits at the top or the bottom, pegs bend it, and the "Almost
+  slips" landing creeps into the next peg, nearly tips over, rolls back and
+  the pointer springs past straight before it settles. The wheel can be
+  bigger than the screen (whole wheel, top half, close-up, from above, or
+  your own zoom and centre), and the camera can push in on the pointer as
+  it slows.
+- Fonts: upload TTF or OTF fonts (Asset Bank › Fonts) for the titles,
+  counters and wheel labels; they ship in the After Effects package.
 - Sound: every cue (reel stops, anticipation, pops, count-up ticks, stings,
   coins, wheel pegs) is synthesised in sync with the animation; any cue can
-  be replaced with your own file. It plays with the preview.
+  be replaced with your own file. The preview starts muted (the Sound
+  button turns it on); exports always carry it.
 
 - Editor:
   - Feature search (Ctrl K or /): every control, section and command, found
@@ -58,9 +71,16 @@ the result as an editable **After Effects project**.
     too), by the words people use for it ("confetti", "fly to score",
     "magnet") or despite a typo. Picking one opens its tab or the Asset
     Bank, selects a fitting round, unfolds the section and highlights it.
+  - Presets (top bar, or P): a gallery of 16 ready-made animations with a
+    frame of each: classic, fruit 3×3, 243 ways, tumbles, clusters 7×7,
+    per-cell spins, mobile portrait, free spins with sticky wilds, teases,
+    the big win ladder, slot into Hold & Spin, Hold & Spin, a slot wheel
+    bonus and three wheel-only framings. It opens by itself on the first
+    visit.
   - Project menu: new project, open and save the project file (Ctrl O,
-    Ctrl S), start from a preset, clear all rounds, reset to the demo.
-    Undo and redo (Ctrl Z, Ctrl Shift Z) cover every change.
+    Ctrl S), presets, clear all rounds, reset to the demo. Undo and redo
+    (Ctrl Z, Ctrl Shift Z) cover every change. Switching the game type keeps
+    rounds only when they belong to the new game.
   - Settings tabs: Machine, Spin, Wins (tiers, winning symbols, particles,
     titles, win timing), Effects, Wheel, Sound, Export. Every section
     folds and remembers it; Alt-click a section title folds them all.
@@ -107,6 +127,8 @@ Everything is a pure function of time, built from one JSON project:
 | `src/js/core/timeline.js` | Schedules every round: reel or cell start/stop times, anticipation, tumble actors, wilds, multipliers, win presentations, the free spins block, the wheel, shakes, flashes and sound cues. Reel motion is stored as After Effects style keyframes (value + speed/influence eases). |
 | `src/js/core/keys.js` | Evaluates those keyframes with the same cubic Bézier After Effects uses, so exported curves play back identically. |
 | `src/js/core/layout.js` | Screen layout shared by the renderer and the exporter. |
+| `src/js/core/wheel.js` | The wheel's framing and screen geometry, pointer side, how pegs bend the pointer and its spring back, the almost-slip landing, and where labels and icons sit on the disc. |
+| `src/js/core/fonts.js` | Built-in and uploaded fonts, and the PostScript names After Effects asks for (read from the font file). |
 | `src/js/core/winfx.js` | Winning symbols that jump into the score or merge into one: landing spots and the flight curves the preview and After Effects share. |
 | `src/js/core/particles.js` | Explosion templates and the win emitters: which moment throws which particles, and every particle's flight as a closed form (gravity, air drag, flutter) that the preview and After Effects both evaluate. |
 | `src/js/core/sfx.js` | The sound cues as separate clips for the After Effects SFX comp (identical cues share a clip). |
@@ -138,6 +160,12 @@ comp, the round comps place them in time, and a few controls sit on
   - `Titles/` (with the light sweep), `Paylines/` (each draws itself on),
     `Plaques/`, `Wheel/` and `Counters/Counter Digits` (the 0-9 strip every
     counter rolls through).
+  - `Wheel/`: `Wheel Disc` is the turning part: your face art, `Wheel
+    Segments`, an icon layer per segment icon and a text layer per label
+    (in the label font), plus the hub when it turns. `Wheel Hub`, `Wheel
+    Ring`, the bulbs and `Wheel Pointer` (anchored at its pivot) are their
+    own placeholders. The pointer's rotation expression reads the disc, so
+    retimed spins keep it in step.
   - `Particles/Particle <name>`: the particle art, one variant (or
     animation frame) per frame.
 - `Reels/Reel N` (or `Cell C-R` for per-cell spins): a `CTRL` null with a

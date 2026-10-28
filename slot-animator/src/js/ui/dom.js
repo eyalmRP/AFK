@@ -100,8 +100,9 @@ export function section(title, ...children) {
   return h('section', { class: 'group' }, h('h3', null, title), children);
 }
 
-export function button(label, onClick, opts = {}) {
-  return h('button', { type: 'button', class: opts.class || 'btn', id: opts.id, title: opts.title, 'aria-label': label ? null : opts.title, disabled: opts.disabled, onclick: onClick }, opts.icon ? icon(opts.icon) : null, label ? h('span', null, label) : null);
+// Extra children (a thumbnail, say) go after the icon and label.
+export function button(label, onClick, opts = {}, ...extra) {
+  return h('button', { type: 'button', class: opts.class || 'btn', id: opts.id, title: opts.title, 'aria-label': label ? null : opts.title, disabled: opts.disabled, onclick: onClick }, opts.icon ? icon(opts.icon) : null, label ? h('span', null, label) : null, ...extra);
 }
 
 const ICONS = {

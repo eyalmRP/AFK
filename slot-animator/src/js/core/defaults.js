@@ -383,6 +383,27 @@ function baseProject() {
       turns: 5,
       landing: 'tease',
       multiplyByBet: true,
+      // Framing (see core/wheel.js): radius relative to fitting the screen,
+      // centre as fractions of the screen. The pointer sits at the top or
+      // the bottom; push zooms in on it as the wheel slows.
+      framing: 'full',
+      size: 1,
+      x: 0.5,
+      y: 0.54,
+      pointer: 'top',
+      push: 0,
+      // Art: uploaded images (data URLs) replace the built-in parts; the
+      // face sits under the segments and shows through uncoloured ones.
+      art: { face: null, rim: null, hub: null, pointer: null },
+      show: { rim: true, bulbs: true, pegs: true, separators: true, hub: true, labels: true },
+      pointerSize: 1,
+      pivot: 0.2,
+      hubSize: 1,
+      hubSpins: true,
+      labelFont: '',
+      labelPalette: 'gold',
+      labelSize: 1,
+      iconSize: 1,
     },
     sound: {
       enabled: true,
@@ -489,10 +510,204 @@ export function wheelProject() {
   return p;
 }
 
+// A three-reel fruit machine: Classic Vegas, five lines.
+export function fruitProject() {
+  const p = baseProject();
+  p.name = 'Fruit Classic';
+  p.seed = 101;
+  p.grid = { reels: 3, rows: 3, peek: 0.12, curvature: 0.35, cellAspect: 0.92 };
+  Object.assign(p.machine, { theme: 'vegas', title: 'FRUIT CLASSIC', maxLines: 5 });
+  p.effects.font = 'Russo One';
+  p.rounds = [
+    newRound('none', { seed: 111 }),
+    newRound('small', { seed: 112, lines: [0], count: 3 }),
+    newRound('nearmiss', { seed: 113 }),
+    newRound('medium', { seed: 114, lines: [1, 2], count: 3 }),
+    newRound('big', { seed: 115, lines: [0, 3, 4], count: 3, symbol: 's7', tier: 0 }),
+  ];
+  return p;
+}
+
+// 243 ways on 5x3, neon, reels kick off in a wave; the big win expands a wild.
+export function waysProject() {
+  const p = baseProject();
+  p.name = 'Neon Ways';
+  p.seed = 121;
+  Object.assign(p.machine, { theme: 'neon', title: 'NEON WAYS', payMode: 'ways' });
+  Object.assign(p.spin, { type: 'stagger', ...SPIN_PRESETS.stagger });
+  p.effects.font = 'Russo One';
+  p.winfx.style = 'jump';
+  p.rounds = [
+    newRound('none', { seed: 131 }),
+    newRound('small', { seed: 132, count: 3 }),
+    newRound('medium', { seed: 133, count: 4 }),
+    newRound('nearmiss', { seed: 134 }),
+    newRound('big', { seed: 135, count: 5, tier: 1, wildAssist: true, expandWild: true }),
+  ];
+  return p;
+}
+
+// Cluster pays on 7x7 with tumbles and multipliers, candy art.
+export function clusterProject() {
+  const p = candyProject();
+  p.name = 'Cluster Candy';
+  p.seed = 141;
+  p.grid = { reels: 7, rows: 7, peek: 0, curvature: 0, cellAspect: 0.9 };
+  Object.assign(p.machine, { title: 'CLUSTER CANDY', payMode: 'cluster', minCluster: 5 });
+  p.winfx.style = 'merge';
+  p.rounds = [
+    newRound('none', { seed: 151 }),
+    newRound('small', { seed: 152, count: 5, chain: [{ symbol: 'auto', count: 5 }] }),
+    newRound('medium', { seed: 153, count: 7, chain: [{ symbol: 'auto', count: 6 }], multipliers: [3] }),
+    newRound('big', { seed: 154, count: 9, tier: 1, chain: [{ symbol: 'auto', count: 8 }, { symbol: 'auto', count: 6 }], multipliers: [10, 25] }),
+  ];
+  return p;
+}
+
+// Portrait for phones: 9:16, a taller grid.
+export function portraitProject() {
+  const p = baseProject();
+  p.name = 'Mobile Sevens';
+  p.seed = 161;
+  p.canvas = { width: 1080, height: 1920, fps: 30 };
+  p.output.formats = ['1080x1920'];
+  p.grid = { reels: 5, rows: 4, peek: 0.15, curvature: 0.25, cellAspect: 0.95 };
+  Object.assign(p.machine, { title: 'MOBILE SEVENS' });
+  p.rounds = [
+    newRound('none', { seed: 171 }),
+    newRound('small', { seed: 172, lines: [0], count: 3 }),
+    newRound('medium', { seed: 173, lines: [1, 2], count: 4 }),
+    newRound('big', { seed: 174, lines: [0, 3], count: 5, symbol: 's7', tier: 2 }),
+  ];
+  return p;
+}
+
+// Scatters trigger free spins; wilds stick; the block ends on its total.
+export function freeSpinsProject() {
+  const p = baseProject();
+  p.name = 'Emerald Free Spins';
+  p.seed = 181;
+  Object.assign(p.machine, { theme: 'emerald', title: 'EMERALD SPINS' });
+  p.effects.font = 'Cinzel Decorative';
+  const fs = { free: true };
+  p.rounds = [
+    newRound('none', { seed: 191 }),
+    newRound('freespins', { seed: 192, freeSpins: 8, sticky: true }),
+    newRound('small', { seed: 193, ...fs, lines: [0], count: 3, extraWilds: 1 }),
+    newRound('none', { seed: 194, ...fs }),
+    newRound('medium', { seed: 195, ...fs, lines: [1, 3], count: 4 }),
+    newRound('big', { seed: 196, ...fs, lines: [0, 2], count: 5, tier: 1, wildAssist: true }),
+    newRound('fstotal', { seed: 197 }),
+  ];
+  return p;
+}
+
+// Suspense: the last reels tease, the camera pushes in, then it pays off.
+export function teaseProject() {
+  const p = baseProject();
+  p.name = 'Neon Tease';
+  p.seed = 201;
+  Object.assign(p.machine, { theme: 'neon', title: 'NEON TEASE' });
+  Object.assign(p.spin, { type: 'tease', ...SPIN_PRESETS.tease, zoom: 0.28 });
+  p.rounds = [
+    newRound('nearmiss', { seed: 211 }),
+    newRound('none', { seed: 212, antic: [3, 4] }),
+    newRound('small', { seed: 213, lines: [0], count: 3 }),
+    newRound('nearmiss', { seed: 214 }),
+    newRound('big', { seed: 215, lines: [0, 3], count: 5, symbol: 's7', tier: 2, antic: [4] }),
+  ];
+  return p;
+}
+
+// Every big win title in a row.
+export function ladderProject() {
+  const p = baseProject();
+  p.name = 'Big Win Ladder';
+  p.seed = 221;
+  Object.assign(p.machine, { title: 'BIG WIN LADDER' });
+  p.rounds = [
+    newRound('small', { seed: 231, lines: [0], count: 3 }),
+    newRound('medium', { seed: 232, lines: [1, 2], count: 4 }),
+    newRound('big', { seed: 233, lines: [0], count: 5, tier: 0 }),
+    newRound('big', { seed: 234, lines: [0, 3], count: 5, tier: 1 }),
+    newRound('big', { seed: 235, lines: [0, 1, 2], count: 5, symbol: 's7', tier: 2 }),
+  ];
+  return p;
+}
+
+// A slot spin lands coins, the board takes over, the coins are collected.
+export function slotHoldSpinProject() {
+  const p = baseProject();
+  p.name = 'Lucky Coins';
+  p.seed = 241;
+  Object.assign(p.machine, { theme: 'emerald', title: 'LUCKY COINS' });
+  p.rounds = [
+    newRound('none', { seed: 251 }),
+    newRound('small', { seed: 252, lines: [0], count: 3 }),
+    newRound('hstrigger', { seed: 253, coinsIn: 6 }),
+    newRound('respin', { seed: 254, coinsIn: 1 }),
+    newRound('respin', { seed: 255, coinsIn: 0 }),
+    newRound('respin', { seed: 256, coinsIn: 2, specials: ['mega'] }),
+    newRound('respin', { seed: 257, coinsIn: 0 }),
+    newRound('collect', { seed: 258 }),
+  ];
+  return p;
+}
+
+// The wheel bonus of a slot, rising from the bottom of the screen; it
+// almost slips past the jackpot.
+export function slotWheelProject() {
+  const p = baseProject();
+  p.name = 'Royal Wheel Bonus';
+  p.seed = 261;
+  Object.assign(p.wheel, { framing: 'half', size: 1.55, x: 0.5, y: 1.02, landing: 'slip', push: 0.2 });
+  p.rounds = [
+    newRound('none', { seed: 271 }),
+    newRound('small', { seed: 272, lines: [0], count: 3 }),
+    newRound('wheel', { seed: 273, wheelSegment: 3 }),
+  ];
+  return p;
+}
+
+// The wheel on its own, close up: only its top shows, the camera leans in
+// on the pointer, and the last spin nearly slips.
+export function wheelCloseProject() {
+  const p = wheelProject();
+  p.name = 'Wheel Close-up';
+  p.seed = 281;
+  Object.assign(p.wheel, { framing: 'close', size: 2.3, x: 0.5, y: 1.42, landing: 'tease', push: 0.25 });
+  p.rounds = [newRound('wheel', { seed: 282, wheelSegment: 6 }), newRound('wheel', { seed: 283, wheelSegment: 1 }), newRound('wheel', { seed: 284, wheelSegment: 3, wheelLanding: 'slip' })];
+  return p;
+}
+
+// The wheel hangs from the top of the screen, pointer at the bottom.
+export function wheelRiseProject() {
+  const p = wheelProject();
+  p.name = 'Neon Wheel';
+  p.seed = 291;
+  Object.assign(p.machine, { theme: 'neon', title: 'NEON WHEEL' });
+  Object.assign(p.wheel, { framing: 'rise', size: 1.55, x: 0.5, y: -0.02, pointer: 'bottom', landing: 'slip', labelPalette: 'neon' });
+  p.wheel.segments = DEFAULT_SEGMENTS.map((s, i) => ({ ...s, color: ['#1a1060', '#3a0f66', '#0c2a5a', '#5a0f4a'][i % 4] }));
+  p.rounds = [newRound('wheel', { seed: 292, wheelSegment: 8 }), newRound('wheel', { seed: 293, wheelSegment: 3 })];
+  return p;
+}
+
+// Presets for the gallery, grouped. desc says what the animation shows.
 export const PRESETS = [
-  { id: 'classic', label: 'Classic 5×3 paylines', make: defaultProject },
-  { id: 'candy', label: 'Tumble 6×5 pay anywhere (Sweet Bonanza style)', make: candyProject },
-  { id: 'cells', label: 'Per-cell spins 5×3', make: cellsProject },
-  { id: 'holdspin', label: 'Hold & Spin coins (fills the board)', make: holdSpinProject },
-  { id: 'wheel', label: 'Wheel of Fortune only', make: wheelProject },
+  { id: 'classic', group: 'Slots', label: 'Classic 5×3 paylines', desc: 'Spins, a near miss, a big win and a wheel bonus.', make: defaultProject },
+  { id: 'fruit', group: 'Slots', label: 'Fruit machine 3×3', desc: 'Three reels, five lines, Vegas chrome.', make: fruitProject },
+  { id: 'ways', group: 'Slots', label: '243 ways', desc: 'Neon 5×3 ways pays; winners jump into the meter.', make: waysProject },
+  { id: 'candy', group: 'Slots', label: 'Tumble 6×5 pay anywhere', desc: 'Sweet Bonanza style: tumbles, bombs, free spins.', make: candyProject },
+  { id: 'clusters', group: 'Slots', label: 'Cluster pays 7×7', desc: 'Clusters tumble and merge into one big symbol.', make: clusterProject },
+  { id: 'cells', group: 'Slots', label: 'Per-cell spins 5×3', desc: 'Every cell spins on its own; an expanding wild.', make: cellsProject },
+  { id: 'portrait', group: 'Slots', label: 'Mobile portrait 9:16', desc: 'A taller 5×4 machine for phones.', make: portraitProject },
+  { id: 'freespins', group: 'Features', label: 'Free spins with sticky wilds', desc: 'Scatters trigger, wilds stick, the total counts up.', make: freeSpinsProject },
+  { id: 'tease', group: 'Features', label: 'Near misses and teases', desc: 'Reels tease with the camera pushing in, then a big win.', make: teaseProject },
+  { id: 'ladder', group: 'Features', label: 'Big win ladder', desc: 'Small, medium, then every big win title in turn.', make: ladderProject },
+  { id: 'slot-hs', group: 'Hold & Spin', label: 'Slot into Hold & Spin', desc: 'Coins land on the reels and carry onto the board.', make: slotHoldSpinProject },
+  { id: 'holdspin', group: 'Hold & Spin', label: 'Hold & Spin coins', desc: 'Respins fill the board for the grand.', make: holdSpinProject },
+  { id: 'slot-wheel', group: 'Wheel', label: 'Slot with a wheel bonus', desc: 'The wheel rises from below and almost slips.', make: slotWheelProject },
+  { id: 'wheel', group: 'Wheel', label: 'Wheel of Fortune only', desc: 'Three spins, the last on the jackpot.', make: wheelProject },
+  { id: 'wheel-close', group: 'Wheel', label: 'Wheel close-up', desc: 'Only the top shows; the camera leans in on the pointer.', make: wheelCloseProject },
+  { id: 'wheel-rise', group: 'Wheel', label: 'Wheel from above', desc: 'Hangs from the top, the pointer at the bottom.', make: wheelRiseProject },
 ];

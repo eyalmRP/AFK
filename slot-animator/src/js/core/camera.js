@@ -1,7 +1,10 @@
 // The camera: while a reel (or a cell) teases with anticipation, the whole
 // view pushes in towards it, follows the tease from reel to reel, and eases
-// back out after the last one lands. Pure; the preview and the After Effects
+// back out after the last one lands. It can also push in on the wheel's
+// pointer as the wheel slows. Pure; the preview and the After Effects
 // CAMERA null evaluate the same curve.
+
+import { wheelConfig } from './wheel.js';
 
 export const ZOOM_IN = 0.4;
 export const ZOOM_HOLD = 0.15;
@@ -21,9 +24,21 @@ export function zoomConfig(project) {
 
 // Windows of anticipation: { start, end, foci: [{ t, c, r }] } where r is
 // null for a whole reel. Teases that follow each other closely share one
-// window so the camera pans instead of zooming out and in again.
+// window so the camera pans instead of zooming out and in again. Wheel
+// windows focus on the pointer ({ wheel: true }) with their own amount.
 export function scheduleCamera(tl, project) {
-  if (!zoomConfig(project).on) return [];
+  const out = zoomConfig(project).on ? teaseWindows(tl) : [];
+  const push = wheelConfig(project).push;
+  if (push > 0) {
+    for (const R of tl.rounds) {
+      const w = R.pres.wheel;
+      if (w) out.push({ start: w.slowFrom, end: w.spinEnd, foci: [{ t: w.slowFrom, wheel: true }], amount: push });
+    }
+  }
+  return out.sort((a, b) => a.start - b.start);
+}
+
+function teaseWindows(tl) {
   const teases = [];
   for (const R of tl.rounds) {
     if (R.cells) for (const ci of R.cells) if (ci && ci.antic) teases.push({ start: ci.antic.start, end: ci.antic.end, c: ci.c, r: ci.r });
@@ -43,6 +58,7 @@ export function scheduleCamera(tl, project) {
 }
 
 export function focusPoint(L, f) {
+  if (f.wheel) return { x: L.wheel.tip.x, y: L.wheel.tip.y };
   if (f.r == null) return { x: L.reelX[f.c] + L.cellW / 2, y: L.winCY };
   const m = L.cellCenter(f.c, f.r);
   return { x: m.x, y: m.y };
@@ -60,7 +76,7 @@ export function cameraAt(windows, t, L, amount) {
       const q = focusPoint(L, w.foci[i]);
       p = { x: p.x + (q.x - p.x) * b, y: p.y + (q.y - p.y) * b };
     }
-    return { z: 1 + amount * k, x: p.x, y: p.y };
+    return { z: 1 + (w.amount ?? amount) * k, x: p.x, y: p.y };
   }
   return { z: 1, x: L.W / 2, y: L.H / 2 };
 }
