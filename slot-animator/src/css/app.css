@@ -378,6 +378,7 @@ input[type='color'] {
 }
 
 .toggle label {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -386,11 +387,16 @@ input[type='color'] {
   cursor: pointer;
 }
 
+/* Hidden under its switch; anchored to the label so it stays inside the
+   scrolling panel instead of stretching the page. */
 .toggle input {
   position: absolute;
+  left: 0;
+  top: 50%;
   opacity: 0;
   width: 1px;
   height: 1px;
+  margin: 0;
 }
 
 .switch {
