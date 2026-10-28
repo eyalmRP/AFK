@@ -2667,3 +2667,124 @@ body.dragging .bank-head {
 .seg-kind.prize {
   color: var(--gold);
 }
+
+/* Options that do not apply to this game or spin style: in view, greyed
+   and locked, with the reason. */
+.na > .group-body,
+.field.na,
+.toggle.na {
+  opacity: 0.45;
+}
+
+.na .na-note,
+.na-note {
+  margin: 4px 0 0;
+  font-size: 11px;
+  color: var(--warn);
+  opacity: 1;
+}
+
+.na-badge {
+  margin-left: auto;
+  padding: 1px 8px;
+  border-radius: 99px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: none;
+  color: var(--warn);
+  border: 1px solid color-mix(in srgb, var(--warn) 45%, transparent);
+  white-space: nowrap;
+}
+
+section.group.na > h3 .group-toggle span:first-of-type {
+  opacity: 0.6;
+}
+
+/* Section icons */
+.group-toggle .sec-ic {
+  display: inline-grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  color: var(--gold);
+  opacity: 0.8;
+}
+
+.group-toggle .sec-ic .ic {
+  width: 14px;
+  height: 14px;
+}
+
+/* Options with a tooltip: a dotted underline says "hover me". */
+.field[data-tip] > label,
+.field[data-tip] > .label,
+.toggle[data-tip] label > span:last-child {
+  text-decoration: underline dotted var(--line-2);
+  text-underline-offset: 3px;
+}
+
+/* The tooltip card, with its mini demo. */
+.tip-card {
+  position: fixed;
+  z-index: 95;
+  width: 300px;
+  padding: 10px 12px 12px;
+  background: var(--surface);
+  border: 1px solid var(--line-2);
+  border-radius: 12px;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.6);
+  pointer-events: none;
+  animation: tip-in 0.12s ease-out;
+}
+
+.tip-card strong {
+  display: block;
+  font-size: 13px;
+  margin-bottom: 3px;
+}
+
+.tip-card p {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--muted);
+}
+
+.tip-card .tip-na {
+  margin-top: 6px;
+  color: var(--warn);
+}
+
+.tip-frame {
+  margin: 0 0 9px;
+  aspect-ratio: 16 / 9;
+  border-radius: 8px;
+  overflow: hidden;
+  background: linear-gradient(110deg, var(--surface-3) 30%, var(--surface-2) 50%, var(--surface-3) 70%) 0 0 / 300% 100%;
+  animation: preset-wait 1.4s linear infinite;
+}
+
+.tip-card.playing .tip-frame {
+  animation: none;
+}
+
+.tip-demo {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+@keyframes tip-in {
+  from {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tip-card,
+  .tip-frame {
+    animation: none;
+  }
+}

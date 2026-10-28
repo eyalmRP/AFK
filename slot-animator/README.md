@@ -56,12 +56,17 @@ the result as an editable **After Effects project**.
   size, and the text and icon height (how far out from the hub). Every
   part can be your own art: the face, rim, hub and pointer (Asset Bank ›
   Wheel), and the rim, bulbs, pegs, separators, hub and labels switch off.
-  The pointer sits at the top or the bottom, pegs bend it, and the "Almost
+  Segments can be a prize, Spin again (the wheel says so and spins once
+  more within the round) or No win. The pointer sits at the top or the
+  bottom, pegs bend it, and the "Almost
   slips" landing creeps into the next peg, nearly tips over, rolls back and
   the pointer springs past straight before it settles. The wheel can be
   bigger than the screen (whole wheel, top half, close-up, from above, or
   your own zoom and centre), and the camera can push in on the pointer as
   it slows.
+- Build-up shake (Effects): every reel or cell that brings a winner lands
+  with a growing bump and a climbing note. Row lines (Machine › Reels) put
+  thin lines between the rows.
 - Fonts: upload TTF or OTF fonts (Asset Bank › Fonts) for the titles,
   counters and wheel labels; they ship in the After Effects package.
 - Sound: every cue (reel stops, anticipation, pops, count-up ticks, stings,
@@ -76,6 +81,13 @@ the result as an editable **After Effects project**.
     too), by the words people use for it ("confetti", "fly to score",
     "magnet") or despite a typo. Picking one opens its tab or the Asset
     Bank, selects a fitting round, unfolds the section and highlights it.
+  - Tooltips: hover (or focus) an option for what it does; many show a
+    small looping demo rendered by the real engine (spin types, start and
+    stop styles, anticipation and zoom, winning symbol styles and paths,
+    build-up shake, sticky and expanding wilds, tumbles, wheel landings,
+    framings and spin again). Options that do not apply to the game type
+    or spin style stay in view, greyed out and locked, saying why. Section
+    headers have icons. Search also reads the tooltip texts.
   - Presets (top bar, or P): a gallery of 16 ready-made animations with a
     frame of each: classic, fruit 3×3, 243 ways, tumbles, clusters 7×7,
     per-cell spins, mobile portrait, free spins with sticky wilds, teases,
@@ -140,7 +152,7 @@ Everything is a pure function of time, built from one JSON project:
 | `src/js/core/ae-export.js` | Builds the ES3 `.jsx` for After Effects. |
 | `src/js/render/*` | Canvas renderer, built-in sample art (classic and candy sets), effects, the sound synth. |
 | `src/js/export/*` | MP4 encoder and the After Effects zip packager. |
-| `src/js/ui/*` | The editor. |
+| `src/js/ui/*` | The editor. `applies.js` says which options apply to which game and spin style, `tips.js` holds the tooltips and `demos.js` the mini demo projects. |
 
 ### After Effects project layout
 

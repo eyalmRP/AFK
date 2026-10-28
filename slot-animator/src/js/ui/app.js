@@ -41,6 +41,9 @@ import { loadParticleSprites, drawParticleList } from '../render/particles.js';
 import { PARTICLE_TEMPLATES, TEMPLATE_BY_ID, BUILTIN_PARTICLES, PARTICLE_MOTIONS, PARTICLE_MOMENTS, PARTICLE_LENGTHS, tierParticles, spawnParticles, particleAssetInfo } from '../core/particles.js';
 import { WIN_STYLES, JUMP_TARGETS, MERGE_POINTS, FLIGHT_PATHS, winFxConfig, jumpTarget, mergeTarget } from '../core/winfx.js';
 import { searchFeatures, buildIndex } from './search.js';
+import { APPLIES, notApplying } from './applies.js';
+import { TIPS, tipEntries } from './tips.js';
+import { DEMOS, demoWindow } from './demos.js';
 import { WHEEL_FRAMINGS, WHEEL_LANDINGS, POINTER_SIDES, LABEL_PALETTES, WHEEL_ICONS, SEGMENT_KINDS, wheelConfig, iconName, autoIcons, autoHeights, segmentKind, wheelLandings } from '../core/wheel.js';
 import { projectFonts, parseFontNames } from '../core/fonts.js';
 import { renderFrame } from '../render/renderer.js';
@@ -385,6 +388,7 @@ function renderBank() {
   const scroll = el.bankBody.scrollTop;
   clear(el.bankBody, panelAssets(ui.bank.filter));
   collapsify(el.bankBody, 'bank');
+  markTips(el.bankBody);
   el.bankBody.scrollTop = scroll;
   refreshThumbs();
 }
@@ -431,6 +435,16 @@ function setSection(sec, open, remember = true) {
   if (open && sec.querySelector('#motion-graph')) drawMotionGraph();
 }
 
+// An icon for each section, so a tab reads at a glance.
+const SECTION_ICONS = {
+  game: 'grid', output: 'film', reels: 'reels', 'how-it-pays': 'coin', 'hold-spin': 'coin', look: 'palette', money: 'coin', randomness: 'dice',
+  'spin-type': 'loop', respins: 'loop', 'reel-order': 'order', 'motion-curve': 'curve', start: 'play', mid: 'loop', end: 'target', 'reel-timing': 'clock', anticipation: 'eye', 'between-rounds': 'clock',
+  'win-tiers': 'trophy', 'winning-symbols': 'sparkle', 'win-particles': 'sparkle', 'explosion-templates': 'bolt', 'titles-and-font': 'text', 'win-timing': 'clock',
+  intensity: 'bolt', segments: 'wheel', framing: 'target', pointer: 'pointer', spin: 'loop',
+  'sound-track': 'sound', 'your-own-sounds': 'upload', 'after-effects-project': 'download', 'quick-preview-mp4': 'film',
+  symbols: 'grid', coins: 'coin', 'wheel-art': 'wheel', 'scene-art': 'palette', fonts: 'text', 'particle-art': 'sparkle',
+};
+
 function collapsify(root, scope) {
   for (const sec of root.querySelectorAll(':scope > section.group')) {
     const h3 = sec.querySelector(':scope > h3');
@@ -441,7 +455,8 @@ function collapsify(root, scope) {
     sec.dataset.key = key;
     const body = h('div', { class: 'group-body', id: `sec-${scope}-${name}` });
     for (const node of [...sec.childNodes]) if (node !== h3) body.append(node);
-    const btn = h('button', { type: 'button', class: 'group-toggle', 'aria-expanded': 'true', 'aria-controls': body.id }, icon('chevron'), h('span', null, title));
+    const ic = SECTION_ICONS[name];
+    const btn = h('button', { type: 'button', class: 'group-toggle', 'aria-expanded': 'true', 'aria-controls': body.id }, icon('chevron'), ic ? h('span', { class: 'sec-ic', 'aria-hidden': 'true' }, icon(ic)) : null, h('span', null, title));
     btn.addEventListener('click', (e) => {
       // Alt-click folds or unfolds every section in this panel.
       const open = sec.classList.contains('closed');
@@ -814,7 +829,7 @@ function invalidateSearchIndex() {
     }
     const idle = window.requestIdleCallback || ((f) => setTimeout(f, 0));
     idle(() => {
-      if (!searchIndex) searchIndex = buildIndex(harvestLabels());
+      if (!searchIndex) searchIndex = buildIndex([...harvestLabels(), ...tipEntries()]);
     });
   }, 1500);
 }
@@ -827,7 +842,7 @@ function closeSearch() {
 
 function openSearch() {
   if (el.search) return el.searchInput.focus();
-  const index = searchIndex || (searchIndex = buildIndex(harvestLabels()));
+  const index = searchIndex || (searchIndex = buildIndex([...harvestLabels(), ...tipEntries()]));
   let results = [];
   let active = 0;
   const list = h('ul', { class: 'search-results', id: 'search-results', role: 'listbox', 'aria-label': 'Features' });
@@ -1465,6 +1480,7 @@ function buildShell() {
   });
   new ResizeObserver(() => fitCanvas()).observe(el.viewport);
   document.addEventListener('keydown', onKey);
+  initTips();
 }
 
 function seek(t) {
@@ -2572,7 +2588,156 @@ function renderPanel() {
   const fn = { machine: panelMachine, spin: panelSpin, wins: panelWins, effects: panelEffects, wheel: panelWheel, sound: panelSound, export: panelExport }[state.tab] || panelMachine;
   clear(el.panel, fn());
   collapsify(el.panel, state.tab);
+  markApplies(el.panel);
+  markTips(el.panel);
   if (state.tab === 'spin') drawMotionGraph();
+}
+
+// ---------- tooltips with mini demos ----------
+// Hover (or focus) an option with a tip: a card explains it and, where it
+// helps, loops a small render of it made with the real renderer.
+
+function markTips(root) {
+  for (const [key, tip] of Object.entries(TIPS)) {
+    let target;
+    if (key.startsWith('sec:')) target = root.querySelector(`section.group[data-key="${key.slice(4)}"] > h3 > .group-toggle`);
+    else {
+      const node = root.querySelector(`#${CSS.escape(key)}`);
+      if (!node) continue;
+      target = node.matches('button, .type') ? node : node.closest('.field, .toggle') || node;
+    }
+    if (!target) continue;
+    target.dataset.tip = key;
+    // The card replaces the browser's own tooltip.
+    if (target.title) target.removeAttribute('title');
+    void tip;
+  }
+}
+
+const demoScenes = new Map();
+function demoScene(id) {
+  if (!demoScenes.has(id)) {
+    demoScenes.set(
+      id,
+      (async () => {
+        const project = DEMOS[id].make();
+        const tl = buildTimeline(project);
+        const L = computeLayout(project);
+        const res = buildResources(project, L, await loadImages(project));
+        return { scene: { project, tl, L, res }, win: demoWindow(id, tl) };
+      })().catch(() => null)
+    );
+  }
+  return demoScenes.get(id);
+}
+
+const tipState = { timer: 0, target: null, raf: 0 };
+
+function hideTip() {
+  clearTimeout(tipState.timer);
+  cancelAnimationFrame(tipState.raf);
+  tipState.target = null;
+  el.tip?.remove();
+  el.tip = null;
+}
+
+function showTip(target) {
+  const key = target.dataset.tip;
+  const tip = TIPS[key];
+  if (!tip) return;
+  hideTip();
+  tipState.target = target;
+  const na = target.closest('.na');
+  const reason = na ? na.querySelector('.na-note, .na-badge')?.textContent : null;
+  const canvasEl = tip.demo ? h('canvas', { class: 'tip-demo', width: 480, height: 270, 'aria-hidden': 'true' }) : null;
+  el.tip = h('div', { class: 'tip-card', role: 'tooltip', id: 'tip-card' }, canvasEl ? h('div', { class: 'tip-frame' }, canvasEl) : null, h('strong', null, tip.title), h('p', null, tip.text), reason ? h('p', { class: 'tip-na' }, reason) : null);
+  document.body.append(el.tip);
+  target.setAttribute('aria-describedby', 'tip-card');
+  // Beside the target: right of it when there is room, else left, else below.
+  const r = target.getBoundingClientRect();
+  const w = el.tip.offsetWidth;
+  const hh = el.tip.offsetHeight;
+  let x = r.right + 12;
+  if (x + w > innerWidth - 8) x = r.left - w - 12;
+  if (x < 8) x = Math.min(innerWidth - w - 8, Math.max(8, r.left));
+  let y = Math.min(innerHeight - hh - 8, Math.max(8, r.top + r.height / 2 - hh / 2));
+  if (x === Math.min(innerWidth - w - 8, Math.max(8, r.left))) y = r.bottom + hh + 8 < innerHeight ? r.bottom + 8 : Math.max(8, r.top - hh - 8);
+  el.tip.style.left = `${Math.round(x)}px`;
+  el.tip.style.top = `${Math.round(y)}px`;
+  if (!canvasEl) return;
+  const card = el.tip;
+  demoScene(tip.demo).then((d) => {
+    if (!d || el.tip !== card) return;
+    const g = canvasEl.getContext('2d');
+    const { a, b, speed } = d.win;
+    const still = reducedMotion();
+    const t0 = performance.now();
+    const frame = (now) => {
+      if (el.tip !== card) return;
+      const t = still ? (a + b) / 2 : a + ((((now - t0) / 1000) * speed) % (b - a));
+      renderFrame(g, d.scene, t);
+      card.classList.add('playing');
+      if (!still) tipState.raf = requestAnimationFrame(frame);
+    };
+    tipState.raf = requestAnimationFrame(frame);
+  });
+}
+
+function initTips() {
+  const later = (target, ms) => {
+    clearTimeout(tipState.timer);
+    tipState.timer = setTimeout(() => target.isConnected && showTip(target), ms);
+  };
+  document.addEventListener('pointerover', (e) => {
+    if (e.pointerType === 'touch') return;
+    const target = e.target.closest?.('[data-tip]');
+    if (target === tipState.target) return;
+    if (!target) {
+      if (tipState.target && !el.tip?.contains(e.target)) hideTip();
+      else clearTimeout(tipState.timer);
+      return;
+    }
+    hideTip();
+    later(target, 380);
+  });
+  document.addEventListener('focusin', (e) => {
+    const target = e.target.closest?.('[data-tip]');
+    if (target && target !== tipState.target) later(target, 650);
+  });
+  document.addEventListener('focusout', () => hideTip());
+  document.addEventListener('pointerdown', () => hideTip(), true);
+  document.addEventListener('keydown', (e) => e.key === 'Escape' && el.tip && hideTip(), true);
+  document.addEventListener('scroll', () => el.tip && hideTip(), true);
+}
+
+// Sections and controls that do not apply to this game (or spin style)
+// stay in view, greyed out and locked, with the reason (see ui/applies.js).
+function markApplies(root) {
+  const game = gameOf();
+  const spin = state.project.spin.type;
+  const lock = (node) => {
+    for (const c of node.querySelectorAll('input, select, textarea, button:not(.group-toggle)')) c.disabled = true;
+  };
+  for (const sec of root.querySelectorAll('section.group[data-key]')) {
+    const why = notApplying(sec.dataset.key, game, spin);
+    if (!why) continue;
+    sec.classList.add('na');
+    lock(sec.querySelector(':scope > .group-body') || sec);
+    sec.querySelector(':scope > h3 > .group-toggle')?.append(h('span', { class: 'na-badge' }, why));
+    // Folded unless you opened it yourself.
+    if (!(sec.dataset.key in (ui.sections || {}))) setSection(sec, false, false);
+  }
+  for (const key of Object.keys(APPLIES)) {
+    if (key.includes('/')) continue;
+    const node = root.querySelector(`#${CSS.escape(key)}`);
+    const why = node && notApplying(key, game, spin);
+    if (!why) continue;
+    const block = node.closest('.field, .toggle') || node;
+    block.classList.add('na');
+    lock(block);
+    if (block.matches('input, select, button')) block.disabled = true;
+    if (!block.closest('section.na')) block.append(h('p', { class: 'na-note' }, why));
+  }
 }
 
 function num(obj, key, kind = 'timeline', after) {
@@ -2687,7 +2852,7 @@ function panelMachine() {
       }),
       segmented({ id: 'm-fps', label: 'Frame rate', value: P.canvas.fps, options: [24, 25, 30, 50, 60].map((f) => ({ value: f, label: `${f}` })), onChange: (v) => num(P.canvas, 'fps', 'timeline')(Number(v)) })
     ),
-    game === 'wheel' ? null : section(
+    section(
       'Reels',
       rangeField({ id: 'm-reels', label: 'Reels', value: P.grid.reels, min: 3, max: 8, step: 1, onInput: num(P.grid, 'reels', 'all', () => renderInspector()) }),
       rangeField({ id: 'm-rows', label: 'Rows', value: P.grid.rows, min: 1, max: 7, step: 1, onInput: num(P.grid, 'rows', 'all', () => renderInspector()) }),
@@ -2696,7 +2861,7 @@ function panelMachine() {
       rangeField({ id: 'm-curve', label: 'Reel curvature', value: P.grid.curvature, min: 0, max: 1, step: 0.01, onInput: num(P.grid, 'curvature', 'all'), hint: 'Bends the strip like a drum. Preview and MP4 only; the After Effects reels stay flat.' }),
       toggleField({ id: 'm-row-lines', label: 'Row lines', checked: !!P.machine.rowLines, onChange: num(P.machine, 'rowLines', 'all'), hint: 'Thin lines between the rows across the reels. Per-cell spins always have them.' })
     ),
-    game !== 'slot' ? null : section(
+    section(
       'How it pays',
       segmented({
         id: 'm-pay',
@@ -2717,7 +2882,7 @@ function panelMachine() {
       pm === 'cluster' ? rangeField({ id: 'm-min-cluster', label: 'Smallest paying cluster', value: P.machine.minCluster, min: 3, max: 12, step: 1, onInput: num(P.machine, 'minCluster', 'timeline', () => renderInspector()) }) : null,
       rangeField({ id: 'm-scatter', label: 'Scatters to trigger a feature', value: P.machine.scatterTrigger, min: 2, max: 6, step: 1, onInput: num(P.machine, 'scatterTrigger', 'timeline', () => renderInspector()) })
     ),
-    game === 'wheel' ? null : holdSettings(),
+    holdSettings(),
     section(
       'Look',
       selectField({ id: 'm-theme', label: 'Theme', value: P.machine.theme, options: Object.entries(THEMES).map(([k, t]) => ({ value: k, label: t.name })), onChange: (v) => num(P.machine, 'theme', 'all')(v) }),
@@ -3396,9 +3561,9 @@ function panelSpin() {
       } });
     delays.append(h('div', { class: 'delay' }, h('span', { class: 'seg-n' }, c + 1), inp('start'), inp('stop')));
   }
-  if (gameOf() === 'wheel') return [section('Spin', h('p', { class: 'hint' }, 'The wheel game has no reels. Turns and landing are in the Wheel tab; each round picks its segment.'))];
   const hsGame = gameOf() === 'holdspin';
   return [
+    gameOf() === 'wheel' ? h('p', { class: 'hint' }, 'The wheel game has no reels, so most of these do not apply. Turns and landing are in the Wheel tab; each round picks its segment.') : null,
     hsGame
       ? section(
           'Respins',
@@ -3407,7 +3572,7 @@ function panelSpin() {
           selectField({ id: 'spin-cell-order', label: 'Cell order', value: sp.cellOrder || 'columns', options: CELL_ORDERS.map((o) => ({ value: o.id, label: o.label })), onChange: num(sp, 'cellOrder') })
         )
       : section('Spin type', typeCards, segmented({ id: 'spin-dir', label: 'Direction', value: sp.direction, options: [{ value: 'down', label: 'Spin down' }, { value: 'up', label: 'Spin up' }], onChange: num(sp, 'direction') })),
-    hsGame ? null : section(
+    section(
       'Reel order',
       selectField({ id: 'spin-start-order', label: 'Start order', value: sp.startOrder || 'ltr', options: orderOpts, onChange: (v) => { sp.startOrder = v; changed('timeline'); renderPanel(); } }),
       sp.startOrder === 'custom' ? orderPicker('spin-custom-start', 'customStart') : null,

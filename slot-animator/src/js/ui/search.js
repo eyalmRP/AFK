@@ -335,7 +335,7 @@ function wordScore(q, list) {
 export function buildIndex(harvested, list = FEATURES) {
   const byId = new Map();
   const out = list.map((f) => {
-    const c = { ...f };
+    const c = { ...f, go: { ...f.go } };
     const id = f.go.id || f.go.top;
     if (id) byId.set(id, c);
     return c;
@@ -346,6 +346,7 @@ export function buildIndex(harvested, list = FEATURES) {
     const same = byId.get(h.go.id);
     if (same) {
       for (const extra of [h.title, h.keys]) if (extra && !norm(same.keys || '').includes(norm(extra))) same.keys = `${same.keys || ''} ${extra}`;
+      if (Array.isArray(same.go.round) && Array.isArray(h.go.round)) same.go.round = [...new Set([...same.go.round, ...h.go.round])];
       continue;
     }
     const key = `${norm(h.title)}|${h.where}`;
@@ -356,6 +357,8 @@ export function buildIndex(harvested, list = FEATURES) {
     }
     const entry = { ...h, go: { ...h.go } };
     seen.set(key, entry);
+    // Later words for the same control (a tooltip, say) join this entry.
+    if (h.go.id && !byId.has(h.go.id)) byId.set(h.go.id, entry);
     out.push(entry);
   }
   return out;
