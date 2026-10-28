@@ -763,8 +763,14 @@ function harvestFrom(root, base) {
   for (const c of root.querySelectorAll('input[id], select[id], textarea[id], button[id], .seg[id]')) {
     if (/-num$/.test(c.id) || c.type === 'file') continue;
     const inSeg = c.tagName === 'BUTTON' && c.parentElement?.classList.contains('seg');
-    const title = labelOf(c, root);
+    let title = labelOf(c, root);
     if (!title || title.length < 2) continue;
+    // A bare "Add" or "Upload" button is named after its field.
+    if (/^(add|upload|replace|clear|remove|delete|reset|browse|pick)$/i.test(title)) {
+      const field = c.closest('.field')?.querySelector(':scope > .label')?.textContent?.trim();
+      if (!field) continue;
+      title = `${field}: ${title.toLowerCase()}`;
+    }
     const sec = c.closest('section.group')?.querySelector(':scope > h3')?.textContent?.trim();
     const group = inSeg ? labelOf(c.parentElement, root) : '';
     const hint = c.closest('.field')?.querySelector(':scope > .hint')?.textContent || '';
@@ -1122,6 +1128,16 @@ function migrate(p) {
   if (!Array.isArray(out.wheel.segments) || out.wheel.segments.length < 2) out.wheel.segments = DEFAULT_SEGMENTS.map((s) => ({ ...s }));
   if (!Array.isArray(out.output.formats) || !out.output.formats.length) out.output.formats = [`${out.canvas.width}x${out.canvas.height}`];
   out.rounds = out.rounds.map((r) => ({ ...newRound(OUTCOME_BY_ID[r.outcome] ? r.outcome : 'none'), ...r, outcome: OUTCOME_BY_ID[r.outcome] ? r.outcome : 'none' }));
+  // A hand-edited file may hold any numbers: keep the machine in range.
+  const lim = (v, a, b, d) => (Number.isFinite(Number(v)) ? Math.min(b, Math.max(a, Number(v))) : d);
+  out.grid.reels = Math.round(lim(out.grid.reels, 3, 8, 5));
+  out.grid.rows = Math.round(lim(out.grid.rows, 1, 7, 3));
+  out.grid.peek = lim(out.grid.peek, 0, 0.5, 0);
+  out.grid.cellAspect = lim(out.grid.cellAspect, 0.6, 1.4, 0.92);
+  out.grid.curvature = lim(out.grid.curvature, 0, 1, 0);
+  out.canvas.width = Math.round(lim(out.canvas.width, 64, 8192, 1920));
+  out.canvas.height = Math.round(lim(out.canvas.height, 64, 8192, 1080));
+  out.canvas.fps = Math.round(lim(out.canvas.fps, 1, 120, 30));
   upgradeJackpotCoins(out);
   out.version = 2;
   return out;
@@ -2241,7 +2257,7 @@ function specialPicker(r, max) {
       }, { class: 'chip', id: `ri-add-special-${ct.id}`, disabled: list.length >= max })
     );
   }
-  return h('div', { class: 'field' }, h('span', { class: 'label' }, 'Special coins among them'), chips, hs.coins.length > 1 ? add : h('p', { class: 'hint' }, 'Add special coin types in Assets.'));
+  return h('div', { class: 'field' }, h('span', { class: 'label' }, 'Special coins among them'), chips, hs.coins.length > 1 ? add : h('p', { class: 'hint' }, 'Add special coin types in the Asset Bank → Coins.'));
 }
 
 function holdInspector(r, set) {
@@ -2405,7 +2421,8 @@ function renderInspector() {
         type: 'number',
         value: r.amount ?? '',
         placeholder: `Auto: ${cur}${autoAmount(ctx2, P, r).toFixed(dec)}`,
-        onChange: set('amount'),
+        // Empty is automatic; a win is never below zero.
+        onChange: (v) => set('amount', true)(v === '' || v == null || Number.isNaN(Number(v)) ? null : Math.max(0, Number(v))),
         hint: r.multipliers?.length ? 'The total after multipliers.' : null,
       })
     );
@@ -2792,8 +2809,12 @@ function markTips(root) {
     }
     if (!target) continue;
     target.dataset.tip = key;
-    // The card replaces the browser's own tooltip.
-    if (target.title) target.removeAttribute('title');
+    // The card replaces the browser's own tooltip; a button with no text
+    // keeps the title as its name.
+    if (target.title) {
+      if (!target.getAttribute('aria-label') && !target.textContent.trim()) target.setAttribute('aria-label', target.title);
+      target.removeAttribute('title');
+    }
     void tip;
   }
 }
@@ -3004,7 +3025,7 @@ function holdSettings() {
     rangeField({ id: 'm-hs-mid', label: 'Respin length (mid phase)', unit: 's', value: hs.respinMid, min: 0, max: 3, step: 0.05, onInput: num(H, 'respinMid') }),
     toggleField({ id: 'm-hs-grand', label: 'Grand prize when the board fills', checked: hs.grand.enabled, onChange: (v) => { H.grand = { ...hs.grand, enabled: v }; changed('timeline'); renderPanel(); } }),
     hs.grand.enabled ? textField({ id: 'm-hs-grand-v', label: 'Grand prize (× bet)', type: 'number', value: hs.grand.value, onChange: (v) => { H.grand = { ...hs.grand, value: Math.max(0, Number(v) || 0) }; changed('timeline'); } }) : null,
-    h('p', { class: 'hint' }, 'Coins and their values are set in Assets → Hold & Spin coins.')
+    h('p', { class: 'hint' }, 'Coins and their values are set in the Asset Bank → Coins.')
   );
 }
 
@@ -3226,7 +3247,12 @@ function panelMachine() {
       h(
         'div',
         { class: 'row3' },
-        textField({ id: 'm-bet', label: 'Bet', type: 'number', value: P.machine.bet, onChange: (v) => num(P.machine, 'bet', 'timeline', () => renderInspector())(v || 1) }),
+        textField({ id: 'm-bet', label: 'Bet', type: 'number', value: P.machine.bet, onChange: (v) => {
+          P.machine.bet = Number(v) > 0 ? Number(v) : 1;
+          changed('timeline');
+          renderPanel();
+          renderInspector();
+        } }),
         selectField({ id: 'm-cur', label: 'Currency', value: P.machine.currency, options: ['$', '€', '£', '¥', ''].map((c) => ({ value: c, label: c || 'None' })), onChange: num(P.machine, 'currency', 'timeline') }),
         selectField({ id: 'm-dec', label: 'Decimals', value: P.machine.decimals, options: [{ value: 0, label: '0' }, { value: 2, label: '2' }], onChange: (v) => num(P.machine, 'decimals', 'timeline')(Number(v)) })
       )
@@ -4066,7 +4092,7 @@ function tierEditor() {
           changed('all');
           renderPanel();
           renderSequence();
-        }, { class: 'icon-btn tiny', icon: 'x', title: 'Remove tier', id: `tier-del-${t.id}` })
+        }, { class: 'icon-btn tiny', icon: 'x', title: P.tiers.length <= 1 ? 'Keep at least one tier' : 'Remove tier', id: `tier-del-${t.id}`, disabled: P.tiers.length <= 1 })
       )
     );
   });
@@ -4911,7 +4937,8 @@ function formatPicker() {
   const wrap = h('div', { class: 'formats', role: 'group', 'aria-label': 'After Effects formats' });
   for (const f of choices) {
     const on = P.output.formats.includes(f.id);
-    const b = h('button', { type: 'button', class: `fmt${on ? ' on' : ''}`, id: `x-fmt-${f.id}`, 'aria-pressed': String(on) }, h('strong', null, f.id.replace('x', ' × ')), h('span', null, f.label));
+    const only = on && P.output.formats.length === 1;
+    const b = h('button', { type: 'button', class: `fmt${on ? ' on' : ''}`, id: `x-fmt-${f.id}`, 'aria-pressed': String(on), disabled: only, title: only ? 'Keep at least one format' : null }, h('strong', null, f.id.replace('x', ' × ')), h('span', null, f.label));
     b.addEventListener('click', () => {
       const set = new Set(P.output.formats);
       if (set.has(f.id)) {

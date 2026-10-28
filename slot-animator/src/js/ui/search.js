@@ -68,6 +68,9 @@ const T = (title, where, keys, go, when) => ({ title, where, keys, go, when });
 // a whole section, { bank, id } the Asset Bank, { round: [outcomes], id }
 // the round inspector, { top } a top bar control, { action } a command.
 // when: why a control may not be on screen yet.
+// Shown when a pots option is searched while the pots are off.
+const POTS_OFF = 'Turn on Pots above the machine first; its options show then.';
+
 export const FEATURES = [
   // project and app
   T('New project', 'Project menu', 'start fresh blank empty', { action: 'new' }),
@@ -106,15 +109,15 @@ export const FEATURES = [
   T('Theme', 'Machine › Look', 'colour palette style', { tab: 'machine', id: 'm-theme' }),
   T('Marquee bulbs', 'Machine › Look', 'lights frame bulbs', { tab: 'machine', id: 'm-marquee' }),
   T('Win meter under the reels', 'Machine › Look', 'hud counter meter', { tab: 'machine', id: 'm-hud' }),
-  T('Pots above the machine', 'Machine › Pots', 'pots pot of gold gems fruits cauldron elements orbs above the reels top band booster collect', { tab: 'machine', id: 'm-pots' }),
-  T('Room above the machine for the pots', 'Machine › Pots', 'height band space top scale machine down', { tab: 'machine', id: 'm-pots-band' }),
-  T('Pot size and spacing', 'Machine › Pots', 'bigger closer together apart gap', { tab: 'machine', id: 'm-pots-size' }),
-  T('Pot art and colour', 'Machine › Pots', 'upload pot image gold gems fruit colour', { tab: 'machine', id: 'm-pot-art-0' }),
-  T('What a pot does: collect, upgrade or both', 'Machine › Pots', 'pot role collect collects upgrade upgrades both only', { tab: 'machine', id: 'm-pot-role-0' }),
-  T('Winners beam up into the pots', 'Machine › Pots', 'collect into pots beam winners pots collect win', { tab: 'machine', id: 'm-pots-collect' }),
-  T('Pots by symbol', 'Machine › Pots', 'by type symbol assign pot each symbol tiles icons which pot gems fruits gold', { tab: 'machine', id: 'm-pots-aim' }),
-  T('Beam curve', 'Machine › Pots › Beams', 'saber laser beam arc s curve bend whip', { tab: 'machine', id: 'm-beam-curve' }),
-  T('Beam thickness and timing', 'Machine › Pots › Beams', 'saber laser beam width travel speed', { tab: 'machine', id: 'm-beam-width' }),
+  T('Pots above the machine', 'Machine › Pots', 'pots pot of gold gems fruits cauldron elements orbs above the reels top band booster collect', { tab: 'machine', id: 'm-pots', section: 'pots-above-the-machine' }),
+  T('Room above the machine for the pots', 'Machine › Pots', 'height band space top scale machine down', { tab: 'machine', id: 'm-pots-band', section: 'pots-above-the-machine' }, POTS_OFF),
+  T('Pot size and spacing', 'Machine › Pots', 'bigger closer together apart gap', { tab: 'machine', id: 'm-pots-size', section: 'pots-above-the-machine' }, POTS_OFF),
+  T('Pot art and colour', 'Machine › Pots', 'upload pot image gold gems fruit colour', { tab: 'machine', id: 'm-pot-art-0', section: 'pots-above-the-machine' }, POTS_OFF),
+  T('What a pot does: collect, upgrade or both', 'Machine › Pots', 'pot role collect collects upgrade upgrades both only', { tab: 'machine', id: 'm-pot-role-0', section: 'pots-above-the-machine' }, POTS_OFF),
+  T('Winners beam up into the pots', 'Machine › Pots', 'collect into pots beam winners pots collect win', { tab: 'machine', id: 'm-pots-collect', section: 'pots-above-the-machine' }, POTS_OFF),
+  T('Pots by symbol', 'Machine › Pots', 'by type symbol assign pot each symbol tiles icons which pot gems fruits gold', { tab: 'machine', id: 'm-pots-aim', section: 'pots-above-the-machine' }, POTS_OFF),
+  T('Beam curve', 'Machine › Pots › Beams', 'saber laser beam arc s curve bend whip', { tab: 'machine', id: 'm-beam-curve', section: 'pots-above-the-machine' }, POTS_OFF),
+  T('Beam thickness and timing', 'Machine › Pots › Beams', 'saber laser beam width travel speed', { tab: 'machine', id: 'm-beam-width', section: 'pots-above-the-machine' }, POTS_OFF),
   T('Bet', 'Machine › Money', 'stake money', { tab: 'machine', id: 'm-bet' }),
   T('Currency', 'Machine › Money', 'dollar euro symbol money', { tab: 'machine', id: 'm-cur' }),
   T('Decimals', 'Machine › Money', 'cents money', { tab: 'machine', id: 'm-dec' }),
@@ -350,16 +353,19 @@ function wordScore(q, list) {
 // for several round outcomes is one entry that knows all of them.
 export function buildIndex(harvested, list = FEATURES) {
   const byId = new Map();
+  const byTitle = new Map();
+  const place = (g) => g.tab || (g.round ? 'round' : g.bank ? 'bank' : '');
   const out = list.map((f) => {
     const c = { ...f, go: { ...f.go } };
     const id = f.go.id || f.go.top;
     if (id) byId.set(id, c);
+    byTitle.set(`${norm(f.title)}|${place(f.go)}`, c);
     return c;
   });
   const seen = new Map();
   for (const h of harvested) {
     if (!h || !h.title) continue;
-    const same = byId.get(h.go.id);
+    const same = byId.get(h.go.id) || byTitle.get(`${norm(h.title)}|${place(h.go)}`);
     if (same) {
       for (const extra of [h.title, h.keys]) if (extra && !norm(same.keys || '').includes(norm(extra))) same.keys = `${same.keys || ''} ${extra}`;
       if (Array.isArray(same.go.round) && Array.isArray(h.go.round)) same.go.round = [...new Set([...same.go.round, ...h.go.round])];

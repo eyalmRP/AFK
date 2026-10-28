@@ -41,7 +41,7 @@ export function makeContext(project, paylines) {
     paylines,
     symbols,
     roles,
-    bet: Number(m.bet) || 1,
+    bet: Number(m.bet) > 0 ? Number(m.bet) : 1,
     payMode: m.payMode || 'lines',
     minAnywhere: Math.max(3, Number(m.minAnywhere) || 8),
     minCluster: Math.max(3, Number(m.minCluster) || 5),
@@ -260,7 +260,7 @@ export function resolveRound(ctx, project, round, rng, carry = {}) {
     return null;
   };
 
-  const amountTotal = round.amount != null && round.amount !== '' && !Number.isNaN(Number(round.amount)) ? Number(round.amount) : autoAmount(ctx, project, round);
+  const amountTotal = round.amount != null && round.amount !== '' && !Number.isNaN(Number(round.amount)) ? Math.max(0, Number(round.amount)) : autoAmount(ctx, project, round);
   const multValues = (round.multipliers || []).map(Number).filter((v) => v > 0);
   const mysteryN = Math.max(0, Math.round(Number(round.mystery)) || 0);
   // Boosters need the pots above the machine to fire them.
@@ -478,7 +478,7 @@ export function resolveRound(ctx, project, round, rng, carry = {}) {
     win.cells = win.coins.map(({ c, r }) => [c, r]);
   } else if (outcome === 'fstotal') {
     win.kind = 'total';
-    win.amount = round.amount != null && round.amount !== '' ? Number(round.amount) : carry.fsTotal || 0;
+    win.amount = round.amount != null && round.amount !== '' && !Number.isNaN(Number(round.amount)) ? Math.max(0, Number(round.amount)) : carry.fsTotal || 0;
   } else {
     placeMystery();
     placeBoosts([], -1, false);

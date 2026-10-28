@@ -144,7 +144,7 @@ export function buildTimeline(project) {
   const peek = num(project.grid.peek, 0);
   const sp = { ...project.spin };
   const tm = project.timing;
-  const bet = Number(project.machine.bet) || 1;
+  const bet = Number(project.machine.bet) > 0 ? Number(project.machine.bet) : 1;
   const tiers = (project.tiers || []).map((t) => ({ ...t, x: Number(t.x) || 0 })).sort((a, b) => a.x - b.x);
   const paylines = generatePaylines(reels, rows, project.machine.maxLines || 20);
   const ctx = makeContext(project, paylines);
