@@ -87,9 +87,12 @@ timing lives in the round comps, and a few controls sit on SLOT CONTROL.
     FX Tease Cell, FX Sticky Frame, FX Coin Lock, FX Special Coin Lock,
     FX Near Miss, FX Wild Beam, FX Collected, FX Mystery Glow, FX
     Collector Glow, FX Pot Glow, FX Boost Target, FX Boost Flash, FX Beam
-    Head and FX Cell Shade.
+    Head, FX Cell Shade, FX Jackpot Glow and FX Jackpot Fly Glow.
   - Pots/: "Pot 1 <name>" ... the art of each pot above the machine.
     Replace it with your own and every use follows.
+  - Jackpots/: "Jackpot Grand", "Jackpot Major", "Jackpot Minor", "Jackpot
+    Mini": each box's plate with its name painted in, at its size. The
+    value is a text layer over it in the main comp.
   - Particles/: "Particle <name>" for each particle the win explosions
     throw (gold coin, stars, confetti, your own art...). A set of variants
     holds one per frame and each particle picks one; an animated particle
@@ -132,6 +135,8 @@ timing lives in the round comps, and a few controls sit on SLOT CONTROL.
   Paths, soft strokes in the pot's colour round a white core, with a
   "Beam Head n" glow riding on the head. Edit the path to reshape a beam.
   A winner that beams to its pot darkens under a "Drained n" shade.
+  A round that awards a jackpot sends its amount from the box down into
+  the win meter as a "Jackpot <tier> Win" text with a "Fly Glow".
   While a cell is held (a sticky or walking wild, a mystery block turning,
   a booster landing) a "Sticky n" or "Reveal n" mask cuts it out of its
   reel.
@@ -161,7 +166,12 @@ timing lives in the round comps, and a few controls sit on SLOT CONTROL.
   each round starts. With pots above the machine: each "Pot n" stands
   behind the frame with a "Charge Light" copy, squashing as it catches
   and kicking as it fires; over the frame its "Glow" and its nameplate
-  ("Pot n Plate" and a counter reading the "Pot n" slider). SCREEN SHAKE is a
+  ("Pot n Plate" and a counter reading the "Pot n" slider). With jackpot
+  boxes: each "Jackpot <tier>" plate with a "Glow" behind it, a "Light"
+  copy over it and a "Win Sweep" (CC Light Sweep), all popping and
+  glowing by expressions when the box is won or its coin lands; its
+  "Value" text reads the "Jackpot <tier>" slider, and a Shockwave plays at
+  every win. SCREEN SHAKE is a
   parent null whose position expression holds the shake events. Ambient
   particles ("Ambient <template>") sit right above the background, and
   particles set to run to the end ("Rxx <template>") above the round
@@ -171,6 +181,10 @@ timing lives in the round comps, and a few controls sit on SLOT CONTROL.
 - SLOT CONTROL (main comp):
   - "Meter", "FS Total" (and "Collect" with Hold & Spin, "Pot 1" to "Pot 3"
     with pots) drive the counters.
+  - "Jackpot Grand" ... "Jackpot Mini" (with jackpot boxes): what each box
+    shows. Its expression holds the seed, the growth per second and every
+    win (when, and what it paid); edit them there, or replace the
+    expression with your own keyframes and the value text follows.
   - "Shake %", "Flash %", "Dim %", "Particles %" (thins every explosion
     out), "Spin Blur %", "Win Pop %" and "Zoom %" (the anticipation
     zoom) scale those effects; 100 is what Reel Studio showed.
@@ -314,6 +328,8 @@ export async function buildAEPackage(scene, images, onProgress, signal = null) {
       [A.wheelBulbsB, () => (res.wheel.bulbs.length ? paintWheelBulbLayer(sc, 1) : null)],
       [A.wheelPointer, () => res.wheel.pointer],
       ...Object.keys(res.titles).map((k) => [A.title(k), () => res.titles[k]]),
+      // Jackpot box plates, at each box's size in this format.
+      ...(res.jackpots || []).map((j, i) => [A.jackpot(i), () => j.img]),
     ];
     for (const [path, paint] of jobs) await png(path, paint);
     tick();

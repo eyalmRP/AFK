@@ -29,6 +29,7 @@ import { zoomConfig, focusPoint, ZOOM_IN, ZOOM_HOLD, ZOOM_OUT, PAN } from './cam
 import { wheelConfig, segmentLayout, labelPalette, POINTER_MAX } from './wheel.js';
 import { fontPostScript } from './fonts.js';
 import { teaseWindows, landings, landUntil, TEASE_DIM, LAND_POP, LAND_FADE, TEASE_LEAD, TEASE_IN, TEASE_TAIL } from './tease.js';
+import { jackpotsConfig, JP_TEXT, JP_HOLD, JP_CELEBRATE, JP_BLINK } from './jackpots.js';
 
 export const AE_ASSETS = {
   shared: {
@@ -59,6 +60,7 @@ export const AE_ASSETS = {
     wheelBulbsB: `${dir}/wheel_bulbs_b.png`,
     wheelPointer: `${dir}/wheel_pointer.png`,
     title: (k) => `${dir}/title_${String(k).replace(/[^a-z0-9_-]/gi, '_')}.png`,
+    jackpot: (i) => `${dir}/jackpot_${i + 1}.png`,
   }),
 };
 
@@ -193,6 +195,37 @@ export function buildAEData(project, tl, L, extras = {}) {
     };
   };
   const keepLit = !!project.spin?.scatterLit;
+  // Progressive jackpot boxes (core/jackpots.js): where each stands, its
+  // seed and growth, and when it is won (for how much) or blinks.
+  const jcfg = jackpotsConfig(project);
+  const r6 = (x) => Math.round(x * 1e6) / 1e6;
+  const jackpots =
+    L.jackpots && tl.jackpots
+      ? {
+          times: [JP_CELEBRATE, JP_BLINK, JP_HOLD],
+          running: jcfg.running ? 1 : 0,
+          items: L.jackpots.map((b, i) => {
+            const tier = jcfg.tiers[i];
+            return {
+              name: `Jackpot ${tier.id[0].toUpperCase()}${tier.id.slice(1)}`,
+              file: A.jackpot(i),
+              x: r4(b.x),
+              y: r4(b.y),
+              w: r4(b.w),
+              h: r4(b.h),
+              color: rgb(COIN_GLOW[tier.palette] || COIN_GLOW.gold),
+              base: r6(tier.base),
+              rate: r6(tier.rate),
+              hits: tl.jackpots.hits.filter((h) => h.tier === tier.id).map((h) => [r4(h.t), h.amount]),
+              blinks: tl.jackpots.blinks.filter((h) => h.tier === tier.id).map((h) => r4(h.t)),
+              value: [r4(b.x), r4(b.y + b.h * JP_TEXT.valueY)],
+              dy: r4(b.h * JP_TEXT.valueY),
+              size: Math.round(b.h * JP_TEXT.valuePx),
+              fitW: r4(b.w * 0.82),
+            };
+          }),
+        }
+      : null;
   // Pots above the machine (core/pots.js) and the beams between them and
   // the cells, laid out on the flat rows After Effects uses.
   const pcfg = potsConfig(project);
@@ -325,6 +358,15 @@ export function buildAEData(project, tl, L, extras = {}) {
         end: r4(p.collect.end),
         items: p.collect.items.map((it) => ({ x: cellX(it.c), y: cellY(it.r), at: r4(it.at), arrive: r4(it.arrive), s: it.sym, text: label(it.sym, it.value)[0], color: it.special ? coinColor(it.sym) : rgb(extras.accent || '#ffd25a') })),
       };
+    }
+    // A round's jackpot: its amount flies from the box to the win meter.
+    if (p.jackpot && L.jackpots) {
+      const i = jcfg.tiers.findIndex((x) => x.id === p.jackpot.tier);
+      const b = L.jackpots[i];
+      if (b) {
+        const to = L.hud ? [L.hud.x + L.hud.w / 2, L.hud.y + L.hud.h / 2] : [L.W / 2, L.frame.y + L.frame.h];
+        out.jackpot = { box: i, at: r4(p.jackpot.at), fly: p.jackpot.fly.map(r4), from: [r4(b.x), r4(b.y)], to: to.map(r4), lift: r4(L.cellH * 0.5), text: clean(formatPrize(p.jackpot.amount, cur, dec)), size: Math.round(L.cellH * 0.26) };
+      }
     }
     if (p.grand) out.grand = { start: r4(p.grand.start), end: r4(p.grand.end), countEnd: r4(p.grand.countEnd), keys: exportKeys(p.grand.keys), amount: p.grand.amount };
     if (p.wheel) {
@@ -484,6 +526,7 @@ export function buildAEData(project, tl, L, extras = {}) {
             times: [POT_CATCH, POT_FIRE],
           }
         : null,
+    jackpots,
     // Beams: their passes (width in px, opacity, white core) and timing.
     beam: { passes: BEAM_PASSES.map(([w, a, core]) => [r4(w * pcfg.beam.width * L.cellW), a, core]), hold: BEAM_HOLD, fade: BEAM_FADE, head: r4(pcfg.beam.width * L.cellW * 0.75) },
     boostT: [BOOST.lead, BOOST.pop],
@@ -612,6 +655,7 @@ export function aeAssetFiles(data) {
       s.win?.frames.forEach(add);
     }
     data.pots?.items.forEach((p) => add(p.file));
+    data.jackpots?.items.forEach((j) => add(j.file));
   }
   const title = (k) => add(A.titles[k]);
   let wheel = false;
@@ -1574,6 +1618,8 @@ export const AE_SCRIPT = String.raw`// Slot animation rebuilt for After Effects 
     var k;
     // What each pot above the machine has caught (its nameplate).
     if (DATA.pots) for (k = 0; k < DATA.pots.items.length; k++) setKeys(slider(slotCtrl, "Pot " + (k + 1)), DATA.pots.items[k].keys);
+    // What each jackpot box shows (its value text reads it).
+    if (DATA.jackpots) for (k = 0; k < DATA.jackpots.items.length; k++) slider(slotCtrl, DATA.jackpots.items[k].name).expression = jpValueExpr(DATA.jackpots.items[k]);
     for (k = 0; k < AE_CONTROLS.length; k++) slider(slotCtrl, AE_CONTROLS[k]).setValue(100);
     fx(slotCtrl, "ADBE Checkbox Control", "FX Colour").property(1).setValue(1);
   }
@@ -1757,6 +1803,7 @@ export const AE_SCRIPT = String.raw`// Slot animation rebuilt for After Effects 
       P(mo, "ADBE Opacity").expression = "thisComp.layer(\"SLOT CONTROL\").effect(\"Meter\")(1).value > 0.0001 ? 100 : 0;";
       kids.push(mo);
     }
+    buildJackpots(kids);
     buildPotsOver(kids);
     }
     for (r = 0; r < DATA.rounds.length; r++) {
@@ -1821,7 +1868,7 @@ export const AE_SCRIPT = String.raw`// Slot animation rebuilt for After Effects 
   function buildRound(R) {
     var P0 = R.start, len = Math.max(0.6, (R.fxEnd !== null && R.fxEnd !== undefined ? R.fxEnd : R.next + 0.6) - P0), i, k;
     var hs = R.holdspin && (R.holdspin.hits.length || R.holdspin.tease.length);
-    var hasFx = R.steps.length || R.overlay || R.banner || R.wheel || R.celebrate || R.nearmiss || R.expand || R.mult || R.mystery || R.collector || R.pops.length || hs || R.collect || R.grand || R.particles.length || R.boost || R.beams;
+    var hasFx = R.steps.length || R.overlay || R.banner || R.wheel || R.celebrate || R.nearmiss || R.expand || R.mult || R.mystery || R.collector || R.pops.length || hs || R.collect || R.grand || R.particles.length || R.boost || R.beams || R.jackpot;
     if (!hasFx) return null;
     RBASE = "R" + pad2(R.index + 1) + " " + R.label;
     var comp = addComp(RBASE + SUFFIX, W, H, len, fRounds);
@@ -1899,6 +1946,7 @@ export const AE_SCRIPT = String.raw`// Slot animation rebuilt for After Effects 
     if (hs) buildRespin(comp, R, rel);
     if (R.collect) buildCollect(comp, R, rel);
     if (R.grand) buildGrand(comp, R, rel);
+    if (R.jackpot && DATA.jackpots) buildJackpotFly(comp, R, rel);
     if (R.overlay) buildBigWin(comp, R, rel);
     if (R.banner) buildBanner(comp, R, rel);
     if (R.wheel) buildWheel(comp, R, rel);
@@ -1974,6 +2022,98 @@ export const AE_SCRIPT = String.raw`// Slot animation rebuilt for After Effects 
       P(CO, "ADBE Scale").expression = ex + "value * (1 + 0.3 * bc);";
       kids.push(CO);
     }
+  }
+  // ---------- progressive jackpot boxes (core/jackpots.js) ----------
+  // What a box shows at time (jackpotValue): its seed growing while it
+  // runs; once won, the amount it paid while it holds, then the seed again.
+  function jpValueExpr(it) {
+    var J = DATA.jackpots, h = "var HT = [", k;
+    for (k = 0; k < it.hits.length; k++) h += (k ? "," : "") + "[" + it.hits[k][0] + "," + it.hits[k][1] + "]";
+    return h + "];\nvar SEED = " + it.base + ", GROW = " + it.rate + ", HOLD = " + J.times[2] + ", RUN = " + J.running + ";\n" +
+      "var from = 0, v = null;\n" +
+      "for (var i = 0; i < HT.length; i++) { if (HT[i][0] > time) break; if (time < HT[i][0] + HOLD) { v = HT[i][1]; break; } if (RUN) from = HT[i][0] + HOLD; }\n" +
+      "v === null ? SEED + GROW * Math.max(0, time - from) : v;";
+  }
+  // How a box reacts at time (jackpotFx): sc = its scale, gl = glow, sw =
+  // the light sweep (0..1, else -1), held = showing what it paid.
+  function jpFxExpr(it) {
+    var J = DATA.jackpots, k, h = "var HT = [", b = "var BT = [";
+    for (k = 0; k < it.hits.length; k++) h += (k ? "," : "") + it.hits[k][0];
+    for (k = 0; k < it.blinks.length; k++) b += (k ? "," : "") + it.blinks[k];
+    return h + "];\n" + b + "];\nvar C = " + J.times[0] + ", BL = " + J.times[1] + ", HOLD = " + J.times[2] + ";\n" +
+      "var sc = 1, gl = 0, sw = -1, held = 0;\n" +
+      "for (var i = 0; i < HT.length; i++) { var a = time - HT[i]; if (a < 0 || a > C) continue;\n" +
+      "  var env = Math.min(1, a / 0.15) * Math.min(1, (C - a) / 0.6);\n" +
+      "  sc = Math.max(sc, 1 + env * (0.05 + 0.1 * Math.exp(-3 * a) + 0.025 * Math.sin(a * 12)));\n" +
+      "  gl = Math.max(gl, env * (0.75 + 0.25 * Math.sin(a * 10)));\n" +
+      "  if (a < 0.9) sw = a / 0.9; if (a < HOLD) held = 1; }\n" +
+      "for (var j = 0; j < BT.length; j++) { var a2 = time - BT[j]; if (a2 < 0 || a2 > BL) continue; var kk = Math.sin(Math.PI * a2 / BL); sc = Math.max(sc, 1 + 0.06 * kk); gl = Math.max(gl, 0.8 * kk); }\n";
+  }
+  // Each box: a glow behind it, its plate (the "Jackpot <tier>" placeholder,
+  // name painted in) popping on a win and swept by light once, an Add copy
+  // that lights it up, the value under the name (its SLOT CONTROL slider),
+  // and a shockwave each time it is won.
+  function buildJackpots(kids) {
+    var J = DATA.jackpots, i, k;
+    if (!J) return;
+    for (i = 0; i < J.items.length; i++) {
+      var it = J.items[i], ex = jpFxExpr(it);
+      var G = frameAt(main, "FX Jackpot Glow", it.w * 1.1, it.h * 1.1, { round: 0.3, fill: [1, 1, 1], fillOp: 70, glow: 0.6, glowI: 2 }, it.name + " Glow", [it.x, it.y], 0, DUR);
+      G.blendingMode = BlendingMode.ADD;
+      tint(G, it.color);
+      P(G, "ADBE Opacity").expression = ex + "100 * Math.min(1, gl);";
+      P(G, "ADBE Scale").expression = ex + "var s = 115 * sc; [s, s];";
+      kids.push(G);
+      var src = imagePH(it.name, "Jackpots", it.file);
+      if (src) {
+        var B = inst(main, src, it.name, [it.x, it.y]);
+        P(B, "ADBE Scale").expression = ex + "[100 * sc, 100 * sc];";
+        try {
+          var swp = fx(B, "CC Light Sweep", "Win Sweep");
+          try { swp.property("Center").expression = ex + "[(sw < 0 ? -1 : sw * 1.6 - 0.3) * thisLayer.width, thisLayer.height / 2];"; } catch (e1) {}
+          try { swp.property("Width").setValue(Math.round(it.h * 0.6)); } catch (e2) {}
+          try { swp.property("Sweep Intensity").setValue(70); } catch (e3) {}
+        } catch (e4) {}
+        kids.push(B);
+        var LT = inst(main, src, it.name + " Light", [it.x, it.y]);
+        LT.blendingMode = BlendingMode.ADD;
+        P(LT, "ADBE Scale").expression = ex + "[100 * sc, 100 * sc];";
+        P(LT, "ADBE Opacity").expression = ex + "35 * Math.min(1, gl);";
+        kids.push(LT);
+      }
+      var V = text(main, it.name + " Value", " ", it.size, it.value, [1, 0.86, 0.4]);
+      V.property("ADBE Text Properties").property("ADBE Text Document").expression = fmtExpr() + "fmt(" + ctrl(it.name) + ".value);";
+      var fit = fmtExpr() + "var str = fmt(" + ctrl(it.name) + ".value); var fit = Math.min(1, " + it.fitW + " / (str.length * " + it.size + " * 0.62));\n";
+      P(V, "ADBE Scale").expression = ex + fit + "[100 * sc * fit, 100 * sc * fit];";
+      P(V, "ADBE Position").expression = ex + "value + [0, " + it.dy + " * (sc - 1)];";
+      P(V, "ADBE Opacity").expression = ex + "held ? 75 + 25 * Math.sin(time * 16) : 100;";
+      kids.push(V);
+      for (k = 0; k < it.hits.length; k++) {
+        var rg = ring(main, [it.x, it.y], it.hits[k][0], it.w * 0.95, it.color);
+        if (rg) kids.push(rg);
+      }
+    }
+  }
+  // A round's jackpot: its amount flies from the box down into the win
+  // meter, in an arc (the meter counts it in on SLOT CONTROL "Meter").
+  function buildJackpotFly(comp, R, rel) {
+    var J = R.jackpot, it = DATA.jackpots.items[J.box];
+    if (!it) return;
+    var a = rel(J.fly[0]), b = rel(J.fly[1]);
+    var path = "var u = Math.max(0, Math.min(1, (time - " + a + ") / " + (b - a) + ")); var k = u < 0.5 ? 2 * u * u : 1 - Math.pow(-2 * u + 2, 2) / 2;\n" +
+      "var x = " + J.from[0] + " + (" + (J.to[0] - J.from[0]) + ") * k; var y = " + J.from[1] + " + (" + (J.to[1] - J.from[1]) + ") * k - Math.sin(k * Math.PI) * " + J.lift + ";\n";
+    var fade = "var f = Math.max(0, Math.min(1, (time - " + b + ") / 0.25));\n";
+    var GL = frameAt(comp, "FX Jackpot Fly Glow", DATA.cellW * 0.9, DATA.cellW * 0.9, { round: 0.5, fill: [1, 1, 1], fillOp: 80, glow: 0.5, glowI: 2 }, it.name + " Fly Glow", J.from, a, b + 0.25);
+    GL.blendingMode = BlendingMode.ADD;
+    tint(GL, it.color);
+    P(GL, "ADBE Position").expression = path + "[x, y];";
+    P(GL, "ADBE Opacity").expression = fade + "80 * (1 - f);";
+    var T = text(comp, it.name + " Win", J.text, J.size, J.from, [1, 0.86, 0.4]);
+    P(T, "ADBE Position").expression = path + "[x, y + " + (J.size * 0.36) + "];";
+    P(T, "ADBE Scale").expression = path + "var s = 100 * (1.1 - 0.2 * k); [s, s];";
+    P(T, "ADBE Opacity").expression = fade + "100 * (1 - f);";
+    glow(T, DATA.cellW * 0.1, 1.3);
+    trim(T, a, b + 0.25);
   }
   // Boosters (core/timeline.js BOOST): each target cell is marked in its
   // pot's colour while the pots charge; the old symbol trembles as the beam
