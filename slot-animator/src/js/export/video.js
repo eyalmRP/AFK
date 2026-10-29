@@ -91,11 +91,13 @@ export async function exportMP4(scene, { from = 0, to = scene.tl.duration, bitra
   return new Blob([muxer.target.buffer], { type: 'video/mp4' });
 }
 
-export function frameToPNG(scene, t) {
+// transparent: leave the background and vignette out, as the After Effects
+// package does with "Transparent background" on.
+export function frameToPNG(scene, t, { transparent = false } = {}) {
   const c = document.createElement('canvas');
   c.width = scene.L.W;
   c.height = scene.L.H;
-  renderFrame(c.getContext('2d'), scene, t);
+  renderFrame(c.getContext('2d'), scene, t, { transparent });
   return new Promise((resolve) => c.toBlob(resolve, 'image/png'));
 }
 

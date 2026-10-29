@@ -1,12 +1,15 @@
 // Builds the After Effects package: the generated .jsx plus every file it
 // imports, zipped. Symbol art, win animations and the sound cues are shared;
-// machine art, titles and effects are painted once per output format.
+// machine art, titles and effects are painted once per output format. Only
+// files the script imports ship, and identical files are stored once.
 
-import { AE_ASSETS, buildAEData, buildAEScript, exportFormats, projectForFormat, usedParticleAssets } from '../core/ae-export.js';
+import { AE_ASSETS, aeAssetFiles, buildAEData, buildAEScript, exportFormats, projectForFormat, usedParticleAssets } from '../core/ae-export.js';
+import { FilePack, remapPaths } from '../core/pack.js';
+import { encodeWav } from '../core/wav.js';
 import { computeLayout } from '../core/layout.js';
 import { paintHudLayer, paintBulbLayer, paintWheelBulbLayer } from '../render/renderer.js';
 import { canvas, buildResources } from '../render/sprites.js';
-import { decodeCustomSounds, renderCue, audioBufferToWav } from '../render/audio.js';
+import { decodeCustomSounds, renderCue } from '../render/audio.js';
 import { sfxCues } from '../core/sfx.js';
 import { fontPostScript } from '../core/fonts.js';
 
@@ -185,6 +188,9 @@ Notes
   files in fonts/) or change the font on "Counter Digits", the wheel labels
   in "Wheel Disc" and the other text layers.
 - Reel curvature and bloom are preview-only effects; the AE reels are flat.
+- assets/ holds only the art and sounds this animation uses, and each
+  identical file once: two placeholders (or two formats) can share one
+  PNG. Replace a shared file and both follow.
 `;
 
 // The fonts the text layers ask for, for the README.
@@ -205,41 +211,19 @@ export async function buildAEPackage(scene, images, onProgress, signal = null) {
   const steps = formats.length + 2;
   let step = 0;
   const tick = (k = 1) => onProgress?.(Math.min(0.9, ((step += k) / steps) * 0.9));
-  // Cancel stops the build at the next file.
-  const png = async (path, c) => {
+  // Only the files the script imports are painted, and each identical file
+  // is stored once (core/pack.js). Cancel stops the build at the next file.
+  const pack = new FilePack();
+  const used = new Set();
+  const cancelled = () => {
     if (signal?.aborted) throw new DOMException('Cancelled', 'AbortError');
-    if (c) dir.file(path, await toPNG(c));
   };
-
-  // Shared: symbol art (with the built-in multiplier orb when the project
-  // has none), win animation frames, the sound track.
-  for (const [i, img] of images.symbols.entries()) await png(AE_ASSETS.shared.symbol(i), imageCanvas(img));
-  const winFrames = [];
-  const winFps = [];
-  for (const [i, anim] of (images.winAnims || []).entries()) {
-    if (!anim) continue;
-    const frames = anim.frames.slice(0, MAX_WIN_FRAMES);
-    for (const [k, f] of frames.entries()) await png(AE_ASSETS.shared.winFrame(i, k), imageCanvas(f, 768));
-    winFrames[i] = frames;
-    winFps[i] = anim.fps;
-  }
-  // The pots above the machine: each art fitted in a square, standing on
-  // its bottom edge (as the preview draws it).
-  for (const [i, img] of (images.pots || []).entries()) {
-    const c = canvas(512, 512);
-    const w = img.naturalWidth || img.width;
-    const h = img.naturalHeight || img.height;
-    const k = Math.min(512 / w, 512 / h);
-    c.getContext('2d').drawImage(img, (512 - w * k) / 2, 512 - h * k, w * k, h * k);
-    await png(AE_ASSETS.shared.pot(i), c);
-  }
-  // Particle art: one PNG per variant or animation frame, shared by every
-  // format (the emitters scale it).
-  for (const a of usedParticleAssets(tl, project)) {
-    const sprite = images.particles?.get(a.id);
-    if (!sprite) continue;
-    for (const [k, file] of a.files.entries()) if (sprite.frames[k]) await png(file, sprite.frames[k]);
-  }
+  const png = async (path, paint) => {
+    cancelled();
+    if (!used.has(path)) return;
+    const c = paint();
+    if (c) pack.add(path, new Uint8Array(await (await toPNG(c)).arrayBuffer()));
+  };
 
   // Sound: every distinct cue as its own clip, laid out in the SFX comp.
   let sfx = false;
@@ -250,15 +234,27 @@ export async function buildAEPackage(scene, images, onProgress, signal = null) {
     const { clips, events } = sfxCues(tl);
     const rendered = [];
     for (const clip of clips) {
+      cancelled();
       const r = await renderCue(clip.cue, custom);
       rendered.push(r);
-      dir.file(AE_ASSETS.shared.sfx(clip.type, clip.n), audioBufferToWav(r.buffer, 0, r.duration));
+      const ch = Array.from({ length: r.buffer.numberOfChannels }, (_, c) => r.buffer.getChannelData(c));
+      pack.add(AE_ASSETS.shared.sfx(clip.type, clip.n), encodeWav(ch, r.buffer.sampleRate, 0, r.duration));
     }
     sfxHeadroom = mixHeadroom(rendered, events, project.sound || {}, tl.duration);
     sfx = clips.length > 0;
     sfxClips = clips.length;
   }
-  tick(2);
+  tick();
+
+  // Win animations: the frames each format's data lists (painted below,
+  // with the rest of the shared art, once the formats say they are used).
+  const winFrames = [];
+  const winFps = [];
+  for (const [i, anim] of (images.winAnims || []).entries()) {
+    if (!anim) continue;
+    winFrames[i] = anim.frames.slice(0, MAX_WIN_FRAMES);
+    winFps[i] = anim.fps;
+  }
 
   // Uploaded fonts ship with the package; After Effects needs them installed.
   for (const f of project.fonts || []) {
@@ -279,55 +275,82 @@ export async function buildAEPackage(scene, images, onProgress, signal = null) {
     const sc = { project: p, tl, L, res };
     const assetDir = `assets/${fmt[0]}x${fmt[1]}`;
     const A = AE_ASSETS.format(assetDir);
+    const data = buildAEData(p, tl, L, {
+      assetDir,
+      winFrames,
+      winFps,
+      wheelLabels: res.wheel.labels,
+      wheelPivot: [res.wheel.pivotX, res.wheel.pivotY],
+      accent: res.theme.accent,
+      titlePx: res.titlePx,
+      hasLogo: !!res.logo,
+      hasBulbs: marquee,
+      fontPostScript: fontPostScript(project, project.effects.font),
+      sfx,
+      sfxHeadroom,
+      titleKeys: Object.keys(res.titles),
+    });
+    for (const f of aeAssetFiles(data)) used.add(f);
+    dataList.push(data);
     const jobs = [
-      [A.background, res.bg],
-      [A.back, res.back],
-      [A.front, res.front],
-      [A.bulbsA, marquee ? paintBulbLayer(sc, 0) : null],
-      [A.bulbsB, marquee ? paintBulbLayer(sc, 1) : null],
-      [A.hud, L.hud ? paintHudLayer(sc) : null],
-      [A.logo, res.logo],
-      [A.vignette, res.vignette],
-      [A.rays, res.rays],
-      [A.raysSmall, res.raysSmall],
-      [A.wheelFace, res.wheel.face],
-      [A.wheelSegments, res.wheel.segs],
-      [A.wheelHub, res.wheel.hub],
-      [A.wheelCenter, res.wheel.center],
+      [A.background, () => res.bg],
+      [A.back, () => res.back],
+      [A.front, () => res.front],
+      [A.bulbsA, () => (marquee ? paintBulbLayer(sc, 0) : null)],
+      [A.bulbsB, () => (marquee ? paintBulbLayer(sc, 1) : null)],
+      [A.hud, () => (L.hud ? paintHudLayer(sc) : null)],
+      [A.logo, () => res.logo],
+      [A.vignette, () => res.vignette],
+      [A.rays, () => res.rays],
+      [A.raysSmall, () => res.raysSmall],
+      [A.wheelFace, () => res.wheel.face],
+      [A.wheelSegments, () => res.wheel.segs],
+      [A.wheelHub, () => res.wheel.hub],
+      [A.wheelCenter, () => res.wheel.center],
       // Only segments with an icon have one (the list has gaps).
-      ...Array.from(res.wheel.icons, (c, k) => [A.wheelIcon(k), c || null]),
-      [A.wheelRing, res.wheel.ring],
-      [A.wheelBulbsA, res.wheel.bulbs.length ? paintWheelBulbLayer(sc, 0) : null],
-      [A.wheelBulbsB, res.wheel.bulbs.length ? paintWheelBulbLayer(sc, 1) : null],
-      [A.wheelPointer, res.wheel.pointer],
-      ...Object.keys(res.titles).map((k) => [A.title(k), res.titles[k]]),
+      ...Array.from(res.wheel.icons, (c, k) => [A.wheelIcon(k), () => c || null]),
+      [A.wheelRing, () => res.wheel.ring],
+      [A.wheelBulbsA, () => (res.wheel.bulbs.length ? paintWheelBulbLayer(sc, 0) : null)],
+      [A.wheelBulbsB, () => (res.wheel.bulbs.length ? paintWheelBulbLayer(sc, 1) : null)],
+      [A.wheelPointer, () => res.wheel.pointer],
+      ...Object.keys(res.titles).map((k) => [A.title(k), () => res.titles[k]]),
     ];
-    for (const [path, c] of jobs) await png(path, c);
-    dataList.push(
-      buildAEData(p, tl, L, {
-        assetDir,
-        winFrames,
-        winFps,
-        wheelLabels: res.wheel.labels,
-        wheelPivot: [res.wheel.pivotX, res.wheel.pivotY],
-        accent: res.theme.accent,
-        titlePx: res.titlePx,
-        hasLogo: !!res.logo,
-        hasBulbs: marquee,
-        fontPostScript: fontPostScript(project, project.effects.font),
-        sfx,
-        sfxHeadroom,
-        titleKeys: Object.keys(res.titles),
-      })
-    );
+    for (const [path, paint] of jobs) await png(path, paint);
     tick();
   }
 
+  // Shared by every format: symbol art (with the built-in multiplier orb
+  // when the project has none), win animation frames, the pots and the
+  // particle art. The wheel game uses none of the symbols.
+  for (const [i, img] of images.symbols.entries()) await png(AE_ASSETS.shared.symbol(i), () => imageCanvas(img));
+  for (const [i, frames] of winFrames.entries()) for (const [k, f] of (frames || []).entries()) await png(AE_ASSETS.shared.winFrame(i, k), () => imageCanvas(f, 768));
+  // The pots above the machine: each art fitted in a square, standing on
+  // its bottom edge (as the preview draws it).
+  for (const [i, img] of (images.pots || []).entries()) {
+    await png(AE_ASSETS.shared.pot(i), () => {
+      const c = canvas(512, 512);
+      const w = img.naturalWidth || img.width;
+      const h = img.naturalHeight || img.height;
+      const k = Math.min(512 / w, 512 / h);
+      c.getContext('2d').drawImage(img, (512 - w * k) / 2, 512 - h * k, w * k, h * k);
+      return c;
+    });
+  }
+  // Particle art: one PNG per variant or animation frame (the emitters
+  // scale it).
+  for (const a of usedParticleAssets(tl, project)) {
+    const sprite = images.particles?.get(a.id);
+    if (!sprite) continue;
+    for (const [k, file] of a.files.entries()) await png(file, () => sprite.frames[k] || null);
+  }
+  tick();
+
+  for (const [path, bytes] of pack.files) dir.file(path, bytes);
   const file = `${base}.jsx`;
-  dir.file(file, buildAEScript(dataList));
+  dir.file(file, buildAEScript(dataList.map((d) => remapPaths(d, (p) => pack.resolve(p)))));
   dir.file(
     'README.txt',
-    README({ name, file, formats: formats.map(([w, h]) => `${w}x${h}`), sfxClips, headroom: sfxHeadroom, transparent: !!project.output?.transparent, font: usedFonts(project) })
+    README({ name, file, formats: formats.map(([w, h]) => `${w}x${h}`), sfxClips: sfxClips && [...pack.files.keys()].filter((p) => p.startsWith('assets/sfx/')).length, headroom: sfxHeadroom, transparent: !!project.output?.transparent, font: usedFonts(project) })
   );
   dir.file(`${base}.reelstudio.json`, JSON.stringify(project, null, 2));
   if (signal?.aborted) throw new DOMException('Cancelled', 'AbortError');

@@ -5070,16 +5070,22 @@ function panelSound() {
   ];
 }
 
+// The whole mix as the preview plays it: 16-bit stereo WAV at 48 kHz. Saves
+// in claude.ai take no .wav files, so there the WAV comes in a zip.
 async function downloadWav() {
   if (state.busy || !state.scene) return;
   try {
     setBusy('wav', 0.2, 'Rendering the sound track…');
     const buf = await renderSoundtrack(state.scene.tl, state.project, await customSounds(state.project));
-    const zip = new window.JSZip();
-    zip.file(`${slugName()}_soundtrack.wav`, audioBufferToWav(buf));
-    const blob = await zip.generateAsync({ type: 'blob', compression: 'STORE' });
+    const name = `${slugName()}_soundtrack.wav`;
+    let file = [name, audioBufferToWav(buf)];
+    if (await downloadsP) {
+      const zip = new window.JSZip();
+      zip.file(...file);
+      file = [`${slugName()}_soundtrack.zip`, await zip.generateAsync({ type: 'blob', compression: 'STORE' })];
+    }
     setBusy(null);
-    await saveFile(`${slugName()}_soundtrack.zip`, blob);
+    await saveFile(...file);
   } catch (e) {
     setBusy(null);
     toast(`Could not render the sound track: ${e.message}`, 'error', 6000);
@@ -5261,7 +5267,7 @@ function panelExport() {
         h('li', null, 'SLOT CONTROL carries the After Effects side controls: shake, flash, dim, particles, spin blur, win pop and effect colours.')
       ),
       h('div', { class: 'field' }, h('span', { class: 'label' }, `Formats · ${n} selected`), formatPicker(), h('p', { class: 'hint' }, 'Each format gets its own comp tree, laid out for that size. The symbol art is shared.')),
-      toggleField({ id: 'x-transparent', label: 'Transparent background', checked: !!P.output.transparent, onChange: (v) => { P.output.transparent = v; save(); }, hint: 'Switches the background and vignette layers off, ready to render ProRes 4444 with alpha from After Effects.' }),
+      toggleField({ id: 'x-transparent', label: 'Transparent background', checked: !!P.output.transparent, onChange: (v) => { P.output.transparent = v; save(); }, hint: 'Switches the background and vignette layers off, ready to render ProRes 4444 with alpha from After Effects. The still PNG leaves them out too.' }),
       button(`Download After Effects package`, startAE, { class: 'btn primary wide', icon: 'download', id: 'x-ae' }),
       h('p', { class: 'hint' }, 'In After Effects: File → Scripts → Run Script File, then pick the .jsx inside the folder. The README inside explains every control.')
     ),
@@ -5274,11 +5280,17 @@ function panelExport() {
       h('p', { class: 'hint' }, 'For sharing a quick look. Rendered frame by frame at full resolution, so no frames drop.')
     ),
     section(
+      'Soundtrack (WAV)',
+      h('p', { class: 'hint' }, P.sound?.enabled === false ? 'The sound track is switched off in the Sound tab.' : 'The whole mix as the preview plays it, for editing the sound elsewhere: 16-bit stereo, 48 kHz, as long as the animation. In claude.ai it comes in a zip.'),
+      button('Download the soundtrack', downloadWav, { class: 'btn wide', icon: 'download', id: 'x-wav', disabled: P.sound?.enabled === false })
+    ),
+    section(
       'Still frame',
       button('Save this frame as PNG', async () => {
-        const blob = await frameToPNG(state.scene, state.t);
+        const blob = await frameToPNG(state.scene, state.t, { transparent: !!P.output.transparent });
         await saveFile(`${slugName()}_${state.t.toFixed(2).replace('.', '-')}s.png`, blob);
-      }, { class: 'btn wide', id: 'x-png' })
+      }, { class: 'btn wide', id: 'x-png' }),
+      h('p', { class: 'hint' }, 'With Transparent background on (After Effects project, above), the background and vignette are left out.')
     ),
     section(
       'Project file',

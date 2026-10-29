@@ -592,6 +592,50 @@ export function buildAEData(project, tl, L, extras = {}) {
   };
 }
 
+// The files the script imports for one format's data: the package ships
+// these and nothing else. It follows the script's own conditions (the
+// tests run the script and check both lists match).
+export function aeAssetFiles(data) {
+  const A = data.assets;
+  const out = new Set();
+  const add = (p) => p && out.add(p);
+  add(A.background);
+  add(A.vignette);
+  if (data.game !== 'wheel') {
+    add(A.back);
+    add(A.front);
+    if (A.bulbsA && A.bulbsB) [A.bulbsA, A.bulbsB].forEach(add);
+    add(A.logo);
+    if (data.hud) add(A.hud);
+    for (const s of data.symbols) {
+      add(s.file);
+      s.win?.frames.forEach(add);
+    }
+    data.pots?.items.forEach((p) => add(p.file));
+  }
+  const title = (k) => add(A.titles[k]);
+  let wheel = false;
+  for (const R of data.rounds) {
+    if (R.overlay || R.grand || R.banner || R.wheel) add(A.rays);
+    if ((R.celebrate && R.scatters.length) || R.steps.some((st) => st.fx?.style === 'merge')) add(A.raysSmall);
+    R.overlay?.tiers.forEach(title);
+    if (R.grand) title('grand');
+    if (R.banner) title(R.banner.kind);
+    if (R.nearmiss) title('nearmiss');
+    if (R.wheel) {
+      title('wheel');
+      wheel = true;
+    }
+  }
+  if (wheel) {
+    [A.wheelFace, A.wheelSegments, A.wheelHub, A.wheelCenter, A.wheelRing, A.wheelBulbsA, A.wheelBulbsB, A.wheelPointer].forEach(add);
+    data.wheel.icons.forEach((ic) => add(ic.file));
+  }
+  data.particles.assets.forEach((a) => a.files.forEach(add));
+  data.sfx?.clips.forEach(add);
+  return out;
+}
+
 // The particle assets the emitters use, with the files the package holds
 // for each (one PNG per variant or animation frame).
 export function usedParticleAssets(tl, project) {

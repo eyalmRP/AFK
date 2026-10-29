@@ -184,9 +184,17 @@ Exports:
   that rebuilds the animation as a working, editable project built from
   placeholder comps, plus every image and every sound cue as its own clip.
   Several formats (16:9, 9:16, 1:1, 4:5, 4K) can go in one package; each gets
-  its own comp tree.
+  its own comp tree. The package holds only the files the script imports
+  (`aeAssetFiles` in `core/ae-export.js`; no wheel art without a wheel round,
+  no titles the animation never shows, no symbols in the wheel game), and
+  each identical file once (`core/pack.js`): formats and sound cues that
+  match share one file.
 - **MP4 preview** with sound (WebCodecs H.264, frame by frame).
-- **PNG** of the current frame, the **sound track** (WAV in a zip) and the
+- **Soundtrack (WAV)**: the whole mix as the preview plays it, 16-bit stereo
+  at 48 kHz, for editing the sound elsewhere. In claude.ai it comes in a zip
+  (saves there take no .wav files); the standalone file saves the .wav.
+- **PNG** of the current frame (with "Transparent background" on it leaves
+  out the background and vignette, like the After Effects package) and the
   **project file** (.json).
 
 This folder is self-contained and does not touch the AFK Arena Codex app.
@@ -222,7 +230,9 @@ Everything is a pure function of time, built from one JSON project:
 | `src/js/core/pots.js` | Pots above the machine: their settings, where they stand, which pot serves a cell, the beam curves (arc or S, sampled evenly along their length like Trim Paths) and timing, and how a pot squashes, kicks and charges. |
 | `src/js/core/particles.js` | Explosion templates and the win emitters: which moment throws which particles, and every particle's flight as a closed form (gravity, air drag, flutter) that the preview and After Effects both evaluate. |
 | `src/js/core/sfx.js` | The sound cues as separate clips for the After Effects SFX comp (identical cues share a clip). |
-| `src/js/core/ae-export.js` | Builds the ES3 `.jsx` for After Effects. |
+| `src/js/core/ae-export.js` | Builds the ES3 `.jsx` for After Effects, and lists the files it imports (the package ships only those). |
+| `src/js/core/pack.js` | The package's files: each identical file stored once, every reference pointed at it. |
+| `src/js/core/wav.js` | 16-bit PCM WAV encoding for the soundtrack and the cue clips. |
 | `src/js/render/*` | Canvas renderer, built-in sample art (classic and candy sets), effects, the sound synth. |
 | `src/js/export/*` | MP4 encoder and the After Effects zip packager. |
 | `src/js/ui/*` | The editor. `applies.js` says which options apply to which game and spin style, `tips.js` holds the tooltips and `demos.js` the mini demo projects. |
@@ -310,5 +320,12 @@ comp, the round comps place them in time, and a few controls sit on
   `Win Pop %`, `Zoom %` and `FX Colour`. With "Transparent
   background" the background and vignette start switched off; render
   ProRes 4444 with alpha from After Effects.
+
+`assets/` holds what the script imports and nothing else: the symbols,
+their win frames, pots and particle art once for every format, the sound
+cues in `sfx/`, and each format's machine art, effects, titles and wheel
+parts in `<W>x<H>/`. A file identical to one already stored (the same rays
+or title in two formats, two cues that sound the same) is not stored again:
+the script points every use at the one copy.
 
 Preview-only: reel curvature and bloom. The AE reels are flat.
