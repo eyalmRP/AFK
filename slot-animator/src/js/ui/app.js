@@ -456,7 +456,7 @@ function setSection(sec, open, remember = true) {
 
 // An icon for each section, so a tab reads at a glance.
 const SECTION_ICONS = {
-  game: 'grid', output: 'film', reels: 'reels', 'how-it-pays': 'coin', 'hold-spin': 'coin', look: 'palette', money: 'coin', randomness: 'dice',
+  game: 'grid', output: 'film', reels: 'reels', framing: 'target', 'how-it-pays': 'coin', 'hold-spin': 'coin', look: 'palette', money: 'coin', randomness: 'dice',
   'spin-type': 'loop', respins: 'loop', 'reel-order': 'order', 'motion-curve': 'curve', start: 'play', mid: 'loop', end: 'target', 'reel-timing': 'clock', anticipation: 'eye', 'between-rounds': 'clock',
   'win-tiers': 'trophy', 'winning-symbols': 'sparkle', 'win-particles': 'sparkle', 'explosion-templates': 'bolt', 'titles-and-font': 'text', 'win-timing': 'clock',
   intensity: 'bolt', segments: 'wheel', framing: 'target', pointer: 'pointer', spin: 'loop',
@@ -3483,7 +3483,7 @@ function potsSettings() {
     cfg.count > 1 && cfg.aim === 'type' ? ownerTable(cfg) : null,
     h('h4', { class: 'insp-sub' }, 'Where they stand'),
     rangeField({ id: 'm-pots-band', label: 'Room above the machine', unit: '× height', value: cfg.band, min: 0.15, max: 0.45, step: 0.01, onInput: num(T, 'band', 'all'), hint: 'The machine scales down to make room.' }),
-    rangeField({ id: 'm-pots-size', label: 'Pot size', value: cfg.size, min: 0.5, max: 1.8, step: 0.05, onInput: num(T, 'size', 'all') }),
+    rangeField({ id: 'm-pots-size', label: 'Pot size', value: cfg.size, min: 0.5, max: 1.8, step: 0.05, onInput: num(T, 'size', 'all'), hint: 'Big pots stop at the top of the screen. To fit taller pots, zoom out in Machine → Framing.' }),
     rangeField({ id: 'm-pots-spacing', label: 'Spacing', value: cfg.spacing, min: 0.6, max: 2.5, step: 0.05, onInput: num(T, 'spacing', 'all'), hint: '1 stands them side by side; less overlaps them.' }),
     rangeField({ id: 'm-pots-overlap', label: 'Hidden behind the frame', value: cfg.overlap, min: 0, max: 0.8, step: 0.01, onInput: num(T, 'overlap', 'all') }),
     toggleField({ id: 'm-pots-plates', label: 'Nameplates show what each pot caught', checked: cfg.plates, onChange: num(T, 'plates', 'timeline') }),
@@ -3629,8 +3629,24 @@ function panelMachine() {
       rangeField({ id: 'm-scatter', label: 'Scatters to trigger a feature', value: P.machine.scatterTrigger, min: 2, max: 6, step: 1, onInput: num(P.machine, 'scatterTrigger', 'timeline', () => renderInspector()) })
     ),
     section(
+      'Framing',
+      rangeField({ id: 'm-zoom', label: 'Zoom', unit: '%', value: Math.round((P.machine.zoom || 1) * 100), min: 50, max: 160, step: 1, onInput: (v) => num(P.machine, 'zoom', 'all')(v / 100), hint: 'Scales the machine with its pots, title and win meter, about their middle. Zoom out when tall pots crowd the top; zoom in to fill the screen. 100% fits the screen.' })
+    ),
+    section(
       'Look',
       selectField({ id: 'm-theme', label: 'Theme', value: P.machine.theme, options: Object.entries(THEMES).map(([k, t]) => ({ value: k, label: t.name })), onChange: (v) => num(P.machine, 'theme', 'all')(v) }),
+      toggleField({
+        id: 'm-title-on',
+        label: 'Title above the machine',
+        checked: P.machine.showTitle !== false,
+        onChange: (v) => {
+          P.machine.showTitle = v;
+          changed('all');
+          renderPanel();
+        },
+        hint: potsConfig(P).on ? 'The pots stand where the title goes, so it is not shown while they are on.' : P.machine.showTitle === false ? 'Off: the machine takes the room, leaving a strip for the free spins counter.' : 'The name, or your logo from the Asset Bank → Scene art.',
+      }),
+      P.machine.showTitle !== false ? textField({ id: 'm-title', label: 'Title', value: P.machine.title, onChange: num(P.machine, 'title', 'all') }) : null,
       toggleField({ id: 'm-marquee', label: 'Marquee bulbs on the frame', checked: P.machine.marquee, onChange: num(P.machine, 'marquee', 'timeline') }),
       toggleField({ id: 'm-hud', label: 'Win meter under the reels', checked: P.machine.showHud, onChange: num(P.machine, 'showHud', 'all') })
     ),
@@ -3792,9 +3808,8 @@ function panelAssets(filter = 'all') {
       'Scene art',
       assetRow('Background', 'background', 'Full-screen image behind the machine.'),
       assetRow('Frame overlay', 'frame', 'PNG drawn over the reels. Leave the window transparent.'),
-      assetRow('Logo', 'logo', 'Replaces the title text above the reels.'),
-      toggleField({ id: 'a-builtin', label: 'Draw the built-in frame', checked: P.machine.builtinFrame !== false, onChange: num(P.machine, 'builtinFrame', 'all') }),
-      textField({ id: 'a-title', label: 'Title above the reels', value: P.machine.title, onChange: num(P.machine, 'title', 'all') })
+      assetRow('Logo', 'logo', 'Replaces the title text above the reels (Machine → Look switches the title off).'),
+      toggleField({ id: 'a-builtin', label: 'Draw the built-in frame', checked: P.machine.builtinFrame !== false, onChange: num(P.machine, 'builtinFrame', 'all') })
     ),
     show('fonts') ? fontsSection() : null,
   ];

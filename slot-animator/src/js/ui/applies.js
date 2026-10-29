@@ -9,6 +9,8 @@ const REELS = ['slot', 'holdspin'];
 export const APPLIES = {
   // Machine
   'machine/reels': { games: REELS },
+  'machine/framing': { games: REELS },
+  'm-title-on': { games: REELS },
   'm-row-lines': { games: SLOT, not: ['cells'] },
   'machine/how-it-pays': { games: SLOT },
   'm-marquee': { games: REELS },

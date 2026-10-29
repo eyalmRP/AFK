@@ -307,6 +307,8 @@ function baseProject() {
     machine: {
       theme: 'royal',
       title: 'ROYAL SEVENS',
+      showTitle: true,
+      zoom: 1,
       showHud: true,
       marquee: true,
       bet: 1,

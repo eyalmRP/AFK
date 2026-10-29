@@ -470,8 +470,8 @@ export function paintTitle(text, font, px, paletteName = 'gold') {
 
 function paintLogo(L, project, theme, img) {
   const { logo } = L;
-  // The pots stand where the title goes.
-  if (L.pots) return null;
+  // The pots stand where the title goes; the title can also be switched off.
+  if (L.pots || project.machine.showTitle === false) return null;
   if (img) {
     const f = fit(img.width, img.height, logo.w, logo.h);
     const c = canvas(f.w, f.h);

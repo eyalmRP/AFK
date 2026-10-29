@@ -169,7 +169,15 @@ the result as an editable **After Effects project**.
     Ctrl S), presets, clear all rounds, reset to the demo. Undo and redo
     (Ctrl Z, Ctrl Shift Z) cover every change. Switching the game type keeps
     rounds only when they belong to the new game.
-  - Settings tabs: Machine (game, reels, how it pays, look, money), Spin,
+  - Framing (Machine tab): Zoom scales the machine with its pots, title and
+    win meter together about their middle (100% fits the screen; zoom out
+    to give tall pots room above them, zoom in to fill the screen). The
+    title above the machine has its own switch in Machine › Look: off, the
+    machine takes its room, keeping a strip for the free spins counter
+    (the pots stand where the title goes, so it never shows with them). A
+    logo image from the Asset Bank replaces the title text. The preview and
+    the After Effects project follow both.
+  - Settings tabs: Machine (game, reels, how it pays, framing, look, money), Spin,
     Wins (tiers, winning symbols, win timing), Effects (intensity, win
     particles, explosion templates, titles and font), Features (Hold & Spin,
     pots above the machine), Wheel, Sound, Export (output size, frame rate

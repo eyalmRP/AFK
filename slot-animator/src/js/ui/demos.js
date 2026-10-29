@@ -221,6 +221,17 @@ export const DEMOS = {
         Object.assign(p.spin, { speed: 8, blur: 0.1 });
       }), ['Flat', 0], ['Curved', 1]), window: midSpin, focus: machineFocus },
   'row-lines': { variants: ab((v) => slot(noWin, (p) => (p.machine.rowLines = v)), ['Off', false], ['On', true]), window: landed, focus: (tl, L) => fit(L, reelsRect(L, 0, 2), 1.05) },
+  'machine-zoom': {
+    variants: ab((z) => slot(noWin, (p) => {
+        pots(p).pots.size = 1.6;
+        p.machine.zoom = z;
+      }), ['100%', 1], ['Zoom 75%', 0.75]),
+    window: (tl) => [R0(tl).t0 - 0.05, R0(tl).t0 + 0.9],
+  },
+  title: {
+    variants: ab((on) => slot(noWin, (p) => (p.machine.showTitle = on)), ['Title on', true], ['Off', false]),
+    window: (tl) => [R0(tl).t0 - 0.05, R0(tl).t0 + 0.9],
+  },
   marquee: { variants: ab((v) => slot(smallWin, (p) => (p.machine.marquee = v)), ['Off', false], ['On', true]), window: (tl) => stepFor(tl, 1.8), focus: machineFocus },
   hud: { variants: ab((v) => slot(smallWin, (p) => (p.machine.showHud = v)), ['Off', false], ['On', true]), window: (tl) => stepFor(tl, 2), focus: lowerHalf },
   holdspin: {

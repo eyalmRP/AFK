@@ -231,7 +231,8 @@ export const FEATURES = [
   T('Background image', 'Asset Bank › Scene art', 'backdrop wallpaper', { bank: 'scene', id: 'asset-up-background' }),
   T('Frame overlay', 'Asset Bank › Scene art', 'border machine cabinet', { bank: 'scene', id: 'asset-up-frame' }),
   T('Logo image', 'Asset Bank › Scene art', 'brand title', { bank: 'scene', id: 'asset-up-logo' }),
-  T('Title above the reels', 'Asset Bank › Scene art', 'name heading text', { bank: 'scene', id: 'a-title' }),
+  T('Title above the machine', 'Machine › Look', 'name heading text logo game name machine name show hide remove turn off no title', { tab: 'machine', id: 'm-title-on' }),
+  T('Zoom the machine', 'Machine › Framing', 'zoom scale size bigger smaller machine pots fit screen tall pots crop zoom out zoom in framing', { tab: 'machine', id: 'm-zoom' }),
   // Rounds
   T('Quick sequence builder', 'Rounds', 'build generate auto sequence finale warm up', { section: 'seq/quick-sequence', id: 'qb-build' }),
   T('Add a round', 'Rounds', 'new spin outcome', { top: 'add-outcome' }),

@@ -177,12 +177,14 @@ export const POT_BOX = { rim: -0.06, bottom: 0.49, top: -0.44, mouth: -0.12 };
 // Where the pots sit: evenly across the middle, standing on the frame's top
 // edge with `overlap` of the body behind it. Each gets its image centre,
 // size, mouth and the nameplate on the frame.
-export function placePots(cfg, W, H, topZone, frame, pad) {
+// zoom scales the pots with the machine (zoomed out, tall pots get the
+// room they asked for); cap false measures them uncut.
+export function placePots(cfg, W, H, topZone, frame, pad, zoom = 1, cap = true) {
   const n = cfg.count;
   const body = POT_BOX.bottom - POT_BOX.rim;
-  let S = topZone * 0.95 * cfg.size;
+  let S = topZone * 0.95 * cfg.size * zoom;
   // Never above the top of the screen.
-  S = Math.min(S, (frame.y - H * 0.01) / (POT_BOX.bottom - POT_BOX.top - body * cfg.overlap));
+  if (cap) S = Math.min(S, (frame.y - H * 0.01) / (POT_BOX.bottom - POT_BOX.top - body * cfg.overlap));
   let pitch = S * 1.02 * cfg.spacing;
   // They stand on the frame: no wider than it (a little overhang), and
   // never off the screen.

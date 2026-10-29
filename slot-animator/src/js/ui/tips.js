@@ -16,6 +16,8 @@ export const TIPS = {
   'sec:features/hold-spin': T('features', 'Hold & Spin', 'Coins land and lock; the empty cells respin until the counter runs out or the board is full, then every coin is collected.', 'holdspin'),
   'm-pay': T('machine', 'Pay mode', 'How wins are found: along paylines, ways (any row on adjacent reels), anywhere on the grid, or in touching clusters.', 'pay-mode'),
   'm-scatter': T('machine', 'Scatters to trigger', 'How many scatters start a feature. One fewer is a near miss.'),
+  'm-zoom': T('machine', 'Zoom', 'Scales the machine with its pots, title and win meter together, about their middle. Zoom out to fit tall pots; zoom in to fill the screen.', 'machine-zoom'),
+  'm-title-on': T('machine', 'Title above the machine', 'The game\'s name (or your logo) above the reels. Off, the machine takes its room.', 'title'),
   'm-marquee': T('machine', 'Marquee bulbs', 'Chasing light bulbs around the machine frame, faster during wins.', 'marquee'),
   'm-hud': T('machine', 'Win meter', 'The bar under the reels with the bet and the win that counts up.', 'hud'),
   'm-theme': T('machine', 'Theme', 'Colours of the background, the reels and the frame.'),
