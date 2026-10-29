@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { TIPS, tipEntries } from '../src/js/ui/tips.js';
-import { DEMOS, demoPlan, demoAt, DEMO_LOOP } from '../src/js/ui/demos.js';
+import { DEMOS, demoPlan, demoAt, DEMO_LOOP, STILL_HOLD } from '../src/js/ui/demos.js';
 import { searchFeatures, buildIndex } from '../src/js/ui/search.js';
 import { buildTimeline } from '../src/js/core/timeline.js';
 import { SPIN_TYPES } from '../src/js/core/defaults.js';
@@ -35,7 +35,16 @@ test('every demo builds and loops a short stretch of its own timeline', () => {
     for (const s of plan) {
       const name = `${id}${s.label ? ` (${s.label})` : ''}`;
       if (plan.length > 1) assert.ok(s.label, `${name}: a variant has a label`);
-      assert.ok(Number.isFinite(s.a) && s.a >= 0 && s.b > s.a && s.b <= s.tl.duration + 1e-6, `${name}: ${s.a}..${s.b} in 0..${s.tl.duration}`);
+      // A still is one moment; an animation a stretch.
+      if (s.still) assert.ok(Number.isFinite(s.a) && s.a >= 0 && s.b === s.a && s.a <= s.tl.duration, `${name}: still at ${s.a} in 0..${s.tl.duration}`);
+      else assert.ok(Number.isFinite(s.a) && s.a >= 0 && s.b > s.a && s.b <= s.tl.duration + 1e-6, `${name}: ${s.a}..${s.b} in 0..${s.tl.duration}`);
+      assert.equal(s.still, plan[0].still, `${name}: all variants stills, or none`);
+      // A spot lies on the frame, smaller than it.
+      if (s.spot) {
+        const r = s.spot;
+        assert.ok(r.w > 4 && r.h > 4 && r.x < 480 && r.y < 270 && r.x + r.w > 0 && r.y + r.h > 0, `${name}: spot ${JSON.stringify(r)}`);
+        assert.ok(r.w * r.h < 480 * 270 * 0.9, `${name}: the spot leaves something to darken`);
+      }
       assert.ok((s.b - s.a) / s.speed <= DEMO_LOOP + 1e-9, `${name} plays within ${DEMO_LOOP} s`);
       assert.ok(s.speed > 0 && s.speed <= Math.max(1, (s.b - s.a) / DEMO_LOOP) + 1e-9, `${name}: speed ${s.speed}`);
       // A focus lies on the 480x270 canvas, keeps its shape, and the view
@@ -59,17 +68,55 @@ test('every demo belongs to a tooltip', () => {
   for (const id of Object.keys(DEMOS)) assert.ok(used.has(id), `${id} is shown by some tip`);
 });
 
-test('a demo with variants plays each in turn', () => {
-  const plan = demoPlan('dim');
+test('a demo with variants plays each in turn; a still shows each for a moment', () => {
+  const plan = demoPlan('shake');
   assert.deepEqual(plan.map((s) => s.label), ['Off', 'On']);
-  assert.equal(plan[0].project.effects.dim, 0);
-  assert.ok(plan[1].project.effects.dim > 0.5);
   const lens = plan.map((s) => (s.b - s.a) / s.speed);
   assert.equal(demoAt(plan, 0).i, 0);
   assert.equal(demoAt(plan, lens[0] + 0.01).i, 1);
   assert.equal(demoAt(plan, lens[0] + lens[1] + 0.01).i, 0);
   const at = demoAt(plan, lens[0] * 0.5);
   assert.ok(at.t > plan[0].a && at.t < plan[0].b);
+  // Stills: the dim off, then on, each held STILL_HOLD seconds.
+  const dim = demoPlan('dim');
+  assert.ok(dim.every((s) => s.still));
+  assert.equal(dim[0].project.effects.dim, 0);
+  assert.ok(dim[1].project.effects.dim > 0.5);
+  assert.deepEqual([0.1, STILL_HOLD + 0.1, 2 * STILL_HOLD + 0.1].map((e) => demoAt(dim, e).i), [0, 1, 0]);
+  assert.equal(demoAt(dim, STILL_HOLD + 0.1).t, dim[1].a);
+  // The highlighted cells show at that moment.
+  assert.ok(dim[1].tl.rounds[0].pres.steps[0].start < dim[1].a && dim[1].a < dim[1].tl.rounds[0].pres.steps[0].end);
+});
+
+test('spots and stills: layouts are stills with their subject lit; the cluster demo shows a cluster', () => {
+  for (const id of ['jp-above', 'jp-left', 'jp-sizing', 'jp-padding', 'title', 'pots-size', 'pay-mode']) {
+    const plan = demoPlan(id);
+    assert.ok(plan.every((s) => s.still), `${id} is a still`);
+  }
+  for (const id of ['jp-above', 'jp-sizing', 'jp-values', 'end-bounce', 'antic-time', 'pay-mode']) assert.ok(demoPlan(id).every((s) => s.spot), `${id} lights its subject`);
+  // Running jackpot values: close on one box, animated.
+  const [, running] = demoPlan('jp-values');
+  assert.ok(!running.still && running.project.canvas.width / 480 > 2, 'zoomed in on one box');
+  // The cluster variant pays a cluster: touching cells, at least five.
+  const cl = demoPlan('pay-mode').find((s) => s.label === 'Clusters');
+  assert.equal(cl.project.machine.payMode, 'cluster');
+  const cells = cl.tl.rounds[0].pres.steps[0].cells;
+  assert.ok(cells.length >= 5);
+  const key = (c, r) => `${c},${r}`;
+  const set = new Set(cells.map(([c, r]) => key(c, r)));
+  const seen = new Set([key(...cells[0])]);
+  const todo = [cells[0]];
+  while (todo.length) {
+    const [c, r] = todo.pop();
+    for (const [dc, dr] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      const k = key(c + dc, r + dr);
+      if (set.has(k) && !seen.has(k)) {
+        seen.add(k);
+        todo.push([c + dc, r + dr]);
+      }
+    }
+  }
+  assert.equal(seen.size, set.size, 'one connected group');
 });
 
 test('demos show only their subject', () => {

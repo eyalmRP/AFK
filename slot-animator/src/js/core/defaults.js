@@ -64,7 +64,7 @@ export const SPIN_TYPES = [
 
 export const SPIN_PRESETS = {
   classic: { startStagger: 0.06, stopStagger: 0.2, midDuration: 1.1, endStyle: 'bounce', startStyle: 'windup' },
-  stagger: { startStagger: 0.16, stopStagger: 0.26, midDuration: 1.0, endStyle: 'bounce', startStyle: 'windup' },
+  stagger: { startStagger: 0.32, stopStagger: 0.26, midDuration: 1.0, endStyle: 'bounce', startStyle: 'windup' },
   turbo: { startStagger: 0, stopStagger: 0.05, midDuration: 0.55, endStyle: 'hard', startStyle: 'instant' },
   tease: { startStagger: 0.06, stopStagger: 0.22, midDuration: 1.0, endStyle: 'elastic', startStyle: 'windup' },
   cascade: { startStagger: 0.07, stopStagger: 0.09, midDuration: 0.3, endStyle: 'bounce', startStyle: 'ease' },
@@ -314,8 +314,11 @@ function baseProject() {
       showHud: true,
       marquee: true,
       bet: 1,
-      currency: '$',
-      decimals: 2,
+      // As typed: its decimals decide every amount's ("auto" decimals).
+      betText: '1.00',
+      // No currency sign unless one is picked (or typed: "R$", "CHF ").
+      currency: '',
+      decimals: 'auto',
       maxLines: 20,
       builtinFrame: true,
       payMode: 'lines',

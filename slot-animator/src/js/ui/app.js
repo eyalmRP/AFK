@@ -28,7 +28,7 @@ import {
   HS_OUTCOMES,
   COIN_PALETTES,
 } from '../core/defaults.js';
-import { holdSpinConfig, symbolLayout, upgradeJackpotCoins } from '../core/coins.js';
+import { holdSpinConfig, symbolLayout, upgradeJackpotCoins, moneyDecimals, formatPrize } from '../core/coins.js';
 import { buildTimeline, roundIndexAt } from '../core/timeline.js';
 import { computeLayout } from '../core/layout.js';
 import { evalVelocity } from '../core/keys.js';
@@ -49,7 +49,7 @@ import { APPLIES, notApplying } from './applies.js';
 import { TIPS, tipEntries } from './tips.js';
 import { DEMOS, demoPlan, demoAt } from './demos.js';
 import { WHEEL_FRAMINGS, WHEEL_LANDINGS, POINTER_SIDES, LABEL_PALETTES, WHEEL_ICONS, SEGMENT_KINDS, wheelConfig, iconName, autoIcons, autoHeights, segmentKind, wheelLandings } from '../core/wheel.js';
-import { projectFonts, parseFontNames } from '../core/fonts.js';
+import { parseFontNames, BUILTIN_FONTS, FONT_CATALOG, FONT_CATS, googleFontURL } from '../core/fonts.js';
 import { renderFrame } from '../render/renderer.js';
 import { decodeCustomSounds, renderSoundtrack, audioBufferToWav } from '../render/audio.js';
 import { exportMP4, frameToPNG, canEncodeVideo } from '../export/video.js';
@@ -1277,6 +1277,7 @@ async function loadImages(project) {
   const font = fontStack(project.effects.font);
   await withTimeout(registerFonts(project), 4000);
   const fams = [project.effects.font || 'Bungee', project.wheel?.labelFont].filter(Boolean);
+  await withTimeout(Promise.all(fams.map(ensureWebFont)), 4000);
   await withTimeout(Promise.all(fams.map((f) => document.fonts.load(`64px "${f}"`).catch(() => null))), 2500);
   const symbols = await Promise.all(project.symbols.map((s) => symbolImage(s, font)));
   // Then the built-in orb (when needed), the Hold & Spin coins and the empty cell.
@@ -1861,6 +1862,7 @@ function selectRound(i, doSeek) {
 
 function renderSequence() {
   el.list = h('ol', { class: 'rounds', id: 'round-list' });
+  initRoundDrag();
   el.inspector = h('div', { class: 'inspector', id: 'round-inspector' });
   const addSel = h(
     'select',
@@ -2201,6 +2203,79 @@ function refreshList() {
   clear(el.list, rows.length ? rows : h('li', { class: 'empty' }, 'No rounds yet. Build a quick sequence or add a round.'));
 }
 
+// Rounds reorder by dragging a row up or down (a click still selects it).
+// The other rows slide aside to show where it will land.
+let roundDragged = false;
+function initRoundDrag() {
+  el.list.addEventListener('pointerdown', (e) => {
+    if (e.button !== 0 || e.pointerType === 'touch') return;
+    const li = e.target.closest('li.round');
+    if (!li || e.target.closest('.round-actions')) return;
+    const rows = [...el.list.querySelectorAll('li.round')];
+    const from = rows.indexOf(li);
+    if (from < 0 || rows.length < 2) return;
+    const rects = rows.map((r) => r.getBoundingClientRect());
+    const pitch = rects.length > 1 ? rects[1].top - rects[0].top : rects[0].height;
+    const y0 = e.clientY;
+    let dragging = false;
+    let to = from;
+    const move = (ev) => {
+      const dy = ev.clientY - y0;
+      if (!dragging && Math.abs(dy) < 6) return;
+      if (!dragging) {
+        dragging = true;
+        li.classList.add('dragging');
+        el.list.classList.add('sorting');
+        try {
+          li.setPointerCapture(e.pointerId);
+        } catch {}
+      }
+      const lo = rects[0].top - rects[from].top;
+      const hi = rects[rects.length - 1].top - rects[from].top;
+      const d = Math.max(lo - pitch * 0.4, Math.min(hi + pitch * 0.4, dy));
+      li.style.transform = `translateY(${d}px)`;
+      const mid = rects[from].top + rects[from].height / 2 + d;
+      to = rects.filter((r, i) => i !== from && r.top + r.height / 2 < mid).length;
+      rows.forEach((r, i) => {
+        if (i === from) return;
+        const shift = from < i && i <= to ? -pitch : to <= i && i < from ? pitch : 0;
+        r.style.transform = shift ? `translateY(${shift}px)` : '';
+      });
+    };
+    const up = () => {
+      removeEventListener('pointermove', move);
+      removeEventListener('pointerup', up);
+      removeEventListener('pointercancel', up);
+      rows.forEach((r) => (r.style.transform = ''));
+      li.classList.remove('dragging');
+      el.list.classList.remove('sorting');
+      if (!dragging) return;
+      roundDragged = true;
+      setTimeout(() => (roundDragged = false), 0);
+      if (to === from) return;
+      const rs = state.project.rounds;
+      const [r] = rs.splice(from, 1);
+      rs.splice(to, 0, r);
+      state.sel = to;
+      changed('timeline');
+      renderSequence();
+    };
+    addEventListener('pointermove', move);
+    addEventListener('pointerup', up);
+    addEventListener('pointercancel', up);
+  });
+  // The click that ends a drag does not select the row under it.
+  el.list.addEventListener(
+    'click',
+    (e) => {
+      if (!roundDragged) return;
+      e.stopPropagation();
+      e.preventDefault();
+    },
+    true
+  );
+}
+
 function moveRound(i, d) {
   const rs = state.project.rounds;
   const j = i + d;
@@ -2387,7 +2462,7 @@ function holdInspector(r, set) {
   } else if (r.outcome === 'collect') {
     const C = R?.pres.collect;
     const cur = P.machine.currency || '';
-    parts.push(h('p', { class: 'hint' }, C ? `Collects ${C.items.length} coin${C.items.length === 1 ? '' : 's'}${R.pres.grand ? ' and the grand' : ''}: ${cur}${C.total.toFixed(P.machine.decimals | 0)} in all. Then the total win counts through your tiers.` : 'There are no coins to collect here. Put this round after the respins.'));
+    parts.push(h('p', { class: 'hint' }, C ? `Collects ${C.items.length} coin${C.items.length === 1 ? '' : 's'}${R.pres.grand ? ' and the grand' : ''}: ${cur}${C.total.toFixed(moneyDecimals(P))} in all. Then the total win counts through your tiers.` : 'There are no coins to collect here. Put this round after the respins.'));
   }
   return parts;
 }
@@ -2424,7 +2499,7 @@ function renderInspector() {
   const parts = [];
   const ctx2 = makeContext(P, state.scene?.tl.paylines || generatePaylines(reels, rows, P.machine.maxLines));
   const cur = P.machine.currency || '';
-  const dec = P.machine.decimals | 0;
+  const dec = moneyDecimals(P);
   const isHS = HS_OUTCOMES.includes(r.outcome);
   const canFree = gameOf() === 'slot' && r.outcome !== 'fstotal' && !isHS;
   const noBlock = r.free && !P.rounds.slice(0, state.sel).some((x) => x.outcome === 'freespins' && !x.free);
@@ -3279,6 +3354,31 @@ function hideTip() {
   el.tip = null;
 }
 
+// A demo's subject lit, the rest darkened, with a thin gold edge.
+function drawSpot(g, r) {
+  const W = g.canvas.width;
+  const H = g.canvas.height;
+  const x = Math.max(-4, r.x);
+  const y = Math.max(-4, r.y);
+  const w = Math.min(W + 4, r.x + r.w) - x;
+  const hh = Math.min(H + 4, r.y + r.h) - y;
+  const rad = Math.min(10, w / 4, hh / 4);
+  g.save();
+  g.beginPath();
+  g.rect(0, 0, W, H);
+  if (g.roundRect) g.roundRect(x, y, w, hh, rad);
+  else g.rect(x, y, w, hh);
+  g.fillStyle = 'rgba(6, 3, 12, 0.62)';
+  g.fill('evenodd');
+  g.beginPath();
+  if (g.roundRect) g.roundRect(x, y, w, hh, rad);
+  else g.rect(x, y, w, hh);
+  g.strokeStyle = 'rgba(255, 220, 140, 0.55)';
+  g.lineWidth = 1.5;
+  g.stroke();
+  g.restore();
+}
+
 function showTip(target) {
   const key = target.dataset.tip;
   const tip = TIPS[key];
@@ -3322,11 +3422,13 @@ function showTip(target) {
       const last = plan[plan.length - 1];
       const at = still ? { i: plan.length - 1, t: (last.a + last.b) / 2 } : demoAt(plan, (now - t0) / 1000);
       const s = plan[at.i];
-      renderFrame(g, s.scene, at.t, s.view ? { view: s.view } : undefined);
-      if (labelEl && at.i !== shown) {
-        shown = at.i;
-        labelEl.textContent = s.label;
+      // A still is drawn once per variant; an animation every frame.
+      if (!s.still || at.i !== shown) {
+        renderFrame(g, s.scene, at.t, s.view ? { view: s.view } : undefined);
+        if (s.spot) drawSpot(g, s.spot);
       }
+      if (labelEl && at.i !== shown) labelEl.textContent = s.label;
+      shown = at.i;
       card.classList.add('playing');
       if (!still) tipState.raf = requestAnimationFrame(frame);
     };
@@ -3684,21 +3786,7 @@ function panelMachine() {
       toggleField({ id: 'm-marquee', label: 'Marquee bulbs on the frame', checked: P.machine.marquee, onChange: num(P.machine, 'marquee', 'timeline') }),
       toggleField({ id: 'm-hud', label: 'Win meter under the reels', checked: P.machine.showHud, onChange: num(P.machine, 'showHud', 'all') })
     ),
-    section(
-      'Money',
-      h(
-        'div',
-        { class: 'row3' },
-        textField({ id: 'm-bet', label: 'Bet', type: 'number', value: P.machine.bet, onChange: (v) => {
-          P.machine.bet = Number(v) > 0 ? Number(v) : 1;
-          changed('timeline');
-          renderPanel();
-          renderInspector();
-        } }),
-        selectField({ id: 'm-cur', label: 'Currency', value: P.machine.currency, options: ['$', '€', '£', '¥', ''].map((c) => ({ value: c, label: c || 'None' })), onChange: num(P.machine, 'currency', 'timeline') }),
-        selectField({ id: 'm-dec', label: 'Decimals', value: P.machine.decimals, options: [{ value: 0, label: '0' }, { value: 2, label: '2' }], onChange: (v) => num(P.machine, 'decimals', 'timeline')(Number(v)) })
-      )
-    ),
+    section('Money', ...moneyFields(P)),
     section(
       'Randomness',
       h('p', { class: 'hint' }, 'Filler symbols come from a seed, so the animation is identical every time you render it.'),
@@ -3743,6 +3831,81 @@ function jpArtCell(J, t) {
     h('button', { type: 'button', class: 'jp-thumb', id: `jp-art-${t.id}`, title: 'Replace the art', onclick: up }, h('img', { src: t.art, alt: '' })),
     button('', () => set(null), { class: 'icon-btn tiny', icon: 'x', title: 'Back to the painted box', id: `jp-art-clear-${t.id}` })
   );
+}
+
+// The bet (kept as typed: "1" or "1.00" decides the decimals), the currency
+// (none, a common sign, or your own) and how many decimals amounts show.
+const CURRENCIES = ['', '$', '€', '£', '¥', '₹', '₪', 'R$'];
+let currencyOther = false;
+function moneyFields(P) {
+  const M = P.machine;
+  const bet = h('input', { type: 'text', inputmode: 'decimal', id: 'm-bet', value: M.betText ?? String(M.bet ?? 1) });
+  bet.addEventListener('change', () => {
+    const txt = bet.value.trim().replace(',', '.');
+    const v = Number(txt);
+    if (!(v > 0)) {
+      bet.value = M.betText ?? String(M.bet);
+      return;
+    }
+    M.bet = v;
+    M.betText = txt;
+    changed('timeline');
+    renderPanel();
+    renderInspector();
+  });
+  const custom = currencyOther || !CURRENCIES.includes(M.currency || '');
+  const dec = M.decimals === 'auto' || M.decimals == null ? 'auto' : String(M.decimals | 0);
+  const shown = moneyDecimals(P);
+  return [
+    h(
+      'div',
+      { class: 'row3' },
+      h('div', { class: 'field' }, h('label', { for: 'm-bet' }, 'Bet'), bet),
+      selectField({
+        id: 'm-cur',
+        label: 'Currency',
+        value: custom ? 'other' : M.currency || '',
+        options: [...CURRENCIES.map((c) => ({ value: c, label: c || 'None' })), { value: 'other', label: 'Other…' }],
+        onChange: (v) => {
+          currencyOther = v === 'other';
+          if (!currencyOther) M.currency = v;
+          else if (CURRENCIES.includes(M.currency || '')) M.currency = '';
+          changed('timeline');
+          renderPanel();
+          if (currencyOther) document.getElementById('m-cur-text')?.focus();
+        },
+      }),
+      selectField({
+        id: 'm-dec',
+        label: 'Decimals',
+        value: dec,
+        options: [
+          { value: 'auto', label: 'As the bet' },
+          { value: '0', label: 'None (1,250)' },
+          { value: '2', label: 'Two (1,250.00)' },
+        ],
+        onChange: (v) => {
+          M.decimals = v === 'auto' ? 'auto' : Number(v);
+          changed('timeline');
+          renderPanel();
+        },
+      })
+    ),
+    custom
+      ? textField({
+          id: 'm-cur-text',
+          label: 'Your currency',
+          value: M.currency || '',
+          placeholder: 'CHF, ฿, coins…',
+          onChange: (v) => {
+            M.currency = v.replace(/["'\\]/g, '').slice(0, 4);
+            changed('timeline');
+          },
+          hint: 'Up to 4 characters, in front of every amount. Add a space for a gap: "CHF ".',
+        })
+      : null,
+    h('p', { class: 'hint', id: 'm-money-note' }, `Every amount (win meter, big wins, coins, pots, jackpot boxes) shows ${shown ? 'two decimals' : 'whole numbers'}${dec === 'auto' ? `, as the bet is typed: ${shown ? '1.00 gives cents, 1 whole numbers' : '1 gives whole numbers, 1.00 cents'}` : ''}. Example: ${formatPrize(1250, M.currency || '', shown)}.`),
+  ];
 }
 
 // Progressive jackpot boxes: how many, where around the machine, their
@@ -3843,6 +4006,19 @@ function jackpotSettings() {
     h('h4', { class: 'insp-sub' }, 'Values'),
     segmented({ id: 'jp-values', label: 'Values', value: J.running ? 'running' : 'fixed', options: [{ value: 'fixed', label: 'Fixed' }, { value: 'running', label: 'Running', hint: 'The numbers climb like a progressive' }], onChange: (v) => all('running')(v === 'running') }),
     J.running ? rangeField({ id: 'jp-growth', label: 'Running speed', unit: '% / s', value: Number(J.growth ?? 0.15), min: 0.01, max: 2, step: 0.01, onInput: num(J, 'growth'), hint: 'How much of its seed a box adds every second. Won, it shows what it paid for a moment, then starts again from its seed.' }) : null,
+    // The machine's decimals, here too: where you look for them on a box.
+    segmented({
+      id: 'jp-decimals',
+      label: 'Decimals',
+      value: P.machine.decimals === 'auto' || P.machine.decimals == null ? 'auto' : String(P.machine.decimals | 0),
+      options: [{ value: 'auto', label: 'As the bet' }, { value: '0', label: '1,250' }, { value: '2', label: '1,250.00' }],
+      onChange: (v) => {
+        P.machine.decimals = v === 'auto' ? 'auto' : Number(v);
+        changed('timeline');
+        renderPanel();
+      },
+    }),
+    h('p', { class: 'hint' }, `Every amount follows this (Machine › Money too). Now: ${formatPrize(1250, P.machine.currency || '', moneyDecimals(P))}.`),
     h('div', { class: 'jp-rows' }, h('div', { class: 'jp-row jp-head', 'aria-hidden': 'true' }, h('span', null, 'Name'), h('span', null, 'Seed (× bet)'), h('span', null, 'Colour'), h('span', null, 'Art')), cfg.tiers.map(boxRow)),
     h('p', { class: 'hint' }, 'Name, seed value (in bets), colour and art per box. They are the Hold & Spin jackpots: the Mini, Minor and Major coins and the Grand prize. Your art fills the box; the value is written over it.'),
     cfg.tiers.some((t) => t.art) ? toggleField({ id: 'jp-art-names', label: 'Write the names on your art', checked: J.artNames !== false, onChange: (v) => { J.artNames = v; changed('all'); }, hint: 'Off when your art already says GRAND, MAJOR…' }) : null,
@@ -4742,7 +4918,11 @@ function panelEffects() {
     templateGallery(),
     section(
       'Titles and font',
-      selectField({ id: 'fx-font', label: 'Display font', value: fx.font, options: projectFonts(P).map((f) => ({ value: f, label: f })), onChange: num(fx, 'font', 'all') }),
+      fontPicker({ id: 'fx-font', label: 'Display font', value: fx.font || 'Bungee', onChange: (f) => {
+        fx.font = f;
+        changed('all');
+        renderPanel();
+      } }),
       h(
         'div',
         { class: 'row2' },
@@ -5064,7 +5244,11 @@ function panelWheel() {
     ),
     section(
       'Look',
-      selectField({ id: 'w-font', label: 'Label font', value: W.labelFont || '', options: [{ value: '', label: `Display font (${P.effects.font || 'Bungee'})` }, ...projectFonts(P).map((f) => ({ value: f, label: f }))], onChange: (v) => { W.labelFont = v; changed('all'); } }),
+      fontPicker({ id: 'w-font', label: 'Label font', value: W.labelFont || '', fallback: { label: `Display font (${P.effects.font || 'Bungee'})`, font: P.effects.font || 'Bungee' }, onChange: (v) => {
+        W.labelFont = v;
+        changed('all');
+        renderPanel();
+      } }),
       segmented({ id: 'w-label-colour', label: 'Label colour', value: cfg.labelPalette, options: LABEL_PALETTES.map((x) => ({ value: x.id, label: x.label })), onChange: (v) => { W.labelPalette = v; changed('all'); } }),
       rangeField({ id: 'w-label-size', label: 'Text size', unit: '×', value: cfg.labelSize, min: 0.4, max: 2, step: 0.01, onInput: allChanged('labelSize') }),
       rangeField({ id: 'w-label-height', label: 'Text height', unit: '% from hub to rim', value: Math.round((cfg.labelHeight ?? autoH.label) * 100), min: 15, max: 97, step: 1, onInput: (v) => { W.labelHeight = v / 100; changed('all'); } }),
@@ -5305,6 +5489,161 @@ async function addFonts() {
   changed('all');
   renderAssets();
   renderPanel();
+}
+
+// Catalogue fonts come from Google Fonts the first time they are used (a
+// stylesheet per family); resolves once its stylesheet is in.
+const webFonts = new Map();
+function ensureWebFont(family) {
+  if (!family || BUILTIN_FONTS.includes(family)) return Promise.resolve();
+  if (webFonts.has(family)) return webFonts.get(family);
+  const url = googleFontURL(family);
+  if (!url) return Promise.resolve();
+  const p = new Promise((resolve) => {
+    const link = h('link', { rel: 'stylesheet', href: url });
+    link.addEventListener('load', () => resolve(), { once: true });
+    link.addEventListener('error', () => resolve(), { once: true });
+    document.head.append(link);
+  });
+  webFonts.set(family, p);
+  return p;
+}
+
+// A font picker: the font's name written in it. It opens a searchable list
+// of fonts, each written in itself (loaded as it scrolls into view): your
+// uploaded fonts, then the catalogue by look, and an upload button.
+// fallback: a first entry meaning "the other font" (value '').
+let fontPop = null;
+function closeFontPicker() {
+  fontPop?.close();
+}
+function fontPicker({ id, label, value, onChange, fallback }) {
+  const P = state.project;
+  const shown = value || fallback?.font || 'Bungee';
+  ensureWebFont(shown);
+  const btn = h(
+    'button',
+    { type: 'button', class: 'font-pick', id, 'aria-haspopup': 'listbox', 'aria-expanded': 'false' },
+    h('span', { class: 'font-pick-name', style: { fontFamily: `"${shown}", sans-serif` } }, value ? value : fallback ? fallback.label : shown),
+    icon('down')
+  );
+  btn.addEventListener('click', () => openFontPicker(btn, value, onChange, fallback, P));
+  return h('div', { class: 'field' }, h('label', { for: id }, label), btn);
+}
+function openFontPicker(btn, value, onChange, fallback, P) {
+  closeFontPicker();
+  const mine = (P.fonts || []).map((f) => ({ family: f.family, cat: 'mine' }));
+  const all = [...(fallback ? [{ family: '', label: fallback.label, cat: 'default', face: fallback.font }] : []), ...mine, ...FONT_CATALOG.filter((f) => !mine.some((m) => m.family === f.family))];
+  let cat = 'all';
+  let query = '';
+  let active = 0;
+  const search = h('input', { type: 'search', class: 'font-search', placeholder: 'Search fonts', 'aria-label': 'Search fonts', id: 'font-search' });
+  const chips = h('div', { class: 'font-cats' });
+  const list = h('div', { class: 'font-list', role: 'listbox', id: 'font-list' });
+  const pop = h(
+    'div',
+    { class: 'font-pop', role: 'dialog', 'aria-label': 'Fonts' },
+    search,
+    chips,
+    list,
+    h('div', { class: 'font-pop-foot' }, button('Upload a font', () => {
+      close();
+      addFonts();
+    }, { class: 'btn small', icon: 'upload', id: 'font-pop-upload' }), h('span', { class: 'hint' }, 'Google Fonts; After Effects needs them installed.'))
+  );
+  const seen = new IntersectionObserver((entries) => {
+    for (const e of entries) if (e.isIntersecting) ensureWebFont(e.target.dataset.font);
+  }, { root: list, rootMargin: '120px' });
+  let items = [];
+  const pick = (f) => {
+    close();
+    const fam = f.family;
+    Promise.resolve(fam ? ensureWebFont(fam) : null)
+      .then(() => (fam ? withTimeout(document.fonts.load(`64px "${fam}"`), 2500).catch(() => null) : null))
+      .then(() => onChange(fam));
+  };
+  const render = () => {
+    clear(chips, [{ id: 'all', label: 'All' }, ...(mine.length ? [{ id: 'mine', label: 'Yours' }] : []), ...FONT_CATS].map((c) =>
+      h('button', { type: 'button', class: `font-cat${cat === c.id ? ' on' : ''}`, onclick: () => {
+        cat = c.id;
+        active = 0;
+        render();
+      } }, c.label)
+    ));
+    const q = query.trim().toLowerCase();
+    const shownList = all.filter((f) => (cat === 'all' || f.cat === cat || f.cat === 'default') && (!q || (f.label || f.family).toLowerCase().includes(q)));
+    seen.disconnect();
+    items = shownList.map((f, i) => {
+      const face = f.face || f.family;
+      const el2 = h(
+        'button',
+        {
+          type: 'button',
+          role: 'option',
+          class: `font-item${(f.family || '') === (value || '') ? ' sel' : ''}${i === active ? ' active' : ''}`,
+          'aria-selected': (f.family || '') === (value || '') ? 'true' : 'false',
+          'data-font': face,
+          onclick: () => pick(f),
+        },
+        h('span', { class: 'font-item-name', style: { fontFamily: `"${face}", sans-serif` } }, f.label || f.family),
+        h('span', { class: 'font-item-cat' }, f.cat === 'mine' ? 'yours' : f.cat === 'default' ? '' : (FONT_CATS.find((c) => c.id === f.cat)?.label || ''))
+      );
+      seen.observe(el2);
+      return el2;
+    });
+    clear(list, items.length ? items : h('p', { class: 'hint font-none' }, 'No font by that name. Upload your own below.'));
+  };
+  const setActive = (i) => {
+    if (!items.length) return;
+    active = (i + items.length) % items.length;
+    items.forEach((x, k) => x.classList.toggle('active', k === active));
+    items[active].scrollIntoView({ block: 'nearest' });
+  };
+  search.addEventListener('input', () => {
+    query = search.value;
+    active = 0;
+    render();
+  });
+  search.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowDown') setActive(active + 1);
+    else if (e.key === 'ArrowUp') setActive(active - 1);
+    else if (e.key === 'Enter' && items[active]) items[active].click();
+    else if (e.key === 'Escape') close();
+    else return;
+    e.preventDefault();
+  });
+  const outside = (e) => {
+    if (!pop.contains(e.target) && e.target !== btn && !btn.contains(e.target)) close();
+  };
+  function close() {
+    if (fontPop !== api) return;
+    fontPop = null;
+    seen.disconnect();
+    pop.remove();
+    btn.setAttribute('aria-expanded', 'false');
+    removeEventListener('pointerdown', outside, true);
+  }
+  const api = { close };
+  fontPop = api;
+  render();
+  document.body.append(pop);
+  const r = btn.getBoundingClientRect();
+  const w = Math.max(300, r.width);
+  pop.style.width = `${w}px`;
+  pop.style.left = `${Math.round(Math.min(innerWidth - w - 8, Math.max(8, r.left)))}px`;
+  const below = innerHeight - r.bottom - 12;
+  if (below >= 320 || below >= r.top) {
+    pop.style.top = `${Math.round(r.bottom + 6)}px`;
+    pop.style.maxHeight = `${Math.round(Math.min(460, below))}px`;
+  } else {
+    pop.style.bottom = `${Math.round(innerHeight - r.top + 6)}px`;
+    pop.style.maxHeight = `${Math.round(Math.min(460, r.top - 12))}px`;
+  }
+  btn.setAttribute('aria-expanded', 'true');
+  addEventListener('pointerdown', outside, true);
+  const cur = items.findIndex((x) => x.classList.contains('sel'));
+  if (cur >= 0) setActive(cur);
+  search.focus();
 }
 
 // Uploaded fonts are registered with the page once each.
@@ -5665,7 +6004,8 @@ export async function start() {
     lastNow = n;
     loop(n);
   });
-  state.playing = !matchMedia('(prefers-reduced-motion: reduce)').matches;
+  // Reel Studio opens paused, on the first frame: Space or Play starts it.
+  state.playing = false;
   renderTransport();
   // The presets gallery shows itself once, where the browser remembers that.
   if (!ui.seenPresets && storageWorks()) setTimeout(() => openPresets(), 700);

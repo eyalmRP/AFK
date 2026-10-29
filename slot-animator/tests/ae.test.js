@@ -6,7 +6,7 @@ import { buildTimeline, heldCells, STICKY_COVER } from '../src/js/core/timeline.
 import { computeLayout } from '../src/js/core/layout.js';
 import { evalKeys } from '../src/js/core/keys.js';
 import { buildAEData, buildAEScript, AE_ASSETS, AE_SCRIPT, exportFormats, projectForFormat, parseFormat } from '../src/js/core/ae-export.js';
-import { formatPrize } from '../src/js/core/coins.js';
+import { formatPrize, moneyDecimals } from '../src/js/core/coins.js';
 import { sfxCues, toDb } from '../src/js/core/sfx.js';
 import { particleAt, particleAssetInfo } from '../src/js/core/particles.js';
 import { createAE, runScript } from './ae-mock.js';
@@ -277,7 +277,7 @@ test('AE hold & spin board: every cell lands the preview coin, with its value', 
   const { tl, list, log } = run(p);
   assert.deepEqual(log.alerts, [], log.alerts.join('\n'));
   const { L } = list[0];
-  const fmt = (v) => formatPrize(v, p.machine.currency, p.machine.decimals);
+  const fmt = (v) => formatPrize(v, p.machine.currency, moneyDecimals(p));
   for (const R of tl.rounds.filter((x) => x.outcome === 'respin')) {
     const t = R.spinEnd + 0.01;
     for (let c = 0; c < tl.reels; c++) {
@@ -313,7 +313,7 @@ test('AE trigger round: coins land on the reels with their values, then carry on
     const comp = log.comps.find((x) => x.name === `Reel ${c + 1}`);
     const pval = evalKeys(tl.stripKeys[c], t);
     const want = {};
-    for (const cn of trig.win.coins) if (cn.c === c) want[cn.r] = formatPrize(cn.value, p.machine.currency, p.machine.decimals);
+    for (const cn of trig.win.coins) if (cn.c === c) want[cn.r] = formatPrize(cn.value, p.machine.currency, moneyDecimals(p));
     assert.deepEqual(shownLabels(comp, pval, tl.peek, L.cellH, tl.rows, t), want, `reel ${c}`);
   }
   const main = log.comps.find((x) => x.name === p.name);

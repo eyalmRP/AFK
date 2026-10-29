@@ -92,19 +92,36 @@ function reelKeysFor(opts) {
   }
   if (tE0 > keys[keys.length - 1].t + 1e-3) keys.push(key(tE0, yE0, { inSpeed: vin, outSpeed: vin }));
   const style = sp.endStyle;
-  const o = style === 'bounce' ? sp.overshoot : style === 'elastic' ? sp.overshoot * 1.25 : 0;
+  // Elastic runs past the stop and springs back and forth around it; the
+  // others arrive on it.
+  const o = style === 'elastic' ? sp.overshoot * 1.5 : 0;
   const frac = style === 'hard' ? 0.62 : style === 'soft' ? 0.42 : 0.5;
   let T = Math.round(yE0 + vin * De * frac - o);
   while (T + o - yE0 < (vin * De) / 3 + 0.05) T++;
   if (T < P0 + minDistance) T = P0 + minDistance;
   if (style === 'bounce') {
-    keys.push(key(stop, T + o, { inInf: 0.55, outInf: 0.45 }));
-    keys.push(key(stop + 0.2, T, { inInf: 0.55 }));
+    // Hits the stop still moving and bounces back off it, twice, like a
+    // ball: each hop a parabola (rise, top, fall), the second smaller.
+    const b1 = sp.overshoot;
+    const b2 = b1 * 0.3;
+    const d1 = 0.11;
+    const d2 = 0.07;
+    const v1 = (2 * b1) / d1;
+    const v2 = (2 * b2) / d2;
+    const hit = Math.max(v1 * 0.6, ((T - yE0) / Math.max(0.05, De)) * 0.8);
+    keys.push(key(stop, T, { inSpeed: hit, inInf: 0.35, outSpeed: -v1 }));
+    keys.push(key(stop + d1, T - b1));
+    keys.push(key(stop + 2 * d1, T, { inSpeed: v1, outSpeed: -v2 }));
+    keys.push(key(stop + 2 * d1 + d2, T - b2));
+    keys.push(key(stop + 2 * d1 + 2 * d2, T, { inSpeed: v2 }));
   } else if (style === 'elastic') {
+    // A spring: past the stop, back before it, and smaller each time.
     keys.push(key(stop, T + o, { inInf: 0.5, outInf: 0.45 }));
-    keys.push(key(stop + 0.13, T - o * 0.45, { inInf: 0.45, outInf: 0.45 }));
-    keys.push(key(stop + 0.25, T + o * 0.16, { inInf: 0.45, outInf: 0.45 }));
-    keys.push(key(stop + 0.36, T, { inInf: 0.5 }));
+    keys.push(key(stop + 0.15, T - o * 0.6, { inInf: 0.45, outInf: 0.45 }));
+    keys.push(key(stop + 0.29, T + o * 0.32, { inInf: 0.45, outInf: 0.45 }));
+    keys.push(key(stop + 0.42, T - o * 0.15, { inInf: 0.45, outInf: 0.45 }));
+    keys.push(key(stop + 0.54, T + o * 0.06, { inInf: 0.45, outInf: 0.45 }));
+    keys.push(key(stop + 0.65, T, { inInf: 0.5 }));
   } else if (style === 'hard') {
     keys.push(key(stop, T, { inSpeed: vin * 0.35, inInf: 0.25, outSpeed: -1.4, outInf: 0.4 }));
     keys.push(key(stop + 0.06, T - 0.05, { inInf: 0.4, outInf: 0.4 }));

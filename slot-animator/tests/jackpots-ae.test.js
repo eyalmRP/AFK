@@ -31,7 +31,7 @@ function exportAE(p) {
 const evalAt = (expr, t, effect = (n) => () => ({ value: / %$/.test(n) ? 100 : 0 })) => new Function('time', 'comp', 'thisComp', 'thisLayer', 'value', `return eval(${JSON.stringify(expr)})`)(t, () => ({ layer: () => ({ effect }) }), {}, { width: 100, height: 40 }, [0, 0]);
 const sliderExpr = (log, name) => log.expressions.find((e) => e.layer === 'SLOT CONTROL' && e.prop.startsWith(name))?.expr;
 const exprOf = (log, layer, prop) => log.expressions.filter((e) => e.layer === layer && e.prop === prop).pop()?.expr;
-const money = (v, cur = '$', d = 2) => {
+const money = (v, cur = '', d = 2) => {
   const [i, f] = Math.max(0, v).toFixed(d).split('.');
   return cur + i.replace(/\B(?=(\d{3})+(?!\d))/g, ',') + (d > 0 ? `.${f}` : '');
 };
@@ -215,7 +215,7 @@ test('After Effects: a Major jackpot gets its full-screen moment (title, count o
   for (const r of data.rounds) for (const ld of r.lands) if (jpSyms.has(ld.s)) assert.ok(ld.coin && !ld.lab);
   // The collect still names each prize.
   const C = data.rounds.find((r) => r.collect);
-  assert.ok(C.collect.items.every((it) => /^\$/.test(it.text)));
+  assert.ok(C.collect.items.every((it) => /^\d[\d,]*\.\d\d$/.test(it.text)));
 });
 
 test('After Effects: with boxes on one side, the pots, title, ribbon and Hold & Spin plaques sit over the moved machine', () => {

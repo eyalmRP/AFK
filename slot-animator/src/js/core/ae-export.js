@@ -21,7 +21,7 @@ import { STICKY_COVER, WILD_WALK, WALK_HOP, BOOST } from './timeline.js';
 import { potsConfig, beamCurve, beamPoints, beamSide, POT_BOX, POT_CATCH, POT_FIRE, BEAM_PASSES, BEAM_HOLD, BEAM_FADE } from './pots.js';
 import { lineColor } from './paylines.js';
 import { OUTCOME_BY_ID } from './defaults.js';
-import { holdSpinConfig, isCoinSym, formatPrize, COIN_GLOW } from './coins.js';
+import { holdSpinConfig, isCoinSym, formatPrize, COIN_GLOW, moneyDecimals } from './coins.js';
 import { sfxCues, SFX_GROUPS, toDb } from './sfx.js';
 import { particleAssetInfo, spawnParticles, TEMPLATE_BY_ID } from './particles.js';
 import { jumpTarget, mergeTarget, flightPath, winFxConfig } from './winfx.js';
@@ -146,7 +146,7 @@ export function buildAEData(project, tl, L, extras = {}) {
   hsc.coins.forEach((ct, i) => symbols.push({ name: clean(ct.name) || `Coin ${i + 1}`, file: AE_ASSETS.shared.symbol(lay.coinBase + i), win: null }));
   symbols.push({ name: 'Empty cell', file: AE_ASSETS.shared.symbol(lay.blankSym), win: null });
   const cur = project.machine.currency || '';
-  const dec = project.machine.decimals | 0;
+  const dec = moneyDecimals(project);
   const labelled = hsc.coins.map((c) => !!c.label && !c.src);
   const coinColor = (sym) => rgb(COIN_GLOW[hsc.coins[sym - lay.coinBase]?.palette] || COIN_GLOW.gold);
   // A value riding on a symbol: [text, offset in cells, scale]. "x5" sits low
@@ -487,7 +487,7 @@ export function buildAEData(project, tl, L, extras = {}) {
         label: Math.round(L.hud.h * 0.17),
         left: [r4(L.hud.x + L.hud.w * 0.14), r4(L.hud.y + L.hud.h * 0.55)],
         right: [r4(L.hud.x + L.hud.w * 0.86), r4(L.hud.y + L.hud.h * 0.55)],
-        betText: `BET ${project.machine.currency || ''}${Number(project.machine.bet || 0).toFixed(project.machine.decimals | 0)}`,
+        betText: `BET ${project.machine.currency || ''}${Number(project.machine.bet || 0).toFixed(moneyDecimals(project))}`,
         rightText:
           project.machine.payMode === 'lines'
             ? `LINES ${tl.paylines.length}`
@@ -587,8 +587,8 @@ export function buildAEData(project, tl, L, extras = {}) {
     shakes: tl.shakes.map((s) => [r4(s.t), r4(s.amp * (Number(project.effects.shake) || 0) * L.cellW * 0.09), r4(s.dur)]),
     flashes: tl.flashes.map((f) => [r4(f.t), r4(f.amp * (Number(project.effects.flash) || 0)), r4(f.dur)]),
     rounds,
-    currency: clean(project.machine.currency || ''),
-    decimals: project.machine.decimals | 0,
+    currency: clean(project.machine.currency || '').replace(/'/g, '').slice(0, 4),
+    decimals: moneyDecimals(project),
     dim: r4(Number(project.effects.dim) || 0),
     popScale: r4(Number(project.effects.popScale) || 0),
     popDur: r4(Number(project.timing.tumblePop) || 0.36),
@@ -1179,7 +1179,8 @@ export const AE_SCRIPT = String.raw`// Slot animation rebuilt for After Effects 
     var scaled = Math.floor(Math.max(0, maxValue) * Math.pow(10, D) + 1e-6);
     // One spare digit, so a value edited up in After Effects still fits.
     var n = Math.max(D + 1, String(scaled).length) + 1;
-    var curW = DATA.currency ? O.size * 0.75 : 0;
+    // Room for the currency: one sign, or up to four characters ("CHF ").
+    var curW = DATA.currency ? O.size * (0.15 + 0.6 * DATA.currency.length) : 0;
     var sepCount = 0;
     for (i = 1; i <= n - 1; i++) if ((i === D && D > 0) || (i > D && (i - D) % 3 === 0)) sepCount++;
     var w = curW + n * O.dw + sepCount * O.sw + O.dw;

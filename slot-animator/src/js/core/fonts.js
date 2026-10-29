@@ -5,6 +5,61 @@
 
 export const BUILTIN_FONTS = ['Bungee', 'Lilita One', 'Russo One', 'Cinzel Decorative'];
 
+// Google Fonts that suit slot titles and counters, by look. w: the weight
+// the page loads and draws (one weight each); ps: the PostScript name After
+// Effects asks for when it is not "<Family>-Regular".
+export const FONT_CATS = [
+  { id: 'bold', label: 'Bold' },
+  { id: 'tech', label: 'Tech & retro' },
+  { id: 'classic', label: 'Classic' },
+  { id: 'script', label: 'Script' },
+  { id: 'fun', label: 'Fun' },
+];
+const F = (cat, list) => list.map((x) => (typeof x === 'string' ? { family: x, cat } : { cat, ...x }));
+export const FONT_CATALOG = [
+  ...F('bold', [
+    'Bungee', 'Lilita One', 'Luckiest Guy', 'Titan One', 'Bangers', 'Russo One', 'Black Ops One', 'Righteous', 'Passion One', 'Changa One',
+    'Alfa Slab One', 'Bowlby One SC', 'Bowlby One', 'Rubik Mono One', 'Paytone One', 'Carter One', 'Sigmar One', 'Rammetto One', 'Ultra',
+    'Archivo Black', 'Anton', 'Bebas Neue', 'Staatliches', 'Squada One', 'Black Han Sans', 'Knewave', 'Patua One', 'Concert One', 'Days One',
+    'Graduate', 'Holtwood One SC', 'Bungee Inline', 'Bungee Shade',
+    { family: 'Montserrat', w: 900, ps: 'Montserrat-Black' }, { family: 'Poppins', w: 800, ps: 'Poppins-ExtraBold' },
+    { family: 'Rubik', w: 800, ps: 'Rubik-ExtraBold' }, { family: 'Nunito', w: 900, ps: 'Nunito-Black' },
+    { family: 'Kanit', w: 800, ps: 'Kanit-ExtraBold' }, { family: 'Oswald', w: 700, ps: 'Oswald-Bold' },
+    { family: 'Fredoka', w: 700, ps: 'Fredoka-Bold' }, { family: 'Baloo 2', w: 800, ps: 'Baloo2-ExtraBold' },
+    { family: 'Teko', w: 600, ps: 'Teko-SemiBold' },
+  ]),
+  ...F('tech', [
+    { family: 'Orbitron', w: 900, ps: 'Orbitron-Black' }, 'Audiowide', 'Monoton', 'Press Start 2P', 'Faster One', 'Racing Sans One', 'Michroma',
+    'Wallpoet', 'Zen Dots', 'Silkscreen', 'Major Mono Display', { family: 'Exo 2', w: 900, ps: 'Exo2-Black' },
+    { family: 'Syncopate', w: 700, ps: 'Syncopate-Bold' }, { family: 'Turret Road', w: 800, ps: 'TurretRoad-ExtraBold' },
+  ]),
+  ...F('classic', [
+    { family: 'Cinzel Decorative', w: 900, ps: 'CinzelDecorative-Black' }, { family: 'Cinzel', w: 900, ps: 'Cinzel-Black' },
+    { family: 'Playfair Display', w: 900, ps: 'PlayfairDisplay-Black' }, 'Abril Fatface', 'Bevan', 'Rye', 'Ewert', 'Diplomata SC', 'Yeseva One',
+    'Rozha One', 'Marcellus SC', 'Pirata One', 'Uncial Antiqua', 'MedievalSharp', 'Almendra Display', 'Metamorphous', 'Limelight', 'Federo',
+    'Shrikhand',
+  ]),
+  ...F('script', [
+    'Lobster', 'Pacifico', 'Yellowtail', 'Kaushan Script', 'Satisfy', 'Permanent Marker', 'Courgette', 'Damion', 'Leckerli One', 'Sonsie One',
+    'Great Vibes', { family: 'Dancing Script', w: 700, ps: 'DancingScript-Bold' }, 'Caveat Brush', 'Marck Script', 'Grand Hotel', 'Cookie', 'Sriracha',
+  ]),
+  ...F('fun', [
+    'Chewy', 'Creepster', 'Nosifer', 'Metal Mania', 'Butcherman', 'Eater', 'Frijole', 'Fascinate', 'Fascinate Inline', 'Margarine', 'Spicy Rice',
+    'Emilys Candy', 'Mountains of Christmas', 'Henny Penny', 'Ribeye Marrow', 'Lemon', 'Modak', 'Bubblegum Sans', 'Chicle', 'Coiny', 'Galindo',
+  ]),
+];
+
+export function catalogFont(family) {
+  return FONT_CATALOG.find((f) => f.family === family) || null;
+}
+
+// The Google Fonts stylesheet for a catalogue font (its one weight).
+export function googleFontURL(family) {
+  const f = catalogFont(family);
+  if (!f) return null;
+  return `https://fonts.googleapis.com/css2?family=${encodeURIComponent(f.family).replace(/%20/g, '+')}${f.w ? `:wght@${f.w}` : ''}&display=swap`;
+}
+
 export function projectFonts(project) {
   return [...BUILTIN_FONTS, ...(project.fonts || []).map((f) => f.family)];
 }
@@ -13,6 +68,8 @@ export function projectFonts(project) {
 export function fontPostScript(project, family) {
   const up = (project.fonts || []).find((f) => f.family === family);
   if (up && up.ps) return up.ps;
+  const cat = catalogFont(family);
+  if (cat && cat.ps) return cat.ps;
   return `${String(family || 'Bungee').replace(/\s+/g, '')}-Regular`;
 }
 

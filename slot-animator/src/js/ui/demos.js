@@ -4,9 +4,10 @@
 // high). Everything that does not belong to the option is switched off:
 // win particles, paylines, marquee, shake, flashes, background lights. A
 // focus zooms into the part that changes (the landing reel, the pots, the
-// pointer); the scene is then built bigger, so the crop stays sharp. The
-// editor renders them with the real renderer. Pure: projects, times and
-// rectangles only.
+// pointer); the scene is then built bigger, so the crop stays sharp. A spot
+// keeps the subject lit and darkens the rest. A still shows one frame (each
+// variant in turn): layouts and looks need no animation. The editor renders
+// them with the real renderer. Pure: projects, times and rectangles only.
 
 import { defaultProject, candyProject, holdSpinProject, wheelProject, newRound, SPIN_PRESETS, AGAIN_SEGMENT } from '../core/defaults.js';
 import { autoIcons } from '../core/wheel.js';
@@ -18,6 +19,8 @@ const SIZE = { width: 480, height: 270, fps: 30 };
 export const DEMO_LOOP = 4;
 // The deepest zoom a focus may ask for.
 const MAX_ZOOM = 3;
+// How long a still shows each of its variants.
+export const STILL_HOLD = 1.7;
 
 function small(p) {
   p.canvas = { ...SIZE };
@@ -197,13 +200,63 @@ const wheelFocus = (tl, L) => {
   return fit(L, { x: g.cx - g.R * 1.08, y: g.cy - g.R * 1.08, w: g.R * 2.16, h: g.R * 2.16 }, 1);
 };
 
+// ---- spots: the subject's own rectangle (the rest is darkened) ----
+const grow = (r, k) => ({ x: r.x - k, y: r.y - k, w: r.w + 2 * k, h: r.h + 2 * k });
+const union = (...rs) => {
+  const x0 = Math.min(...rs.map((r) => r.x));
+  const y0 = Math.min(...rs.map((r) => r.y));
+  return { x: x0, y: y0, w: Math.max(...rs.map((r) => r.x + r.w)) - x0, h: Math.max(...rs.map((r) => r.y + r.h)) - y0 };
+};
+const boxRect = (b) => ({ x: b.x - b.w / 2, y: b.y - b.h / 2, w: b.w, h: b.h });
+const boxesSpot = (tl, L) => (L.jackpots?.length ? grow(union(...L.jackpots.map(boxRect)), L.cellW * 0.12) : null);
+// The boxes and the machine's edge next to them (padding).
+const boxesEdgeSpot = (tl, L) => {
+  const bs = boxesSpot(tl, L);
+  if (!bs) return null;
+  const f = L.frame;
+  const below = bs.y > f.y + f.h / 2;
+  return union(bs, { x: f.x, y: below ? f.y + f.h - L.cellH * 0.5 : f.y, w: f.w, h: L.cellH * 0.5 });
+};
+const firstBox = (tl, L) => (L.jackpots?.length ? grow(boxRect(L.jackpots[0]), L.cellW * 0.08) : null);
+const firstBoxFocus = (tl, L) => (L.jackpots?.length ? fit(L, boxRect(L.jackpots[0]), 1.5) : null);
+const potsSpot = (tl, L) => (L.pots ? grow(potsRect(L), L.cellW * 0.05) : null);
+const hudSpot = (tl, L) => (L.hud ? grow({ x: L.hud.x, y: L.hud.y, w: L.hud.w, h: L.hud.h }, L.cellW * 0.1) : null);
+const logoSpot = (tl, L) => grow({ x: L.logo.cx - L.logo.w / 2, y: L.logo.cy - L.logo.h / 2, w: L.logo.w, h: L.logo.h }, L.cellW * 0.05);
+const reelSpot = (c) => (tl, L) => grow(reelsRect(L, c(tl, L), c(tl, L)), L.cellW * 0.06);
+const lastReelSpot = reelSpot((tl) => lastReel(R0(tl)));
+const firstReelsSpot = (tl, L) => grow(reelsRect(L, 0, 2), L.cellW * 0.04);
+const teaseSpot = (tl, L) => {
+  const R = R0(tl);
+  const cs = R.reels.map((ri, c) => (ri.antic ? c : -1)).filter((c) => c >= 0);
+  return cs.length ? grow(reelsRect(L, Math.min(...cs), Math.max(...cs)), L.cellW * 0.06) : null;
+};
+// The cells of the first win.
+const winSpot = (tl, L) => {
+  const st = R0(tl).pres.steps?.[0];
+  if (!st) return null;
+  const rs = st.cells.map(([c, r]) => {
+    const m = L.cellCenter(c, r);
+    return { x: m.x - L.cellW / 2, y: m.y - L.cellH / 2, w: L.cellW, h: L.cellH };
+  });
+  return grow(union(...rs), L.cellW * 0.06);
+};
+const wheelSpot = (tl, L) => {
+  const g = L.wheel;
+  return grow({ x: g.cx - g.R, y: g.cy - g.R, w: g.R * 2, h: g.R * 2 }, g.R * 0.08);
+};
+// A moment of the first win: its cells highlighted.
+const winStill = (tl) => {
+  const st = R0(tl).pres.steps?.[0];
+  return st ? st.start + 0.55 : R0(tl).spinEnd + 0.3;
+};
+
 // Jackpot boxes on, with what a demo changes.
 const boxes = (extra = {}) => (p) => {
   Object.assign(p.jackpots, { enabled: true, ...extra });
 };
 const idle = (tl) => [Math.max(0, R0(tl).t0 - 0.6), R0(tl).t0 + 0.5];
 const jpPlaces = Object.fromEntries(
-  ['above', 'below', 'left', 'right', 'sides', 'ends'].map((place) => [`jp-${place}`, { make: () => slot(noWin, boxes({ place, running: true })), window: idle }])
+  ['above', 'below', 'left', 'right', 'sides', 'ends'].map((place) => [`jp-${place}`, { make: () => slot(noWin, boxes({ place })), window: idle, still: true, spot: boxesSpot }])
 );
 
 export const DEMOS = {
@@ -216,13 +269,15 @@ export const DEMOS = {
     },
   },
   ...jpPlaces,
-  'jp-sizing': { variants: ab((sizing) => slot(noWin, boxes({ sizing })), ['By tier', 'tiers'], ['All the same', 'same']), window: idle },
-  'jp-padding': { variants: ab((padding) => slot(noWin, boxes({ padding, place: 'below' })), ['Apart', 0.45], ['Tucked in', -0.35]), window: idle },
-  'jp-spacing': { variants: ab((spacing) => slot(noWin, boxes({ spacing })), ['Tight', 0], ['Wide', 0.6]), window: idle },
+  'jp-sizing': { variants: ab((sizing) => slot(noWin, boxes({ sizing })), ['By tier', 'tiers'], ['All the same', 'same']), window: idle, still: true, focus: boxesFocus, spot: boxesSpot },
+  'jp-padding': { variants: ab((padding) => slot(noWin, boxes({ padding, place: 'below' })), ['Apart', 0.45], ['Tucked in', -0.35]), window: idle, still: true, spot: boxesEdgeSpot },
+  'jp-spacing': { variants: ab((spacing) => slot(noWin, boxes({ spacing })), ['Tight', 0], ['Wide', 0.6]), window: idle, still: true, focus: boxesFocus, spot: boxesSpot },
+  // Close on one box, so its digits can be read climbing.
   'jp-values': {
-    variants: ab((running) => slot(noWin, boxes({ running, growth: 1 })), ['Fixed', false], ['Running', true]),
-    window: (tl) => [R0(tl).t0, R0(tl).t0 + 2],
-    focus: boxesFocus,
+    variants: ab((running) => slot(noWin, boxes({ running, growth: 2 })), ['Fixed', false], ['Running', true]),
+    window: (tl) => [R0(tl).t0, R0(tl).t0 + 2.4],
+    focus: firstBoxFocus,
+    spot: firstBox,
   },
 
   // ---- Machine ----
@@ -246,29 +301,45 @@ export const DEMOS = {
       { label: 'Paylines', make: () => slot(oneLine, (p) => (p.effects.showLines = true)) },
       { label: 'Ways', make: () => slot(oneLine, (p) => (p.machine.payMode = 'ways')) },
       { label: 'Anywhere', make: () => slot(() => [newRound('medium', { seed: 31 })], (p) => (p.machine.payMode = 'anywhere')) },
-      { label: 'Clusters', make: () => slot(() => [newRound('medium', { seed: 41 })], (p) => (p.machine.payMode = 'clusters')) },
+      // A cluster game: a bigger grid, and a group of touching symbols.
+      {
+        label: 'Clusters',
+        make: () =>
+          slot(
+            () => [newRound('medium', { seed: 41, count: 7 })],
+            (p) => {
+              p.grid = { ...p.grid, reels: 6, rows: 5, peek: 0, curvature: 0 };
+              Object.assign(p.machine, { payMode: 'cluster', minCluster: 5 });
+            }
+          ),
+      },
     ],
     window: (tl) => stepFor(tl, 1.4),
+    still: winStill,
+    spot: winSpot,
   },
-  peek: { variants: ab((v) => slot(noWin, (p) => (p.grid.peek = v)), ['None', 0], ['Deep', 0.45]), window: landed, focus: topEdge },
+  peek: { variants: ab((v) => slot(noWin, (p) => (p.grid.peek = v)), ['None', 0], ['Deep', 0.45]), window: landed, focus: topEdge, still: true },
   curve: { variants: ab((v) => slot(noWin, (p) => {
         p.grid.curvature = v;
         Object.assign(p.spin, { speed: 8, blur: 0.1 });
-      }), ['Flat', 0], ['Curved', 1]), window: midSpin, focus: machineFocus },
-  'row-lines': { variants: ab((v) => slot(noWin, (p) => (p.machine.rowLines = v)), ['Off', false], ['On', true]), window: landed, focus: (tl, L) => fit(L, reelsRect(L, 0, 2), 1.05) },
+      }), ['Flat', 0], ['Curved', 1]), window: midSpin, focus: machineFocus, still: true },
+  'row-lines': { variants: ab((v) => slot(noWin, (p) => (p.machine.rowLines = v)), ['Off', false], ['On', true]), window: landed, focus: (tl, L) => fit(L, reelsRect(L, 0, 2), 1.05), still: true },
   'machine-zoom': {
     variants: ab((z) => slot(noWin, (p) => {
         pots(p).pots.size = 1.6;
         p.machine.zoom = z;
       }), ['100%', 1], ['Zoom 75%', 0.75]),
     window: (tl) => [R0(tl).t0 - 0.05, R0(tl).t0 + 0.9],
+    still: true,
   },
   title: {
     variants: ab((on) => slot(noWin, (p) => (p.machine.showTitle = on)), ['Title on', true], ['Off', false]),
     window: (tl) => [R0(tl).t0 - 0.05, R0(tl).t0 + 0.9],
+    still: true,
+    spot: logoSpot,
   },
   marquee: { variants: ab((v) => slot(smallWin, (p) => (p.machine.marquee = v)), ['Off', false], ['On', true]), window: (tl) => stepFor(tl, 1.8), focus: machineFocus },
-  hud: { variants: ab((v) => slot(smallWin, (p) => (p.machine.showHud = v)), ['Off', false], ['On', true]), window: (tl) => stepFor(tl, 2), focus: lowerHalf },
+  hud: { variants: ab((v) => slot(smallWin, (p) => (p.machine.showHud = v)), ['Off', false], ['On', true]), window: (tl) => stepFor(tl, 2), focus: lowerHalf, still: (tl) => winStill(tl) + 0.6, spot: hudSpot },
   holdspin: {
     make: () => {
       const p = quiet(holdSpinProject());
@@ -290,14 +361,15 @@ export const DEMOS = {
       return [R.pres.boost.start - 0.2, bs.length ? Math.max(...bs.map((b) => b.fire + b.travel)) + 0.4 : R.pres.boost.end + 0.5];
     },
   },
-  'pots-band': { variants: ab((v) => slot(noWin, (p) => Object.assign(pots(p).pots, { band: v })), ['Less room', 0.18], ['More room', 0.42]), window: (tl) => [R0(tl).t0, R0(tl).t0 + 1.2] },
-  'pots-size': { variants: ab((v) => slot(noWin, (p) => Object.assign(pots(p).pots, { size: v })), ['Small', 0.65], ['Big', 1.5]), window: (tl) => [R0(tl).t0, R0(tl).t0 + 1.2], focus: potsAndReels },
-  'pots-spacing': { variants: ab((v) => slot(noWin, (p) => Object.assign(pots(p).pots, { spacing: v, size: 0.8 })), ['Close', 0.7], ['Wide', 2]), window: (tl) => [R0(tl).t0, R0(tl).t0 + 1.2], focus: potsAndReels },
-  'pots-overlap': { variants: ab((v) => slot(noWin, (p) => Object.assign(pots(p).pots, { overlap: v })), ['Low', 0.05], ['High', 0.7]), window: (tl) => [R0(tl).t0, R0(tl).t0 + 1.2], focus: potsAndReels },
+  'pots-band': { variants: ab((v) => slot(noWin, (p) => Object.assign(pots(p).pots, { band: v })), ['Less room', 0.18], ['More room', 0.42]), window: (tl) => [R0(tl).t0, R0(tl).t0 + 1.2], still: true, spot: potsSpot },
+  'pots-size': { variants: ab((v) => slot(noWin, (p) => Object.assign(pots(p).pots, { size: v })), ['Small', 0.65], ['Big', 1.5]), window: (tl) => [R0(tl).t0, R0(tl).t0 + 1.2], focus: potsAndReels, still: true, spot: potsSpot },
+  'pots-spacing': { variants: ab((v) => slot(noWin, (p) => Object.assign(pots(p).pots, { spacing: v, size: 0.8 })), ['Close', 0.7], ['Wide', 2]), window: (tl) => [R0(tl).t0, R0(tl).t0 + 1.2], focus: potsAndReels, still: true, spot: potsSpot },
+  'pots-overlap': { variants: ab((v) => slot(noWin, (p) => Object.assign(pots(p).pots, { overlap: v })), ['Low', 0.05], ['High', 0.7]), window: (tl) => [R0(tl).t0, R0(tl).t0 + 1.2], focus: potsAndReels, still: true },
   plates: {
     variants: ab((v) => slot(winRound, (p) => (collect(p).pots.plates = v)), ['Off', false], ['On', true]),
     window: beamWin,
     focus: potsFocus,
+    spot: potsSpot,
   },
   'pots-aim': {
     variants: ab((v) => slot(winRound, (p) => (collect(p).pots.aim = v)), ['Nearest', 'nearest'], ['Take turns', 'turns']),
@@ -325,13 +397,13 @@ export const DEMOS = {
   'spin-tease': { make: () => slot(() => [newRound('none', { seed: 21 })], spinType('tease')), window: spinWin },
   'spin-cascade': { make: () => slot(noWin, spinType('cascade')), window: spinWin },
   'spin-cells': { make: () => slot(noWin, spinType('cells')), window: spinWin },
-  'start-windup': { make: () => slot(noWin, (p) => Object.assign(p.spin, { startStyle: 'windup', windup: 0.5, startDuration: 0.5 })), window: startWin, focus: firstReelsFocus, slow: 0.4 },
-  'start-ease': { make: () => slot(noWin, (p) => Object.assign(p.spin, { startStyle: 'ease', startDuration: 0.5 })), window: startWin, focus: firstReelsFocus, slow: 0.4 },
-  'start-instant': { make: () => slot(noWin, (p) => Object.assign(p.spin, { startStyle: 'instant' })), window: startWin, focus: firstReelsFocus, slow: 0.4 },
-  'end-bounce': { make: () => slot(noWin, (p) => Object.assign(p.spin, { endStyle: 'bounce', overshoot: 0.35 })), window: landWin, focus: lastReelFocus, slow: 0.45 },
-  'end-elastic': { make: () => slot(noWin, (p) => Object.assign(p.spin, { endStyle: 'elastic', overshoot: 0.35 })), window: landWin, focus: lastReelFocus, slow: 0.45 },
-  'end-hard': { make: () => slot(noWin, (p) => Object.assign(p.spin, { endStyle: 'hard' })), window: landWin, focus: lastReelFocus, slow: 0.45 },
-  'end-soft': { make: () => slot(noWin, (p) => Object.assign(p.spin, { endStyle: 'soft' })), window: landWin, focus: lastReelFocus, slow: 0.45 },
+  'start-windup': { make: () => slot(noWin, (p) => Object.assign(p.spin, { startStyle: 'windup', windup: 0.5, startDuration: 0.5 })), window: startWin, focus: firstReelsFocus, spot: firstReelsSpot, slow: 0.4 },
+  'start-ease': { make: () => slot(noWin, (p) => Object.assign(p.spin, { startStyle: 'ease', startDuration: 0.5 })), window: startWin, focus: firstReelsFocus, spot: firstReelsSpot, slow: 0.4 },
+  'start-instant': { make: () => slot(noWin, (p) => Object.assign(p.spin, { startStyle: 'instant' })), window: startWin, focus: firstReelsFocus, spot: firstReelsSpot, slow: 0.4 },
+  'end-bounce': { make: () => slot(noWin, (p) => Object.assign(p.spin, { endStyle: 'bounce', overshoot: 0.35 })), window: landWin, focus: lastReelFocus, spot: lastReelSpot, slow: 0.45 },
+  'end-elastic': { make: () => slot(noWin, (p) => Object.assign(p.spin, { endStyle: 'elastic', overshoot: 0.35 })), window: landWin, focus: lastReelFocus, spot: lastReelSpot, slow: 0.45 },
+  'end-hard': { make: () => slot(noWin, (p) => Object.assign(p.spin, { endStyle: 'hard' })), window: landWin, focus: lastReelFocus, spot: lastReelSpot, slow: 0.45 },
+  'end-soft': { make: () => slot(noWin, (p) => Object.assign(p.spin, { endStyle: 'soft' })), window: landWin, focus: lastReelFocus, spot: lastReelSpot, slow: 0.45 },
   blur: { variants: ab((v) => slot(noWin, (p) => Object.assign(p.spin, { blur: v, speed: 30 })), ['Off', 0], ['On', 1]), window: midSpin, focus: (tl, L) => fit(L, reelsRect(L, 1, 3), 1.05) },
   speed: { variants: ab((v) => slot(noWin, (p) => (p.spin.speed = v)), ['Slow', 9], ['Fast', 42]), window: spinWin },
   'spin-length': { variants: ab((v) => slot(noWin, (p) => (p.spin.midDuration = v)), ['Short', 0.2], ['Long', 2]), window: spinWin },
@@ -345,8 +417,8 @@ export const DEMOS = {
     ].map(([label, v]) => ({ label, make: () => slot(noWin, (p) => Object.assign(p.spin, { stopOrder: v, stopStagger: 0.3 })) })),
     window: stopsWin,
   },
-  'antic-time': { variants: ab((v) => slot(teaseRound, (p) => Object.assign(p.spin, { anticipation: v, zoomOn: false })), ['0.5 s', 0.5], ['2.5 s', 2.5]), window: teaseWin, focus: tease },
-  'antic-crawl': { variants: ab((v) => slot(teaseRound, (p) => Object.assign(p.spin, { anticipationSpeed: v, zoomOn: false })), ['Slow', 3], ['Fast', 14]), window: teaseWin, focus: tease },
+  'antic-time': { variants: ab((v) => slot(teaseRound, (p) => Object.assign(p.spin, { anticipation: v, zoomOn: false })), ['0.5 s', 0.5], ['2.5 s', 2.5]), window: teaseWin, focus: tease, spot: teaseSpot },
+  'antic-crawl': { variants: ab((v) => slot(teaseRound, (p) => Object.assign(p.spin, { anticipationSpeed: v, zoomOn: false })), ['Slow', 3], ['Fast', 14]), window: teaseWin, focus: tease, spot: teaseSpot },
   zoom: { variants: ab((v) => slot(teaseRound, (p) => Object.assign(p.spin, { zoomOn: v, zoom: 0.3 })), ['Off', false], ['On', true]), window: teaseWin },
   'zoom-amount': { variants: ab((v) => slot(teaseRound, (p) => Object.assign(p.spin, { zoomOn: true, zoom: v })), ['10%', 0.1], ['50%', 0.5]), window: teaseWin },
   'scatter-lit': {
@@ -376,10 +448,10 @@ export const DEMOS = {
   'merge-arc': { make: () => slot(winRound, (p) => Object.assign(p.winfx, { style: 'merge', mergePath: 'arc' })), window: stepWin },
   'merge-back': { make: () => slot(winRound, (p) => Object.assign(p.winfx, { style: 'merge', mergePath: 'back' })), window: stepWin },
   'merge-seq': { variants: ab((v) => slot(winRound, (p) => Object.assign(p.winfx, { style: 'merge', mergeSeq: v })), ['Together', 0], ['One by one', 1]), window: (tl) => stepFor(tl, 3) },
-  lines: { variants: ab((v) => slot(oneLine, (p) => (p.effects.showLines = v)), ['Off', false], ['On', true]), window: (tl) => stepFor(tl, 1.6) },
-  'line-glow': { variants: ab((v) => slot(oneLine, (p) => Object.assign(p.effects, { showLines: true, lineGlow: v })), ['Low', 0.15], ['High', 1.5]), window: (tl) => stepFor(tl, 1.6) },
+  lines: { variants: ab((v) => slot(oneLine, (p) => (p.effects.showLines = v)), ['Off', false], ['On', true]), window: (tl) => stepFor(tl, 1.6), still: winStill, focus: machineFocus },
+  'line-glow': { variants: ab((v) => slot(oneLine, (p) => Object.assign(p.effects, { showLines: true, lineGlow: v })), ['Low', 0.15], ['High', 1.5]), window: (tl) => stepFor(tl, 1.6), still: winStill, focus: machineFocus },
   'pop-size': { variants: ab((v) => slot(oneLine, (p) => (p.effects.popScale = v)), ['Low', 0.03], ['High', 0.36]), window: (tl) => stepFor(tl, 1.6), focus: machineFocus },
-  dim: { variants: ab((v) => slot(oneLine, (p) => (p.effects.dim = v)), ['Off', 0], ['On', 0.85]), window: (tl) => stepFor(tl, 1.6), focus: machineFocus },
+  dim: { variants: ab((v) => slot(oneLine, (p) => (p.effects.dim = v)), ['Off', 0], ['On', 0.85]), window: (tl) => stepFor(tl, 1.6), focus: machineFocus, still: winStill },
   particles: { make: () => slot(oneLine, (p) => (p.effects.coins = 1)), window: (tl) => stepFor(tl, 2.2) },
 
   // ---- Effects ----
@@ -406,12 +478,12 @@ export const DEMOS = {
   'wheel-random': { make: () => wheel((p) => (p.wheel.landing = 'random')), window: wheelLand, focus: pointerFocus },
   'wheel-tease': { make: () => wheel((p) => (p.wheel.landing = 'tease')), window: wheelLand, focus: pointerFocus },
   'wheel-slip': { make: () => wheel((p) => (p.wheel.landing = 'slip')), window: (tl) => { const w = R0(tl).pres.wheel; return [w.spinEnd - 2.4, w.prizeStart - 0.02]; }, focus: pointerFocus },
-  'pointer-top': { make: () => wheel((p) => Object.assign(p.wheel, { pointer: 'top', landing: 'center' })), window: wheelLand },
-  'pointer-bottom': { make: () => wheel((p) => Object.assign(p.wheel, { pointer: 'bottom', landing: 'center' })), window: wheelLand },
-  'frame-full': { make: () => wheel((p) => (p.wheel.landing = 'center')), window: wheelLand },
-  'frame-half': { make: () => wheel((p) => Object.assign(p.wheel, { size: 1.55, x: 0.5, y: 1.02, landing: 'center' })), window: wheelLand },
-  'frame-close': { make: () => wheel((p) => Object.assign(p.wheel, { size: 2.3, x: 0.5, y: 1.42, landing: 'center' })), window: wheelLand },
-  'frame-rise': { make: () => wheel((p) => Object.assign(p.wheel, { size: 1.55, x: 0.5, y: -0.02, pointer: 'bottom', landing: 'center' })), window: wheelLand },
+  'pointer-top': { make: () => wheel((p) => Object.assign(p.wheel, { pointer: 'top', landing: 'center' })), window: wheelLand, still: true },
+  'pointer-bottom': { make: () => wheel((p) => Object.assign(p.wheel, { pointer: 'bottom', landing: 'center' })), window: wheelLand, still: true },
+  'frame-full': { make: () => wheel((p) => (p.wheel.landing = 'center')), window: wheelLand, still: true },
+  'frame-half': { make: () => wheel((p) => Object.assign(p.wheel, { size: 1.55, x: 0.5, y: 1.02, landing: 'center' })), window: wheelLand, still: true },
+  'frame-close': { make: () => wheel((p) => Object.assign(p.wheel, { size: 2.3, x: 0.5, y: 1.42, landing: 'center' })), window: wheelLand, still: true },
+  'frame-rise': { make: () => wheel((p) => Object.assign(p.wheel, { size: 1.55, x: 0.5, y: -0.02, pointer: 'bottom', landing: 'center' })), window: wheelLand, still: true },
   'wheel-push': {
     variants: ab((v) => wheel((p) => Object.assign(p.wheel, { push: v, landing: 'tease' })), ['Off', 0], ['On', 0.45]),
     window: (tl) => {
@@ -426,7 +498,7 @@ export const DEMOS = {
       return [w.agains[0].at - 1.4, w.prizeStart + 0.4];
     },
   },
-  'label-height': { variants: ab((v) => wheel((p) => Object.assign(p.wheel, { labelHeight: v, landing: 'center' })), ['Near the hub', 0.38], ['Further out', 0.72]), window: wheelSlow, focus: wheelFocus },
+  'label-height': { variants: ab((v) => wheel((p) => Object.assign(p.wheel, { labelHeight: v, landing: 'center' })), ['Near the hub', 0.38], ['Further out', 0.72]), window: wheelSlow, focus: wheelFocus, still: true },
   // The icons alone, so they show wherever they sit.
   'icon-height': {
     variants: ab(
@@ -440,6 +512,7 @@ export const DEMOS = {
     ),
     window: wheelSlow,
     focus: wheelFocus,
+    still: true,
   },
   'seg-icons': {
     variants: ab(
@@ -454,6 +527,7 @@ export const DEMOS = {
     ),
     window: wheelSlow,
     focus: wheelFocus,
+    still: true,
   },
 
   // ---- Round features ----
@@ -550,7 +624,10 @@ export function demoPlan(id) {
     const L = computeLayout(project);
     const [a, b] = (v.window || d.window)(tl, L);
     const focusOf = v.focus || d.focus;
-    return { label: v.label, project, tl, L, a, len: Math.max(0.5, b - a), rect: focusOf ? focusOf(tl, L) : null };
+    // A still: one moment (its own, or the middle of the stretch).
+    const still = v.still ?? d.still;
+    const at = typeof still === 'function' ? still(tl, L) : still ? (a + b) / 2 : null;
+    return { label: v.label, project, tl, L, a: at ?? a, len: at != null ? 0 : Math.max(0.5, b - a), rect: focusOf ? focusOf(tl, L) : null, spotOf: v.spot || d.spot };
   });
   const rects = scenes.map((s) => s.rect).filter(Boolean);
   let focus = null;
@@ -570,13 +647,21 @@ export function demoPlan(id) {
       L = computeLayout(project);
       view = { x: Math.round(focus.x * z), y: Math.round(focus.y * z) };
     }
-    return { label: s.label, project, tl, L, a: s.a, b: s.a + s.len, speed: Math.max(d.slow ?? 1, s.len / DEMO_LOOP), view, focus };
+    // The spot in the frame's own pixels (after the zoom).
+    const r = s.spotOf ? s.spotOf(tl, L) : null;
+    const spot = r ? { x: r.x - (view?.x || 0), y: r.y - (view?.y || 0), w: r.w, h: r.h } : null;
+    const still = s.len === 0;
+    return { label: s.label, project, tl, L, a: s.a, b: still ? s.a : s.a + s.len, speed: still ? 1 : Math.max(d.slow ?? 1, s.len / DEMO_LOOP), view, focus, spot, still };
   });
 }
 
 // The demo's whole loop: each scene's stretch played in turn. Returns the
 // scene and its time at e seconds into the loop.
 export function demoAt(plan, e) {
+  if (plan[0]?.still) {
+    const i = Math.floor(Math.max(0, e) / STILL_HOLD) % plan.length;
+    return { i, t: plan[i].a };
+  }
   const lens = plan.map((s) => (s.b - s.a) / s.speed);
   const total = lens.reduce((x, y) => x + y, 0);
   let u = ((e % total) + total) % total;

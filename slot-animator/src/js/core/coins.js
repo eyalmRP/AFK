@@ -101,10 +101,18 @@ export function coinTypeIndex(project, id) {
   return i < 0 ? 0 : i;
 }
 
-// "$2.50", "$10", "$1,250": whole amounts drop their decimals.
+// How many decimals every amount shows (Machine > Money > Decimals). "auto"
+// follows how the bet was typed: 1 gives whole numbers, 1.00 or 0.25 two
+// decimals (even for a whole amount: 100.00).
+export function moneyDecimals(project) {
+  const m = project.machine || {};
+  if (m.decimals === 'auto' || m.decimals == null) return /\./.test(String(m.betText ?? m.bet ?? '')) ? 2 : 0;
+  return Math.max(0, m.decimals | 0);
+}
+
+// "$2.50", "$10.00", "1,250": as many decimals as the money shows.
 export function formatPrize(amount, currency = '', decimals = 2) {
-  const whole = Math.abs(amount - Math.round(amount)) < 1e-6;
-  const s = Math.max(0, amount).toFixed(whole ? 0 : Math.max(0, decimals | 0));
+  const s = Math.max(0, amount).toFixed(Math.max(0, decimals | 0));
   const [i, f] = s.split('.');
   return currency + i.replace(/\B(?=(\d{3})+(?!\d))/g, ',') + (f ? `.${f}` : '');
 }

@@ -4,7 +4,7 @@
 
 import { evalKeys, evalVelocity } from '../core/keys.js';
 import { roundIndexAt, holdAlpha } from '../core/timeline.js';
-import { isCoinSym, formatPrize, COIN_GLOW } from '../core/coins.js';
+import { isCoinSym, formatPrize, COIN_GLOW, moneyDecimals } from '../core/coins.js';
 import { lineColor } from '../core/paylines.js';
 import { hash01 } from '../core/rng.js';
 import { sparkle, roundRect } from './paint.js';
@@ -155,7 +155,7 @@ function drawValueLabel(ctx, scene, sym, value, x, y, s = 1, alpha = 1) {
   }
   // A jackpot coin shows its name only; its box shows the value.
   if (tl.jackpots?.coinSyms.includes(sym)) return;
-  const text = formatPrize(value, project.machine.currency || '', project.machine.decimals | 0);
+  const text = formatPrize(value, project.machine.currency || '', moneyDecimals(project));
   const img = cachedTitle(res, 'coinval', text, Math.round(L.cellH * 0.2), 'silver');
   const dy = res.coinLabelled?.[sym - tl.lay.coinBase] ? -L.cellH * 0.1 : 0;
   drawCentered(ctx, img, x, y + dy * s, s * Math.min(1, (L.cellW * 0.64) / img.width), alpha);
@@ -649,7 +649,7 @@ function drawHud(ctx, scene, R, t) {
   if (!h) return;
   drawHudPanel(ctx, scene, t);
   const cur = project.machine.currency || '';
-  const dec = project.machine.decimals | 0;
+  const dec = moneyDecimals(project);
   const v = evalKeys(tl.meterKeys, t);
   const rate = evalVelocity(tl.meterKeys, t);
   if (v > 0.0001 || (R && R.win.amount > 0 && t > R.presentStart)) {
@@ -717,7 +717,7 @@ function drawHudPanel(ctx, scene, t = null, panelOnly = false) {
   ctx.font = `${Math.round(label * 0.85)}px ${res.font}`;
   ctx.fillStyle = 'rgba(255,255,255,0.75)';
   const cur = project.machine.currency || '';
-  const dec = project.machine.decimals | 0;
+  const dec = moneyDecimals(project);
   if (holdNow) {
     ctx.fillStyle = res.theme.accent;
     const n = tl.hold.locks.filter((l) => t >= l.from && t < l.to).length;
@@ -1076,7 +1076,7 @@ function drawSteps(ctx, scene, R, t) {
         cy = g.y + L.cellH * ((Number(winFxConfig(project).bigScale) || 2.2) * 0.5 + 0.25);
       }
       const cur = project.machine.currency || '';
-      const txt = `+${cur}${Number(st.amount).toFixed(project.machine.decimals | 0)}`;
+      const txt = `+${cur}${Number(st.amount).toFixed(moneyDecimals(project))}`;
       const img = cachedTitle(res, 'float', txt, Math.round(res.titlePx * (st.tumble ? 0.4 : 0.5)), 'gold');
       const s2 = 0.4 + 0.6 * ease.outBack(clamp01((t - aStart) / 0.45));
       drawCentered(ctx, img, cx, cy - k * L.cellH * 0.5, s2, a);
@@ -1133,7 +1133,7 @@ function drawMultPhase(ctx, scene, R, t) {
   // Plaque collecting the multipliers, then the multiplied win.
   const applied = t >= mp.applyAt;
   const cur = project.machine.currency || '';
-  const dec = project.machine.decimals | 0;
+  const dec = moneyDecimals(project);
   const pw = L.cellW * 2.6;
   const ph = L.cellH * 0.7;
   ctx.save();
@@ -1297,7 +1297,7 @@ function drawCollector(ctx, scene, R, t) {
   const target = L.cellCenter(cl.c, cl.r);
   const a = Math.min(clamp01((t - cl.start) / 0.25), clamp01((cl.end + 0.4 - t) / 0.4));
   const cur = project.machine.currency || '';
-  const dec = project.machine.decimals | 0;
+  const dec = moneyDecimals(project);
   let got = 0;
   let bump = 0;
   for (const it of cl.items) {
@@ -1418,7 +1418,7 @@ function drawPotsOver(ctx, scene, t) {
     ctx.restore();
     ctx.save();
     ctx.globalAlpha = a;
-    drawOdometer(ctx, res, v, pl.x, pl.y, Math.round(pl.h * 0.56), { currency: project.machine.currency || '', decimals: project.machine.decimals | 0, rate: evalVelocity(tl.pots.valueKeys[pt.i], t), scale: k });
+    drawOdometer(ctx, res, v, pl.x, pl.y, Math.round(pl.h * 0.56), { currency: project.machine.currency || '', decimals: moneyDecimals(project), rate: evalVelocity(tl.pots.valueKeys[pt.i], t), scale: k });
     ctx.restore();
   }
 }
@@ -1433,7 +1433,7 @@ function drawJackpots(ctx, scene, t) {
   if (!L.jackpots || !tl.jackpots) return;
   const cfg = jackpotsConfig(project);
   const cur = project.machine.currency || '';
-  const dec = project.machine.decimals | 0;
+  const dec = moneyDecimals(project);
   L.jackpots.forEach((b, i) => {
     const art = res.jackpots[i];
     const tier = cfg.tiers[i];
@@ -1495,7 +1495,7 @@ function drawJackpotFly(ctx, scene, R, t) {
   const a = 1 - clamp01((t - j.fly[1]) / 0.25);
   const col = res.jackpots[i]?.color || res.theme.accent;
   drawGlow(ctx, res, col, x, y, L.cellW * 1.4, 0.8 * a);
-  const img = cachedTitle(res, 'jpfly', formatPrize(j.amount, project.machine.currency || '', project.machine.decimals | 0), Math.round(L.cellH * 0.26), 'gold');
+  const img = cachedTitle(res, 'jpfly', formatPrize(j.amount, project.machine.currency || '', moneyDecimals(project)), Math.round(L.cellH * 0.26), 'gold');
   drawCentered(ctx, img, x, y, Math.min(1, (L.cellW * 1.6) / img.width) * (1.1 - 0.2 * k), a);
 }
 
@@ -1716,7 +1716,7 @@ function drawBigWin(ctx, scene, R, t) {
   const px = Math.round(res.titlePx * 0.72);
   ctx.save();
   ctx.globalAlpha = a;
-  drawOdometer(ctx, res, v, cx, cy + L.H * 0.13, px, { currency: project.machine.currency || '', decimals: project.machine.decimals | 0, rate, scale: cIn * slam });
+  drawOdometer(ctx, res, v, cx, cy + L.H * 0.13, px, { currency: project.machine.currency || '', decimals: moneyDecimals(project), rate, scale: cIn * slam });
   ctx.restore();
 }
 
@@ -1755,7 +1755,7 @@ function drawBanner(ctx, scene, R, t) {
     const v = evalKeys(tl.meterKeys, t);
     ctx.save();
     ctx.globalAlpha = a;
-    drawOdometer(ctx, res, v, cx, cy + L.H * 0.16, Math.round(res.titlePx * 0.6), { currency: project.machine.currency || '', decimals: project.machine.decimals | 0, rate: evalVelocity(tl.meterKeys, t) });
+    drawOdometer(ctx, res, v, cx, cy + L.H * 0.16, Math.round(res.titlePx * 0.6), { currency: project.machine.currency || '', decimals: moneyDecimals(project), rate: evalVelocity(tl.meterKeys, t) });
     ctx.restore();
   }
   drawSparkleField(ctx, scene, t, { n: 22, start: b.start, x: cx, y: cy, w: L.W * 0.6, h: L.H * 0.4, size: L.cellW * 0.15, alpha: a, salt: 400 });
@@ -1902,7 +1902,7 @@ function drawWheelPlaque(ctx, scene, pl, k, a, label, value, rate = 0) {
   if (value == null) return;
   ctx.save();
   ctx.globalAlpha = a;
-  drawOdometer(ctx, res, value, pl.x, pl.y + ph * 0.2 * k, Math.round(pl.R * 0.14), { currency: project.machine.currency || '', decimals: project.machine.decimals | 0, rate, scale: k });
+  drawOdometer(ctx, res, value, pl.x, pl.y + ph * 0.2 * k, Math.round(pl.R * 0.14), { currency: project.machine.currency || '', decimals: moneyDecimals(project), rate, scale: k });
   ctx.restore();
 }
 
@@ -2023,7 +2023,7 @@ function drawHoldFx(ctx, scene, R, t) {
       const u = ease.inOut(clamp01((t - it.at) / (it.arrive - it.at)));
       const x = m.x + (L.cx - m.x) * u;
       const y = m.y + (ty - m.y) * u - Math.sin(u * Math.PI) * L.cellH * 0.6;
-      const text = formatPrize(it.value, scene.project.machine.currency || '', scene.project.machine.decimals | 0);
+      const text = formatPrize(it.value, scene.project.machine.currency || '', moneyDecimals(scene.project));
       const img = cachedTitle(res, 'coinval', text, Math.round(L.cellH * 0.2), 'silver');
       drawGlow(ctx, res, res.theme.accent, x, y, L.cellW * 0.9, 0.6 * hA);
       drawCentered(ctx, img, x, y, (1.1 - 0.35 * u) * Math.min(1, (L.cellW * 0.8) / img.width), hA);
@@ -2053,7 +2053,7 @@ function drawHoldBar(ctx, scene, R, t) {
     const v = evalKeys(tl.hold.collectKeys, t);
     ctx.save();
     ctx.globalAlpha = a;
-    drawOdometer(ctx, res, v, L.cx, y + ph * 0.04, Math.round(ph * 0.52), { currency: project.machine.currency || '', decimals: project.machine.decimals | 0, rate: evalVelocity(tl.hold.collectKeys, t) });
+    drawOdometer(ctx, res, v, L.cx, y + ph * 0.04, Math.round(ph * 0.52), { currency: project.machine.currency || '', decimals: moneyDecimals(project), rate: evalVelocity(tl.hold.collectKeys, t) });
     ctx.restore();
     return;
   }
@@ -2113,7 +2113,7 @@ function drawGrand(ctx, scene, R, t) {
   const v = evalKeys(g.keys, t);
   ctx.save();
   ctx.globalAlpha = a;
-  drawOdometer(ctx, res, v, cx, cy + L.H * 0.14, Math.round(res.titlePx * 0.66), { currency: project.machine.currency || '', decimals: project.machine.decimals | 0, rate: evalVelocity(g.keys, t), scale: ease.outBack(clamp01((t - g.start - 0.3) / 0.5)) });
+  drawOdometer(ctx, res, v, cx, cy + L.H * 0.14, Math.round(res.titlePx * 0.66), { currency: project.machine.currency || '', decimals: moneyDecimals(project), rate: evalVelocity(g.keys, t), scale: ease.outBack(clamp01((t - g.start - 0.3) / 0.5)) });
   ctx.restore();
 }
 
@@ -2145,7 +2145,7 @@ function drawJackpotShows(ctx, scene, R, t) {
     drawShimmer(ctx, res, title, cx, cy - L.H * 0.06, s * fit, (((t - sh.start) % 1.5) / 1.5) * 1.6 - 0.3, a);
     ctx.save();
     ctx.globalAlpha = a;
-    drawOdometer(ctx, res, evalKeys(sh.keys, t), cx, cy + L.H * 0.14, Math.round(res.titlePx * 0.66), { currency: project.machine.currency || '', decimals: project.machine.decimals | 0, rate: evalVelocity(sh.keys, t), scale: ease.outBack(clamp01((t - sh.start - 0.3) / 0.5)) });
+    drawOdometer(ctx, res, evalKeys(sh.keys, t), cx, cy + L.H * 0.14, Math.round(res.titlePx * 0.66), { currency: project.machine.currency || '', decimals: moneyDecimals(project), rate: evalVelocity(sh.keys, t), scale: ease.outBack(clamp01((t - sh.start - 0.3) / 0.5)) });
     ctx.restore();
   }
 }

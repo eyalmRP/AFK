@@ -148,8 +148,24 @@ the result as an editable **After Effects project**.
 - Build-up shake (Effects): every reel or cell that brings a winner lands
   with a growing bump and a climbing note. Row lines (Machine › Reels) put
   thin lines between the rows.
-- Fonts: upload TTF or OTF fonts (Asset Bank › Fonts) for the titles,
-  counters and wheel labels; they ship in the After Effects package.
+- Fonts: the font picker (Effects › Titles and font, Wheel › Look) lists
+  about a hundred Google Fonts by look (bold, tech and retro, classic,
+  script, fun), each name written in its own font and loaded as it scrolls
+  into view, with a search; your uploaded fonts (TTF or OTF, Asset Bank ›
+  Fonts or the picker's Upload button) come first and ship in the After
+  Effects package. `core/fonts.js` holds the catalogue and the PostScript
+  names After Effects asks for.
+- Money (Machine › Money): no currency by default; pick one or type your
+  own (up to four characters, "CHF "). Decimals: "As the bet" (the bet as
+  typed decides: 1 gives whole numbers, 1.00 or 0.50 two decimals, shown
+  even on a whole amount: 100.00), or always none or two. It applies to
+  every amount (meter, big wins, coins, pots, jackpot boxes, After Effects
+  counters); the jackpot boxes section has the same control.
+  `moneyDecimals` in `core/coins.js`.
+- Stop styles: Bounce hits the stop still moving and bounces back off it
+  twice, like a ball; Elastic runs past it and springs back and forth,
+  smaller each time. Overshoot sets the height of either. Staggered start
+  kicks the reels off a third of a second apart.
 - Sound: every cue (reel stops, anticipation, pops, count-up ticks, stings,
   coins, wheel pegs) is synthesised in sync with the animation; any cue can
   be replaced with your own file. The preview starts muted (the Sound
@@ -166,9 +182,17 @@ the result as an editable **After Effects project**.
     small looping demo rendered by the real engine (spin types, start and
     stop styles, anticipation and zoom, winning symbol styles and paths,
     build-up shake, sticky and expanding wilds, tumbles, wheel landings,
-    framings and spin again). Options that do not apply to the game type
-    or spin style stay in view, greyed out and locked, saying why. Section
-    headers have icons. Search also reads the tooltip texts.
+    framings and spin again). Layouts and looks (jackpot box places and
+    sizes, pots, title, pay modes, paylines, wheel framings) are stills,
+    each variant in turn. A demo can zoom in (close on one jackpot box for
+    running values) and light its subject while the rest darkens (the
+    boxes, the landing reel, the winning cells). Options that do not apply
+    to the game type or spin style stay in view, greyed out and locked,
+    saying why. Section headers have icons. Search also reads the tooltip
+    texts.
+  - Rounds: drag a round up or down in Spin rounds to reorder it (its
+    number turns into a grip on hover); the arrows still work. Reel Studio
+    opens paused on the first frame.
   - Presets (top bar, or P): a gallery of 19 ready-made animations with a
     frame of each: classic, fruit 3×3, 243 ways, tumbles, clusters 7×7,
     per-cell spins, mobile portrait, free spins with sticky wilds and a

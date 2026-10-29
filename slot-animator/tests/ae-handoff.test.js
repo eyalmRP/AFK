@@ -94,8 +94,8 @@ test('fonts: one Fonts comp; every text layer takes its font from it and keeps i
   const meter = texts.find(([, l]) => l.name === 'Win Counter (text)')[1];
   const e = meter.property('ADBE Text Properties').property('ADBE Text Document').expression;
   const text = { sourceText: { style: { setFont: (font) => ({ setText: (words) => ({ font, words }) }) } } };
-  assert.deepEqual(evalExpr(e, { ctl: { Amount: 1234.5, font: 'Foo-Bold', text } }), { font: 'Foo-Bold', words: '$1,234.50' });
-  assert.equal(evalExpr(e, { ctl: { Amount: 1234.5, text: { sourceText: {} } } }), '$1,234.50');
+  assert.deepEqual(evalExpr(e, { ctl: { Amount: 1234.5, font: 'Foo-Bold', text } }), { font: 'Foo-Bold', words: '1,234.50' });
+  assert.equal(evalExpr(e, { ctl: { Amount: 1234.5, text: { sourceText: {} } } }), '1,234.50');
   // Painted words (titles, the logo, jackpot names) come with an editable
   // text twin in the Main Font, switched off.
   for (const c of log.comps.filter((x) => x.name.startsWith('Title '))) {

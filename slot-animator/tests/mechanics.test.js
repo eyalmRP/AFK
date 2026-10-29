@@ -230,7 +230,7 @@ test('collector: cash values fly into the collector one by one, on top of the wi
   const tx = comp.layers.list.find((l) => l.name === 'Collected');
   const rel = (t) => t - R.presentStart;
   assert.equal(ev(textExpr(tx), rel(cl.items[0].arrive) - 0.01), '');
-  assert.equal(ev(textExpr(tx), rel(cl.items[2].arrive) + 0.01), '$17');
+  assert.equal(ev(textExpr(tx), rel(cl.items[2].arrive) + 0.01), '17.00');
 });
 
 test('the last round of tumbles keeps its symbols on screen through the outro', () => {

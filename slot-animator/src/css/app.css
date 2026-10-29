@@ -1520,6 +1520,34 @@ body.dragging * {
   box-shadow: inset 0 0 0 1px var(--line-2);
 }
 
+/* Pointing at a round, its number turns into a grip: drag it to reorder. */
+.round:hover .round-n {
+  font-size: 0;
+}
+.round:hover .round-n::before {
+  content: '⠿';
+  font-size: 15px;
+  line-height: 1;
+  color: var(--muted);
+}
+
+/* Dragging a round: it follows the pointer, the others slide aside. */
+.rounds.sorting .round {
+  transition: transform 0.14s ease;
+}
+.rounds.sorting .round.dragging {
+  transition: none;
+  z-index: 3;
+  background: var(--surface-3);
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.45), inset 0 0 0 1px var(--gold);
+  cursor: grabbing;
+}
+.rounds.sorting,
+.rounds.sorting .round-main {
+  cursor: grabbing;
+  user-select: none;
+}
+
 .round-main {
   width: 100%;
   display: grid;
@@ -3478,4 +3506,127 @@ section.group.na > h3 .group-toggle span:first-of-type {
   .tip-frame {
     animation: none;
   }
+}
+
+/* ---- font picker: the font's name in its own face; a searchable list ---- */
+.font-pick {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 7px 10px;
+  border: 1px solid var(--line-2);
+  border-radius: 8px;
+  background: var(--surface-2);
+  color: var(--text);
+  cursor: pointer;
+  min-width: 0;
+}
+.font-pick:hover {
+  border-color: var(--muted);
+}
+.font-pick-name {
+  font-size: 19px;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.font-pick svg {
+  width: 14px;
+  height: 14px;
+  flex: none;
+  opacity: 0.7;
+}
+.font-pop {
+  position: fixed;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  background: var(--surface-2);
+  border: 1px solid var(--line-2);
+  border-radius: 12px;
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.55);
+}
+.font-search {
+  width: 100%;
+  padding: 7px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--line-2);
+  background: var(--surface);
+  color: var(--text);
+  font: 13.5px var(--f-ui);
+}
+.font-cats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.font-cat {
+  padding: 3px 9px;
+  border-radius: 999px;
+  border: 1px solid var(--line-2);
+  background: transparent;
+  color: var(--muted);
+  font: 12px var(--f-ui);
+  cursor: pointer;
+}
+.font-cat.on {
+  background: var(--surface-3);
+  color: var(--text);
+  border-color: var(--muted);
+}
+.font-list {
+  flex: 1;
+  min-height: 120px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.font-item {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+}
+.font-item:hover,
+.font-item.active {
+  background: var(--surface-3);
+}
+.font-item.sel {
+  box-shadow: inset 0 0 0 1px var(--muted);
+}
+.font-item-name {
+  font-size: 21px;
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.font-item-cat {
+  flex: none;
+  font: 11px var(--f-ui);
+  color: var(--faint);
+}
+.font-pop-foot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-top: 6px;
+  border-top: 1px solid var(--line);
+}
+.font-pop-foot .hint {
+  margin: 0;
+  font-size: 11px;
 }
