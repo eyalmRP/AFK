@@ -45,7 +45,7 @@ function noiseData() {
 }
 
 // How long each synth cue rings after its start (plus its own duration).
-const TAIL = { upgrade: 0.8, reveal: 1.2, merge: 1.1, bigWin: 2.9, fsTrigger: 2.2, scatter: 1.2, wheelLand: 1.2, countEnd: 1.0, tierUp: 0.9, expand: 0.9, mult: 0.9, nearMiss: 0.8, coinLand: 0.8, respinReset: 0.6 };
+const TAIL = { jackpot: 1.8, upgrade: 0.8, reveal: 1.2, merge: 1.1, bigWin: 2.9, fsTrigger: 2.2, scatter: 1.2, wheelLand: 1.2, countEnd: 1.0, tierUp: 0.9, expand: 0.9, mult: 0.9, nearMiss: 0.8, coinLand: 0.8, respinReset: 0.6 };
 
 function tailOf(e, custom) {
   const buf = custom.get(e.type);
@@ -338,6 +338,13 @@ function renderChunk(list, offset, length, sound, custom) {
       tone('sine', 90, e.t, 0.3, o, 0.3, { f1: 45 });
       [0, 7, 12, 19].forEach((n, i) => tone('triangle', semis(659, n), e.t + i * 0.025, 0.35, o, 0.08));
       noise(e.t, 0.2, o, 0.1, { type: 'highpass', f0: 5000 });
+    },
+    // A jackpot box is won: a bell fanfare over a low hit and a shimmer.
+    jackpot(e, o) {
+      tone('sine', 70, e.t, 0.5, o, 0.32, { f1: 40 });
+      [0, 4, 7, 12, 16, 19, 24].forEach((n, i) => tone('triangle', semis(784, n), e.t + i * 0.06, 0.6, o, 0.1));
+      [0, 7, 12].forEach((n) => tone('sine', semis(392, n), e.t + 0.42, 1.2, o, 0.07));
+      noise(e.t + 0.05, 0.9, o, 0.08, { f0: 4000, f1: 9000, attack: 0.2 });
     },
     // Walking wilds: a soft hop.
     wildWalk(e, o) {

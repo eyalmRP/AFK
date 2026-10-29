@@ -34,8 +34,11 @@ export const JP_HOLD = 1.6;
 export const JP_CELEBRATE = 2.4;
 // A jackpot coin landing makes its box blink.
 export const JP_BLINK = 0.6;
-// Box shape, in cells: width and height at size 1 and tier scale 1.
-export const JP_BOX = { w: 1.7, h: 0.62 };
+// Box shape, in cells: width and height at size 1 and tier scale 1. The
+// name sits in the top part, the value below it (JP_TEXT: centre heights
+// from the box's centre and text heights, as fractions of the box height).
+export const JP_BOX = { w: 1.8, h: 0.72 };
+export const JP_TEXT = { labelY: -0.22, labelPx: 0.24, valueY: 0.17, valuePx: 0.34 };
 
 const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 const num = (v, d) => (Number.isFinite(Number(v)) && v !== '' && v != null ? Number(v) : d);
@@ -214,4 +217,34 @@ export function placeJackpots(cfg, frame, u, W, H) {
   }
   // Tier order, so box i is tier i everywhere.
   return cfg.tiers.map((t) => out.find((b) => b.id === t.id));
+}
+
+// How a box reacts at time t (tl.jackpots: { hits, blinks }): a won box
+// pops, glows with a pulse and a light sweeps across it once; a box whose
+// coin just landed blinks. scale 1 = at rest; glow 0..1; sweep 0..1 while
+// the light crosses, else -1; held: showing the amount it paid.
+export function jackpotFx(jt, id, t) {
+  let scale = 1;
+  let glow = 0;
+  let sweep = -1;
+  let held = false;
+  for (const h of jt?.hits || []) {
+    if (h.tier !== id) continue;
+    const a = t - h.t;
+    if (a < 0 || a > JP_CELEBRATE) continue;
+    const env = Math.min(1, a / 0.15) * Math.min(1, (JP_CELEBRATE - a) / 0.6);
+    scale = Math.max(scale, 1 + env * (0.05 + 0.1 * Math.exp(-3 * a) + 0.025 * Math.sin(a * 12)));
+    glow = Math.max(glow, env * (0.75 + 0.25 * Math.sin(a * 10)));
+    if (a < 0.9) sweep = a / 0.9;
+    if (a < JP_HOLD) held = true;
+  }
+  for (const b of jt?.blinks || []) {
+    if (b.tier !== id) continue;
+    const a = t - b.t;
+    if (a < 0 || a > JP_BLINK) continue;
+    const k = Math.sin((Math.PI * a) / JP_BLINK);
+    scale = Math.max(scale, 1 + 0.06 * k);
+    glow = Math.max(glow, 0.8 * k);
+  }
+  return { scale, glow, sweep, held };
 }

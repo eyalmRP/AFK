@@ -7,6 +7,8 @@ import { symbolLayout, holdSpinConfig } from '../core/coins.js';
 import { wheelConfig, segmentLayout, labelPalette, iconName } from '../core/wheel.js';
 import { paintBuiltin, paintCoinSymbol, paintEmptyCell, paintPot, metalGradient, roundRect, starPath, sparkle, METALS } from './paint.js';
 import { potsConfig } from '../core/pots.js';
+import { jackpotsConfig, JP_TEXT } from '../core/jackpots.js';
+import { COIN_GLOW } from '../core/coins.js';
 
 export function canvas(w, h) {
   const c = document.createElement('canvas');
@@ -489,6 +491,65 @@ function paintLogo(L, project, theme, img) {
   return paintTitle(text, font, px, theme.metal === 'neon' ? 'aqua' : theme.metal === 'chrome' ? 'silver' : theme.metal === 'rose' ? 'rose' : 'gold');
 }
 
+// A jackpot box: a metal frame in the tier's colour around a dark panel,
+// the tier's name at the top; the value is drawn live under it. Painted at
+// the box's size, with room around it for the glow. Returns { img, pad }.
+const JP_PANELS = { gold: ['#3a2304', '#120801'], fire: ['#3b0d05', '#140302'], violet: ['#2a0b4d', '#0c0219'], aqua: ['#05304d', '#010e1c'], emerald: ['#053d26', '#01140c'], rose: ['#43082c', '#16020e'], silver: ['#2a3140', '#0b0e14'] };
+export function paintJackpotBox(w, h, palette, label, font) {
+  const pad = Math.ceil(h * 0.22);
+  const c = canvas(Math.ceil(w + pad * 2), Math.ceil(h + pad * 2));
+  const g = c.getContext('2d');
+  const titlePal = TITLE_PALETTES[palette] ? palette : palette === 'emerald' ? 'aqua' : 'gold';
+  const metal = ['violet', 'aqua', 'silver', 'emerald'].includes(palette) ? 'chrome' : 'gold';
+  const glow = COIN_GLOW[palette] || COIN_GLOW.gold;
+  const r = h * 0.26;
+  const bw = Math.max(2, h * 0.075);
+  g.save();
+  g.translate(pad, pad);
+  // Glow and the metal frame.
+  g.save();
+  g.shadowColor = glow;
+  g.shadowBlur = h * 0.2;
+  roundRect(g, 0, 0, w, h, r);
+  g.fillStyle = metalGradient(g, 0, 0, 0, h, metal);
+  g.fill();
+  g.restore();
+  // The panel, in the tier's colour from the top.
+  const [a, b] = JP_PANELS[palette] || JP_PANELS.gold;
+  roundRect(g, bw, bw, w - bw * 2, h - bw * 2, r - bw * 0.8);
+  const pg = g.createLinearGradient(0, bw, 0, h - bw);
+  pg.addColorStop(0, a);
+  pg.addColorStop(1, b);
+  g.fillStyle = pg;
+  g.fill();
+  g.lineWidth = Math.max(1, bw * 0.3);
+  g.strokeStyle = 'rgba(0,0,0,0.65)';
+  g.stroke();
+  // A soft light inside, and a gloss on the top half.
+  g.save();
+  g.clip();
+  const lg = g.createRadialGradient(w / 2, h * 0.32, 0, w / 2, h * 0.32, w * 0.55);
+  lg.addColorStop(0, glow + '55');
+  lg.addColorStop(1, glow + '00');
+  g.fillStyle = lg;
+  g.fillRect(0, 0, w, h);
+  const gl = g.createLinearGradient(0, bw, 0, h * 0.5);
+  gl.addColorStop(0, 'rgba(255,255,255,0.18)');
+  gl.addColorStop(1, 'rgba(255,255,255,0)');
+  g.fillStyle = gl;
+  g.fillRect(0, 0, w, h * 0.5);
+  g.restore();
+  // The tier's name.
+  const name = String(label || '').trim();
+  if (name) {
+    const t = paintTitle(name, font, Math.round(h * JP_TEXT.labelPx), titlePal);
+    const k = Math.min(1, (w * 0.8) / t.width);
+    g.drawImage(t, w / 2 - (t.width * k) / 2, h * (0.5 + JP_TEXT.labelY) - (t.height * k) / 2, t.width * k, t.height * k);
+  }
+  g.restore();
+  return { img: c, pad };
+}
+
 export function paintCoin(size) {
   const c = canvas(size, size);
   const g = c.getContext('2d');
@@ -898,6 +959,10 @@ export function buildResources(project, L, images) {
     wheel: paintWheel(L.wheel.R, segs, project, images.wheel || {}),
     pots: L.pots ? L.pots.map((_, i) => (images.pots || [])[i] || paintPot(potsConfig(project).items[i].art, 512)) : [],
     potColors: potsConfig(project).items.map((it) => it.color || '#ffd25a'),
+    jackpots: L.jackpots ? L.jackpots.map((b, i) => {
+      const tier = jackpotsConfig(project).tiers[i];
+      return { ...paintJackpotBox(b.w, b.h, tier.palette, tier.label, font), color: COIN_GLOW[tier.palette] || COIN_GLOW.gold };
+    }) : [],
     digitCache: new Map(),
     titleCache: new Map(),
   };

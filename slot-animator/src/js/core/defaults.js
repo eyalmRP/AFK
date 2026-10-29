@@ -247,6 +247,7 @@ export const SOUND_EVENTS = [
   { id: 'potCharge', label: 'Pots charge up', group: 'wins' },
   { id: 'beam', label: 'Beam fires', group: 'wins' },
   { id: 'upgrade', label: 'Beam upgrades a cell', group: 'wins' },
+  { id: 'jackpot', label: 'Jackpot box won', group: 'bigwin' },
   { id: 'wheelAgain', label: 'Wheel: spin again', group: 'bigwin' },
   { id: 'wheelTick', label: 'Wheel peg tick', group: 'reels' },
   { id: 'wheelLand', label: 'Wheel lands', group: 'bigwin' },

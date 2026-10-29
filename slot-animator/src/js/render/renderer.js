@@ -17,6 +17,7 @@ import { pointerAt } from '../core/wheel.js';
 import { teaseWindows, teaseEnv, teaseDim, landLit, landScale, landings, LAND_POP } from '../core/tease.js';
 import { potsConfig, potBump, potCharge, beamCurve, beamPoints, pointAlong, beamState, beamSide, beamFlicker, BEAM_PASSES, POT_BOX } from '../core/pots.js';
 import { BOOST } from '../core/timeline.js';
+import { jackpotsConfig, jackpotValue, jackpotFx, JP_TEXT } from '../core/jackpots.js';
 
 const clamp01 = (x) => (x < 0 ? 0 : x > 1 ? 1 : x);
 const prog = (t, a, b) => clamp01((t - a) / Math.max(1e-6, b - a));
@@ -1420,6 +1421,82 @@ function drawPotsOver(ctx, scene, t) {
   }
 }
 
+// ---- progressive jackpot boxes (core/jackpots.js) ----
+
+// Every box with its value: running boxes roll their digits; a won box
+// pops, glows and a light sweeps across it, then shows what it paid (the
+// digits pulse) before it starts again from its seed.
+function drawJackpots(ctx, scene, t) {
+  const { L, res, tl, project } = scene;
+  if (!L.jackpots || !tl.jackpots) return;
+  const cfg = jackpotsConfig(project);
+  const cur = project.machine.currency || '';
+  const dec = project.machine.decimals | 0;
+  L.jackpots.forEach((b, i) => {
+    const art = res.jackpots[i];
+    const tier = cfg.tiers[i];
+    if (!art || !tier) return;
+    const fx = jackpotFx(tl.jackpots, tier.id, t);
+    if (fx.glow > 0.01) drawGlow(ctx, res, art.color, b.x, b.y, b.w * 1.5, Math.min(1, fx.glow));
+    ctx.save();
+    ctx.translate(b.x, b.y);
+    ctx.scale(fx.scale, fx.scale);
+    const img = art.img;
+    ctx.drawImage(img, -img.width / 2, -img.height / 2);
+    if (fx.glow > 0.01) {
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.globalAlpha = Math.min(1, fx.glow) * 0.35;
+      ctx.drawImage(img, -img.width / 2, -img.height / 2);
+    }
+    ctx.restore();
+    if (fx.sweep >= 0) drawShimmer(ctx, res, img, b.x, b.y, fx.scale, fx.sweep * 1.6 - 0.3, 0.9);
+    // The value, under the tier's name.
+    const v = jackpotValue(cfg, tl.jackpots.hits, tier.id, t);
+    const px = Math.round(b.h * JP_TEXT.valuePx);
+    const chars = formatPrize(v, cur, dec).length;
+    const fit = Math.min(1, (b.w * 0.82) / (chars * px * 0.62));
+    const rate = cfg.running && !fx.held ? tier.rate : 0;
+    ctx.save();
+    ctx.globalAlpha = fx.held ? 0.75 + 0.25 * Math.sin(t * 16) : 1;
+    drawOdometer(ctx, res, v, b.x, b.y + b.h * JP_TEXT.valueY * fx.scale, px, { currency: cur, decimals: dec, rate, scale: fx.scale * fit });
+    ctx.restore();
+  });
+  // A ring and sparks burst from a box as it is won.
+  for (const h of tl.jackpots.hits) {
+    const i = cfg.tiers.findIndex((x) => x.id === h.tier);
+    const b = L.jackpots[i];
+    const a = t - h.t;
+    if (!b || a < 0 || a > 0.9) continue;
+    const col = res.jackpots[i]?.color || res.theme.accent;
+    drawRing(ctx, b.x, b.y, a / 0.6, b.w * 0.95, col, b.h * 0.06);
+    for (let k = 0; k < 14; k++) {
+      const ang = (k / 14) * Math.PI * 2 + i;
+      const rr = b.w * (0.35 + 0.75 * ease.outCubic(Math.min(1, a / 0.9)));
+      sparkle(ctx, b.x + Math.cos(ang) * rr, b.y + Math.sin(ang) * rr * 0.55, b.h * 0.12 * (1 - a / 0.9), 1 - a / 0.9);
+    }
+  }
+}
+
+// A round awards a jackpot: its amount flies from the box down into the
+// win meter, which counts it in.
+function drawJackpotFly(ctx, scene, R, t) {
+  const j = R.pres.jackpot;
+  const { L, res, project } = scene;
+  if (!j || !L.jackpots || t < j.fly[0] || t > j.fly[1] + 0.25) return;
+  const i = jackpotsConfig(project).tiers.findIndex((x) => x.id === j.tier);
+  const b = L.jackpots[i];
+  if (!b) return;
+  const to = L.hud ? { x: L.hud.x + L.hud.w / 2, y: L.hud.y + L.hud.h / 2 } : { x: L.W / 2, y: L.frame.y + L.frame.h };
+  const k = ease.inOut(clamp01((t - j.fly[0]) / (j.fly[1] - j.fly[0])));
+  const x = b.x + (to.x - b.x) * k;
+  const y = b.y + (to.y - b.y) * k - Math.sin(k * Math.PI) * L.cellH * 0.5;
+  const a = 1 - clamp01((t - j.fly[1]) / 0.25);
+  const col = res.jackpots[i]?.color || res.theme.accent;
+  drawGlow(ctx, res, col, x, y, L.cellW * 1.4, 0.8 * a);
+  const img = cachedTitle(res, 'jpfly', formatPrize(j.amount, project.machine.currency || '', project.machine.decimals | 0), Math.round(L.cellH * 0.26), 'gold');
+  drawCentered(ctx, img, x, y, Math.min(1, (L.cellW * 1.6) / img.width) * (1.1 - 0.2 * k), a);
+}
+
 // Each beam's path for the current layout (pots and cells don't move).
 const beamCache = new WeakMap();
 function beamPath(scene, bm) {
@@ -2144,6 +2221,7 @@ export function renderFrame(ctx, scene, t, opts = {}) {
     drawFsRibbon(ctx, scene, t);
     drawHoldBar(ctx, scene, R, t);
     drawHud(ctx, scene, R, t);
+    drawJackpots(ctx, scene, t);
     drawPotsOver(ctx, scene, t);
   }
   if (R) {
@@ -2155,6 +2233,7 @@ export function renderFrame(ctx, scene, t, opts = {}) {
     drawSteps(ctx, scene, R, t);
     drawMultPhase(ctx, scene, R, t);
     drawCollector(ctx, scene, R, t);
+    drawJackpotFly(ctx, scene, R, t);
     drawBeams(ctx, scene, R, t);
     drawGrand(ctx, scene, R, t);
     drawBigWin(ctx, scene, R, t);

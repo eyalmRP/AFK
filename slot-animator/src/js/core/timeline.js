@@ -1277,6 +1277,9 @@ export function buildTimeline(project) {
     for (const a of R.actors) if (!Number.isFinite(a.tOut)) a.tOut = k === rounds.length - 1 ? duration : R.next;
   });
   for (const k of stripKeys) pushKeys(k, [key(duration, k[k.length - 1].v)]);
+  // A box won by a coin, a full board or the wheel rings out too (a round's
+  // own jackpot already has its cue).
+  for (const h of jp.hits) if (h.kind !== 'round') sfx.push({ t: h.t, type: 'jackpot' });
   sfx.sort((a, b) => a.t - b.t);
   const tl = {
     duration,
