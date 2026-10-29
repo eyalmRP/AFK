@@ -6,6 +6,7 @@ import { defaultParticles } from './particles.js';
 import { defaultWinFx } from './winfx.js';
 import { autoIcons } from './wheel.js';
 import { defaultPots } from './pots.js';
+import { defaultJackpots } from './jackpots.js';
 
 export const OUTCOMES = [
   { id: 'none', label: 'No win', list: 'No win', short: 'No win', color: '#56607a' },
@@ -435,6 +436,7 @@ function baseProject() {
     particles: defaultParticles(),
     winfx: defaultWinFx(),
     pots: defaultPots(),
+    jackpots: defaultJackpots(),
     symbols: BUILTIN_SYMBOLS.map((s, i) => ({ id: `s${i}`, src: null, winAnim: null, ...s })),
     assets: { background: null, frame: null, logo: null },
     rounds: [],
@@ -797,6 +799,28 @@ export function slotHoldSpinProject() {
   return p;
 }
 
+// Progressive jackpot boxes above the reels, their numbers running: a round
+// awards the Minor, then Hold & Spin coins win the Major and the Mini.
+export function jackpotsProject() {
+  const p = baseProject();
+  p.name = 'Royal Jackpots';
+  p.seed = 401;
+  Object.assign(p.machine, { theme: 'royal', title: 'ROYAL JACKPOTS' });
+  Object.assign(p.jackpots, { enabled: true, place: 'above', running: true });
+  p.effects.landShake = true;
+  p.rounds = [
+    newRound('none', { seed: 411 }),
+    newRound('medium', { seed: 412, lines: [1], count: 4, jackpot: 'minor' }),
+    newRound('hstrigger', { seed: 413, coinsIn: 6 }),
+    newRound('respin', { seed: 414, coinsIn: 2, specials: ['major'] }),
+    newRound('respin', { seed: 415, coinsIn: 0 }),
+    newRound('respin', { seed: 416, coinsIn: 1, specials: ['mini'] }),
+    newRound('respin', { seed: 417, coinsIn: 0 }),
+    newRound('collect', { seed: 418 }),
+  ];
+  return p;
+}
+
 // The wheel bonus of a slot, rising from the bottom of the screen; it
 // almost slips past the jackpot.
 export function slotWheelProject() {
@@ -852,6 +876,7 @@ export const PRESETS = [
   { id: 'freespins', group: 'Features', label: 'Free spins with sticky wilds', desc: 'Scatters trigger, wilds stick while their reels spin on, a retrigger adds spins, the total counts up.', make: freeSpinsProject },
   { id: 'cash', group: 'Features', label: 'Cash collector', desc: 'Cash coins land with values; in free spins a collector takes them all, and a retrigger adds spins.', make: cashCollectorProject },
   { id: 'mystery', group: 'Features', label: 'Mystery and walking wilds', desc: 'Mystery blocks reveal wins, wilds carry multipliers, and in free spins wilds walk off reel by reel.', make: mysteryWalkProject },
+  { id: 'jackpots', group: 'Features', label: 'Progressive jackpots', desc: 'Grand, Major, Minor and Mini boxes over the reels with running numbers: a round awards the Minor, then Hold & Spin coins win the Major and the Mini.', make: jackpotsProject },
   { id: 'pots', group: 'Features', label: 'Pots and beams', desc: 'Pots of gold, gems and fruits fire beams that upgrade cells into a win; winners beam up to their own pot: cherries to the fruits, diamonds to the gems, sevens to the gold.', make: potsProject },
   { id: 'tease', group: 'Features', label: 'Near misses and teases', desc: 'Reels tease with the camera pushing in, then a big win.', make: teaseProject },
   { id: 'ladder', group: 'Features', label: 'Big win ladder', desc: 'Small, medium, then every big win title; the fireworks run to the end.', make: ladderProject },

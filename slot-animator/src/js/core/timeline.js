@@ -19,6 +19,10 @@ import { winFxConfig, winStyleOf, scheduleWinFx } from './winfx.js';
 import { scheduleCamera } from './camera.js';
 import { wheelConfig, wheelLandings, segmentKind, SLIP } from './wheel.js';
 import { potsConfig, pickPot, ownerOf, symbolKey } from './pots.js';
+import { jackpotsConfig, jackpotLedger, jackpotTier, wheelJackpot, JP_CELEBRATE } from './jackpots.js';
+
+// Rounds that can award a jackpot box at their end.
+export const JACKPOT_ROUNDS = ['none', 'nearmiss', 'small', 'medium', 'big', 'freespins', 'bonus', 'wheel'];
 
 export const STRIP_PAD = 4;
 
@@ -208,6 +212,16 @@ export function buildTimeline(project) {
   // the machine's reels. Coins that land lock; the counter counts respins.
   const lay = ctx.lay;
   const hsCfg = holdSpinConfig(project);
+  // Progressive jackpot boxes: what each shows and pays over time.
+  const jpCfg = jackpotsConfig(project);
+  const jp = jackpotLedger(jpCfg);
+  const jpShown = (id) => jpCfg.on && !!jackpotTier(jpCfg, id);
+  // The box a jackpot coin belongs to (Mini, Minor, Major), if shown.
+  const jpOfSym = (sym) => {
+    if (!jpCfg.on || !isCoinSym(lay, sym)) return null;
+    const id = hsCfg.coins[sym - lay.coinBase]?.id;
+    return jpShown(id) ? id : null;
+  };
   const nCells = reels * rows;
   const rngHS = mulberry32(hashSeed(project.seed, 'holdspin'));
   const hsStrips = [];
@@ -270,6 +284,7 @@ export function buildTimeline(project) {
         const lock = { c: cn.c, r: cn.r, sym: cn.sym, value: cn.value, from: appear, to: Infinity, special: cn.sym !== lay.coinBase, start: true };
         hs.locked.set(k, lock);
         hsLocks.push(lock);
+        if (jpOfSym(cn.sym)) jp.blink(jpOfSym(cn.sym), appear);
         if (!now) sfx.push({ t: appear, type: 'coinLand', special: lock.special });
       }
     }
@@ -584,6 +599,7 @@ export function buildTimeline(project) {
           const lock = { c, r, sym, value, from: stop, to: Infinity, special: ti > 0 };
           hs.locked.set(k, lock);
           hsLocks.push(lock);
+          if (jpOfSym(sym)) jp.blink(jpOfSym(sym), stop);
           firstHit = Math.min(firstHit, stop);
           sfx.push({ t: stop, type: 'coinLand', special: ti > 0, pan: reels > 1 ? (c / (reels - 1)) * 2 - 1 : 0 });
         } else sfx.push({ t: stop, type: 'cellStop', pan: reels > 1 ? (c / (reels - 1)) * 2 - 1 : 0 });
@@ -1052,6 +1068,9 @@ export function buildTimeline(project) {
         }
       });
       const spinEnd2 = last.end;
+      // A segment linked to a jackpot box pays what the box shows.
+      const jw = noWin ? null : wheelJackpot(jpCfg, segs[segment]);
+      if (jw) win.amount = jp.award(jw, spinEnd2 + 0.25, 'wheel');
       const countStart = spinEnd2 + 0.65;
       const countEnd = countStart + 2.2;
       const outStart = keepOn ? countEnd + 1000 : countEnd + 1.3;
@@ -1105,16 +1124,19 @@ export function buildTimeline(project) {
           const at = t1 + j * per;
           const arrive = at + 0.42;
           const prev = sum;
-          sum += l.value;
+          // A jackpot coin pays what its box shows as it is collected.
+          const jt = jpOfSym(l.sym);
+          const value = jt ? jp.award(jt, at, 'coin') : l.value;
+          sum += value;
           pushKeys(collectKeys, [key(arrive, prev), key(arrive + 0.1, sum, { hold: true })]);
           pushKeys(meterKeys, [key(arrive, prev), key(arrive + 0.1, sum, { hold: true })]);
           sfx.push({ t: at, type: 'collect', i: j, n });
           l.collectAt = at;
-          return { c: l.c, r: l.r, sym: l.sym, value: l.value, at, arrive, special: l.special };
+          return { c: l.c, r: l.r, sym: l.sym, value, at, arrive, special: l.special, jackpot: jt };
         });
         let tA = items[n - 1].arrive + 0.45;
         if (hs.full && hsCfg.grand.enabled) {
-          const g = Math.max(0, Number(hsCfg.grand.value) || 0) * bet;
+          const g = jpShown('grand') ? jp.award('grand', tA, 'grand') : Math.max(0, Number(hsCfg.grand.value) || 0) * bet;
           const cs = tA + 0.55;
           const ce = cs + 1.4;
           pres.grand = { start: tA, end: ce + 1.0, amount: g, countStart: cs, countEnd: ce, keys: [key(cs, 0, { outSpeed: (g / 1.4) * 1.25 }), key(ce, g, { inInf: 0.6, hold: true })] };
@@ -1135,6 +1157,24 @@ export function buildTimeline(project) {
       }
     } else {
       end = tcur + 0.5;
+    }
+
+    // ---- a jackpot this round awards: its box lights up, its amount flies
+    // down into the win meter and counts on top of the win ----
+    if (round.jackpot && jpShown(round.jackpot) && JACKPOT_ROUNDS.includes(o) && !(o === 'wheel' && game !== 'slot')) {
+      const at = end - 0.1;
+      const amount = jp.award(round.jackpot, at, 'round');
+      const prev = evalKeys(meterKeys, at);
+      const fly = [at + 0.55, at + 1.15];
+      const cs = fly[1];
+      const ce = cs + 1.4;
+      pushKeys(meterKeys, [key(cs, prev, { outSpeed: (amount / 1.4) * 1.25 }), key(ce, prev + amount, { inInf: 0.6, hold: true })]);
+      win.amount = (win.amount || 0) + amount;
+      pres.jackpot = { tier: round.jackpot, at, fly, countStart: cs, countEnd: ce, amount, end: Math.max(ce + 0.6, at + JP_CELEBRATE) };
+      flashes.push({ t: at + 0.05, amp: 0.45, dur: 0.3 });
+      shakes.push({ t: at + 0.1, amp: 0.5, dur: 0.4 });
+      sfx.push({ t: at, type: 'jackpot' }, { t: fly[0], type: 'whoosh' }, { t: cs, type: 'count', dur: 1.4 }, { t: ce, type: 'countEnd' });
+      end = pres.jackpot.end;
     }
 
     const next = end + Math.max(0, num(round.hold, 0)) + num(tm.gap, 0.3);
@@ -1263,6 +1303,8 @@ export function buildTimeline(project) {
     fsBlocks,
     rounds,
     pots: potCfg.on ? { count: potCfg.count, hits: potHits.sort((a, b) => a[0] - b[0]), charges: potCharges, show: potShow, valueKeys: potValueKeys } : null,
+    // Jackpot boxes: when each is won (and for how much) or blinks.
+    jackpots: jpCfg.on ? { hits: jp.hits.sort((a, b) => a.t - b.t), blinks: jp.blinks.sort((a, b) => a.t - b.t) } : null,
     initialGrid,
     tiers,
     orbSym: ctx.orbSym,
