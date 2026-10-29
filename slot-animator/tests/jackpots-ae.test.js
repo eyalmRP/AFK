@@ -27,7 +27,8 @@ function exportAE(p) {
 
 // The value a slider expression gives at time t, and a text expression
 // reading SLOT CONTROL sliders by their expressions.
-const evalAt = (expr, t, effect = () => () => ({ value: 0 })) => new Function('time', 'comp', 'thisComp', 'thisLayer', 'value', `return eval(${JSON.stringify(expr)})`)(t, () => ({ layer: () => ({ effect }) }), {}, { width: 100, height: 40 }, [0, 0]);
+// Controls read 100 for a percentage (FX CONTROLS Size % and Opacity %), else 0.
+const evalAt = (expr, t, effect = (n) => () => ({ value: / %$/.test(n) ? 100 : 0 })) => new Function('time', 'comp', 'thisComp', 'thisLayer', 'value', `return eval(${JSON.stringify(expr)})`)(t, () => ({ layer: () => ({ effect }) }), {}, { width: 100, height: 40 }, [0, 0]);
 const sliderExpr = (log, name) => log.expressions.find((e) => e.layer === 'SLOT CONTROL' && e.prop.startsWith(name))?.expr;
 const exprOf = (log, layer, prop) => log.expressions.filter((e) => e.layer === layer && e.prop === prop).pop()?.expr;
 const money = (v, cur = '$', d = 2) => {

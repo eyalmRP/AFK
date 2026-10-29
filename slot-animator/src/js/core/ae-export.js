@@ -64,6 +64,10 @@ export const AE_ASSETS = {
   }),
 };
 
+// Full-screen art (titles, logo, rays, particles) is painted this many
+// times larger for After Effects, so it can be scaled up and stay sharp.
+export const AE_HD = 2;
+
 // Batch formats are "WxH" strings. The timeline does not depend on the canvas
 // size, so every format shares one timeline and only the layout changes.
 export const FORMAT_CHOICES = [
@@ -224,6 +228,10 @@ export function buildAEData(project, tl, L, extras = {}) {
               dy: r4(b.h * JP_TEXT.valueY),
               size: Math.round(b.h * JP_TEXT.valuePx),
               fitW: r4(b.w * 0.82),
+              // The name as an editable text layer (off) in the plate's comp.
+              label: clean(tier.label),
+              labelY: r4(b.h * JP_TEXT.labelY),
+              labelPx: Math.round(b.h * JP_TEXT.labelPx),
             };
           }),
         }
@@ -469,7 +477,10 @@ export function buildAEData(project, tl, L, extras = {}) {
       .filter(Boolean),
     icons: wlay.map((it, k) => (it.icon && wsegs[k].icon ? { k, a: r4(it.a), r: r4(it.icon.r), file: A.wheelIcon(k) } : null)).filter(Boolean),
   };
-  const odoSize = 120;
+  // Counters are built at twice their largest use (a big win's amount as it
+  // slams), so they stay sharp scaled up in After Effects.
+  const titlePx = extras.titlePx || Math.round(Math.min(L.W * 0.11, L.H * 0.16));
+  const odoSize = Math.max(120, Math.round(titlePx * 0.9 * AE_HD));
   const hud = L.hud
     ? {
         x: r4(L.hud.x + L.hud.w / 2),
@@ -586,7 +597,12 @@ export function buildAEData(project, tl, L, extras = {}) {
     blur: r4(Number(project.spin.blur) || 0),
     accent: rgb(extras.accent || '#ffd25a'),
     font: extras.fontPostScript || 'Bungee-Regular',
-    titlePx: extras.titlePx || Math.round(Math.min(L.W * 0.11, L.H * 0.16)),
+    titlePx,
+    // Titles, the logo, rays and particles are painted at hd times the size
+    // they show; their uses are scaled down by it.
+    hd: AE_HD,
+    titleTexts: Object.fromEntries(Object.entries(extras.titleTexts || {}).map(([k, v]) => [k, clean(v)])),
+    logoText: extras.logoText ? { text: clean(extras.logoText.text), px: r4(extras.logoText.px) } : null,
     odo: { size: odoSize, dw: Math.round(odoSize * 0.8), sw: Math.round(odoSize * 0.38), rh: Math.round(odoSize * 1.3) },
     wheel: wheelData,
     transparent: project.output?.transparent ? 1 : 0,
@@ -722,10 +738,13 @@ function sfxData(tl, project, headroom) {
   };
 }
 
+// The script is plain ASCII: every other character is a \\u escape, so it
+// reads the same whatever encoding After Effects assumes (Mac or Windows,
+// with or without a byte order mark).
 export function buildAEScript(dataList) {
   const list = Array.isArray(dataList) ? dataList : [dataList];
-  const json = JSON.stringify(list).replace(/\u2028/g, '\\u2028').replace(/\u2029/g, '\\u2029');
-  return AE_SCRIPT.replace('__DATA__', () => json);
+  const json = JSON.stringify(list);
+  return AE_SCRIPT.replace('__DATA__', () => json).replace(/[^\x00-\x7f]/g, (c) => `\\u${c.charCodeAt(0).toString(16).padStart(4, '0')}`);
 }
 
 // ExtendScript (ES3). Keep it free of let/const, arrow functions, template
@@ -742,7 +761,7 @@ export const AE_SCRIPT = String.raw`// Slot animation rebuilt for After Effects 
   var proj, fShared;
   var footage = {};
   var DATA, W, H, FPS, DUR, SUFFIX, top, fPH, fSymbols, fReels, fRounds, fHold, atlas, main, slotCtrl, shake, symComps, winComps, digits, mainName;
-  var PH, FOLD, RBASE;
+  var PH, FOLD, RBASE, FONTS = null, missingFonts = [];
   var WIN_INTRO = 0.6, WIN_LOOP = 1.5385;
 
   function file(rel) { return new File(ROOT.fsName + "/" + rel); }
@@ -894,6 +913,7 @@ export const AE_SCRIPT = String.raw`// Slot animation rebuilt for After Effects 
     td.justification = ParagraphJustification.CENTER_JUSTIFY;
     try { td.font = DATA.font; } catch (e) { try { td.font = "Arial-BoldMT"; } catch (e2) {} }
     prop.setValue(td);
+    textExpr(L);
     pos(L, [xy[0], xy[1] + size * 0.36]);
     if (shadow !== false) {
       try {
@@ -905,12 +925,61 @@ export const AE_SCRIPT = String.raw`// Slot animation rebuilt for After Effects 
     }
     return L;
   }
+  // ---------- fonts ----------
+  // The "Fonts" comp holds one text layer per font: "Main Font" (every
+  // text, counter and title twin) and "Wheel Font" (the wheel labels).
+  // Each text layer reads its font from there by expression (After Effects
+  // 2020 and later), so changing the font of one layer changes them all.
+  function fontMissing(name) {
+    try {
+      if (app.fonts && app.fonts.getFontsByPostScriptName) {
+        var a = app.fonts.getFontsByPostScriptName(name);
+        return !a || !a.length;
+      }
+    } catch (e) {}
+    return false;
+  }
+  function fontLayer(c, role, font, sample, y) {
+    var L = c.layers.addText(sample);
+    L.name = role;
+    var prop = L.property("ADBE Text Properties").property("ADBE Text Document");
+    var td = prop.value;
+    td.fontSize = 120;
+    td.applyFill = true;
+    td.fillColor = [1, 0.86, 0.4];
+    td.justification = ParagraphJustification.CENTER_JUSTIFY;
+    try { td.font = font; } catch (e) { try { td.font = "Arial-BoldMT"; } catch (e2) {} }
+    prop.setValue(td);
+    pos(L, [c.width / 2, y]);
+    if (fontMissing(font)) missingFonts.push(font);
+    return L;
+  }
+  function buildFonts() {
+    var D0 = DATA_LIST[0], wheel = false, f, r;
+    // A Wheel Font only when a wheel with labels shows.
+    for (f = 0; f < DATA_LIST.length; f++) {
+      var Df = DATA_LIST[f], shows = Df.game === "wheel";
+      for (r = 0; r < Df.rounds.length; r++) if (Df.rounds[r].wheel) shows = true;
+      if (shows && Df.wheel && Df.wheel.labels.length) wheel = true;
+    }
+    FONTS = proj.items.addComp(uniqueName("Fonts"), 1600, wheel ? 440 : 260, 1, 10, D0.fps);
+    FONTS.parentFolder = fShared;
+    FONTS.comment = "Pick a font for a layer here (Character panel): every text layer that uses it follows. Main Font: all text, counters and the editable title twins. Wheel Font: the wheel labels.";
+    fontLayer(FONTS, "Main Font", D0.font, "BIG WIN 0123456789", 175);
+    if (wheel) fontLayer(FONTS, "Wheel Font", D0.wheel.font, "SPIN AGAIN 500", 355);
+  }
+  // A text layer's Source Text: its words (an expression value, or the
+  // text it was made with) in the font of its Fonts layer. Older After
+  // Effects versions skip the font and keep the words.
+  function textExpr(L, pre, val, role) {
+    var f = "comp(\"" + FONTS.name + "\").layer(\"" + (role || "Main Font") + "\").text.sourceText.style.font";
+    L.property("ADBE Text Properties").property("ADBE Text Document").expression = val === undefined ?
+      "try { text.sourceText.style.setFont(" + f + "); } catch (err) { value; }" :
+      (pre || "") + "var txt_ = " + val + ";\ntry { text.sourceText.style.setFont(" + f + ").setText(txt_); } catch (err) { txt_; }";
+  }
   function fmtExpr() {
     return "function fmt(v){var d=" + DATA.decimals + ";var s=Math.max(0,v).toFixed(d);var parts=s.split('.');var i=parts[0];var out='';" +
       "while(i.length>3){out=','+i.substr(i.length-3)+out;i=i.substr(0,i.length-3);}return '" + DATA.currency + "'+i+out+(d>0?'.'+parts[1]:'');}\n";
-  }
-  function counterExpr(ref) {
-    return fmtExpr() + "var v = " + ref + ";\nv > 0.0001 ? fmt(v) : '';";
   }
   function windowsExpr(name, list) {
     var s = "var " + name + " = [", i;
@@ -957,8 +1026,9 @@ export const AE_SCRIPT = String.raw`// Slot animation rebuilt for After Effects 
     PH[key] = c;
     return c;
   }
-  // A placeholder holding one image at its own size (missing file: none).
-  function imagePH(key, sub, rel) {
+  // A placeholder holding one image at its own size (missing file: none),
+  // with effect controls and anything more (extra) when given.
+  function imagePH(key, sub, rel, controls, extra) {
     if (PH.hasOwnProperty(key)) return PH[key];
     var it = imp(rel);
     if (!it) { PH[key] = null; return null; }
@@ -966,6 +1036,8 @@ export const AE_SCRIPT = String.raw`// Slot animation rebuilt for After Effects 
       var L = c.layers.add(it);
       L.name = key;
       pos(L, [c.width / 2, c.height / 2]);
+      if (extra) extra(c);
+      if (controls) fxControls(c, controls);
     });
   }
   // A layer of a placeholder (or any comp) from a to b.
@@ -982,13 +1054,62 @@ export const AE_SCRIPT = String.raw`// Slot animation rebuilt for After Effects 
   function ctrl(name) {
     return "comp(\"" + mainName + "\").layer(\"SLOT CONTROL\").effect(\"" + name + "\")(1)";
   }
-  // Effect placeholders are white; each use is tinted to its colour. Turn
-  // "FX Colour" off on SLOT CONTROL to keep your own art's colours.
+  // ---------- effect controls ----------
+  // Every effect placeholder holds an "FX CONTROLS" null: its sliders and
+  // switches drive every use of that effect (size, opacity, colour, speed,
+  // and whether the uses move by themselves). Replace the art inside with a
+  // prerendered movie and every use plays it from its start.
+  var FX_STD = [["Size %", 100], ["Opacity %", 100], ["Colour", true]];
+  var FX_RAYS = [["Size %", 100], ["Opacity %", 100], ["Spin %", 100], ["Built-in Motion", true]];
+  var FX_RING = [["Size %", 100], ["Opacity %", 100], ["Colour", true], ["Speed %", 100]];
+  var FX_TITLE = [["Size %", 100], ["Built-in Motion", true], ["Light Sweep", true]];
+  var FXC = {};
+  function fxControls(c, list) {
+    var n = c.layers.addNull(c.duration), i;
+    n.name = "FX CONTROLS";
+    for (i = 0; i < list.length; i++) {
+      if (list[i][1] === true) fx(n, "ADBE Checkbox Control", list[i][0]).property(1).setValue(1);
+      else slider(n, list[i][0]).setValue(list[i][1]);
+    }
+    FXC[c.name] = list;
+    return n;
+  }
+  function hasFx(src, name) {
+    var list = src && FXC[src.name], i;
+    if (list) for (i = 0; i < list.length; i++) if (list[i][0] === name) return true;
+    return false;
+  }
+  // A control of a use's placeholder, as an expression value.
+  function fxv(src, name) {
+    return "comp(\"" + src.name + "\").layer(\"FX CONTROLS\").effect(\"" + name + "\")(1).value";
+  }
+  // A use's opacity and scale times its placeholder's Opacity % and Size %:
+  // e is the value (an expression after the statements in pre), or the
+  // layer's own keyframes or value.
+  function fxOpacity(L, pre, e) {
+    if (!L) return;
+    var src = L.source;
+    P(L, "ADBE Opacity").expression = (pre || "") + "(" + (e || "value") + ")" + (hasFx(src, "Opacity %") ? " * " + fxv(src, "Opacity %") + " / 100" : "") + ";";
+  }
+  function fxScale(L, pre, e) {
+    if (!L) return;
+    var src = L.source;
+    P(L, "ADBE Scale").expression = (pre || "") + "var sv_ = " + (e || "value") + ";" + (hasFx(src, "Size %") ? " var sk_ = " + fxv(src, "Size %") + " / 100; [sv_[0] * sk_, sv_[1] * sk_];" : " sv_;");
+  }
+  // Whether a use moves by itself (rays spin, titles spring): off for a
+  // prerendered movie that brings its own motion.
+  function fxMotion(src) {
+    return hasFx(src, "Built-in Motion") ? fxv(src, "Built-in Motion") : "1";
+  }
+  // Effect placeholders are white; each use is tinted to its colour. Untick
+  // "Colour" in an effect's FX CONTROLS (or "FX Colour" on SLOT CONTROL for
+  // all of them) to keep your own art's colours.
   function tint(L, rgbv) {
     try {
       var t = fx(L, "ADBE Tint", "Colour");
       try { t.property("ADBE Tint-0002").setValue(rgbv); } catch (e1) { t.property("Map White To").setValue(rgbv); }
-      try { t.property("ADBE Tint-0003").expression = ctrl("FX Colour") + ".value ? value : 0;"; } catch (e2) {}
+      var own = hasFx(L.source, "Colour") ? " && " + fxv(L.source, "Colour") : "";
+      try { t.property("ADBE Tint-0003").expression = "(" + ctrl("FX Colour") + ".value" + own + ") ? value : 0;"; } catch (e2) {}
     } catch (e) {}
   }
 
@@ -1019,6 +1140,7 @@ export const AE_SCRIPT = String.raw`// Slot animation rebuilt for After Effects 
       } else {
         var wl = wc.layers.add(sc);
         wl.name = sd.name;
+        try { wl.collapseTransformation = true; } catch (eC) {}
         pos(wl, [wc.width / 2, wc.height / 2]);
         P(wl, "ADBE Scale").expression = EASE_LIB + "var a = time; var s = a < " + WIN_INTRO + " ? outElastic(c01(a / " + WIN_INTRO + ")) : 0.78 + 0.22 * Math.cos((a - " + WIN_INTRO + ") * Math.PI * 2 * 1.3);\n" +
           "var v = 100 * (1 + " + DATA.popScale + " * " + ctrl("Win Pop %") + " / 100 * s); [v, v];";
@@ -1151,7 +1273,7 @@ export const AE_SCRIPT = String.raw`// Slot animation rebuilt for After Effects 
     for (k = 0; k < nCells; k++) {
       var jE2 = "var j = Math.floor(p + 1e-4) - 2 + " + k + ";\n";
       var T = text(rc, "Value " + (k + 1), " ", size, [x, 0], [1, 0.9, 0.55]);
-      T.property("ADBE Text Properties").property("ADBE Text Document").expression = head + V + jE2 + "var e = V[j]; e ? e[0] : '';";
+      textExpr(T, head + V + jE2 + "var e = V[j];\n", "e ? e[0] : ''");
       P(T, "ADBE Position").expression = head + V + jE2 + rowE + "var e = V[j]; var dy = e ? e[1] : 0; var sc = e ? e[2] : 1;\n" +
         "[" + x + ", (row + 0.5 + " + peek + " + dy) * " + DATA.cellH + " + " + (size * 0.36) + " * sc];";
       P(T, "ADBE Scale").expression = head + V + jE2 + "var e = V[j]; var s = e ? e[2] * 100 : 100; [s, s];";
@@ -1395,22 +1517,31 @@ export const AE_SCRIPT = String.raw`// Slot animation rebuilt for After Effects 
     }
   }
   // A white ring that grows and fades in 0.7 s; each use is scaled and tinted.
-  var RING_R = 250;
+  // It is drawn as big as its largest use (a full-screen win), so no use
+  // scales it up. Uses last SHOCK_LEN, so a prerendered shockwave movie up
+  // to that long plays in full.
+  var RING_R = 250, SHOCK_LEN = 4;
   function ring(comp, xy, t, maxR, rgbv) {
-    var src = ph("FX Shockwave", "Effects", 640, 640, 0.8, function (c) {
+    RING_R = Math.max(250, Math.round(H * 0.8));
+    var src = ph("FX Shockwave", "Effects", RING_R * 2.56, RING_R * 2.56, SHOCK_LEN, function (c) {
+      var m = c.width / 2, k = RING_R / 250;
       var L = shapeLayer(c, "Ring");
       var g = group(L);
-      ellipse(g, [320, 320], [RING_R * 2, RING_R * 2]);
-      stroke(g, [1, 1, 1], 14);
-      P(L, "ADBE Anchor Point").setValue([320, 320]);
-      pos(L, [320, 320]);
-      P(L, "ADBE Scale").expression = EASE_LIB + "var a = c01(time / 0.7); var s = 100 * (1 - Math.pow(1 - a, 3)); [s, s];";
-      P(L, "ADBE Opacity").expression = "var a = time / 0.7; a > 1 ? 0 : 100 * Math.pow(1 - a, 1.5);";
-      glow(L, 26, 1);
+      ellipse(g, [m, m], [RING_R * 2, RING_R * 2]);
+      stroke(g, [1, 1, 1], 14 * k);
+      P(L, "ADBE Anchor Point").setValue([m, m]);
+      pos(L, [m, m]);
+      var sp = "var sp = thisComp.layer(\"FX CONTROLS\").effect(\"Speed %\")(1).value / 100;\n";
+      P(L, "ADBE Scale").expression = EASE_LIB + sp + "var a = c01(time * sp / 0.7); var s = 100 * (1 - Math.pow(1 - a, 3)); [s, s];";
+      P(L, "ADBE Opacity").expression = sp + "var a = time * sp / 0.7; a > 1 ? 0 : 100 * Math.pow(1 - a, 1.5);";
+      glow(L, 26 * k, 1);
+      fxControls(c, FX_RING);
     });
-    var L = inst(comp, src, "Shockwave", xy, t, Math.max(0, t) + 0.75);
-    var s = 100 * maxR / RING_R;
+    var L = inst(comp, src, "Shockwave", xy, t, Math.min(comp.duration, Math.max(0, t) + SHOCK_LEN));
+    var s = r4(100 * maxR / RING_R);
     P(L, "ADBE Scale").setValue([s, s]);
+    fxScale(L);
+    fxOpacity(L);
     L.blendingMode = BlendingMode.ADD;
     tint(L, rgbv);
     return L;
@@ -1426,10 +1557,16 @@ export const AE_SCRIPT = String.raw`// Slot animation rebuilt for After Effects 
       if (o.stroke) stroke(g, o.color || [1, 1, 1], Math.max(2, DATA.cellW * o.stroke));
       if (o.fill) fill(g, o.fill, o.fillOp);
       if (o.glow) glow(L, DATA.cellW * o.glow, o.glowI || 1.3);
+      fxControls(c, FX_STD);
     });
   }
+  // A use of a frame placeholder; its size and opacity follow FX CONTROLS
+  // (a caller animating them goes through fxScale and fxOpacity).
   function frameAt(comp, key, w, h, o, name, xy, a, b) {
-    return inst(comp, framePH(key, w, h, o), name, xy, a, b);
+    var L = inst(comp, framePH(key, w, h, o), name, xy, a, b);
+    fxScale(L);
+    fxOpacity(L);
+    return L;
   }
   function darkLayer(comp, a, b, peak) {
     var L = solid(comp, [0, 0, 0], "Darken", W * 1.2, H * 1.2, [W / 2, H / 2]);
@@ -1438,19 +1575,29 @@ export const AE_SCRIPT = String.raw`// Slot animation rebuilt for After Effects 
     return L;
   }
   function raysPH(small) {
-    return small ? imagePH("FX Small Rays", "Effects", DATA.assets.raysSmall) : imagePH("FX Light Rays", "Effects", DATA.assets.rays);
+    return small ? imagePH("FX Small Rays", "Effects", DATA.assets.raysSmall, FX_RAYS) : imagePH("FX Light Rays", "Effects", DATA.assets.rays, FX_RAYS);
   }
-  function rays(comp, xy, a, b, scale, speed, alpha) {
+  // Rays spinning at speed (degrees a second), times the placeholder's Spin %.
+  function spin(L, speed, add) {
+    var src = L.source;
+    P(L, "ADBE Rotate Z").expression = fxMotion(src) + " ? time * " + speed + (hasFx(src, "Spin %") ? " * " + fxv(src, "Spin %") + " / 100" : "") + (add ? " + " + add : "") + " : " + (add || 0) + ";";
+  }
+  // Light rays diam pixels across, popping in at a and fading out by b.
+  function rays(comp, xy, a, b, diam, speed, alpha) {
     var L = inst(comp, raysPH(false), "Light Rays", xy, a, b);
     if (!L) return null;
+    var sc = r4(100 * diam / L.source.width);
     L.blendingMode = BlendingMode.ADD;
-    P(L, "ADBE Rotate Z").expression = "time * " + speed + ";";
-    P(L, "ADBE Scale").expression = EASE_LIB + "var k = outBack(c01((time - " + a + ") / 0.45)); [" + scale + " * k, " + scale + " * k];";
+    spin(L, speed);
+    fxScale(L, EASE_LIB + "var k = " + fxMotion(L.source) + " ? outBack(c01((time - " + a + ") / 0.45)) : 1;\n", "[" + sc + " * k, " + sc + " * k]");
     fadeKeys(L, a, b, 0.45, 0.6, alpha);
+    fxOpacity(L);
     return L;
   }
-  // Title placeholders hold the title art with its light sweep; each use
-  // springs in and breathes.
+  // Title placeholders hold the title art (painted hd times larger than it
+  // shows) with its light sweep, and the words as a text layer in the Main
+  // Font, switched off: turn it on (and the art off) to change the words or
+  // the font. Each use springs in and breathes.
   function titlePH(key) {
     if (PH.hasOwnProperty("Title " + key)) return PH["Title " + key];
     var it = imp(DATA.assets.titles[key]);
@@ -1462,17 +1609,23 @@ export const AE_SCRIPT = String.raw`// Slot animation rebuilt for After Effects 
       try {
         var sw = fx(L, "CC Light Sweep");
         try { sw.property("Center").expression = "var p = (time % 1.7) / 1.7 * 1.6 - 0.3; [p * thisLayer.width, thisLayer.height / 2];"; } catch (e1) {}
-        try { sw.property("Width").setValue(Math.round(DATA.titlePx * 0.45)); } catch (e2) {}
+        try { sw.property("Width").setValue(Math.round(DATA.titlePx * 0.45 * DATA.hd)); } catch (e2) {}
         try { sw.property("Sweep Intensity").setValue(70); } catch (e3) {}
+        try { sw.property("Sweep Intensity").expression = "thisComp.layer(\"FX CONTROLS\").effect(\"Light Sweep\")(1).value ? value : 0;"; } catch (e5) {}
       } catch (e4) {}
+      var tw = text(c, "Text (editable)", DATA.titleTexts[key] || key.toUpperCase(), Math.round(it.height / 1.75), [c.width / 2, c.height / 2], [1, 0.86, 0.4]);
+      glow(tw, Math.round(it.height * 0.12), 1);
+      tw.enabled = false;
+      fxControls(c, FX_TITLE);
     });
   }
   function titleLayer(comp, key, xy, a, b, maxW) {
     var src = titlePH(key);
     var L = inst(comp, src, "Title " + key, xy, a, b);
     if (!L) return null;
-    var fit = maxW && src.width > maxW ? 100 * maxW / src.width : 100;
-    P(L, "ADBE Scale").expression = EASE_LIB + "var a = time - inPoint; var s = (" + (fit * 0.15) + " + " + (fit * 0.85) + " * outElastic(c01(a / 0.8))) * (1 + 0.025 * Math.sin(time * 5)); [s, s];";
+    var shown = src.width / DATA.hd;
+    var fit = r4((maxW && shown > maxW ? maxW / shown : 1) * 100 / DATA.hd);
+    fxScale(L, EASE_LIB + "var a = time - inPoint; var s = " + fxMotion(src) + " ? (" + r4(fit * 0.15) + " + " + r4(fit * 0.85) + " * outElastic(c01(a / 0.8))) * (1 + 0.025 * Math.sin(time * 5)) : " + fit + ";\n", "[s, s]");
     return L;
   }
   function winCtrl(comp, keys, tOff, name) {
@@ -1491,7 +1644,7 @@ export const AE_SCRIPT = String.raw`// Slot animation rebuilt for After Effects 
       P(od, "ADBE Scale").expression = EASE_LIB + "var a = time - " + slamAt + "; var s = " + base + " * (a > 0 ? 1 + 0.2 * Math.pow(1 - c01(a / 0.35), 2) : 1); [s, s];";
     }
     var tx = text(comp, "Win Counter (text)", "0", size, xy);
-    tx.property("ADBE Text Properties").property("ADBE Text Document").expression = counterExpr('thisComp.layer("' + cn + '").effect("Amount")(1).value');
+    textExpr(tx, fmtExpr() + "var v = thisComp.layer(\"" + cn + "\").effect(\"Amount\")(1).value;\n", "v > 0.0001 ? fmt(v) : ''");
     tx.enabled = false;
     return od;
   }
@@ -1514,10 +1667,12 @@ export const AE_SCRIPT = String.raw`// Slot animation rebuilt for After Effects 
         var rr = inst(comp, raysPH(true), "Scatter Rays", [cl.x, cl.y], a, b);
         if (rr) {
           rr.blendingMode = BlendingMode.ADD;
-          P(rr, "ADBE Rotate Z").expression = "time * 69 + " + (i * 40) + ";";
-          var rs = 100 * DATA.cellW * 2.1 / rr.source.width;
+          spin(rr, 69, i * 40);
+          var rs = r4(100 * DATA.cellW * 2.1 / rr.source.width);
           P(rr, "ADBE Scale").setValue([rs, rs]);
+          fxScale(rr);
           fadeKeys(rr, a, b, 0.2, 0.3, 75);
+          fxOpacity(rr);
         }
       }
       var wl = winLayer(comp, cl.s, [cl.x, cl.y], a + i * 0.05, b);
@@ -1572,11 +1727,14 @@ export const AE_SCRIPT = String.raw`// Slot animation rebuilt for After Effects 
     var rr = inst(comp, raysPH(true), "Merge Rays", F.goal, M, lb);
     if (rr) {
       rr.blendingMode = BlendingMode.ADD;
-      P(rr, "ADBE Rotate Z").expression = "time * 52;";
-      P(rr, "ADBE Scale").expression = EASE_LIB + "var a = c01((time - " + M + ") / 0.6); var s = " + r4(100 * DATA.cellW * F.big * 1.7 / rr.source.width) + " * outElastic(a); [s, s];";
+      spin(rr, 52);
+      fxScale(rr, EASE_LIB + "var a = c01((time - " + M + ") / 0.6); var s = " + r4(100 * DATA.cellW * F.big * 1.7 / rr.source.width) + " * (" + fxMotion(rr.source) + " ? outElastic(a) : 1);\n", "[s, s]");
       fadeKeys(rr, M, lb, 0.05, 0.3, 70);
+      fxOpacity(rr);
     }
     var big = winLayer(comp, F.sym, F.goal, M, lb, "Merged " + DATA.symbols[F.sym].name);
+    // Scaled up: drawn from the symbol art itself, not the cell-sized comp.
+    try { big.collapseTransformation = true; } catch (eC) {}
     P(big, "ADBE Scale").expression = EASE_LIB + "var a = c01((time - " + M + ") / 0.6); var s = 100 * " + F.big + " * outElastic(a) * (1 + 0.04 * Math.sin((time - " + M + ") * 5)); [s, s];";
     fadeKeys(big, M, lb, 0.05, 0.3);
   }
@@ -1709,9 +1867,9 @@ export const AE_SCRIPT = String.raw`// Slot animation rebuilt for After Effects 
       var SL = inst(main, symComps[DATA.wildSym], (st.walk ? "Walking Wild " : "Sticky Wild ") + (i + 1), [st.x, st.y], st.from, stEnd);
       var SF = frameAt(main, "FX Sticky Frame", DATA.cellW * 0.96, DATA.cellH * 0.96, { stroke: 0.035, round: 0.12, glow: 0.15, color: [1, 0.82, 0.35] }, "Sticky Frame " + (i + 1), [st.x, st.y], st.from, stEnd);
       if (st.fade) {
-        var fo = "Math.max(0, Math.min(1, 1 - (time - " + st.to + ") / 0.3)) * 100;";
-        P(SL, "ADBE Opacity").expression = fo;
-        P(SF, "ADBE Opacity").expression = fo;
+        var fo = "Math.max(0, Math.min(1, 1 - (time - " + st.to + ") / 0.3)) * 100";
+        P(SL, "ADBE Opacity").expression = fo + ";";
+        fxOpacity(SF, "", fo);
       }
       if (st.lab) valueOn(main, SL, st, st.from, st.labUntil);
       if (st.walk) {
@@ -1723,7 +1881,7 @@ export const AE_SCRIPT = String.raw`// Slot animation rebuilt for After Effects 
         P(SL, "ADBE Scale").expression = step + "var s = 100 * (1 + 0.08 * hop); [s, s];";
         if (st.exit) {
           P(SL, "ADBE Opacity").expression = step + "100 * (1 - u);";
-          P(SF, "ADBE Opacity").expression = step + "100 * (1 - u);";
+          fxOpacity(SF, step, "100 * (1 - u)");
         }
       } else P(SL, "ADBE Scale").expression = EASE_LIB + "var s = 100 * outBack(c01((time - " + st.from + ") / 0.4)); [s, s];";
       kids.push(SL);
@@ -1738,15 +1896,21 @@ export const AE_SCRIPT = String.raw`// Slot animation rebuilt for After Effects 
         var lk = DATA.hold.locks[i];
         var LF = frameAt(main, lk.special ? "FX Special Coin Lock" : "FX Coin Lock", DATA.cellW * 0.96, DATA.cellH * 0.96, { stroke: lk.special ? 0.04 : 0.028, round: 0.12, glow: lk.special ? 0.25 : 0.14 }, "Coin Lock " + (i + 1), [lk.x, lk.y], lk.from, lk.to);
         tint(LF, lk.color);
-        P(LF, "ADBE Opacity").expression = holdAlphaExpr() + "var f = Math.min(1, Math.max(0, (time - " + lk.from + ") / 0.15));\n" +
-          (lk.done !== null ? "var d = time > " + lk.done + " ? 0.35 : 1;\n" : "var d = 1;\n") + "a * f * d * 100;";
+        fxOpacity(LF, holdAlphaExpr() + "var f = Math.min(1, Math.max(0, (time - " + lk.from + ") / 0.15));\n" +
+          (lk.done !== null ? "var d = time > " + lk.done + " ? 0.35 : 1;\n" : "var d = 1;\n"), "a * f * d * 100");
         kids.push(LF);
       }
     }
-    var logo = machineArt("Logo", DATA.assets.logo, DATA.logo);
+    // The logo is painted hd times larger; a painted name also comes as an
+    // editable text layer in the Main Font (off) in its placeholder.
+    var LT = DATA.logoText;
+    var logo = inst(main, imagePH("Logo", "Machine", DATA.assets.logo, null, LT ? function (c) {
+      var tw = text(c, "Text (editable)", LT.text, Math.round(LT.px * DATA.hd), [c.width / 2, c.height / 2], [1, 0.86, 0.4]);
+      tw.enabled = false;
+    } : null), "Logo", DATA.logo);
     if (logo) {
       kids.push(logo);
-      P(logo, "ADBE Scale").expression = "var s = 100 * (1 + 0.012 * Math.sin(time * 1.6)); [s, s];";
+      P(logo, "ADBE Scale").expression = "var s = " + r4(100 / DATA.hd) + " * (1 + 0.012 * Math.sin(time * 1.6)); [s, s];";
     }
     var fsData = "var B = [";
     for (i = 0; i < DATA.fsBlocks.length; i++) {
@@ -1758,7 +1922,7 @@ export const AE_SCRIPT = String.raw`// Slot animation rebuilt for After Effects 
       "var idx = 0, nn = cur ? cur[2] : 0, done = false; if (cur) for (var k = 0; k < cur[3].length; k++) if (cur[3][k][0] <= time) { if (cur[3][k][2]) done = true; else idx = cur[3][k][1]; if (cur[3][k][3]) nn = cur[3][k][3]; }\n";
     if (DATA.fsBlocks.length) {
       var rib = text(main, "Free Spins Ribbon", "FREE SPINS", Math.round(H * 0.035), DATA.ribbon, [0.6, 0.95, 1]);
-      rib.property("ADBE Text Properties").property("ADBE Text Document").expression = fsData + "cur ? (done ? 'FREE SPINS COMPLETE' : 'FREE SPIN ' + Math.max(1, idx) + ' OF ' + Math.max(nn, idx)) : '';";
+      textExpr(rib, fsData, "cur ? (done ? 'FREE SPINS COMPLETE' : 'FREE SPIN ' + Math.max(1, idx) + ' OF ' + Math.max(nn, idx)) : ''");
       kids.push(rib);
     }
     // Hold & Spin: the respins counter on the frame's top edge; the coins'
@@ -1769,7 +1933,7 @@ export const AE_SCRIPT = String.raw`// Slot animation rebuilt for After Effects 
       P(PL, "ADBE Opacity").expression = holdAlphaExpr() + "a * 100;";
       kids.push(PL);
       var CT = text(main, "Respins Counter", "3 RESPINS LEFT", Math.round(H * 0.03), [DATA.machineX, hb.barY], [0.6, 0.95, 1]);
-      CT.property("ADBE Text Properties").property("ADBE Text Document").expression = holdCounterExpr() + "n == 1 ? 'LAST RESPIN' : (n == 0 ? 'NO RESPINS LEFT' : n + ' RESPINS LEFT');";
+      textExpr(CT, holdCounterExpr(), "n == 1 ? 'LAST RESPIN' : (n == 0 ? 'NO RESPINS LEFT' : n + ' RESPINS LEFT')");
       P(CT, "ADBE Opacity").expression = holdAlphaExpr() + holdCollectExpr() + "col ? 0 : a * 100;";
       kids.push(CT);
       var maxC = 0;
@@ -1799,17 +1963,17 @@ export const AE_SCRIPT = String.raw`// Slot animation rebuilt for After Effects 
         for (i = 0; i < DATA.hold.locks.length; i++) lks += (i ? "," : "") + "[" + DATA.hold.locks[i].from + "," + DATA.hold.locks[i].to + "]";
         lks += "]; var nc = 0; for (var q = 0; q < LK.length; q++) if (time >= LK[q][0] && time < LK[q][1]) nc++;\n";
         var hcl = text(main, "Hold Coins", "COINS", DATA.hud.label, DATA.hud.left, DATA.accent, false);
-        hcl.property("ADBE Text Properties").property("ADBE Text Document").expression = holdAlphaExpr() + lks + "a > 0.5 ? 'COINS ' + nc + '/' + " + DATA.hold.cells + " : '';";
+        textExpr(hcl, holdAlphaExpr() + lks, "a > 0.5 ? 'COINS ' + nc + '/' + " + DATA.hold.cells + " : ''");
         var hcr = text(main, "Hold Respins", "RESPINS", DATA.hud.label, DATA.hud.right, DATA.accent, false);
-        hcr.property("ADBE Text Properties").property("ADBE Text Document").expression = holdAlphaExpr() + holdCounterExpr() + "a > 0.5 ? 'RESPINS ' + n : '';";
+        textExpr(hcr, holdAlphaExpr() + holdCounterExpr(), "a > 0.5 ? 'RESPINS ' + n : ''");
         kids.push(hcl);
         kids.push(hcr);
       }
       if (DATA.fsBlocks.length) {
         var fsl = text(main, "Free Spins Counter", "FREE SPINS", DATA.hud.label, DATA.hud.left, DATA.accent, false);
-        fsl.property("ADBE Text Properties").property("ADBE Text Document").expression = fsData + "cur ? (done ? 'FREE SPINS DONE' : 'FREE SPINS ' + idx + '/' + Math.max(nn, idx)) : '';";
+        textExpr(fsl, fsData, "cur ? (done ? 'FREE SPINS DONE' : 'FREE SPINS ' + idx + '/' + Math.max(nn, idx)) : ''");
         var fst = text(main, "Free Spins Total", "TOTAL", DATA.hud.label, DATA.hud.right, DATA.accent, false);
-        fst.property("ADBE Text Properties").property("ADBE Text Document").expression = fmtExpr() + fsData + "cur ? 'TOTAL ' + fmt(thisComp.layer(\"SLOT CONTROL\").effect(\"FS Total\")(1).value) : '';";
+        textExpr(fst, fmtExpr() + fsData, "cur ? 'TOTAL ' + fmt(thisComp.layer(\"SLOT CONTROL\").effect(\"FS Total\")(1).value) : ''");
         kids.push(fsl);
         kids.push(fst);
       }
@@ -1954,7 +2118,7 @@ export const AE_SCRIPT = String.raw`// Slot animation rebuilt for After Effects 
       popCells(comp, R.scatters, rel(R.nearmiss.start), rel(R.nearmiss.end), false, false);
       if (R.nearMiss) {
         var nmL = frameAt(comp, "FX Near Miss", DATA.cellW, DATA.winH, { stroke: 0.035, round: 0.06, glow: 0.2, glowI: 1.4, color: [1, 0.31, 0.43] }, "Near Miss Reel", [R.nearMiss.x, winC[1]], rel(R.nearmiss.start), rel(R.nearmiss.end));
-        P(nmL, "ADBE Opacity").expression = "60 + 40 * Math.sin(time * 16);";
+        fxOpacity(nmL, "", "60 + 40 * Math.sin(time * 16)");
       }
       var nt = titleLayer(comp, "nearmiss", winC, rel(R.nearmiss.start), rel(R.nearmiss.end), W * 0.9);
       if (nt) fadeKeys(nt, rel(R.nearmiss.start), rel(R.nearmiss.end), 0.2, 0.35);
@@ -2021,8 +2185,8 @@ export const AE_SCRIPT = String.raw`// Slot animation rebuilt for After Effects 
       var G = frameAt(main, "FX Pot Glow", it.size * 0.5, it.size * 0.5, { round: 0.5, fill: [1, 1, 1], fillOp: 80, glow: 0.8, glowI: 2 }, it.name + " Glow", it.mouth, 0, DUR);
       G.blendingMode = BlendingMode.ADD;
       tint(G, it.color);
-      P(G, "ADBE Opacity").expression = ex + "Math.min(100, 100 * (ch * (0.75 + 0.25 * Math.sin(time * 13 + " + i + ")) + fl * 0.8));";
-      P(G, "ADBE Scale").expression = ex + "var s = 100 * (1 + 0.35 * ch + 0.35 * fl); [s, s];";
+      fxOpacity(G, ex, "Math.min(100, 100 * (ch * (0.75 + 0.25 * Math.sin(time * 13 + " + i + ")) + fl * 0.8))");
+      fxScale(G, ex + "var s = 100 * (1 + 0.35 * ch + 0.35 * fl);\n", "[s, s]");
       kids.push(G);
       if (!Pd.plates || !(it.max > 0)) continue;
       var n = 0, sh = "var S = [";
@@ -2078,10 +2242,16 @@ export const AE_SCRIPT = String.raw`// Slot animation rebuilt for After Effects 
       var G = frameAt(main, "FX Jackpot Glow", it.w * 1.1, it.h * 1.1, { round: 0.3, fill: [1, 1, 1], fillOp: 70, glow: 0.6, glowI: 2 }, it.name + " Glow", [it.x, it.y], 0, DUR);
       G.blendingMode = BlendingMode.ADD;
       tint(G, it.color);
-      P(G, "ADBE Opacity").expression = ex + "100 * Math.min(1, gl);";
-      P(G, "ADBE Scale").expression = ex + "var s = 115 * sc; [s, s];";
+      fxOpacity(G, ex, "100 * Math.min(1, gl)");
+      fxScale(G, ex + "var s = 115 * sc;\n", "[s, s]");
       kids.push(G);
-      var src = imagePH(it.name, "Jackpots", it.file);
+      // The name also as an editable text layer (off), for art without it.
+      var src = imagePH(it.name, "Jackpots", it.file, null, (function (it2) {
+        return function (c) {
+          var tw = text(c, "Name (editable)", it2.label, it2.labelPx, [c.width / 2, c.height / 2 + it2.labelY], [1, 0.86, 0.4]);
+          tw.enabled = false;
+        };
+      })(it));
       if (src) {
         var B = inst(main, src, it.name, [it.x, it.y]);
         P(B, "ADBE Scale").expression = ex + "[100 * sc, 100 * sc];";
@@ -2099,7 +2269,7 @@ export const AE_SCRIPT = String.raw`// Slot animation rebuilt for After Effects 
         kids.push(LT);
       }
       var V = text(main, it.name + " Value", " ", it.size, it.value, [1, 0.86, 0.4]);
-      V.property("ADBE Text Properties").property("ADBE Text Document").expression = fmtExpr() + "fmt(" + ctrl(it.name) + ".value);";
+      textExpr(V, fmtExpr(), "fmt(" + ctrl(it.name) + ".value)");
       var fit = fmtExpr() + "var str = fmt(" + ctrl(it.name) + ".value); var fit = Math.min(1, " + it.fitW + " / (str.length * " + it.size + " * 0.62));\n";
       P(V, "ADBE Scale").expression = ex + fit + "[100 * sc * fit, 100 * sc * fit];";
       P(V, "ADBE Position").expression = ex + "value + [0, " + it.dy + " * (sc - 1)];";
@@ -2124,7 +2294,7 @@ export const AE_SCRIPT = String.raw`// Slot animation rebuilt for After Effects 
     GL.blendingMode = BlendingMode.ADD;
     tint(GL, it.color);
     P(GL, "ADBE Position").expression = path + "[x, y];";
-    P(GL, "ADBE Opacity").expression = fade + "80 * (1 - f);";
+    fxOpacity(GL, fade, "80 * (1 - f)");
     var T = text(comp, it.name + " Win", J.text, J.size, J.from, [1, 0.86, 0.4]);
     P(T, "ADBE Position").expression = path + "[x, y + " + (J.size * 0.36) + "];";
     P(T, "ADBE Scale").expression = path + "var s = 100 * (1.1 - 0.2 * k); [s, s];";
@@ -2143,7 +2313,7 @@ export const AE_SCRIPT = String.raw`// Slot animation rebuilt for After Effects 
       var it = B.items[i], h = rel(it.hit);
       var mk = frameAt(comp, "FX Boost Target", DATA.cellW * 0.94, DATA.cellH * 0.94, { stroke: 0.035, round: 0.12, glow: 0.2, glowI: 1.5 }, "Boost Target " + (i + 1), [it.x, it.y], a, h + 0.05);
       tint(mk, it.color);
-      P(mk, "ADBE Opacity").expression = "function c01(x){return x<0?0:(x>1?1:x);}\nvar e = Math.min(c01((time - " + a + ") / 0.3), c01((" + (h + 0.05) + " - time) / 0.05));\n100 * e * (0.65 + 0.35 * Math.sin(time * 10 + " + i + "));";
+      fxOpacity(mk, "function c01(x){return x<0?0:(x>1?1:x);}\nvar e = Math.min(c01((time - " + a + ") / 0.3), c01((" + (h + 0.05) + " - time) / 0.05));\n", "100 * e * (0.65 + 0.35 * Math.sin(time * 10 + " + i + "))");
       var A = inst(comp, symComps[it.from], "Boost From " + DATA.symbols[it.from].name, [it.x, it.y], Math.max(0, h - lead), h);
       if (A) P(A, "ADBE Position").expression = "value + [Math.sin(time * 90) * " + r4(DATA.cellW * 0.02) + ", 0];";
       var T = inst(comp, symComps[it.to], "Boost " + DATA.symbols[it.to].name, [it.x, it.y], h, h + popT);
@@ -2153,8 +2323,8 @@ export const AE_SCRIPT = String.raw`// Slot animation rebuilt for After Effects 
       }
       var fl = frameAt(comp, "FX Boost Flash", DATA.cellW * 0.8, DATA.cellW * 0.8, { round: 0.5, fill: [1, 1, 1], fillOp: 90, glow: 0.5, glowI: 2 }, "Boost Flash " + (i + 1), [it.x, it.y], h, h + 0.6);
       fl.blendingMode = BlendingMode.ADD;
-      P(fl, "ADBE Opacity").expression = "var f = Math.min(1, Math.max(0, (time - " + h + ") / 0.6)); 80 * (1 - f);";
-      P(fl, "ADBE Scale").expression = "var f = Math.min(1, Math.max(0, (time - " + h + ") / 0.6)); var s = 100 * (1.2 + f); [s, s];";
+      fxOpacity(fl, "var f = Math.min(1, Math.max(0, (time - " + h + ") / 0.6));\n", "80 * (1 - f)");
+      fxScale(fl, "var f = Math.min(1, Math.max(0, (time - " + h + ") / 0.6)); var s = 100 * (1.2 + f);\n", "[s, s]");
       ring(comp, [it.x, it.y], h, DATA.cellW * 0.95, it.color);
     }
   }
@@ -2199,7 +2369,7 @@ export const AE_SCRIPT = String.raw`// Slot animation rebuilt for After Effects 
       hd.blendingMode = BlendingMode.ADD;
       tint(hd, bm.color);
       P(hd, "ADBE Position").expression = pre + rowsExpr("Q", bm.pts) + "var n = Q.length - 1; var x = head * n; var j = Math.min(n - 1, Math.floor(x)); var kk = x - j;\n[Q[j][0] + (Q[j + 1][0] - Q[j][0]) * kk, Q[j][1] + (Q[j + 1][1] - Q[j][1]) * kk];";
-      P(hd, "ADBE Opacity").expression = pre + "90 * " + fade + ";";
+      fxOpacity(hd, pre, "90 * " + fade);
     }
   }
   // Beaming to the pots: each winner fires (a ring in its pot's colour) and
@@ -2210,7 +2380,7 @@ export const AE_SCRIPT = String.raw`// Slot animation rebuilt for After Effects 
       var cl = st.cells[i], l0 = rel(F.launch[i]);
       ring(comp, [cl.x, cl.y], l0, DATA.cellW * 0.75, DATA.pots.items[F.pots[i]].color);
       var dk = frameAt(comp, "FX Cell Shade", DATA.cellW * 0.94, DATA.cellH * 0.94, { round: 0.1, fill: [0.02, 0.01, 0.05], fillOp: 100 }, "Drained " + (i + 1), [cl.x, cl.y], l0, e);
-      P(dk, "ADBE Opacity").expression = "var d = Math.min(1, Math.max(0, (time - " + (l0 + 0.05) + ") / 0.3)); var o = Math.min(1, Math.max(0, (" + e + " - time) / 0.3)); 45 * d * o;";
+      fxOpacity(dk, "var d = Math.min(1, Math.max(0, (time - " + (l0 + 0.05) + ") / 0.3)); var o = Math.min(1, Math.max(0, (" + e + " - time) / 0.3));\n", "45 * d * o");
     }
   }
 
@@ -2262,7 +2432,7 @@ export const AE_SCRIPT = String.raw`// Slot animation rebuilt for After Effects 
     for (i = 0; i < C.items.length; i++) tot += (i ? "," : "") + "\"" + C.items[i].after + "\"";
     tot += "];\n";
     var TX = text(comp, "Collected", C.items.length ? C.items[0].after : "", Math.round(DATA.cellH * 0.3), [tg[0], tg[1] + DATA.cellH * 0.3]);
-    TX.property("ADBE Text Properties").property("ADBE Text Document").expression = arr + tot + "got >= 0 ? T[got] : '';";
+    textExpr(TX, arr + tot, "got >= 0 ? T[got] : ''");
     P(TX, "ADBE Scale").expression = arr + "var s = 100 * (1 + 0.2 * bump); [s, s];";
     glow(TX, DATA.cellW * 0.1, 1.3);
     trim(TX, C.items.length ? rel(C.items[0].arrive) : a, b);
@@ -2288,8 +2458,7 @@ export const AE_SCRIPT = String.raw`// Slot animation rebuilt for After Effects 
     for (i = 0; i < M.items.length; i++) items += (i ? "," : "") + "[" + rel(M.items[i].t) + "," + M.items[i].value + "]";
     items += "]; var sum = 0; for (var i = 0; i < I.length; i++) if (time >= I[i][0] + 0.45) sum += I[i][1];\n";
     var tx = text(comp, "Multiplier Total", "x", Math.round(DATA.cellH * 0.35), tg);
-    tx.property("ADBE Text Properties").property("ADBE Text Document").expression = fmtExpr() + items +
-      "time >= " + rel(M.applyAt) + " ? fmt(" + M.total + ") : (sum > 0 ? fmt(" + M.base + ") + ' x' + sum : fmt(" + M.base + "));";
+    textExpr(tx, fmtExpr() + items, "time >= " + rel(M.applyAt) + " ? fmt(" + M.total + ") : (sum > 0 ? fmt(" + M.base + ") + ' x' + sum : fmt(" + M.base + "))");
     P(tx, "ADBE Scale").expression = EASE_LIB + "var a = time - " + rel(M.applyAt) + "; var s = a > 0 ? 100 * (1 + 0.25 * Math.pow(1 - c01(a / 0.4), 2)) : 100; [s, s];";
     fadeKeys(tx, rel(M.start), rel(M.end + 0.3), 0.25, 0.4);
     ring(comp, tg, rel(M.applyAt), DATA.cellW * 2.6, [1, 0.82, 0.35]);
@@ -2300,8 +2469,8 @@ export const AE_SCRIPT = String.raw`// Slot animation rebuilt for After Effects 
     var a = rel(ov.start), b = rel(ov.end);
     var cx = W / 2, cy = H * (H > W * 1.1 ? 0.4 : 0.42);
     darkLayer(comp, a, b, 72);
-    rays(comp, [cx, cy], a, b, 100 * H * 1.7 / 1024, 12.6, 60);
-    rays(comp, [cx, cy], a, b, 70 * H * 1.7 / 1024, -20, 35);
+    rays(comp, [cx, cy], a, b, H * 1.7, 12.6, 60);
+    rays(comp, [cx, cy], a, b, 0.7 * H * 1.7, -20, 35);
     emitters(comp, R, "under", ["tier", "total"]);
     for (i = 0; i < ov.tiers.length; i++) {
       var ta = rel(ov.tierTimes[i]);
@@ -2419,7 +2588,7 @@ export const AE_SCRIPT = String.raw`// Slot animation rebuilt for After Effects 
     var a = rel(G.start), b = rel(G.end);
     var cx = W / 2, cy = H * 0.44;
     darkLayer(comp, a, b, 70);
-    rays(comp, [cx, cy], a, b, 100 * H * 1.8 / 1024, 17, 60);
+    rays(comp, [cx, cy], a, b, H * 1.8, 17, 60);
     ring(comp, [cx, cy], a, H * 0.8, [1, 0.7, 0.1]);
     emitters(comp, R, "under", ["grand"]);
     var T = titleLayer(comp, "grand", [cx, cy - H * 0.06], a, b, W * 0.9);
@@ -2437,7 +2606,7 @@ export const AE_SCRIPT = String.raw`// Slot animation rebuilt for After Effects 
       var S = R.jpShows[k];
       var a = rel(S.start), b = rel(S.end);
       darkLayer(comp, a, b, 70);
-      rays(comp, [cx, cy], a, b, 100 * H * 1.8 / 1024, 17, 60);
+      rays(comp, [cx, cy], a, b, H * 1.8, 17, 60);
       ring(comp, [cx, cy], a, H * 0.8, S.color);
       if (k === 0) emitters(comp, R, "under", ["jackpot"]);
       var T = titleLayer(comp, S.title, [cx, cy - H * 0.06], a, b, W * 0.9);
@@ -2454,7 +2623,7 @@ export const AE_SCRIPT = String.raw`// Slot animation rebuilt for After Effects 
     var a = rel(bn.start), b = rel(bn.end);
     var cx = W / 2, cy = H * 0.44;
     darkLayer(comp, a, b, 60);
-    rays(comp, [cx, cy], a, b, 100 * H * 1.6 / 1024, 14.3, 55);
+    rays(comp, [cx, cy], a, b, H * 1.6, 14.3, 55);
     ring(comp, [cx, cy], a, H * 0.7, DATA.accent);
     var T = titleLayer(comp, bn.kind, [cx, bn.kind === "freespins" || bn.kind === "retrigger" || bn.kind === "holdspin" ? cy - H * 0.13 : cy], a, b, W * 0.9);
     if (T) fadeKeys(T, a, b, 0.05, 0.5);
@@ -2509,6 +2678,7 @@ export const AE_SCRIPT = String.raw`// Slot animation rebuilt for After Effects 
         td.justification = ParagraphJustification.CENTER_JUSTIFY;
         try { td.font = WH.font; } catch (e) { try { td.font = DATA.font; } catch (e2) {} }
         prop.setValue(td);
+        textExpr(L, null, undefined, "Wheel Font");
         // Turn about the middle of the text, reading outwards.
         P(L, "ADBE Anchor Point").setValue([0, -lb.px * 0.36]);
         pos(L, [D / 2 + Math.cos(la) * lb.r, D / 2 + Math.sin(la) * lb.r]);
@@ -2534,10 +2704,11 @@ export const AE_SCRIPT = String.raw`// Slot animation rebuilt for After Effects 
     var ry = inst(comp, raysPH(false), "Light Rays", [cx, cy]);
     if (ry) {
       ry.blendingMode = BlendingMode.ADD;
-      P(ry, "ADBE Rotate Z").expression = "time * 8.6;";
-      var rys = 100 * Rr * 3.4 / ry.source.width;
+      spin(ry, 8.6);
+      var rys = r4(100 * Rr * 3.4 / ry.source.width);
       P(ry, "ADBE Scale").setValue([rys, rys]);
-      P(ry, "ADBE Opacity").expression = envExpr + "env * 45;";
+      fxScale(ry);
+      fxOpacity(ry, envExpr, "env * 45");
     }
     var rig = comp.layers.addNull(comp.duration);
     rig.name = "WHEEL RIG";
@@ -2703,6 +2874,7 @@ export const AE_SCRIPT = String.raw`// Slot animation rebuilt for After Effects 
   app.beginUndoGroup("Build slot animation");
   try {
     fShared = folder("Slot Assets");
+    buildFonts();
     var f;
     for (f = 0; f < DATA_LIST.length; f++) {
       DATA = DATA_LIST[f];
@@ -2714,6 +2886,14 @@ export const AE_SCRIPT = String.raw`// Slot animation rebuilt for After Effects 
     alert("The slot build stopped: " + err.toString() + (err.line ? " (script line " + err.line + ")" : ""));
   }
   app.endUndoGroup();
-  if (missing.length) alert("These asset files were not found next to the script:\n" + missing.join("\n"));
+  // Missing files: a few names, and on a Mac the likely cause when none
+  // could be read (macOS asks before an app reads Downloads, Desktop or
+  // Documents).
+  if (missing.length) {
+    var mac = $.os && $.os.indexOf("Mac") >= 0;
+    alert(missing.length + " asset file" + (missing.length > 1 ? "s were" : " was") + " not found next to the script:\n" + missing.slice(0, 8).join("\n") + (missing.length > 8 ? "\n..." : "") +
+      "\n\nKeep the .jsx next to its \"assets\" folder, unzipped." + (mac ? "\nOn a Mac, if After Effects was refused access to this folder, allow it in System Settings > Privacy & Security > Files and Folders, then run the script again." : ""));
+  }
+  if (missingFonts.length) alert("Not installed: " + missingFonts.join(", ") + ".\nInstall it (the fonts folder, or Google Fonts), or pick another font on the layers of the \"Fonts\" comp: every text follows.");
 })();
 `;

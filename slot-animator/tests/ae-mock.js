@@ -17,7 +17,8 @@ const KNOWN_MATCH = new Set([
   'ADBE Mask Parade', 'ADBE Mask Atom', 'ADBE Mask Shape', 'ADBE Mask Opacity',
 ]);
 
-export function createAE({ files = new Set(), fileName = '/pkg/slot.jsx' } = {}) {
+// sizes: image sizes by path ([w, h]; else 512 square); os: what $.os says.
+export function createAE({ files = new Set(), fileName = '/pkg/slot.jsx', sizes = {}, os = 'Windows' } = {}) {
   const log = { comps: [], expressions: [], keys: [], alerts: [], imports: [], folders: [] };
 
   class Prop {
@@ -206,7 +207,8 @@ export function createAE({ files = new Set(), fileName = '/pkg/slot.jsx' } = {})
     importFile: (io) => {
       const p = io.file.fsName;
       log.imports.push(p);
-      const f = { name: p.split('/').pop(), width: 512, height: 512, duration: 0 };
+      const [width, height] = sizes[p] || [512, 512];
+      const f = { name: p.split('/').pop(), path: p, width, height, duration: 0 };
       items.push(f);
       return f;
     },
@@ -247,7 +249,7 @@ export function createAE({ files = new Set(), fileName = '/pkg/slot.jsx' } = {})
       this.comment = c;
     },
     alert: (m) => log.alerts.push(String(m)),
-    $: { fileName },
+    $: { fileName, os },
   };
   return { env, log };
 }

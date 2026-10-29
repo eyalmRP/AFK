@@ -478,7 +478,7 @@ export function paintTitle(text, font, px, paletteName = 'gold') {
   return c;
 }
 
-function paintLogo(L, project, theme, img) {
+export function paintLogo(L, project, theme, img) {
   const { logo } = L;
   // The pots stand where the title goes; the title can also be switched off.
   if (L.pots || project.machine.showTitle === false) return null;
@@ -622,7 +622,7 @@ function paintGlow(size, color = '#ffffff') {
   return c;
 }
 
-function paintRays(size, count, color) {
+export function paintRays(size, count, color) {
   const c = canvas(size, size);
   const g = c.getContext('2d');
   const r = size / 2;
@@ -930,21 +930,28 @@ export function shade(hex, amt) {
   return `rgb(${r},${g},${b})`;
 }
 
-export function buildResources(project, L, images) {
-  const theme = THEMES[project.machine.theme] || THEMES.royal;
+// The size the titles are painted at for a layout.
+export function titleSize(L) {
+  return Math.round(Math.min(L.W * 0.11, L.H * 0.16));
+}
+
+// Every title the animation can show (win tiers, banners, the Grand, a
+// Major jackpot), painted at the layout's title size times `scale` (the
+// After Effects package paints them larger). texts holds the words.
+export function paintTitles(project, L, scale = 1) {
   const font = fontStack(project.effects.font);
-  const sym = images.symbols.map((img) => symbolSprites(img, L.cellW, L.cellH));
-  const { back, front } = paintMachine(L, theme, images.frame, project.machine.builtinFrame !== false, project.spin.type === 'cells', !!project.machine.rowLines);
-  const winAnim = (images.winAnims || []).map((a) => (a ? { frames: a.frames.slice(0, 240).map((f) => fitFrame(f, L.cellW, L.cellH)), fps: a.fps } : null));
-  const titlePx = Math.round(Math.min(L.W * 0.11, L.H * 0.16));
+  const titlePx = titleSize(L) * scale;
   const titles = {};
+  const texts = {};
   const t = project.effects.titles || {};
-  const make = (k, pal, scale = 1) => {
-    titles[k] = paintTitle(t[k] || k.toUpperCase(), font, Math.round(titlePx * scale), pal);
+  const put = (k, text, px, pal) => {
+    texts[k] = text;
+    titles[k] = paintTitle(text, font, Math.round(px), pal);
   };
+  const make = (k, pal, sc = 1) => put(k, t[k] || k.toUpperCase(), titlePx * sc, pal);
   const tierPalette = { total: 'gold' };
   for (const tier of project.tiers || []) {
-    titles[tier.id] = paintTitle(tier.title || 'BIG WIN', font, titlePx, tier.palette || 'gold');
+    put(tier.id, tier.title || 'BIG WIN', titlePx, tier.palette || 'gold');
     tierPalette[tier.id] = tier.palette || 'gold';
   }
   make('total', 'gold', 0.85);
@@ -957,7 +964,19 @@ export function buildResources(project, L, images) {
   make('grand', 'fire', 1.05);
   // A Major jackpot's full-screen title: its box's name and JACKPOT.
   const jpc = jackpotsConfig(project);
-  if (jpc.on) for (const tier of jpc.tiers) if (JP_SHOW_TIERS.includes(tier.id)) titles[`jp_${tier.id}`] = paintTitle(`${tier.label} JACKPOT`.trim(), font, Math.round(titlePx * 0.9), TITLE_PALETTES[tier.palette] ? tier.palette : tier.palette === 'emerald' ? 'aqua' : 'gold');
+  if (jpc.on) for (const tier of jpc.tiers) if (JP_SHOW_TIERS.includes(tier.id)) put(`jp_${tier.id}`, `${tier.label} JACKPOT`.trim(), titlePx * 0.9, TITLE_PALETTES[tier.palette] ? tier.palette : tier.palette === 'emerald' ? 'aqua' : 'gold');
+  return { titles, texts, tierPalette };
+}
+
+export function buildResources(project, L, images) {
+  const theme = THEMES[project.machine.theme] || THEMES.royal;
+  const font = fontStack(project.effects.font);
+  const sym = images.symbols.map((img) => symbolSprites(img, L.cellW, L.cellH));
+  const { back, front } = paintMachine(L, theme, images.frame, project.machine.builtinFrame !== false, project.spin.type === 'cells', !!project.machine.rowLines);
+  const winAnim = (images.winAnims || []).map((a) => (a ? { frames: a.frames.slice(0, 240).map((f) => fitFrame(f, L.cellW, L.cellH)), fps: a.fps } : null));
+  const titlePx = titleSize(L);
+  const { titles, tierPalette } = paintTitles(project, L);
+  const jpc = jackpotsConfig(project);
   const segs = project.wheel.segments.length >= 2 ? project.wheel.segments : [{ label: '?', value: 0 }, { label: '?', value: 0 }];
   return {
     theme,

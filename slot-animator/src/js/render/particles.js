@@ -8,6 +8,8 @@ import { canvas, loadImage, loadWinAnim, paintCoin } from './sprites.js';
 import { starPath, roundRect } from './paint.js';
 
 export const PARTICLE_PX = 192;
+// The size the painters work at (paintParticle sets it for one call).
+let paintPx = PARTICLE_PX;
 
 const STAR_FILLS = [
   ['#fff8d2', '#ffd447', '#c77c08'],
@@ -29,7 +31,7 @@ const CHIPS = [
 ];
 
 function paintStar(fill) {
-  const S = PARTICLE_PX;
+  const S = paintPx;
   const c = canvas(S, S);
   const g = c.getContext('2d');
   const r = S * 0.46;
@@ -50,7 +52,7 @@ function paintStar(fill) {
 }
 
 function paintSparkle() {
-  const S = PARTICLE_PX;
+  const S = paintPx;
   const c = canvas(S, S);
   const g = c.getContext('2d');
   const m = S / 2;
@@ -75,7 +77,7 @@ function paintSparkle() {
 }
 
 function paintGem(fill) {
-  const S = PARTICLE_PX;
+  const S = paintPx;
   const c = canvas(S, S);
   const g = c.getContext('2d');
   const m = S / 2;
@@ -120,7 +122,7 @@ function paintGem(fill) {
 }
 
 function paintConfetti(color, k) {
-  const S = PARTICLE_PX;
+  const S = paintPx;
   const c = canvas(S, S);
   const g = c.getContext('2d');
   const w = S * (k % 3 === 0 ? 0.62 : 0.5);
@@ -137,7 +139,7 @@ function paintConfetti(color, k) {
 }
 
 function paintEmber(k) {
-  const S = PARTICLE_PX;
+  const S = paintPx;
   const c = canvas(S, S);
   const g = c.getContext('2d');
   const m = S / 2;
@@ -153,7 +155,7 @@ function paintEmber(k) {
 }
 
 function paintChip([body, stripe]) {
-  const S = PARTICLE_PX;
+  const S = paintPx;
   const c = canvas(S, S);
   const g = c.getContext('2d');
   const m = S / 2;
@@ -188,10 +190,22 @@ function paintChip([body, stripe]) {
   return c;
 }
 
-export function paintParticle(id) {
+// One particle's art (its variants), at PARTICLE_PX or `size` (the After
+// Effects package paints it larger).
+export function paintParticle(id, size = PARTICLE_PX) {
+  const prev = paintPx;
+  paintPx = size;
+  try {
+    return paintParticleAt(id);
+  } finally {
+    paintPx = prev;
+  }
+}
+
+function paintParticleAt(id) {
   switch (id) {
     case 'coin':
-      return [paintCoin(PARTICLE_PX)];
+      return [paintCoin(paintPx)];
     case 'star':
       return STAR_FILLS.map(paintStar);
     case 'sparkle':
@@ -205,15 +219,15 @@ export function paintParticle(id) {
     case 'chip':
       return CHIPS.map(paintChip);
     default:
-      return [paintCoin(PARTICLE_PX)];
+      return [paintCoin(paintPx)];
   }
 }
 
-// Fit an uploaded frame into PARTICLE_PX, keeping its aspect.
-function fitParticle(img) {
+// Fit an uploaded frame into PARTICLE_PX (or px), keeping its aspect.
+export function fitParticle(img, px = PARTICLE_PX) {
   const w = img.naturalWidth || img.width;
   const h = img.naturalHeight || img.height;
-  const s = Math.min(1, PARTICLE_PX / Math.max(w, h));
+  const s = Math.min(1, px / Math.max(w, h));
   const c = canvas(Math.max(1, Math.round(w * s)), Math.max(1, Math.round(h * s)));
   const g = c.getContext('2d');
   g.imageSmoothingQuality = 'high';
@@ -245,7 +259,8 @@ export async function loadParticleSprites(project, load = loadImage) {
       frames = null;
     }
     if (!frames || !frames.length) continue;
-    out.set(a.id, { frames: frames.map(fitParticle), fps: info.fps, anim: info.anim, motion: info.motion, blend: a.blend === 'add' || info.motion === 'glow' ? 'add' : 'normal' });
+    // raw: the frames as loaded (the After Effects package fits them larger).
+    out.set(a.id, { frames: frames.map((f) => fitParticle(f)), raw: frames, fps: info.fps, anim: info.anim, motion: info.motion, blend: a.blend === 'add' || info.motion === 'glow' ? 'add' : 'normal' });
   }
   return out;
 }

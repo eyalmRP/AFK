@@ -3,12 +3,13 @@
 // machine art, titles and effects are painted once per output format. Only
 // files the script imports ship, and identical files are stored once.
 
-import { AE_ASSETS, aeAssetFiles, buildAEData, buildAEScript, exportFormats, projectForFormat, usedParticleAssets } from '../core/ae-export.js';
+import { AE_ASSETS, AE_HD, aeAssetFiles, buildAEData, buildAEScript, exportFormats, projectForFormat, usedParticleAssets } from '../core/ae-export.js';
 import { FilePack, remapPaths } from '../core/pack.js';
 import { encodeWav } from '../core/wav.js';
 import { computeLayout } from '../core/layout.js';
 import { paintHudLayer, paintBulbLayer, paintWheelBulbLayer } from '../render/renderer.js';
-import { canvas, buildResources } from '../render/sprites.js';
+import { canvas, buildResources, paintTitles, paintRays, paintLogo } from '../render/sprites.js';
+import { paintParticle, fitParticle, PARTICLE_PX } from '../render/particles.js';
 import { decodeCustomSounds, renderCue } from '../render/audio.js';
 import { sfxCues } from '../core/sfx.js';
 import { fontPostScript } from '../core/fonts.js';
@@ -60,10 +61,21 @@ const README = ({ name, file, formats, sfxClips, headroom, transparent, font }) 
 =========================================
 
 1. Unzip this folder anywhere. Keep "${file}" next to the "assets" folder.
-2. In After Effects (2026 or any CC version): File > Scripts > Run Script
-   File... and pick "${file}".
+2. In After Effects (2026 or any CC version, Mac or Windows): File >
+   Scripts > Run Script File... and pick "${file}". Do not double-click
+   the .jsx: that opens it in another app.
 3. The script builds one project folder per format (${formats.join(', ')}).
    Open the main comp and press space to play.
+
+On a Mac
+- The script and the file names are plain ASCII, so the script reads the
+  same on a Mac as on Windows.
+- macOS asks before an app reads your Downloads, Desktop or Documents
+  folder. If After Effects says the asset files were not found, allow it
+  in System Settings > Privacy & Security > Files and Folders (or move
+  the unzipped folder elsewhere), then run the script again.
+- Fonts: install the fonts listed under Notes below (double-click a font
+  file to install it with Font Book).
 
 How the project is organised
 Most of the animation is decided in Reel Studio (outcomes, timing, motion,
@@ -98,7 +110,9 @@ timing lives in the round comps, and a few controls sit on SLOT CONTROL.
     holds one per frame and each particle picks one; an animated particle
     holds its frames in order and each particle plays it from a random
     frame. Replace the art here and every explosion follows.
-  - Titles/: "Title <tier>" for each title, with its light sweep.
+  - Titles/: "Title <tier>" for each title, with its light sweep, and its
+    words as a "Text (editable)" layer in the Main Font, switched off: turn
+    it on (and the art off) to change the words or their font.
   - Paylines/: "Payline NN", each drawing itself on.
   - Plaques/: the multiplier, prize and hold & spin plaques.
   - Wheel/: Wheel Disc (the turning part: your face art, Wheel Segments,
@@ -107,11 +121,40 @@ timing lives in the round comps, and a few controls sit on SLOT CONTROL.
     Icon NN, Wheel Ring, Wheel Bulbs A and B, Wheel Pointer (its anchor is
     the pivot). Replace any of them with your art.
   - Counters/: "Counter Digits", the 0-9 strip every counter rolls
-    through. Change its font, colour or style once and every counter
-    follows.
-  Effect placeholders are white; each use is tinted to its colour by a
-  "Colour" (Tint) effect. Untick "FX Colour" on SLOT CONTROL to keep the
-  colours of your own effect art.
+    through. Change its colour or style once and every counter follows.
+  The Logo placeholder (a logo painted from the machine's name) and each
+  Jackpot plate also hold their words as a text layer, switched off.
+
+Effects and their controls
+- Every effect placeholder (Effects/ and Titles/) has an "FX CONTROLS"
+  null. Its sliders and switches drive every use of that effect:
+  - "Size %" and "Opacity %": every use bigger, smaller, brighter, fainter.
+  - "Colour": effect art is white and each use is tinted to its colour;
+    untick it to keep your art's own colours ("FX Colour" on SLOT CONTROL
+    does it for all effects at once).
+  - "Speed %" (FX Shockwave): how fast the ring grows.
+  - "Spin %" (rays): how fast the rays turn.
+  - "Built-in Motion" (rays and titles): untick it when your art brings
+    its own motion; the uses then stop spinning, popping and springing.
+  - "Light Sweep" (titles): the sweep across the title.
+- Swap an effect for a prerendered movie (a .mov with alpha, a PNG
+  sequence...): open its placeholder, switch off or delete the art layer,
+  and drop your movie in at 0:00. Every use starts it
+  at the moment the effect happens: shockwave uses last 4 s, so a movie up
+  to 4 s plays in full; frames and glows last as long as they show (set a
+  looping movie to loop in Interpret Footage). Untick "Colour" for a
+  coloured movie and "Built-in Motion" for one that moves by itself.
+- Particle explosions: replace the art in Particles/ and every explosion
+  follows; to swap one explosion for a movie, open its comp in
+  Rounds/Particles, switch its particle layers off and drop the movie in.
+
+Full-screen wins in HD
+- Titles, the logo, the light rays and the particle art are painted twice
+  the size they show, and their uses are scaled to 50% (or less). Enlarge
+  a title, the rays or a particle up to 200% and it stays sharp. The
+  counters are built at twice the size of the biggest amount, and the
+  shockwave ring is drawn as big as its biggest use. A winning symbol that
+  merges into a big one is drawn from its full-size art.
 - Reels/: one precomp per reel (or per cell for per-cell spins). Each has a
   CTRL null with a "Spin" slider: its keyframes are the start, mid and end
   phases from Reel Studio, with the same speed and influence eases. Open the
@@ -159,7 +202,7 @@ timing lives in the round comps, and a few controls sit on SLOT CONTROL.
   main comp); key or pick-whip it to drive the counter yourself. Each
   column turns as the one below it wraps, like the Odometer plugin, so no
   plugin is needed.
-- Sound/SFX: ${sfxClips ? `every sound cue on its own audio layer at its time (${sfxClips} distinct clips in assets/sfx), named after the cue and its round and coloured by group: Reels blue, Wins green, Coins yellow, Big Win red, UI purple. The SFX MIX null holds the levels in dB: "Master" and one slider per group; every layer reads its two sliders. Mute, move or swap any cue layer.${headroom < 0 ? ` Master includes ${headroom} dB of headroom so the loudest moment stays below 0 dB (After Effects has no compressor).` : ''}` : 'sound was switched off in Reel Studio, so there are no sound cues.'}
+- Sound/SFX: ${sfxClips ? `every sound cue on its own audio layer at its time (${sfxClips} distinct clips in assets/sfx), named after the cue and its round and coloured by group: Reels blue, Wins green, Coins yellow, Big Win red, UI purple. The SFX MIX null holds the levels in dB: "Master" and one slider per group; every layer reads its two sliders. Mute, move or swap any cue layer; to change a sound everywhere it plays, select its file in Slot Assets/SFX and use File > Replace Footage.${headroom < 0 ? ` Master includes ${headroom} dB of headroom so the loudest moment stays below 0 dB (After Effects has no compressor).` : ''}` : 'sound was switched off in Reel Studio, so there are no sound cues.'}
 - Main comp: the machine, reels, sticky wilds and walking wilds (each step
   hops in from the reel it left), the tease ("Tease Dim Rn" over the
   other reels and a lit "Scatter Lands" copy of every scatter that
@@ -201,8 +244,10 @@ Transparency
 
 Notes
 - Fonts: text layers ask for ${font}. Install them (Google Fonts, or the
-  files in fonts/) or change the font on "Counter Digits", the wheel labels
-  in "Wheel Disc" and the other text layers.
+  files in fonts/). Every text layer takes its font from the "Fonts" comp
+  (in Slot Assets): pick another font on its "Main Font" layer (or "Wheel
+  Font" for the wheel labels) and all the text follows (After Effects 2020
+  or later; older versions keep the font each layer was built with).
 - Reel curvature and bloom are preview-only effects; the AE reels are flat.
 - assets/ holds only the art and sounds this animation uses, and each
   identical file once: two placeholders (or two formats) can share one
@@ -289,6 +334,11 @@ export async function buildAEPackage(scene, images, onProgress, signal = null) {
       res.front = buildResources(flat, computeLayout(flat), images).front;
     }
     const sc = { project: p, tl, L, res };
+    // Full-screen art at AE_HD times its size: titles, the logo and the rays
+    // (as big as their largest use, a full-screen win's, times AE_HD).
+    const hdTitles = paintTitles(p, L, AE_HD);
+    const hdLogo = () => res.logo && paintLogo({ ...L, logo: { ...L.logo, w: L.logo.w * AE_HD, h: L.logo.h * AE_HD } }, p, res.theme, images.logo);
+    const raysPx = Math.min(4096, Math.round(L.H * 1.8 * AE_HD));
     const assetDir = `assets/${fmt[0]}x${fmt[1]}`;
     const A = AE_ASSETS.format(assetDir);
     const data = buildAEData(p, tl, L, {
@@ -305,6 +355,9 @@ export async function buildAEPackage(scene, images, onProgress, signal = null) {
       sfx,
       sfxHeadroom,
       titleKeys: Object.keys(res.titles),
+      titleTexts: hdTitles.texts,
+      // A logo painted from the machine's name: its words and size.
+      logoText: res.logo && !images.logo && (p.machine.title || '').trim() ? { text: p.machine.title.trim(), px: res.logo.height / 1.75 } : null,
     });
     for (const f of aeAssetFiles(data)) used.add(f);
     dataList.push(data);
@@ -315,10 +368,10 @@ export async function buildAEPackage(scene, images, onProgress, signal = null) {
       [A.bulbsA, () => (marquee ? paintBulbLayer(sc, 0) : null)],
       [A.bulbsB, () => (marquee ? paintBulbLayer(sc, 1) : null)],
       [A.hud, () => (L.hud ? paintHudLayer(sc) : null)],
-      [A.logo, () => res.logo],
+      [A.logo, hdLogo],
       [A.vignette, () => res.vignette],
-      [A.rays, () => res.rays],
-      [A.raysSmall, () => res.raysSmall],
+      [A.rays, () => paintRays(raysPx, 18, 'rgba(255,220,140,0.75)')],
+      [A.raysSmall, () => paintRays(512 * AE_HD, 12, 'rgba(255,240,200,0.8)')],
       [A.wheelFace, () => res.wheel.face],
       [A.wheelSegments, () => res.wheel.segs],
       [A.wheelHub, () => res.wheel.hub],
@@ -329,7 +382,7 @@ export async function buildAEPackage(scene, images, onProgress, signal = null) {
       [A.wheelBulbsA, () => (res.wheel.bulbs.length ? paintWheelBulbLayer(sc, 0) : null)],
       [A.wheelBulbsB, () => (res.wheel.bulbs.length ? paintWheelBulbLayer(sc, 1) : null)],
       [A.wheelPointer, () => res.wheel.pointer],
-      ...Object.keys(res.titles).map((k) => [A.title(k), () => res.titles[k]]),
+      ...Object.keys(res.titles).map((k) => [A.title(k), () => hdTitles.titles[k] || res.titles[k]]),
       // Jackpot box plates, at each box's size in this format.
       ...(res.jackpots || []).map((j, i) => [A.jackpot(i), () => j.img]),
     ];
@@ -354,12 +407,17 @@ export async function buildAEPackage(scene, images, onProgress, signal = null) {
       return c;
     });
   }
-  // Particle art: one PNG per variant or animation frame (the emitters
-  // scale it).
+  // Particle art: one PNG per variant or animation frame, at AE_HD times
+  // the preview's size (the emitters scale it).
   for (const a of usedParticleAssets(tl, project)) {
     const sprite = images.particles?.get(a.id);
     if (!sprite) continue;
-    for (const [k, file] of a.files.entries()) await png(file, () => sprite.frames[k] || null);
+    let hd = null;
+    const frame = (k) => {
+      if (!hd) hd = sprite.raw ? sprite.raw.map((f) => fitParticle(f, PARTICLE_PX * AE_HD)) : paintParticle(a.id, PARTICLE_PX * AE_HD);
+      return hd[k] || sprite.frames[k] || null;
+    };
+    for (const [k, file] of a.files.entries()) await png(file, () => frame(k));
   }
   tick();
 

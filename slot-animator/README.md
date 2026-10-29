@@ -311,9 +311,16 @@ comp, the round comps place them in time, and a few controls sit on
   - `Effects/`: `FX Shockwave`, `FX Light Rays`, `FX Small Rays`, `FX Coin`,
     `FX Cell Frame`, `FX Anticipation`, `FX Tease Cell`, `FX Sticky Frame`,
     `FX Coin Lock`, `FX Near Miss`, `FX Wild Beam`, `FX Collected`. They are
-    white; each use carries a Tint named `Colour` that follows the
-    `FX Colour` checkbox on `SLOT CONTROL`.
-  - `Titles/` (with the light sweep), `Paylines/` (each draws itself on),
+    white; each use carries a Tint named `Colour`. Each effect placeholder
+    (and each title) holds an `FX CONTROLS` null whose sliders and switches
+    drive every use: `Size %`, `Opacity %`, `Colour` (with the global
+    `FX Colour` on `SLOT CONTROL`), `Speed %` (the shockwave), `Spin %`
+    (rays), `Built-in Motion` (rays and titles: off for art that brings its
+    own motion) and `Light Sweep` (titles). A prerendered movie dropped into
+    a placeholder plays from the start of every use; shockwave uses last
+    4 s so a movie that long plays in full.
+  - `Titles/` (with the light sweep and the words as an editable text
+    layer in the Main Font, switched off), `Paylines/` (each draws itself on),
     `Plaques/`, `Wheel/` and `Counters/Counter Digits` (the 0-9 strip every
     counter rolls through).
   - `Wheel/`: `Wheel Disc` is the turning part: your face art, `Wheel
@@ -352,6 +359,19 @@ comp, the round comps place them in time, and a few controls sit on
   of its particle placeholder, with expressions that reproduce the
   preview's flight exactly. Looping emitters wrap each particle's age by
   the cycle, so they run as long as the comp does.
+- `Slot Assets/Fonts`: a `Main Font` layer (and `Wheel Font` with a wheel).
+  Every text layer's Source Text expression takes its font from there
+  (After Effects 2020+), so one font change restyles all the text. Painted
+  words (titles, a logo painted from the name, jackpot names) also come as
+  editable text layers, switched off, in their placeholders.
+- Full-screen art is HD: titles, the logo, the rays and the particle art are
+  painted `AE_HD` (2) times their size and their uses scaled down; counters
+  are built at twice the biggest amount; the shockwave ring is drawn as big
+  as its biggest use; a merged symbol is drawn from its full-size art
+  (Collapse Transformations).
+- The `.jsx` is plain ASCII (other characters are `\u` escapes), so After
+  Effects reads it the same on a Mac and on Windows whatever encoding it
+  assumes; the missing-files alert says where macOS grants folder access.
 - `Counter Rigs/`: rolling-digit money counters made of plain layers; each
   `COUNTER CTRL > Value` reads its source slider. Each column turns as the
   one below it wraps, like the Odometer plugin, so no plugin is needed.
