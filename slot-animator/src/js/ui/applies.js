@@ -18,6 +18,7 @@ export const APPLIES = {
   // Features
   'features/hold-spin': { games: REELS },
   'features/pots-above-the-machine': { games: SLOT },
+  'features/jackpot-boxes': { games: REELS },
   // Spin
   'spin/spin-type': { games: SLOT },
   'spin/reel-order': { games: SLOT },

@@ -232,6 +232,13 @@ export const FEATURES = [
   T('Frame overlay', 'Asset Bank › Scene art', 'border machine cabinet', { bank: 'scene', id: 'asset-up-frame' }),
   T('Logo image', 'Asset Bank › Scene art', 'brand title', { bank: 'scene', id: 'asset-up-logo' }),
   T('Title above the machine', 'Machine › Look', 'name heading text logo game name machine name show hide remove turn off no title', { tab: 'machine', id: 'm-title-on' }),
+  T('Jackpot boxes', 'Features › Jackpot boxes', 'jackpot jackpots progressive grand major minor mini meters boxes plaques values running numbers ticking', { tab: 'features', id: 'jp-on', section: 'jackpot-boxes' }),
+  T('Where the jackpot boxes stand', 'Features › Jackpot boxes', 'jackpot boxes place above below left right sides each side both sides position', { tab: 'features', id: 'jp-place', section: 'jackpot-boxes' }, 'Turn on the jackpot boxes first; their options show then.'),
+  T('Jackpot box size, padding and spacing', 'Features › Jackpot boxes', 'jackpot boxes size bigger smaller by tier same size distance padding negative overlap gap spacing between', { tab: 'features', id: 'jp-size', section: 'jackpot-boxes' }, 'Turn on the jackpot boxes first; their options show then.'),
+  T('Running jackpot values', 'Features › Jackpot boxes', 'running numbers ticking progressive climbing growing increasing fixed values jackpot', { tab: 'features', id: 'jp-values', section: 'jackpot-boxes' }, 'Turn on the jackpot boxes first; their options show then.'),
+  T('Jackpot names and values', 'Features › Jackpot boxes', 'grand major minor mini names labels seed values colour jackpot', { tab: 'features', id: 'jp-label-grand', section: 'jackpot-boxes' }, 'Turn on the jackpot boxes first; their options show then.'),
+  T('A wheel segment pays a jackpot', 'Features › Jackpot boxes', 'wheel segment jackpot grand link pays box', { tab: 'features', id: 'jp-wheel', section: 'jackpot-boxes' }, 'Shown with the jackpot boxes on and a wheel bonus round.'),
+  T('A round awards a jackpot', 'Round inspector', 'jackpot award win grand major minor mini round', { round: ['none', 'nearmiss', 'small', 'medium', 'big', 'freespins', 'bonus', 'wheel'], id: 'ri-jackpot' }),
   T('Zoom the machine', 'Machine › Framing', 'zoom scale size bigger smaller machine pots fit screen tall pots crop zoom out zoom in framing', { tab: 'machine', id: 'm-zoom' }),
   // Rounds
   T('Quick sequence builder', 'Rounds', 'build generate auto sequence finale warm up', { section: 'seq/quick-sequence', id: 'qb-build' }),

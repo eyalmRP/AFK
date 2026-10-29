@@ -16,7 +16,8 @@ test('feature search finds features by name, by synonym and despite typos', () =
   assert.equal(top('load')[0], 'Open project file');
   assert.equal(top('mute')[0], 'Sound on or off');
   assert.ok(top('ae').includes('Export to After Effects'));
-  assert.ok(top('jackpot').includes('Big win tiers'));
+  assert.ok(top('jackpot').includes('Jackpot boxes'));
+  assert.ok(top('mega win').includes('Big win tiers'));
   // Typos.
   assert.equal(top('shak')[0], 'Screen shake');
   assert.ok(top('magent').includes('Winning symbols merge into one big symbol'));

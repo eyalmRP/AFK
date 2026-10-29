@@ -57,6 +57,24 @@ the result as an editable **After Effects project**.
   - Cash symbols and a collector (Big Bass style): coins land with values
     (in bets); a collector, landing on the last reel to stop when it can,
     takes them one by one on top of the win, the meter counting each in.
+  - Progressive jackpot boxes (Features tab): 2 to 4 boxes (Grand and
+    Major; then the Minor; then the Mini) above, below, left or right of
+    the machine; four can also split, two on each side (left and right, or
+    above and below). Sized by tier or all the same; box size, distance
+    from the machine (below 0 they tuck over the frame) and the space
+    between them are settings, and the machine makes room. Their names,
+    seed values (in bets) and colours are the Hold & Spin jackpots: the
+    Mini, Minor and Major coins and the Grand prize. Values are fixed or
+    running (a share of the seed added per second; the digits roll). What
+    wins a box: collecting its coin, a full board (the Grand), a wheel
+    segment linked to it (by its label, GRAND or JACKPOT to the Grand, or
+    by choice), or a round that awards it (round inspector → Add a feature
+    → Jackpot: after the win its amount flies down into the meter and
+    counts on top). A won box pops, glows and a light sweeps across it, a
+    ring and sparks burst from it, and a running box shows what it paid for
+    a moment before it starts again from its seed; a jackpot coin landing
+    makes its box blink. Each pays what its box shows at that moment. With
+    the pots on, boxes stand at the sides or below. `core/jackpots.js`.
   - Pots above the machine (Features tab): a pot of gold, a pot of gems
     and a pot of fruits stand on the frame's top edge, peeking over it,
     where the title was. 1 to 3 pots; their size, spacing, how much hides

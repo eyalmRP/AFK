@@ -42,6 +42,8 @@ import { loadParticleSprites, drawParticleList } from '../render/particles.js';
 import { PARTICLE_TEMPLATES, TEMPLATE_BY_ID, BUILTIN_PARTICLES, PARTICLE_MOTIONS, PARTICLE_MOMENTS, PARTICLE_LENGTHS, tierParticles, spawnParticles, particleAssetInfo } from '../core/particles.js';
 import { WIN_STYLES, JUMP_TARGETS, MERGE_POINTS, FLIGHT_PATHS, winFxConfig, jumpTarget, mergeTarget } from '../core/winfx.js';
 import { POT_ARTS, POT_AIMS, POT_ROLES, BOOST_KINDS, BEAM_CURVES, defaultPots, potsConfig, potsCollect, potsUpgrade, ownerOf } from '../core/pots.js';
+import { JP_PLACES, defaultJackpots, jackpotsConfig, wheelJackpot } from '../core/jackpots.js';
+import { JACKPOT_ROUNDS } from '../core/timeline.js';
 import { searchFeatures, buildIndex } from './search.js';
 import { APPLIES, notApplying } from './applies.js';
 import { TIPS, tipEntries } from './tips.js';
@@ -425,7 +427,7 @@ const SECTION_OPEN = {
   spin: ['spin-type', 'motion-curve', 'anticipation'],
   wins: ['win-tiers', 'winning-symbols'],
   effects: ['intensity', 'win-particles'],
-  features: ['hold-spin', 'pots-above-the-machine'],
+  features: ['hold-spin', 'pots-above-the-machine', 'jackpot-boxes'],
   wheel: ['segments', 'framing', 'pointer', 'look', 'spin'],
   sound: ['sound-track'],
   export: ['output', 'after-effects-project', 'quick-preview-mp4'],
@@ -456,7 +458,7 @@ function setSection(sec, open, remember = true) {
 
 // An icon for each section, so a tab reads at a glance.
 const SECTION_ICONS = {
-  game: 'grid', output: 'film', reels: 'reels', framing: 'target', 'how-it-pays': 'coin', 'hold-spin': 'coin', look: 'palette', money: 'coin', randomness: 'dice',
+  game: 'grid', output: 'film', reels: 'reels', framing: 'target', 'jackpot-boxes': 'trophy', 'pots-above-the-machine': 'coin', 'how-it-pays': 'coin', 'hold-spin': 'coin', look: 'palette', money: 'coin', randomness: 'dice',
   'spin-type': 'loop', respins: 'loop', 'reel-order': 'order', 'motion-curve': 'curve', start: 'play', mid: 'loop', end: 'target', 'reel-timing': 'clock', anticipation: 'eye', 'between-rounds': 'clock',
   'win-tiers': 'trophy', 'winning-symbols': 'sparkle', 'win-particles': 'sparkle', 'explosion-templates': 'bolt', 'titles-and-font': 'text', 'win-timing': 'clock',
   intensity: 'bolt', segments: 'wheel', framing: 'target', pointer: 'pointer', spin: 'loop',
@@ -505,7 +507,7 @@ function revealSection(node) {
 }
 
 // Round features not in the round yet are found in "Add a feature".
-const FEATURE_OF_ID = { 'ri-tumble': 'tumble', 'ri-chain-add': 'tumble', 'ri-mult': 'mult', 'ri-mult-add': 'mult', 'ri-expand': 'expand', 'ri-wmult': 'wmult', 'ri-extra-wilds': 'extra', 'ri-mystery': 'mystery', 'ri-cash': 'cash', 'ri-collector': 'cash', 'ri-boost': 'boost' };
+const FEATURE_OF_ID = { 'ri-jackpot': 'jackpot', 'ri-tumble': 'tumble', 'ri-chain-add': 'tumble', 'ri-mult': 'mult', 'ri-mult-add': 'mult', 'ri-expand': 'expand', 'ri-wmult': 'wmult', 'ri-extra-wilds': 'extra', 'ri-mystery': 'mystery', 'ri-cash': 'cash', 'ri-collector': 'cash', 'ri-boost': 'boost' };
 
 function offerFeature(id) {
   const offer = FEATURE_OF_ID[id] && document.getElementById(`feat-add-${FEATURE_OF_ID[id]}`);
@@ -2432,6 +2434,7 @@ function renderInspector() {
   const pattern = r.pattern || base;
   const tumbles = lineWin && tumbleEnabled(ctx2, r) && pattern !== 'full';
   const cfg = potsConfig(P);
+  const jpCfg = jackpotsConfig(P);
 
   const outcomeField = selectField({
     id: 'ri-outcome',
@@ -2843,6 +2846,36 @@ function renderInspector() {
         valueChips({ id: 'ri-cash', label: 'Cash values (in bets)', list: r.cash, values: CASH_VALUES, fmt: (v) => `${cur}${v}`, max: 10, set: (list) => set('cash', true)(list), hint: 'On their own they just land; a collector takes them all.' }),
         toggleField({ id: 'ri-collector', label: 'A collector lands and takes the cash', checked: !!r.collector, onChange: set('collector', true), hint: r.collector && !(r.cash || []).length ? 'Add cash symbols for it to collect.' : null }),
       ],
+    },
+    {
+      id: 'jackpot',
+      tip: 'ri-jackpot',
+      title: 'Jackpot',
+      desc: 'A jackpot box lights up and pays into the win',
+      show: gameOf() === 'slot' && JACKPOT_ROUNDS.includes(r.outcome),
+      used: !!r.jackpot,
+      add: () => {
+        const tiers = jackpotsConfig(P).tiers;
+        r.jackpot = tiers[tiers.length - 1].id;
+      },
+      clear: () => (r.jackpot = null),
+      sum: () => (jpCfg.on ? jpCfg.tiers.find((t) => t.id === r.jackpot)?.label || 'Not shown' : 'Boxes off'),
+      body: () => {
+        if (!jpCfg.on)
+          return [
+            h('p', { class: 'hint', id: 'ri-jackpot' }, 'The jackpot boxes are off. Turn them on to show the boxes around the machine.'),
+            button('Turn on the jackpot boxes', () => {
+              P.jackpots = { ...defaultJackpots(), ...(P.jackpots || {}), enabled: true };
+              changed('all');
+              renderPanel();
+              renderInspector();
+            }, { class: 'btn small', icon: 'plus', id: 'ri-jackpot-on' }),
+          ];
+        return [
+          segmented({ id: 'ri-jackpot', label: 'Box', value: jpCfg.tiers.some((t) => t.id === r.jackpot) ? r.jackpot : null, options: jpCfg.tiers.map((t) => ({ value: t.id, label: t.label })), onChange: (v) => set('jackpot', true)(v) }),
+          h('p', { class: 'hint' }, 'After the round shows its win, the box lights up and what it shows flies down into the win meter, on top of the win.'),
+        ];
+      },
     },
     {
       id: 'boost',
@@ -3684,7 +3717,113 @@ function panelFeatures() {
     h('p', { class: 'hint tab-intro' }, 'Features built into the machine. What happens in a single round (free spins, wilds, mystery, multipliers, the collector, boosters) is added in the round inspector.'),
     holdSettings(),
     potsSettings(),
+    jackpotSettings(),
   ];
+}
+
+// Progressive jackpot boxes: how many, where around the machine, their
+// size, values (fixed or running), names and colours, and what wins them.
+function jackpotSettings() {
+  const P = state.project;
+  P.jackpots = { ...defaultJackpots(), ...(P.jackpots || {}) };
+  const J = P.jackpots;
+  const cfg = jackpotsConfig({ ...P, jackpots: { ...J, enabled: true } });
+  const all = (k) => (v) => {
+    J[k] = v;
+    changed('all');
+    renderPanel();
+    renderInspector();
+  };
+  const on = toggleField({ id: 'jp-on', label: 'Jackpot boxes', checked: !!J.enabled, onChange: all('enabled'), hint: 'Grand, Major, Minor and Mini boxes around the machine, with fixed or running values. A jackpot won on the machine lights its box.' });
+  if (!J.enabled) return section('Jackpot boxes', on);
+  const potsOn = potsConfig(P).on;
+  const H = (P.holdspin = { ...holdSpinConfig(P), ...(P.holdspin || {}) });
+  const coin = (id) => H.coins.find((c) => c.id === id);
+  // Names, values and colours are the Hold & Spin jackpots': one place to
+  // change them, here or on the coins.
+  const boxRow = (t) => {
+    const c = coin(t.id);
+    const grand = t.id === 'grand';
+    const setLabel = (v) => {
+      if (grand) J.grandLabel = v;
+      else if (c) c.label = v;
+      changed('all');
+    };
+    const setValue = (v) => {
+      const n = Math.max(0, Number(v) || 0);
+      if (grand) H.grand = { ...H.grand, value: n };
+      else if (c) c.values = [n];
+      changed('timeline');
+    };
+    const setPalette = (v) => {
+      if (grand) J.grandPalette = v;
+      else if (c) c.palette = v;
+      changed('all');
+    };
+    const value = grand ? H.grand.value : c ? Math.max(...(Array.isArray(c.values) ? c.values : [c.values]).map(Number).filter((x) => x > 0), 0) : 0;
+    return h(
+      'div',
+      { class: 'jp-row' },
+      h('input', { type: 'text', id: `jp-label-${t.id}`, value: t.label, 'aria-label': `${t.id} box name`, onchange: (e) => setLabel(e.target.value.slice(0, 16)) }),
+      h('input', { type: 'number', id: `jp-value-${t.id}`, min: 0, value, 'aria-label': `${t.label} seed value in bets`, onchange: (e) => setValue(e.target.value) }),
+      h('select', { id: `jp-pal-${t.id}`, 'aria-label': `${t.label} colour`, onchange: (e) => setPalette(e.target.value) }, COIN_PALETTES.map((pl) => h('option', { value: pl, selected: t.palette === pl }, pl[0].toUpperCase() + pl.slice(1))))
+    );
+  };
+  const placeOpts = JP_PLACES.map((pl) => ({ value: pl.id, label: pl.label, hint: pl.four && cfg.count < 4 ? 'Four boxes only' : (pl.id === 'above' || pl.id === 'ends') && potsOn ? 'The pots stand above the machine' : null }));
+  const placeField = segmented({ id: 'jp-place', label: 'Where they stand', value: cfg.place, options: placeOpts, onChange: (v) => all('place')(v) });
+  // Places that cannot be used now stay visible, locked, saying why.
+  for (const pl of JP_PLACES) {
+    const why = pl.four && cfg.count < 4 ? 'Four boxes only' : (pl.id === 'above' || pl.id === 'ends') && potsOn ? 'The pots stand above' : null;
+    const b = placeField.querySelector(`#jp-place-${pl.id}`);
+    if (b && why) {
+      b.disabled = true;
+      b.title = why;
+    }
+  }
+  const linked = (P.wheel?.segments || []).map((sg, i) => [sg, i]).filter(([sg]) => segmentKind(sg) === 'prize');
+  const nLinked = linked.filter(([sg]) => wheelJackpot(cfg, sg)).length;
+  const wheelRows = P.game === 'slot' && P.rounds.some((r) => r.outcome === 'wheel') && linked.length
+    ? foldRow('jp-wheel', 'Wheel segments', `${nLinked} pay${nLinked === 1 ? 's' : ''} a box`, h(
+        'div',
+        { class: 'field', id: 'jp-wheel' },
+        h(
+          'div',
+          { class: 'jp-wheel' },
+          linked.map(([sg, i]) =>
+            h(
+              'label',
+              { class: 'jp-wheel-row' },
+              h('span', null, sg.label || `Segment ${i + 1}`),
+              h(
+                'select',
+                { id: `jp-seg-${i}`, 'aria-label': `What segment ${sg.label || i + 1} pays`, onchange: (e) => { sg.jackpot = e.target.value; changed('timeline'); renderPanel(); } },
+                [['auto', `Auto${wheelJackpot(cfg, { ...sg, jackpot: 'auto' }) ? ` (${cfg.tiers.find((t) => t.id === wheelJackpot(cfg, { ...sg, jackpot: 'auto' })).label})` : ' (its value)'}`], ['none', 'Its value'], ...cfg.tiers.map((t) => [t.id, `The ${t.label} box`])].map(([v, l]) => h('option', { value: v, selected: (sg.jackpot || 'auto') === v }, l))
+              )
+            )
+          )
+        ),
+        h('p', { class: 'hint' }, 'Auto links a segment by its label: GRAND or JACKPOT to the Grand, MAJOR, MINOR, MINI to theirs. A linked segment pays what its box shows.')
+      ))
+    : null;
+  return section(
+    'Jackpot boxes',
+    on,
+    segmented({ id: 'jp-count', label: 'Boxes', value: cfg.count, options: [2, 3, 4].map((n) => ({ value: n, label: String(n), hint: n === 4 ? 'Grand, Major, Minor and Mini' : n === 3 ? 'Grand, Major and Minor' : 'Grand and Major' })), onChange: (v) => all('count')(Number(v)) }),
+    placeField,
+    h('p', { class: 'hint' }, cfg.place === 'sides' || cfg.place === 'ends' ? 'Two on each side, the bigger pair first.' : potsOn ? 'With the pots above the machine the boxes stand at its sides or below it.' : 'Two or three boxes stand on one side; four can also split, two on each side.'),
+    segmented({ id: 'jp-sizing', label: 'Size', value: cfg.sizing, options: [{ value: 'tiers', label: 'By tier', hint: 'The Grand biggest, the Mini smallest' }, { value: 'same', label: 'All the same' }], onChange: (v) => all('sizing')(v) }),
+    rangeField({ id: 'jp-size', label: 'Box size', value: cfg.size, min: 0.4, max: 2, step: 0.05, onInput: num(J, 'size', 'all') }),
+    rangeField({ id: 'jp-padding', label: 'Distance from the machine', value: cfg.padding, min: -1, max: 2, step: 0.05, onInput: num(J, 'padding', 'all'), hint: 'Below 0 the boxes tuck over the frame.' }),
+    rangeField({ id: 'jp-spacing', label: 'Space between boxes', value: cfg.spacing, min: -0.3, max: 1.5, step: 0.05, onInput: num(J, 'spacing', 'all') }),
+    h('h4', { class: 'insp-sub' }, 'Values'),
+    segmented({ id: 'jp-values', label: 'Values', value: J.running ? 'running' : 'fixed', options: [{ value: 'fixed', label: 'Fixed' }, { value: 'running', label: 'Running', hint: 'The numbers climb like a progressive' }], onChange: (v) => all('running')(v === 'running') }),
+    J.running ? rangeField({ id: 'jp-growth', label: 'Running speed', unit: '% / s', value: Number(J.growth ?? 0.15), min: 0.01, max: 2, step: 0.01, onInput: num(J, 'growth'), hint: 'How much of its seed a box adds every second. Won, it shows what it paid for a moment, then starts again from its seed.' }) : null,
+    h('div', { class: 'jp-rows' }, h('div', { class: 'jp-row jp-head', 'aria-hidden': 'true' }, h('span', null, 'Name'), h('span', null, 'Seed (× bet)'), h('span', null, 'Colour')), cfg.tiers.map(boxRow)),
+    h('p', { class: 'hint' }, 'Name, seed value (in bets) and colour per box. They are the Hold & Spin jackpots: the Mini, Minor and Major coins and the Grand prize.'),
+    h('h4', { class: 'insp-sub' }, 'What wins them'),
+    h('p', { class: 'hint', id: 'jp-wins' }, 'Collecting a Mini, Minor or Major coin wins its box, and a full Hold & Spin board the Grand: each pays what its box shows then. A round can award a box too (round inspector → Add a feature → Jackpot), and a wheel segment can pay one.'),
+    wheelRows
+  );
 }
 
 function coinTile(ct, i) {
@@ -4788,7 +4927,9 @@ function segmentRow(P, W, s, i) {
     colour,
     iconCell,
     h('input', { type: 'text', id: `seg-l-${i}`, value: s.label, 'aria-label': `Segment ${i + 1} label`, onchange: (e) => { s.label = e.target.value; changed('all'); refreshList(); } }),
-    kindOf === 'prize'
+    kindOf === 'prize' && wheelJackpot(jackpotsConfig(P), s)
+      ? h('span', { class: 'seg-kind-chip jp', id: `seg-v-${i}`, title: 'Pays what its jackpot box shows (Features → Jackpot boxes)' }, jackpotsConfig(P).tiers.find((t) => t.id === wheelJackpot(jackpotsConfig(P), s))?.label || 'Jackpot')
+      : kindOf === 'prize'
       ? h('input', { type: 'number', id: `seg-v-${i}`, value: s.value, 'aria-label': `Segment ${i + 1} value`, onchange: (e) => { s.value = Number(e.target.value) || 0; changed('timeline'); } })
       : h('span', { class: `seg-kind-chip ${kindOf}`, id: `seg-v-${i}`, title: kindOf === 'again' ? 'Lands here: the wheel spins again' : 'Lands here: no win' }, kindOf === 'again' ? 'Again' : 'No win'),
     button('', () => {

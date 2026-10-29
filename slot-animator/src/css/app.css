@@ -3053,6 +3053,50 @@ body.dragging .bank-head {
   line-height: 1.3;
 }
 
+/* Jackpot boxes: one row per box (name, value, colour); wheel links. */
+.jp-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.jp-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr) minmax(0, 1fr);
+  gap: 6px;
+  align-items: center;
+}
+
+.jp-row input,
+.jp-row select {
+  min-width: 0;
+  width: 100%;
+}
+
+.jp-head span {
+  color: var(--faint);
+  font-size: 11px;
+}
+
+.jp-wheel {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.jp-wheel-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr);
+  gap: 8px;
+  align-items: center;
+  font-size: 13px;
+}
+
+.seg-kind-chip.jp {
+  color: var(--gold-2);
+  border-color: color-mix(in srgb, var(--gold) 50%, var(--line));
+}
+
 /* Look and Spin and timing: one line that says what they are set to. */
 .insp-fold {
   border-top: 1px solid var(--line);

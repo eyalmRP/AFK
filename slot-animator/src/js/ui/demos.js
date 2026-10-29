@@ -168,6 +168,14 @@ const potsRect = (L) => {
   return { x: x0, y: y0, w: x1 - x0, h: y1 - y0 };
 };
 const potsFocus = (tl, L) => fit(L, potsRect(L), 1.12);
+// The jackpot boxes, all of them.
+const boxesFocus = (tl, L) => {
+  const bs = L.jackpots || [];
+  if (!bs.length) return null;
+  const x0 = Math.min(...bs.map((b) => b.x - b.w / 2));
+  const y0 = Math.min(...bs.map((b) => b.y - b.h / 2));
+  return fit(L, { x: x0, y: y0, w: Math.max(...bs.map((b) => b.x + b.w / 2)) - x0, h: Math.max(...bs.map((b) => b.y + b.h / 2)) - y0 }, 1.1);
+};
 // The pots and the top of the reels, so a beam's whole flight shows.
 const potsAndReels = (tl, L) => {
   const p = potsRect(L);
@@ -189,7 +197,34 @@ const wheelFocus = (tl, L) => {
   return fit(L, { x: g.cx - g.R * 1.08, y: g.cy - g.R * 1.08, w: g.R * 2.16, h: g.R * 2.16 }, 1);
 };
 
+// Jackpot boxes on, with what a demo changes.
+const boxes = (extra = {}) => (p) => {
+  Object.assign(p.jackpots, { enabled: true, ...extra });
+};
+const idle = (tl) => [Math.max(0, R0(tl).t0 - 0.6), R0(tl).t0 + 0.5];
+const jpPlaces = Object.fromEntries(
+  ['above', 'below', 'left', 'right', 'sides', 'ends'].map((place) => [`jp-${place}`, { make: () => slot(noWin, boxes({ place, running: true })), window: idle }])
+);
+
 export const DEMOS = {
+  // ---- Jackpot boxes ----
+  jackpots: {
+    make: () => slot(() => [newRound('small', { seed: 12, lines: [0], count: 3, jackpot: 'minor' })], boxes({ running: true })),
+    window: (tl) => {
+      const j = R0(tl).pres.jackpot;
+      return [j.at - 0.4, j.countEnd + 0.4];
+    },
+  },
+  ...jpPlaces,
+  'jp-sizing': { variants: ab((sizing) => slot(noWin, boxes({ sizing })), ['By tier', 'tiers'], ['All the same', 'same']), window: idle },
+  'jp-padding': { variants: ab((padding) => slot(noWin, boxes({ padding, place: 'below' })), ['Apart', 0.45], ['Tucked in', -0.35]), window: idle },
+  'jp-spacing': { variants: ab((spacing) => slot(noWin, boxes({ spacing })), ['Tight', 0], ['Wide', 0.6]), window: idle },
+  'jp-values': {
+    variants: ab((running) => slot(noWin, boxes({ running, growth: 1 })), ['Fixed', false], ['Running', true]),
+    window: (tl) => [R0(tl).t0, R0(tl).t0 + 2],
+    focus: boxesFocus,
+  },
+
   // ---- Machine ----
   game: {
     variants: [
