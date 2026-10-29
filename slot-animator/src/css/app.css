@@ -1937,6 +1937,123 @@ body.dragging * {
   }
 }
 
+/* ---------- phones: pinned preview, a bar to switch areas ---------- */
+
+.phone-tp,
+.phone-bar {
+  display: none;
+}
+
+@media (max-width: 760px) {
+  .app {
+    padding-bottom: calc(66px + env(safe-area-inset-bottom, 0px));
+  }
+
+  /* The playback strip under the preview replaces the top bar's. */
+  .top .transport {
+    display: none;
+  }
+
+  .stage {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    gap: 6px;
+    margin-inline: -16px;
+    padding: 6px 16px 8px;
+    background: var(--bg);
+    border-bottom: 1px solid var(--line);
+  }
+
+  .stage .viewport {
+    max-height: 34vh;
+  }
+
+  .stage .timeline {
+    display: none;
+  }
+
+  .phone-tp {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .phone-tp .icon-btn.play {
+    width: 36px;
+    height: 36px;
+  }
+
+  .phone-tp .time {
+    font: 11px var(--f-mono);
+    color: var(--muted);
+    white-space: nowrap;
+  }
+
+  .phone-tp input[type="range"] {
+    flex: 1;
+    min-width: 40px;
+  }
+
+  .chip.icon-chip {
+    padding: 6px 8px;
+  }
+
+  .work[data-phone="rounds"] .side.left,
+  .work[data-phone="settings"] .side.right {
+    display: none;
+  }
+
+  .phone-bar {
+    position: fixed;
+    z-index: 45;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    padding: 6px 10px calc(6px + env(safe-area-inset-bottom, 0px));
+    background: color-mix(in srgb, var(--surface) 94%, transparent);
+    border-top: 1px solid var(--line-2);
+    backdrop-filter: blur(10px);
+  }
+
+  .phone-tab {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    padding: 6px 4px;
+    border: 0;
+    border-radius: 10px;
+    background: none;
+    color: var(--faint);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .phone-tab .ic {
+    width: 20px;
+    height: 20px;
+  }
+
+  .phone-tab.on {
+    color: var(--gold-2);
+    background: var(--surface-3);
+  }
+
+  .toasts {
+    bottom: calc(74px + env(safe-area-inset-bottom, 0px));
+  }
+
+  /* The bank opens above the bar. */
+  .bank {
+    bottom: calc(60px + env(safe-area-inset-bottom, 0px)) !important;
+    height: 72vh !important;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   * {
     transition: none !important;

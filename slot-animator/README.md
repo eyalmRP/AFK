@@ -57,7 +57,7 @@ the result as an editable **After Effects project**.
   - Cash symbols and a collector (Big Bass style): coins land with values
     (in bets); a collector, landing on the last reel to stop when it can,
     takes them one by one on top of the win, the meter counting each in.
-  - Pots above the machine (Machine tab): a pot of gold, a pot of gems
+  - Pots above the machine (Features tab): a pot of gold, a pot of gems
     and a pot of fruits stand on the frame's top edge, peeking over it,
     where the title was. 1 to 3 pots; their size, spacing, how much hides
     behind the frame and how much room they get above the machine (the
@@ -169,9 +169,27 @@ the result as an editable **After Effects project**.
     Ctrl S), presets, clear all rounds, reset to the demo. Undo and redo
     (Ctrl Z, Ctrl Shift Z) cover every change. Switching the game type keeps
     rounds only when they belong to the new game.
-  - Settings tabs: Machine, Spin, Wins (tiers, winning symbols, particles,
-    titles, win timing), Effects, Wheel, Sound, Export. Every section
-    folds and remembers it; Alt-click a section title folds them all.
+  - Settings tabs: Machine (game, reels, how it pays, look, money), Spin,
+    Wins (tiers, winning symbols, win timing), Effects (intensity, win
+    particles, explosion templates, titles and font), Features (Hold & Spin,
+    pots above the machine), Wheel, Sound, Export (output size, frame rate
+    and transparency first, then the exports). On a narrow settings panel
+    the tabs sit in two rows of four. Every section folds and remembers
+    it; Alt-click a section title folds them all.
+  - Round inspector: the round's basics on top (outcome, symbol, amount,
+    pattern; winning lines show the picked ones until you change them),
+    then a card for each feature the round uses: tumbles, multipliers,
+    expanding wild, multiplier wilds, extra wilds, mystery symbols, cash
+    and collector, boosters. A card folds to one line or takes its feature
+    out of the round; the rest wait in "Add a feature", whose items show
+    their tooltip demos. Look and Spin and timing fold to one line saying
+    what they are set to. Search opens a folded setting, and offers a
+    feature the round does not use yet. With no rounds the inspector offers
+    a first round or the quick sequence.
+  - Phones: the preview stays pinned at the top with a playback strip
+    (play, time, scrubber, loop, sound); a bar at the bottom switches the
+    area below between Rounds and Settings and opens the Asset Bank.
+    Desktop and tablet layouts are unchanged.
   - The side panels resize (drag a divider, or focus it and use the arrow
     keys; double-click resets) and remember their widths. The Asset Bank
     (symbols, coins, particles, scene art) is a floating window you can

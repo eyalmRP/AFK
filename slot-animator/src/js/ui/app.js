@@ -333,6 +333,7 @@ function openBank(filter, focus = true) {
   el.bank.hidden = false;
   el.bankBtn.setAttribute('aria-expanded', 'true');
   el.bankBtn.classList.add('on');
+  renderPhoneBar();
   if (ui.bank.min) setBankMin(false);
   placeBank();
   renderBank();
@@ -346,6 +347,7 @@ function closeBank() {
   el.bank.hidden = true;
   el.bankBtn.setAttribute('aria-expanded', 'false');
   el.bankBtn.classList.remove('on');
+  renderPhoneBar();
   if (had) el.bankBtn.focus();
   saveUI();
 }
@@ -1496,6 +1498,7 @@ function buildShell() {
   el.viewport.append(el.badge, el.pickNote);
   el.canvas.addEventListener('click', onPreviewClick);
   el.transport = h('div', { class: 'transport' });
+  el.phoneTp = h('div', { class: 'phone-tp', role: 'group', 'aria-label': 'Playback' });
   el.timeline = h('div', { class: 'timeline' });
   el.tabs = h('nav', { class: 'tabs', role: 'tablist', 'aria-label': 'Settings' });
   el.panel = h('div', { class: 'panel-body', id: 'settings-panel' });
@@ -1536,13 +1539,15 @@ function buildShell() {
       { class: 'work' },
       h('aside', { class: 'side left', 'aria-label': 'Settings' }, el.tabs, el.panel),
       splitter('left'),
-      h('main', { class: 'stage' }, el.viewport, el.timeline),
+      h('main', { class: 'stage' }, el.viewport, el.phoneTp, el.timeline),
       splitter('right'),
       h('aside', { class: 'side right', 'aria-label': 'Spin rounds' }, el.sequence)
     )),
     buildBank(),
+    (el.phoneBar = h('nav', { class: 'phone-bar', 'aria-label': 'Show' })),
     el.toasts
   );
+  renderPhoneBar();
   el.splitters = [...el.work.querySelectorAll('.splitter')];
   el.bankBtn.setAttribute('aria-controls', 'asset-bank');
   el.bankBtn.setAttribute('aria-expanded', 'false');
@@ -1676,7 +1681,65 @@ function renderTransport() {
       })
     )
   );
+  renderPhoneTransport();
   updatePlayhead();
+}
+
+// ---------- phones ----------
+// The preview stays pinned at the top with a small playback strip; a bar at
+// the bottom switches the area below between the rounds and the settings,
+// and opens the Asset Bank. Wider screens never show either.
+
+function renderPhoneTransport() {
+  if (!el.phoneTp) return;
+  const soundOff = state.project?.sound?.enabled === false;
+  const D = state.scene?.tl.duration || 1;
+  el.phoneScrub = h('input', { type: 'range', id: 'ptp-scrub', min: 0, max: D, step: 0.01, value: state.t, 'aria-label': 'Position' });
+  el.phoneScrub.addEventListener('input', () => seek(Number(el.phoneScrub.value)));
+  clear(
+    el.phoneTp,
+    button('', togglePlay, { class: 'icon-btn play', icon: state.playing ? 'pause' : 'play', title: 'Play or pause', id: 'ptp-play' }),
+    (el.phoneTime = h('span', { class: 'time', id: 'ptp-time' })),
+    el.phoneScrub,
+    button('', () => {
+      state.loop = !state.loop;
+      renderTransport();
+    }, { class: `chip icon-chip${state.loop ? ' on' : ''}`, icon: 'loop', id: 'ptp-loop', title: 'Loop playback' }),
+    button('', () => {
+      state.soundOn = !state.soundOn;
+      ensureAudioContext();
+      if (state.soundOn) startAudio();
+      else stopAudio();
+      renderTransport();
+    }, { class: `chip icon-chip${state.soundOn && !soundOff ? ' on' : ''}`, icon: state.soundOn && !soundOff ? 'sound' : 'mute', id: 'ptp-sound', title: soundOff ? 'Sound is switched off in the Sound tab' : 'Sound', disabled: soundOff })
+  );
+}
+
+function renderPhoneBar() {
+  if (!el.phoneBar) return;
+  const view = ui.phone === 'settings' ? 'settings' : 'rounds';
+  el.work.dataset.phone = view;
+  const item = (id, label, ic, on, run) => {
+    const b = button(label, run, { class: `phone-tab${on ? ' on' : ''}`, icon: ic, id: `pb-${id}` });
+    b.setAttribute('aria-pressed', String(on));
+    return b;
+  };
+  const show = (v) => () => {
+    if (ui.bank.open) closeBank();
+    ui.phone = v;
+    saveUI();
+    renderPhoneBar();
+    // The top of the chosen area, just under the pinned preview.
+    const side = el.work.querySelector(v === 'settings' ? '.side.left' : '.side.right');
+    const stage = el.work.querySelector('.stage');
+    window.scrollTo({ top: Math.max(0, side.getBoundingClientRect().top + window.scrollY - stage.offsetHeight - 6) });
+  };
+  clear(
+    el.phoneBar,
+    item('rounds', 'Rounds', 'order', view === 'rounds' && !ui.bank.open, show('rounds')),
+    item('settings', 'Settings', 'palette', view === 'settings' && !ui.bank.open, show('settings')),
+    item('assets', 'Assets', 'grid', !!ui.bank.open, toggleBank)
+  );
 }
 
 function updatePlayhead() {
@@ -1684,6 +1747,11 @@ function updatePlayhead() {
   const D = state.scene.tl.duration;
   el.head.style.left = `${(state.t / D) * 100}%`;
   if (el.time) el.time.textContent = `${fmtTime(state.t)} / ${fmtTime(D)}`;
+  if (el.phoneTime) el.phoneTime.textContent = `${fmtTime(state.t)} / ${fmtTime(D)}`;
+  if (el.phoneScrub && document.activeElement !== el.phoneScrub) {
+    el.phoneScrub.max = D;
+    el.phoneScrub.value = state.t;
+  }
   const cur = roundIndexAt(state.scene.tl, state.t);
   if (cur !== state.curShown) {
     state.curShown = cur;
@@ -5053,7 +5121,7 @@ function panelSound() {
             ...groups.map(([k, l]) => rangeField({ id: `snd-mix-${k}`, label: l, value: S.mix[k] ?? 1, min: 0, max: 1.5, step: 0.01, onInput: (v) => { S.mix[k] = v; soundChanged(); } })),
           ]
         : null,
-      button('Download the sound track (WAV in a zip)', downloadWav, { class: 'btn small', icon: 'download', id: 'snd-wav', disabled: S.enabled === false })
+      button('Download the sound track (WAV)', downloadWav, { class: 'btn small', icon: 'download', id: 'snd-wav', disabled: S.enabled === false })
     ),
     S.enabled !== false
       ? section(
@@ -5252,7 +5320,8 @@ function panelExport() {
           changed('all');
         },
       }),
-      segmented({ id: 'm-fps', label: 'Frame rate', value: P.canvas.fps, options: [24, 25, 30, 50, 60].map((f) => ({ value: f, label: `${f}` })), onChange: (v) => num(P.canvas, 'fps', 'timeline')(Number(v)) })
+      segmented({ id: 'm-fps', label: 'Frame rate', value: P.canvas.fps, options: [24, 25, 30, 50, 60].map((f) => ({ value: f, label: `${f}` })), onChange: (v) => num(P.canvas, 'fps', 'timeline')(Number(v)) }),
+      toggleField({ id: 'x-transparent', label: 'Transparent background', checked: !!P.output.transparent, onChange: (v) => { P.output.transparent = v; save(); }, hint: 'Leaves out the background and vignette: switched-off layers in After Effects, ready to render ProRes 4444 with alpha, and alpha in the still PNG. The preview and MP4 keep them.' })
     ),
     section(
       'After Effects project',
@@ -5267,7 +5336,6 @@ function panelExport() {
         h('li', null, 'SLOT CONTROL carries the After Effects side controls: shake, flash, dim, particles, spin blur, win pop and effect colours.')
       ),
       h('div', { class: 'field' }, h('span', { class: 'label' }, `Formats · ${n} selected`), formatPicker(), h('p', { class: 'hint' }, 'Each format gets its own comp tree, laid out for that size. The symbol art is shared.')),
-      toggleField({ id: 'x-transparent', label: 'Transparent background', checked: !!P.output.transparent, onChange: (v) => { P.output.transparent = v; save(); }, hint: 'Switches the background and vignette layers off, ready to render ProRes 4444 with alpha from After Effects. The still PNG leaves them out too.' }),
       button(`Download After Effects package`, startAE, { class: 'btn primary wide', icon: 'download', id: 'x-ae' }),
       h('p', { class: 'hint' }, 'In After Effects: File → Scripts → Run Script File, then pick the .jsx inside the folder. The README inside explains every control.')
     ),
@@ -5290,7 +5358,7 @@ function panelExport() {
         const blob = await frameToPNG(state.scene, state.t, { transparent: !!P.output.transparent });
         await saveFile(`${slugName()}_${state.t.toFixed(2).replace('.', '-')}s.png`, blob);
       }, { class: 'btn wide', id: 'x-png' }),
-      h('p', { class: 'hint' }, 'With Transparent background on (After Effects project, above), the background and vignette are left out.')
+      h('p', { class: 'hint' }, 'With Transparent background on (Output, above), the background and vignette are left out.')
     ),
     section(
       'Project file',

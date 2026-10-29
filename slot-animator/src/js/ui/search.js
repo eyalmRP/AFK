@@ -214,7 +214,7 @@ export const FEATURES = [
   // Export
   T('Export to After Effects', 'Export › After Effects project', 'ae jsx package download', { tab: 'export', id: 'x-ae' }),
   T('Export formats', 'Export › After Effects project', 'sizes portrait square 4k batch', { tab: 'export', section: 'after-effects-project' }),
-  T('Transparent background', 'Export › After Effects project', 'alpha prores no background', { tab: 'export', id: 'x-transparent' }),
+  T('Transparent background', 'Export › Output', 'alpha prores no background', { tab: 'export', id: 'x-transparent' }),
   T('Render an MP4 preview', 'Export › Quick preview (MP4)', 'video movie', { tab: 'export', id: 'x-mp4' }),
   T('MP4 quality', 'Export › Quick preview (MP4)', 'bitrate', { tab: 'export', id: 'x-bitrate' }),
   T('Save this frame as PNG', 'Export › Still frame', 'screenshot image still transparent alpha', { tab: 'export', id: 'x-png' }),
