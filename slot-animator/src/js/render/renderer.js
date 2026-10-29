@@ -744,7 +744,7 @@ function drawFsRibbon(ctx, scene, t) {
   const text = st.total ? 'FREE SPINS COMPLETE' : `FREE SPIN ${Math.max(1, st.index)} OF ${Math.max(st.n, st.index)}`;
   const img = cachedTitle(res, 'fsribbon', text, Math.round(L.H * 0.04), 'aqua');
   const y = L.pots ? L.ribbonY : Math.min(L.frame.y - img.height * 0.32, L.logo.cy + L.logo.h * 0.42);
-  drawCentered(ctx, img, L.W / 2, y, Math.min(1, (L.frame.w * 0.8) / img.width), a);
+  drawCentered(ctx, img, L.cx, y, Math.min(1, (L.frame.w * 0.8) / img.width), a);
 }
 
 function drawFsTint(ctx, scene, t) {
@@ -1067,7 +1067,7 @@ function drawSteps(ctx, scene, R, t) {
       cx /= st.cells.length;
       cy /= st.cells.length;
       if (st.lines && st.lines.length) {
-        cx = L.W / 2;
+        cx = L.cx;
         cy = L.winCY - L.cellH * 0.15;
       }
       if (merged) {
@@ -1488,7 +1488,7 @@ function drawJackpotFly(ctx, scene, R, t) {
   const i = jackpotsConfig(project).tiers.findIndex((x) => x.id === j.tier);
   const b = L.jackpots[i];
   if (!b) return;
-  const to = L.hud ? { x: L.hud.x + L.hud.w / 2, y: L.hud.y + L.hud.h / 2 } : { x: L.W / 2, y: L.frame.y + L.frame.h };
+  const to = L.hud ? { x: L.hud.x + L.hud.w / 2, y: L.hud.y + L.hud.h / 2 } : { x: L.cx, y: L.frame.y + L.frame.h };
   const k = ease.inOut(clamp01((t - j.fly[0]) / (j.fly[1] - j.fly[0])));
   const x = b.x + (to.x - b.x) * k;
   const y = b.y + (to.y - b.y) * k - Math.sin(k * Math.PI) * L.cellH * 0.5;
@@ -1655,7 +1655,7 @@ function drawScatterFx(ctx, scene, R, t) {
       ctx.restore();
     }
     const s = 0.6 + 0.4 * ease.outBack(clamp01((t - p.nearmiss.start) / 0.4));
-    drawCentered(ctx, res.titles.nearmiss, L.W / 2, L.winCY, s, a);
+    drawCentered(ctx, res.titles.nearmiss, L.cx, L.winCY, s, a);
   }
   void project;
 }
@@ -2021,7 +2021,7 @@ function drawHoldFx(ctx, scene, R, t) {
       if (t < it.at || t > it.arrive) continue;
       const m = L.cellCenter(it.c, it.r);
       const u = ease.inOut(clamp01((t - it.at) / (it.arrive - it.at)));
-      const x = m.x + (L.W / 2 - m.x) * u;
+      const x = m.x + (L.cx - m.x) * u;
       const y = m.y + (ty - m.y) * u - Math.sin(u * Math.PI) * L.cellH * 0.6;
       const text = formatPrize(it.value, scene.project.machine.currency || '', scene.project.machine.decimals | 0);
       const img = cachedTitle(res, 'coinval', text, Math.round(L.cellH * 0.2), 'silver');
@@ -2046,14 +2046,14 @@ function drawHoldBar(ctx, scene, R, t) {
     const pulse = col.items.reduce((p, it) => Math.max(p, 1 - clamp01((t - it.arrive) / 0.25)), 0) * (t > col.items[0].arrive ? 1 : 0);
     ctx.save();
     ctx.globalAlpha = a;
-    ctx.translate(L.W / 2, y);
+    ctx.translate(L.cx, y);
     ctx.scale(1 + 0.06 * pulse, 1 + 0.06 * pulse);
     plaque(ctx, res, pw, ph, 0.3 + 0.4 * pulse);
     ctx.restore();
     const v = evalKeys(tl.hold.collectKeys, t);
     ctx.save();
     ctx.globalAlpha = a;
-    drawOdometer(ctx, res, v, L.W / 2, y + ph * 0.04, Math.round(ph * 0.52), { currency: project.machine.currency || '', decimals: project.machine.decimals | 0, rate: evalVelocity(tl.hold.collectKeys, t) });
+    drawOdometer(ctx, res, v, L.cx, y + ph * 0.04, Math.round(ph * 0.52), { currency: project.machine.currency || '', decimals: project.machine.decimals | 0, rate: evalVelocity(tl.hold.collectKeys, t) });
     ctx.restore();
     return;
   }
@@ -2071,7 +2071,7 @@ function drawHoldBar(ctx, scene, R, t) {
   const pw = lw + R0 * gap + ph * 0.6;
   ctx.save();
   ctx.globalAlpha = hA;
-  ctx.translate(L.W / 2, y);
+  ctx.translate(L.cx, y);
   const sc = 1 + 0.14 * Math.sin(pop * Math.PI);
   ctx.scale(sc, sc);
   plaque(ctx, res, pw, ph, 0.25 + 0.5 * pop);

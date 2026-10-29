@@ -62,7 +62,8 @@ the result as an editable **After Effects project**.
     the machine; four can also split, two on each side (left and right, or
     above and below). Sized by tier or all the same; box size, distance
     from the machine (below 0 they tuck over the frame) and the space
-    between them are settings, and the machine makes room. Their names,
+    between them are settings, and the machine makes room (boxes on one
+    side move it over, its title, pots and plaques with it). Their names,
     seed values (in bets) and colours are the Hold & Spin jackpots: the
     Mini, Minor and Major coins and the Grand prize. Values are fixed or
     running (a share of the seed added per second; the digits roll). What

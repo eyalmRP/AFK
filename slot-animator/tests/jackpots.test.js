@@ -236,3 +236,31 @@ test('jackpot coins show only their name; uploaded box art rides on the tier', (
   assert.ok(c2.tiers.filter((t) => t.id !== 'major').every((t) => !t.art));
   assert.equal(c2.artNames, false);
 });
+
+test('boxes on one side: the pots, the title and what sits over the machine move with it', () => {
+  for (const place of ['left', 'right'])
+    for (const [w, h] of [[1920, 1080], [1080, 1080], [1080, 1920]]) {
+      const p = withBoxes(defaultProject(), { place });
+      p.canvas = { ...p.canvas, width: w, height: h };
+      p.pots.enabled = true;
+      const L = computeLayout(p);
+      const mid = L.frame.x + L.frame.w / 2;
+      const tag = `${place} ${w}x${h}`;
+      assert.ok(near(L.cx, mid), tag);
+      if (w > h) assert.ok(Math.abs(mid - w / 2) > L.cellW * 0.5, `${tag}: the machine moved over`);
+      const pm = (L.pots[0].x + L.pots[L.pots.length - 1].x) / 2;
+      assert.ok(near(pm, mid, 0.5), `${tag}: pots centred on the machine`);
+      for (const pt of L.pots) assert.ok(pt.x - pt.size * 0.47 >= -1 && pt.x + pt.size * 0.47 <= w + 1, `${tag}: pot on screen`);
+      assert.ok(near(L.multTarget.x, mid), tag);
+      // No pot over a box.
+      for (const b of L.jackpots) for (const pt of L.pots) assert.ok(Math.abs(pt.x - b.x) >= b.w / 2 + pt.size * 0.3 || pt.bottom <= b.y - b.h / 2, `${tag}: pot clear of ${b.id}`);
+      p.pots.enabled = false;
+      const T = computeLayout(p);
+      assert.ok(near(T.logo.cx, T.frame.x + T.frame.w / 2), `${tag}: title centred on the machine`);
+      assert.ok(T.logo.cx - T.logo.w / 2 >= 0 && T.logo.cx + T.logo.w / 2 <= w, `${tag}: title on screen`);
+    }
+  // Centred machine: nothing moves.
+  const c = computeLayout(defaultProject());
+  assert.equal(c.cx, c.W / 2);
+  assert.equal(c.logo.cx, c.W / 2);
+});

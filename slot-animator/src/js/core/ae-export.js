@@ -367,7 +367,7 @@ export function buildAEData(project, tl, L, extras = {}) {
       const i = jcfg.tiers.findIndex((x) => x.id === p.jackpot.tier);
       const b = L.jackpots[i];
       if (b) {
-        const to = L.hud ? [L.hud.x + L.hud.w / 2, L.hud.y + L.hud.h / 2] : [L.W / 2, L.frame.y + L.frame.h];
+        const to = L.hud ? [L.hud.x + L.hud.w / 2, L.hud.y + L.hud.h / 2] : [L.cx, L.frame.y + L.frame.h];
         out.jackpot = { box: i, at: r4(p.jackpot.at), fly: p.jackpot.fly.map(r4), from: [r4(b.x), r4(b.y)], to: to.map(r4), lift: r4(L.cellH * 0.5), text: clean(formatPrize(p.jackpot.amount, cur, dec)), size: Math.round(L.cellH * 0.26) };
       }
     }
@@ -512,7 +512,9 @@ export function buildAEData(project, tl, L, extras = {}) {
     rowsTop: r4(L.rowsTop),
     reelX: L.reelX,
     logo: [r4(L.logo.cx), r4(L.logo.cy)],
-    ribbon: [r4(L.W / 2), r4(L.ribbonY)],
+    // The machine's middle (off the screen's with boxes on one side).
+    machineX: r4(L.cx),
+    ribbon: [r4(L.cx), r4(L.ribbonY)],
     pots:
       L.pots && tl.pots
         ? {
@@ -1763,17 +1765,17 @@ export const AE_SCRIPT = String.raw`// Slot animation rebuilt for After Effects 
     // running total takes its place while they are collected.
     if (DATA.hold) {
       var hb = DATA.hold;
-      var PL = inst(main, plaquePH("Hold Plaque", DATA.cellW * 2.8, H * 0.065, H * 0.02, 96, [0.91, 0.73, 0.29], Math.max(2, H * 0.004)), "Hold Plaque", [W / 2, hb.barY]);
+      var PL = inst(main, plaquePH("Hold Plaque", DATA.cellW * 2.8, H * 0.065, H * 0.02, 96, [0.91, 0.73, 0.29], Math.max(2, H * 0.004)), "Hold Plaque", [DATA.machineX, hb.barY]);
       P(PL, "ADBE Opacity").expression = holdAlphaExpr() + "a * 100;";
       kids.push(PL);
-      var CT = text(main, "Respins Counter", "3 RESPINS LEFT", Math.round(H * 0.03), [W / 2, hb.barY], [0.6, 0.95, 1]);
+      var CT = text(main, "Respins Counter", "3 RESPINS LEFT", Math.round(H * 0.03), [DATA.machineX, hb.barY], [0.6, 0.95, 1]);
       CT.property("ADBE Text Properties").property("ADBE Text Document").expression = holdCounterExpr() + "n == 1 ? 'LAST RESPIN' : (n == 0 ? 'NO RESPINS LEFT' : n + ' RESPINS LEFT');";
       P(CT, "ADBE Opacity").expression = holdAlphaExpr() + holdCollectExpr() + "col ? 0 : a * 100;";
       kids.push(CT);
       var maxC = 0;
       for (i = 0; i < hb.collectKeys.length; i++) maxC = Math.max(maxC, hb.collectKeys[i].v);
       if (maxC > 0) {
-        var CO = rollCounter(main, "Collect", ctrl("Collect") + ".valueAtTime(time)", maxC, Math.round(H * 0.039), [W / 2, hb.barY]);
+        var CO = rollCounter(main, "Collect", ctrl("Collect") + ".valueAtTime(time)", maxC, Math.round(H * 0.039), [DATA.machineX, hb.barY]);
         P(CO, "ADBE Opacity").expression = holdAlphaExpr() + holdCollectExpr() + "col ? a * 100 : 0;";
         kids.push(CO);
       }
@@ -1925,7 +1927,7 @@ export const AE_SCRIPT = String.raw`// Slot animation rebuilt for After Effects 
         for (k = 0; k < st.cells.length; k++) { cx += st.cells[k].x; cy += st.cells[k].y; }
         cx /= st.cells.length;
         cy /= st.cells.length;
-        if (st.lines.length) { cx = W / 2; cy = winC[1] - DATA.cellH * 0.15; }
+        if (st.lines.length) { cx = winC[0]; cy = winC[1] - DATA.cellH * 0.15; }
         // A merged win shows its amount under the big symbol once it forms.
         var ta = la + 0.15;
         if (st.fx && st.fx.style === "merge") {
@@ -2395,7 +2397,7 @@ export const AE_SCRIPT = String.raw`// Slot animation rebuilt for After Effects 
   }
   function buildCollect(comp, R, rel) {
     var C = R.collect, i;
-    var target = [W / 2, DATA.hold ? DATA.hold.barY : H * 0.15];
+    var target = [DATA.machineX, DATA.hold ? DATA.hold.barY : H * 0.15];
     for (i = 0; i < C.items.length; i++) {
       var it = C.items[i], a = rel(it.at), b = rel(it.arrive);
       ring(comp, [it.x, it.y], a, DATA.cellW * 0.9, it.color);

@@ -174,7 +174,7 @@ export function pickPot(cfg, need, aim, c, reels, i, owner = -1) {
 // rim, the bottom, the treasure's top and the mouth beams start from.
 export const POT_BOX = { rim: -0.06, bottom: 0.49, top: -0.44, mouth: -0.12 };
 
-// Where the pots sit: evenly across the middle, standing on the frame's top
+// Where the pots sit: evenly across the machine, standing on the frame's top
 // edge with `overlap` of the body behind it. Each gets its image centre,
 // size, mouth and the nameplate on the frame.
 // zoom scales the pots with the machine (zoomed out, tall pots get the
@@ -190,7 +190,8 @@ export function placePots(cfg, W, H, topZone, frame, pad, zoom = 1, cap = true) 
   // never off the screen.
   // Spread too far, they stop at the frame's edges; still too big, they
   // shrink.
-  const room = Math.min(W * 0.98, frame.w * 1.04);
+  const cx = frame.x + frame.w / 2;
+  const room = Math.min(2 * Math.min(cx, W - cx) * 0.98, frame.w * 1.04);
   if (n > 1) pitch = Math.min(pitch, Math.max(S * 0.85, (room - S * 0.94) / (n - 1)));
   const span = (n - 1) * pitch + S * 0.94;
   if (span > room) {
@@ -202,7 +203,7 @@ export function placePots(cfg, W, H, topZone, frame, pad, zoom = 1, cap = true) 
   const y = bottom - POT_BOX.bottom * S;
   const plateH = Math.max(pad * 1.4, S * 0.19);
   return Array.from({ length: n }, (_, i) => {
-    const x = W / 2 + (i - (n - 1) / 2) * pitch;
+    const x = cx + (i - (n - 1) / 2) * pitch;
     return {
       i,
       x,

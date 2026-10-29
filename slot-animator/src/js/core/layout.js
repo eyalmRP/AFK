@@ -134,7 +134,10 @@ export function computeLayout(project) {
   const logoH = logoH0 * zoom;
   const hudH = hudH0 * zoom;
   const frame = { x: frameX, y: frameY, w: frameW, h: frameH, r: pad * 0.9 };
-  const logo = { cx: W / 2, cy: zy(logoCY0), w: Math.min(W * 0.9, frameW * 1.05), h: logoH };
+  // The machine's middle: off the screen's middle when boxes stand on one
+  // side. The title, pots and plaques over the machine follow it.
+  const cx = room.left === room.right ? W / 2 : frameX + frameW / 2;
+  const logo = { cx, cy: zy(logoCY0), w: Math.min(W * 0.9, frameW * 1.05, 2 * Math.min(cx, W - cx) * 0.98), h: logoH };
   const potList = pots.on ? placePots(pots, W, H, topZone, frame, pad, zoom) : null;
   const jackpots = placeJackpots(jp, frame, cellW, W, H);
   const boxesTop = frameY - room.top * cellW;
@@ -158,12 +161,13 @@ export function computeLayout(project) {
     rowsTop,
     reelX,
     frame,
+    cx,
     logo,
     // The pots replace the title; the free spins ribbon goes above them.
     pots: potList,
     // The multiplier plaque: over the top row, or the bottom one when the
     // pots' nameplates sit on the frame's top edge.
-    multTarget: { x: W / 2, y: potList ? winTop + winH - cellH * 0.55 : winTop + cellH * 0.55 },
+    multTarget: { x: cx, y: potList ? winTop + winH - cellH * 0.55 : winTop + cellH * 0.55 },
     ribbonY: potList ? Math.max(H * 0.035, Math.min(...potList.map((p) => p.top)) * 0.5) : Math.max(H * 0.035, Math.min(boxesTop - H * 0.025, logo.cy + logo.h * 0.42)),
     // Progressive jackpot boxes (core/jackpots.js), in tier order.
     jackpots,
@@ -174,7 +178,7 @@ export function computeLayout(project) {
     bulbR: Math.max(3, cellW * 0.035),
     mapY,
     cellCenter,
-    center: { x: W / 2, y: winCY },
+    center: { x: cx, y: winCY },
     wheel: wheelGeometry(project, W, H),
   };
 }

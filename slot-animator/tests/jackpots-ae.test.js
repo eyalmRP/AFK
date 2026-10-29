@@ -216,3 +216,23 @@ test('After Effects: a Major jackpot gets its full-screen moment (title, count o
   const C = data.rounds.find((r) => r.collect);
   assert.ok(C.collect.items.every((it) => /^\$/.test(it.text)));
 });
+
+test('After Effects: with boxes on one side, the pots, title, ribbon and Hold & Spin plaques sit over the moved machine', () => {
+  const p = jackpotsProject();
+  p.jackpots.place = 'right';
+  p.pots.enabled = true;
+  const { L, data, log } = exportAE(p);
+  const mid = L.frame.x + L.frame.w / 2;
+  assert.ok(mid < L.W / 2 - L.cellW * 0.5, 'the machine moved left');
+  assert.ok(near(data.machineX, mid, 0.01) && near(data.ribbon[0], mid, 0.01));
+  assert.ok(near((data.pots.items[0].x + data.pots.items.at(-1).x) / 2, mid, 0.5));
+  const main = log.comps.find((c) => c.name === data.name);
+  for (const name of ['Hold Plaque', 'Respins Counter']) {
+    const layer = main.layers.list.find((l) => l.name === name);
+    assert.ok(layer, name);
+    assert.ok(near(layer.property('ADBE Transform Group').property('ADBE Position').value[0], mid, 0.01), name);
+  }
+  p.pots.enabled = false;
+  const T = exportAE(p);
+  assert.ok(near(T.data.logo[0], T.L.frame.x + T.L.frame.w / 2, 0.01), 'the title over the machine');
+});

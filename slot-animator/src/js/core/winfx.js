@@ -126,12 +126,12 @@ function centroid(cells, L) {
 // Where jumping winners land.
 export function jumpTarget(project, L, st) {
   const cfg = winFxConfig(project);
-  const top = { x: L.W / 2, y: Math.max(L.cellH * 0.45, L.winTop - L.cellH * 0.38) };
+  const top = { x: L.cx, y: Math.max(L.cellH * 0.45, L.winTop - L.cellH * 0.38) };
   switch (cfg.target) {
     case 'meter':
       return L.hud ? { x: L.hud.x + L.hud.w / 2, y: L.hud.y + L.hud.h * 0.6 } : top;
     case 'amount':
-      return st.lines && st.lines.length ? { x: L.W / 2, y: L.winCY - L.cellH * 0.15 } : centroid(st.cells, L);
+      return st.lines && st.lines.length ? { x: L.cx, y: L.winCY - L.cellH * 0.15 } : centroid(st.cells, L);
     case 'top':
       return top;
     case 'center':
