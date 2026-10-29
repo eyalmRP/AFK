@@ -747,7 +747,7 @@ body.dragging * {
   color: var(--text);
 }
 
-.group-toggle .ic {
+.group-toggle > .ic {
   width: 14px;
   height: 14px;
   transform: rotate(90deg);
@@ -755,7 +755,7 @@ body.dragging * {
   color: var(--faint);
 }
 
-.group.closed .group-toggle .ic {
+.group.closed .group-toggle > .ic {
   transform: rotate(0deg);
 }
 
@@ -3401,19 +3401,97 @@ section.group.na > h3 .group-toggle span:first-of-type {
   opacity: 0.6;
 }
 
-/* Section icons */
+/* Section titles: each in its own colour (--sc, set per section), a
+   tinted bar with a coloured edge and an icon chip, so they stand out
+   from the settings between them. */
+section.group[data-key] > h3 .group-toggle {
+  --hc: var(--sc, var(--gold));
+  margin: -2px 0;
+  padding: 6px 8px 6px 6px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--hc) 9%, transparent);
+  box-shadow: inset 3px 0 0 var(--hc);
+  color: color-mix(in srgb, var(--hc) 62%, var(--text));
+  transition: background 0.15s;
+}
+
+section.group[data-key] > h3 .group-toggle:hover {
+  background: color-mix(in srgb, var(--hc) 16%, transparent);
+  color: color-mix(in srgb, var(--hc) 40%, var(--text));
+}
+
+section.group[data-key].closed > h3 .group-toggle {
+  background: color-mix(in srgb, var(--hc) 5%, transparent);
+}
+
+section.group[data-key] > h3 .group-toggle > .ic {
+  margin-left: 2px;
+  color: color-mix(in srgb, var(--hc) 55%, var(--faint));
+}
+
+/* A section that does not apply to this game is greyed. */
+section.group.na > h3 .group-toggle {
+  --hc: var(--faint);
+}
+
 .group-toggle .sec-ic {
   display: inline-grid;
   place-items: center;
-  width: 16px;
-  height: 16px;
-  color: var(--gold);
-  opacity: 0.8;
+  flex: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--sc, var(--gold)) 20%, transparent);
+  color: var(--sc, var(--gold));
+}
+
+section.group.na > h3 .group-toggle .sec-ic {
+  background: var(--surface-3);
+  color: var(--faint);
 }
 
 .group-toggle .sec-ic .ic {
-  width: 14px;
-  height: 14px;
+  width: 13px;
+  height: 13px;
+}
+
+/* "More settings" links to a related setting elsewhere in the app. */
+.more-link {
+  align-self: flex-start;
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: 4px;
+  max-width: 100%;
+  padding: 4px 10px;
+  border: 1px solid color-mix(in srgb, var(--gold) 30%, transparent);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--gold) 7%, transparent);
+  color: var(--muted);
+  font: 12px/1.35 var(--f-ui);
+  text-align: left;
+  cursor: pointer;
+}
+
+.more-link strong {
+  color: var(--gold);
+  font-weight: 600;
+}
+
+.more-link .ic {
+  width: 13px;
+  height: 13px;
+  color: var(--gold);
+  transition: transform 0.15s;
+}
+
+.more-link:hover {
+  border-color: color-mix(in srgb, var(--gold) 60%, transparent);
+  background: color-mix(in srgb, var(--gold) 13%, transparent);
+}
+
+.more-link:hover .ic {
+  transform: translateX(2px);
 }
 
 /* Options with a tooltip: a dotted underline says "hover me". */
@@ -3538,6 +3616,32 @@ section.group.na > h3 .group-toggle span:first-of-type {
   height: 14px;
   flex: none;
   opacity: 0.7;
+  transform: rotate(90deg);
+  transition: transform 0.15s;
+}
+.font-pick[aria-expanded="true"] {
+  border-color: var(--gold);
+}
+.font-pick[aria-expanded="true"] svg {
+  transform: rotate(-90deg);
+}
+.font-pop-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.font-pop-head .font-search {
+  flex: 1;
+  min-width: 0;
+}
+.font-pop-fold {
+  flex: none;
+}
+.font-pop-fold svg {
+  transform: rotate(-90deg);
+}
+.font-pop.above .font-pop-fold svg {
+  transform: rotate(90deg);
 }
 .font-pop {
   position: fixed;

@@ -151,7 +151,8 @@ the result as an editable **After Effects project**.
 - Fonts: the font picker (Effects › Titles and font, Wheel › Look) lists
   about a hundred Google Fonts by look (bold, tech and retro, classic,
   script, fun), each name written in its own font and loaded as it scrolls
-  into view, with a search; your uploaded fonts (TTF or OTF, Asset Bank ›
+  into view, with a search. Its chevron, or the field itself, folds the
+  list again. Your uploaded fonts (TTF or OTF, Asset Bank ›
   Fonts or the picker's Upload button) come first and ship in the After
   Effects package. `core/fonts.js` holds the catalogue and the PostScript
   names After Effects asks for.
@@ -188,8 +189,17 @@ the result as an editable **After Effects project**.
     running values) and light its subject while the rest darkens (the
     boxes, the landing reel, the winning cells). Options that do not apply
     to the game type or spin style stay in view, greyed out and locked,
-    saying why. Section headers have icons. Search also reads the tooltip
-    texts.
+    saying why. Section headers have icons and each its own colour (a
+    tinted bar, never the same as the few above it). Search also reads
+    the tooltip texts.
+  - More settings: a setting whose companions live elsewhere links to
+    them (Wins › Beam to pots → Features › Pots above the machine, the
+    pots → winning symbols, boosters and zoom, Hold & Spin ↔ Asset Bank ›
+    Coins and the jackpot boxes, the logo ↔ Machine › Look, particles ↔
+    particle art, fonts ↔ Effects › Titles and font, the wheel ↔ wheel
+    art, the round inspector's overrides → their defaults). A link opens
+    the tab, Asset Bank or a fitting round and highlights the setting, as
+    search does.
   - Rounds: drag a round up or down in Spin rounds to reorder it (its
     number turns into a grip on hover); the arrows still work. Reel Studio
     opens paused on the first frame.

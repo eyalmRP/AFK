@@ -466,9 +466,25 @@ const SECTION_ICONS = {
   symbols: 'grid', coins: 'coin', 'wheel-art': 'wheel', 'scene-art': 'palette', fonts: 'text', 'particle-art': 'sparkle',
 };
 
+// Each section title gets its own colour, kept from render to render and
+// unlike the few sections above it, so titles stand out from the settings
+// between them.
+const SECTION_HUES = ['#f4c55b', '#ff7eb3', '#4fe0a5', '#ffa65c', '#6cc7ff', '#b49bff', '#ff7a6b', '#3fd6c6', '#c4e66a'];
+
+function sectionHue(name, recent) {
+  let n = 0;
+  for (const c of name) n = (n * 31 + c.charCodeAt(0)) >>> 0;
+  let i = n % SECTION_HUES.length;
+  while (recent.includes(SECTION_HUES[i])) i = (i + 1) % SECTION_HUES.length;
+  return SECTION_HUES[i];
+}
+
 function collapsify(root, scope) {
+  const recent = [];
+  const keep = (hue) => recent.push(hue) > 4 && recent.shift();
   for (const sec of root.querySelectorAll(':scope > section.group')) {
     const h3 = sec.querySelector(':scope > h3');
+    if (sec.dataset.key) keep(sec.style.getPropertyValue('--sc'));
     if (!h3 || sec.dataset.key) continue;
     const title = h3.textContent;
     const name = slugOf(title);
@@ -477,6 +493,9 @@ function collapsify(root, scope) {
     const body = h('div', { class: 'group-body', id: `sec-${scope}-${name}` });
     for (const node of [...sec.childNodes]) if (node !== h3) body.append(node);
     const ic = SECTION_ICONS[name];
+    const hue = sectionHue(name, recent);
+    sec.style.setProperty('--sc', hue);
+    keep(hue);
     const btn = h('button', { type: 'button', class: 'group-toggle', 'aria-expanded': 'true', 'aria-controls': body.id }, icon('chevron'), ic ? h('span', { class: 'sec-ic', 'aria-hidden': 'true' }, icon(ic)) : null, h('span', null, title));
     btn.addEventListener('click', (e) => {
       // Alt-click folds or unfolds every section in this panel.
@@ -733,6 +752,19 @@ function spotlight(node) {
   void target.offsetWidth;
   target.classList.add('found');
   setTimeout(() => target.classList.remove('found'), 2200);
+}
+
+// A link to a related setting that lives elsewhere: it opens that tab (or
+// the Asset Bank, or a fitting round), unfolds the section and highlights
+// the setting, as a search result does. go: { tab | bank | round, id, section }.
+function moreLink(where, go, text = 'More settings') {
+  return h(
+    'button',
+    { type: 'button', class: 'more-link', onclick: () => goToFeature({ title: where, go }), title: `Go to ${where}` },
+    h('span', { class: 'more-link-text' }, `${text}: `),
+    h('strong', null, where),
+    icon('arrow')
+  );
 }
 
 // Takes the user to a feature: the right tab, bank filter or round, the
@@ -2333,7 +2365,7 @@ function boostField(r, set, cur, tumbles) {
   const P = state.project;
   const cfg = potsConfig(P);
   if (cfg.on && !potsUpgrade(cfg)) {
-    return [h('p', { class: 'hint', id: 'ri-boost' }, 'No pot upgrades cells: set one to Upgrades or Both in Features → Pots above the machine.')];
+    return [h('p', { class: 'hint', id: 'ri-boost' }, 'No pot upgrades cells: set one to Upgrades or Both.'), moreLink('Features › Pots above the machine', { tab: 'features', section: 'pots-above-the-machine', id: 'm-pots' }, 'Pots')];
   }
   if (!cfg.on) {
     return [h('div', { class: 'field', id: 'ri-boost' }, h('p', { class: 'hint' }, 'Boosters come from the pots above the machine. Turn them on to fire beams at cells.'), button('Turn on the pots', () => turnOnPots(), { class: 'btn small', icon: 'plus', id: 'ri-boost-pots' }))];
@@ -2357,6 +2389,7 @@ function boostField(r, set, cur, tumbles) {
     ),
   ];
   if (list.length) out.push(potAimField(r, set, cfg));
+  out.push(moreLink('Features › Pots above the machine', { tab: 'features', section: 'pots-above-the-machine', id: 'm-beam-curve' }, 'Pots and beams'));
   return out;
 }
 
@@ -2434,7 +2467,7 @@ function specialPicker(r, max) {
       }, { class: 'chip', id: `ri-add-special-${ct.id}`, disabled: list.length >= max })
     );
   }
-  return h('div', { class: 'field' }, h('span', { class: 'label' }, 'Special coins among them'), chips, hs.coins.length > 1 ? add : h('p', { class: 'hint' }, 'Add special coin types in the Asset Bank → Coins.'));
+  return h('div', { class: 'field' }, h('span', { class: 'label' }, 'Special coins among them'), chips, hs.coins.length > 1 ? add : moreLink('Asset Bank › Coins', { bank: 'coins', section: 'hold-spin-coins' }, 'Add special coin types'));
 }
 
 function holdInspector(r, set) {
@@ -2950,6 +2983,7 @@ function renderInspector() {
         return [
           segmented({ id: 'ri-jackpot', label: 'Box', value: jpCfg.tiers.some((t) => t.id === r.jackpot) ? r.jackpot : null, options: jpCfg.tiers.map((t) => ({ value: t.id, label: t.label })), onChange: (v) => set('jackpot', true)(v) }),
           h('p', { class: 'hint' }, 'After the round shows its win, the box lights up and what it shows flies down into the win meter, on top of the win.'),
+          moreLink('Features › Jackpot boxes', { tab: 'features', section: 'jackpot-boxes', id: 'jp-place' }, 'Box settings'),
         ];
       },
     },
@@ -3014,7 +3048,8 @@ function renderInspector() {
           value: r.winStyle || 'auto',
           options: [{ value: 'auto', label: `Wins tab default (${def})` }, ...WIN_STYLES.map((x) => ({ value: x.id, label: x.label }))],
           onChange: (v) => set('winStyle', true)(v === 'auto' ? null : v),
-        })
+        }),
+        moreLink('Wins › Winning symbols', { tab: 'wins', id: 'wf-style' }, 'The default and its settings')
       );
       if (cfg.on && winStyleIsCollect(r) && !boosts.length) look.push(potAimField(r, set, cfg));
     }
@@ -3032,7 +3067,8 @@ function renderInspector() {
         { class: 'row2' },
         h('div', { class: 'field' }, h('label', { class: 'label', for: 'ri-pfx' }, 'Win particles'), h('select', { id: 'ri-pfx', onchange: (e) => setP('fx')(e.target.value) }, h('option', { value: 'auto', selected: (rp.fx || 'auto') === 'auto' }, 'Default (Effects)'), templateOptions(rp.fx || 'auto'))),
         selectField({ id: 'ri-passet', label: 'Particle', value: rp.asset || 'auto', options: [{ value: 'auto', label: 'Auto' }, ...particleAssetChoices()], onChange: setP('asset') })
-      )
+      ),
+      moreLink('Effects › Win particles', { tab: 'effects', section: 'win-particles' }, 'The default particles')
     );
     parts.push(foldRow('look', 'Look', sum.join(' · '), look));
   }
@@ -3573,7 +3609,8 @@ function holdSettings() {
     rangeField({ id: 'm-hs-mid', label: 'Respin length (mid phase)', unit: 's', value: hs.respinMid, min: 0, max: 3, step: 0.05, onInput: num(H, 'respinMid') }),
     toggleField({ id: 'm-hs-grand', label: 'Grand prize when the board fills', checked: hs.grand.enabled, onChange: (v) => { H.grand = { ...hs.grand, enabled: v }; changed('timeline'); renderPanel(); } }),
     hs.grand.enabled ? textField({ id: 'm-hs-grand-v', label: 'Grand prize (× bet)', type: 'number', value: hs.grand.value, onChange: (v) => { H.grand = { ...hs.grand, value: Math.max(0, Number(v) || 0) }; changed('timeline'); } }) : null,
-    h('p', { class: 'hint' }, 'Coins and their values are set in the Asset Bank → Coins.')
+    moreLink('Asset Bank › Coins', { bank: 'coins', section: 'hold-spin-coins' }, 'Coins, their values and art'),
+    moreLink('Features › Jackpot boxes', { tab: 'features', section: 'jackpot-boxes', id: 'jp-on' }, 'Show the jackpots as boxes')
   );
 }
 
@@ -3612,14 +3649,17 @@ function potsSettings() {
         renderPanel();
         renderInspector();
       },
-      hint: potsCollect(cfg) ? 'Collect: the same as Wins → Winning symbols → Beam to pots; a round can still pick its own.' : 'No pot collects: set one to Collects or Both above.',
+      hint: potsCollect(cfg) ? 'Collect: the same as Beam to pots for the winning symbols; a round can still pick its own.' : 'No pot collects: set one to Collects or Both above.',
     }),
-    h('p', { class: 'hint', id: 'm-pots-boost-hint' }, potsUpgrade(cfg) ? 'Upgrade: add Boosters to a round in the round inspector. After its spin the pots fire them at cells.' : 'No pot upgrades: set one to Upgrades or Both above for boosters.'),
+    moreLink('Wins › Winning symbols', { tab: 'wins', id: 'wf-style' }, 'Winning symbols'),
+    h('p', { class: 'hint', id: 'm-pots-boost-hint' }, potsUpgrade(cfg) ? 'Upgrade: add Boosters to a round. After its spin the pots fire them at cells.' : 'No pot upgrades: set one to Upgrades or Both above for boosters.'),
+    potsUpgrade(cfg) ? moreLink('Round inspector › Boosters', { round: ['none', 'small', 'medium', 'big', 'nearmiss', 'freespins', 'bonus', 'wheel'], id: 'ri-boost' }, 'Add boosters') : null,
     cfg.count > 1 ? selectField({ id: 'm-pots-aim', label: 'Which pot fires or catches', value: cfg.aim, options: potAims(cfg.count), onChange: (v) => all('aim')(v), hint: cfg.aim === 'type' ? null : 'Nearest: each cell goes to the pot above its reels. By symbol: each symbol has its pot.' }) : null,
     cfg.count > 1 && cfg.aim === 'type' ? ownerTable(cfg) : null,
     h('h4', { class: 'insp-sub' }, 'Where they stand'),
     rangeField({ id: 'm-pots-band', label: 'Room above the machine', unit: '× height', value: cfg.band, min: 0.15, max: 0.45, step: 0.01, onInput: num(T, 'band', 'all'), hint: 'The machine scales down to make room.' }),
-    rangeField({ id: 'm-pots-size', label: 'Pot size', value: cfg.size, min: 0.5, max: 1.8, step: 0.05, onInput: num(T, 'size', 'all'), hint: 'Big pots stop at the top of the screen. To fit taller pots, zoom out in Machine → Framing.' }),
+    rangeField({ id: 'm-pots-size', label: 'Pot size', value: cfg.size, min: 0.5, max: 1.8, step: 0.05, onInput: num(T, 'size', 'all'), hint: 'Big pots stop at the top of the screen. To fit taller pots, zoom the machine out.' }),
+    moreLink('Machine › Framing', { tab: 'machine', id: 'm-zoom' }, 'Zoom'),
     rangeField({ id: 'm-pots-spacing', label: 'Spacing', value: cfg.spacing, min: 0.6, max: 2.5, step: 0.05, onInput: num(T, 'spacing', 'all'), hint: '1 stands them side by side; less overlaps them.' }),
     rangeField({ id: 'm-pots-overlap', label: 'Hidden behind the frame', value: cfg.overlap, min: 0, max: 0.8, step: 0.01, onInput: num(T, 'overlap', 'all') }),
     toggleField({ id: 'm-pots-plates', label: 'Nameplates show what each pot caught', checked: cfg.plates, onChange: num(T, 'plates', 'timeline') }),
@@ -3780,9 +3820,10 @@ function panelMachine() {
           changed('all');
           renderPanel();
         },
-        hint: potsConfig(P).on ? 'The pots stand where the title goes, so it is not shown while they are on.' : P.machine.showTitle === false ? 'Off: the machine takes the room, leaving a strip for the free spins counter.' : 'The name, or your logo from the Asset Bank → Scene art.',
+        hint: potsConfig(P).on ? 'The pots stand where the title goes, so it is not shown while they are on.' : P.machine.showTitle === false ? 'Off: the machine takes the room, leaving a strip for the free spins counter.' : 'The name, or your own logo.',
       }),
       P.machine.showTitle !== false ? textField({ id: 'm-title', label: 'Title', value: P.machine.title, onChange: num(P.machine, 'title', 'all') }) : null,
+      P.machine.showTitle !== false && !potsConfig(P).on ? moreLink('Asset Bank › Scene art', { bank: 'scene', id: 'asset-up-logo' }, 'Your own logo') : null,
       toggleField({ id: 'm-marquee', label: 'Marquee bulbs on the frame', checked: P.machine.marquee, onChange: num(P.machine, 'marquee', 'timeline') }),
       toggleField({ id: 'm-hud', label: 'Win meter under the reels', checked: P.machine.showHud, onChange: num(P.machine, 'showHud', 'all') })
     ),
@@ -4018,12 +4059,15 @@ function jackpotSettings() {
         renderPanel();
       },
     }),
-    h('p', { class: 'hint' }, `Every amount follows this (Machine › Money too). Now: ${formatPrize(1250, P.machine.currency || '', moneyDecimals(P))}.`),
+    h('p', { class: 'hint' }, `Every amount follows this. Now: ${formatPrize(1250, P.machine.currency || '', moneyDecimals(P))}.`),
+    moreLink('Machine › Money', { tab: 'machine', id: 'm-bet' }, 'Bet and currency'),
     h('div', { class: 'jp-rows' }, h('div', { class: 'jp-row jp-head', 'aria-hidden': 'true' }, h('span', null, 'Name'), h('span', null, 'Seed (× bet)'), h('span', null, 'Colour'), h('span', null, 'Art')), cfg.tiers.map(boxRow)),
     h('p', { class: 'hint' }, 'Name, seed value (in bets), colour and art per box. They are the Hold & Spin jackpots: the Mini, Minor and Major coins and the Grand prize. Your art fills the box; the value is written over it.'),
+    moreLink('Asset Bank › Coins', { bank: 'coins', section: 'hold-spin-coins' }, 'The jackpot coins'),
     cfg.tiers.some((t) => t.art) ? toggleField({ id: 'jp-art-names', label: 'Write the names on your art', checked: J.artNames !== false, onChange: (v) => { J.artNames = v; changed('all'); }, hint: 'Off when your art already says GRAND, MAJOR…' }) : null,
     h('h4', { class: 'insp-sub' }, 'What wins them'),
-    h('p', { class: 'hint', id: 'jp-wins' }, 'Collecting a Mini, Minor or Major coin wins its box, and a full Hold & Spin board the Grand: each pays what its box shows then. A round can award a box too (round inspector → Add a feature → Jackpot), and a wheel segment can pay one. A Major also takes the whole screen.'),
+    h('p', { class: 'hint', id: 'jp-wins' }, 'Collecting a Mini, Minor or Major coin wins its box, and a full Hold & Spin board the Grand: each pays what its box shows then. A round can award a box too (Add a feature → Jackpot), and a wheel segment can pay one. A Major also takes the whole screen.'),
+    moreLink('Round inspector › Jackpot', { round: JACKPOT_ROUNDS, id: 'ri-jackpot' }, 'A round awards a box'),
     wheelRows
   );
 }
@@ -4115,7 +4159,9 @@ function coinSection() {
         }, { class: 'btn small', id: 'coin-empty-up' }),
         H.emptySrc ? button('Clear', () => { H.emptySrc = null; changed('all'); renderAssets(); }, { class: 'btn small ghost', id: 'coin-empty-clear' }) : null
       )
-    )
+    ),
+    moreLink('Features › Hold & Spin', { tab: 'features', id: 'm-hs-respins' }, 'Respins and how coins land'),
+    moreLink('Features › Jackpot boxes', { tab: 'features', section: 'jackpot-boxes', id: 'jp-on' }, 'Jackpot values')
   );
 }
 
@@ -4149,8 +4195,9 @@ function panelAssets(filter = 'all') {
       'Scene art',
       assetRow('Background', 'background', 'Full-screen image behind the machine.'),
       assetRow('Frame overlay', 'frame', 'PNG drawn over the reels. Leave the window transparent.'),
-      assetRow('Logo', 'logo', 'Replaces the title text above the reels (Machine → Look switches the title off).'),
-      toggleField({ id: 'a-builtin', label: 'Draw the built-in frame', checked: P.machine.builtinFrame !== false, onChange: num(P.machine, 'builtinFrame', 'all') })
+      assetRow('Logo', 'logo', 'Replaces the title text above the reels.'),
+      toggleField({ id: 'a-builtin', label: 'Draw the built-in frame', checked: P.machine.builtinFrame !== false, onChange: num(P.machine, 'builtinFrame', 'all') }),
+      moreLink('Machine › Look', { tab: 'machine', id: 'm-title-on' }, 'Title on or off')
     ),
     show('fonts') ? fontsSection() : null,
   ];
@@ -4287,9 +4334,10 @@ function particleArtSection() {
   for (const a of P.particles.assets) tiles.append(particleTile(a));
   return section(
     'Win particles',
-    h('p', { class: 'hint' }, 'The art the win explosions throw. Upload one PNG for a still particle, several PNGs for an animated one (a spinning coin, a flapping banknote), or one sprite sheet. Pick which particle each win moment uses in Effects → Win particles. In After Effects each particle is a placeholder comp.'),
+    h('p', { class: 'hint' }, 'The art the win explosions throw. Upload one PNG for a still particle, several PNGs for an animated one (a spinning coin, a flapping banknote), or one sprite sheet. Pick which particle each win moment uses in the win particle settings. In After Effects each particle is a placeholder comp.'),
     tiles,
-    h('div', { class: 'row' }, button('Add particle art', addParticleArt, { class: 'btn', icon: 'upload', id: 'pa-add' }), button('Win particles settings', () => { showTab('effects'); document.getElementById('fx-particles')?.scrollIntoView({ block: 'start' }); }, { class: 'btn ghost small', icon: 'sparkle', id: 'pa-goto' }))
+    h('div', { class: 'row' }, button('Add particle art', addParticleArt, { class: 'btn', icon: 'upload', id: 'pa-add' })),
+    moreLink('Effects › Win particles', { tab: 'effects', section: 'win-particles' }, 'Which moment uses which particle')
   );
 }
 
@@ -4433,10 +4481,10 @@ function particleSettings() {
     'section',
     { class: 'group', id: 'fx-particles' },
     h('h3', null, 'Win particles'),
-    h('p', { class: 'hint' }, 'Pick an explosion and a particle for every win moment. Short explosions fire once. Continuous ones keep going while the win shows, until the next round, or to the end of the animation (they loop seamlessly). Ambient particles float behind the machine the whole time. A round can use its own in the round inspector. Particle art lives in the Asset Bank.'),
+    h('p', { class: 'hint' }, 'Pick an explosion and a particle for every win moment. Short explosions fire once. Continuous ones keep going while the win shows, until the next round, or to the end of the animation (they loop seamlessly). Ambient particles float behind the machine the whole time. A round can use its own in the round inspector.'),
     h('div', { class: 'pfx-rows' }, rows),
     rangeField({ id: 'fx-coins', label: 'Particle amount', value: fx.coins, min: 0, max: 2, step: 0.01, onInput: num(fx, 'coins') }),
-    button('Open the Asset Bank', () => openBank('particles'), { class: 'btn small ghost', icon: 'grid', id: 'pfx-bank' })
+    moreLink('Asset Bank › Particle art', { bank: 'particles', id: 'pa-add' }, 'Your own particle art')
   );
 }
 
@@ -4684,7 +4732,8 @@ function panelSpin() {
     hsGame
       ? section(
           'Respins',
-          h('p', { class: 'hint' }, 'Every empty cell spins on its own and stops in the cell order. The start, mid and end phases below shape each cell; the respin length is in Features → Hold & Spin.'),
+          h('p', { class: 'hint' }, 'Every empty cell spins on its own and stops in the cell order. The start, mid and end phases below shape each cell; the respin length is with Hold & Spin.'),
+          moreLink('Features › Hold & Spin', { tab: 'features', id: 'm-hs-mid' }, 'Respin length'),
           segmented({ id: 'spin-dir', label: 'Direction', value: sp.direction, options: [{ value: 'down', label: 'Spin down' }, { value: 'up', label: 'Spin up' }], onChange: num(sp, 'direction') }),
           selectField({ id: 'spin-cell-order', label: 'Cell order', value: sp.cellOrder || 'columns', options: CELL_ORDERS.map((o) => ({ value: o.id, label: o.label })), onChange: num(sp, 'cellOrder') })
         )
@@ -4936,7 +4985,9 @@ function panelEffects() {
           ['holdspin', 'Hold & Spin'],
           ['grand', 'Grand (full board)'],
         ].map(([k, l]) => textField({ id: `fx-t-${k}`, label: l, value: titles[k], onChange: num(titles, k, 'all') }))
-      )
+      ),
+      moreLink('Asset Bank › Fonts', { bank: 'fonts', id: 'font-add' }, 'Your own fonts'),
+      gameOf() === 'slot' || gameOf() === 'holdspin' ? moreLink('Wins › Win tiers', { tab: 'wins', section: 'win-tiers' }, 'Big win titles') : null
     ),
     h('p', { class: 'hint' }, 'Win tiers, winning symbols and win timing are in the Wins tab.'),
   ];
@@ -5054,10 +5105,11 @@ function winSymbolsSection() {
   } else if (W.style === 'collect') {
     parts.push(
       potsCollect(potsConfig(P))
-        ? h('p', { class: 'hint' }, 'Which pot each winner goes to, and the beams\' curve, thickness and timing, are in Features → Pots above the machine.')
+        ? h('p', { class: 'hint' }, 'Which pot each winner goes to, and the beams\' curve, thickness and timing, are set with the pots.')
         : potsConfig(P).on
-        ? h('p', { class: 'hint' }, 'No pot collects, so winners pop in place. Set a pot to Collects or Both in Features → Pots above the machine.')
-        : h('div', { class: 'field' }, h('p', { class: 'hint' }, 'The pots are off, so winners pop in place.'), button('Turn on the pots', () => turnOnPots(), { class: 'btn small', icon: 'plus', id: 'wf-pots-on' }))
+        ? h('p', { class: 'hint' }, 'No pot collects, so winners pop in place. Set a pot to Collects or Both.')
+        : h('div', { class: 'field' }, h('p', { class: 'hint' }, 'The pots are off, so winners pop in place.'), button('Turn on the pots', () => turnOnPots(), { class: 'btn small', icon: 'plus', id: 'wf-pots-on' })),
+      potsConfig(P).on ? moreLink('Features › Pots above the machine', { tab: 'features', section: 'pots-above-the-machine', id: 'm-beam-curve' }, 'Pots and beams') : null
     );
   } else if (W.style === 'merge') {
     parts.push(
@@ -5249,6 +5301,7 @@ function panelWheel() {
         changed('all');
         renderPanel();
       } }),
+      moreLink('Effects › Titles and font', { tab: 'effects', id: 'fx-font' }, 'Display font'),
       segmented({ id: 'w-label-colour', label: 'Label colour', value: cfg.labelPalette, options: LABEL_PALETTES.map((x) => ({ value: x.id, label: x.label })), onChange: (v) => { W.labelPalette = v; changed('all'); } }),
       rangeField({ id: 'w-label-size', label: 'Text size', unit: '×', value: cfg.labelSize, min: 0.4, max: 2, step: 0.01, onInput: allChanged('labelSize') }),
       rangeField({ id: 'w-label-height', label: 'Text height', unit: '% from hub to rim', value: Math.round((cfg.labelHeight ?? autoH.label) * 100), min: 15, max: 97, step: 1, onInput: (v) => { W.labelHeight = v / 100; changed('all'); } }),
@@ -5280,7 +5333,7 @@ function panelWheel() {
         toggleField({ id: 'w-show-rim', label: 'Rim', checked: cfg.show.rim, onChange: show('rim') }),
         toggleField({ id: 'w-show-bulbs', label: 'Rim bulbs', checked: cfg.show.bulbs, onChange: show('bulbs') })
       ),
-      button('Replace the wheel art', () => openBank('wheel'), { class: 'btn small ghost', icon: 'grid', id: 'w-bank' })
+      moreLink('Asset Bank › Wheel art', { bank: 'wheel', id: 'wart-up-face' }, 'Your own face, rim, hub and pointer')
     ),
     section(
       'Spin',
@@ -5348,7 +5401,8 @@ function wheelArtSection() {
     wheelArtRow('Hub', 'hub', 'The centre piece. Hub size and whether it turns are in the Wheel tab.'),
     wheelArtRow('Pointer', 'pointer', 'Pointing down, hinged near its top.'),
     h('div', { class: 'field' }, h('span', { class: 'label' }, 'Centre and segment icons'), icons),
-    h('div', { class: 'row' }, iconsEverywhereButton({ id: 'wi-all' }), clearIconsButton({ id: 'wi-clear' }))
+    h('div', { class: 'row' }, iconsEverywhereButton({ id: 'wi-all' }), clearIconsButton({ id: 'wi-clear' })),
+    moreLink('Wheel › Look', { tab: 'wheel', id: 'w-hub-size' }, 'Hub size and which parts show')
   );
 }
 
@@ -5467,8 +5521,9 @@ function fontsSection() {
   return section(
     'Fonts',
     h('p', { class: 'hint' }, 'Upload TTF or OTF fonts to use for the titles, counters and wheel labels. They ship in the After Effects package; install them there.'),
-    rows.length ? h('div', { class: 'font-rows' }, rows) : h('p', { class: 'hint' }, 'Built-in: Bungee, Lilita One, Russo One, Cinzel Decorative.'),
-    button('Upload fonts', addFonts, { class: 'btn small', icon: 'upload', id: 'font-add' })
+    rows.length ? h('div', { class: 'font-rows' }, rows) : h('p', { class: 'hint' }, 'None yet. Without them, pick any font in the font list.'),
+    button('Upload fonts', addFonts, { class: 'btn small', icon: 'upload', id: 'font-add' }),
+    moreLink('Effects › Titles and font', { tab: 'effects', id: 'fx-font' }, 'Display font')
   );
 }
 
@@ -5525,9 +5580,10 @@ function fontPicker({ id, label, value, onChange, fallback }) {
     'button',
     { type: 'button', class: 'font-pick', id, 'aria-haspopup': 'listbox', 'aria-expanded': 'false' },
     h('span', { class: 'font-pick-name', style: { fontFamily: `"${shown}", sans-serif` } }, value ? value : fallback ? fallback.label : shown),
-    icon('down')
+    icon('chevron')
   );
-  btn.addEventListener('click', () => openFontPicker(btn, value, onChange, fallback, P));
+  // The trigger folds the list again too.
+  btn.addEventListener('click', () => (fontPop?.btn === btn ? closeFontPicker() : openFontPicker(btn, value, onChange, fallback, P)));
   return h('div', { class: 'field' }, h('label', { for: id }, label), btn);
 }
 function openFontPicker(btn, value, onChange, fallback, P) {
@@ -5540,10 +5596,11 @@ function openFontPicker(btn, value, onChange, fallback, P) {
   const search = h('input', { type: 'search', class: 'font-search', placeholder: 'Search fonts', 'aria-label': 'Search fonts', id: 'font-search' });
   const chips = h('div', { class: 'font-cats' });
   const list = h('div', { class: 'font-list', role: 'listbox', id: 'font-list' });
+  const fold = h('button', { type: 'button', class: 'icon-btn font-pop-fold', id: 'font-pop-close', title: 'Fold the list', 'aria-label': 'Fold the list', onclick: () => close() }, icon('chevron'));
   const pop = h(
     'div',
     { class: 'font-pop', role: 'dialog', 'aria-label': 'Fonts' },
-    search,
+    h('div', { class: 'font-pop-head' }, search, fold),
     chips,
     list,
     h('div', { class: 'font-pop-foot' }, button('Upload a font', () => {
@@ -5623,7 +5680,7 @@ function openFontPicker(btn, value, onChange, fallback, P) {
     btn.setAttribute('aria-expanded', 'false');
     removeEventListener('pointerdown', outside, true);
   }
-  const api = { close };
+  const api = { close, btn };
   fontPop = api;
   render();
   document.body.append(pop);
@@ -5638,6 +5695,8 @@ function openFontPicker(btn, value, onChange, fallback, P) {
   } else {
     pop.style.bottom = `${Math.round(innerHeight - r.top + 6)}px`;
     pop.style.maxHeight = `${Math.round(Math.min(460, r.top - 12))}px`;
+    // Opened upwards: the fold chevron points down, back to the field.
+    pop.classList.add('above');
   }
   btn.setAttribute('aria-expanded', 'true');
   addEventListener('pointerdown', outside, true);
