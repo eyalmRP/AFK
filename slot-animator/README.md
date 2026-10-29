@@ -190,7 +190,7 @@ the result as an editable **After Effects project**.
     boxes, the landing reel, the winning cells). Options that do not apply
     to the game type or spin style stay in view, greyed out and locked,
     saying why. Section headers have icons and each its own colour (a
-    tinted bar, never the same as the few above it). Search also reads
+    tinted title, never the same as the few above it). Search also reads
     the tooltip texts.
   - More settings: a setting whose companions live elsewhere links to
     them (Wins › Beam to pots → Features › Pots above the machine, the
@@ -246,8 +246,10 @@ the result as an editable **After Effects project**.
     and gives the preview its room (any tab brings it back, and it is
     remembered; arrow keys move along the rail). Tablets and phones keep
     the tabs on top of the panel, in two rows of four when it is narrow.
-    Every section folds and remembers it; Alt-click a section title folds
-    them all.
+    Every section folds and remembers it. Fold all, pinned to the top of
+    the settings panel and the Asset Bank, folds them all (and unfolds
+    them once all are folded); Alt-click on a section title does the
+    same.
   - Round inspector: the round's basics on top (outcome, symbol, amount,
     pattern; winning lines show the picked ones until you change them),
     then a card for each feature the round uses: tumbles, multipliers,

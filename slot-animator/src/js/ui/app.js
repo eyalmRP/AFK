@@ -454,6 +454,26 @@ function setSection(sec, open, remember = true) {
     saveUI();
   }
   if (open && sec.querySelector('#motion-graph')) drawMotionGraph();
+  syncFoldAll(sec.parentElement);
+}
+
+// "Fold all" above a panel's sections; it unfolds them all once every one
+// is folded.
+function foldAllBar(root) {
+  const btn = h('button', { type: 'button', class: 'fold-all', onclick: () => {
+    const secs = [...root.querySelectorAll(':scope > section.group[data-key]')];
+    const open = secs.every((s) => s.classList.contains('closed'));
+    for (const s of secs) setSection(s, open);
+  } });
+  return h('div', { class: 'fold-bar' }, btn);
+}
+
+function syncFoldAll(root) {
+  const btn = root?.querySelector(':scope > .fold-bar > .fold-all');
+  if (!btn) return;
+  const folded = [...root.querySelectorAll(':scope > section.group[data-key]')].every((s) => s.classList.contains('closed'));
+  clear(btn, icon(folded ? 'unfoldAll' : 'foldAll'), h('span', null, folded ? 'Unfold all' : 'Fold all'));
+  btn.title = folded ? 'Open every section (Alt-click a section title does it too)' : 'Fold every section (Alt-click a section title does it too)';
 }
 
 // An icon for each section, so a tab reads at a glance.
@@ -507,6 +527,8 @@ function collapsify(root, scope) {
     sec.append(body);
     setSection(sec, sectionOpen(key, scope, name), false);
   }
+  if (!root.querySelector(':scope > .fold-bar') && root.querySelectorAll(':scope > section.group[data-key]').length >= 3) root.prepend(foldAllBar(root));
+  syncFoldAll(root);
 }
 
 // Opens the section around an element (search results land inside folded

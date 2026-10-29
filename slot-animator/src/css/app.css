@@ -3402,15 +3402,14 @@ section.group.na > h3 .group-toggle span:first-of-type {
 }
 
 /* Section titles: each in its own colour (--sc, set per section), a
-   tinted bar with a coloured edge and an icon chip, so they stand out
-   from the settings between them. */
+   tinted bar and an icon chip, so they stand out from the settings
+   between them. */
 section.group[data-key] > h3 .group-toggle {
   --hc: var(--sc, var(--gold));
   margin: -2px 0;
   padding: 6px 8px 6px 6px;
   border-radius: 8px;
   background: color-mix(in srgb, var(--hc) 9%, transparent);
-  box-shadow: inset 3px 0 0 var(--hc);
   color: color-mix(in srgb, var(--hc) 62%, var(--text));
   transition: background 0.15s;
 }
@@ -3432,6 +3431,41 @@ section.group[data-key] > h3 .group-toggle > .ic {
 /* A section that does not apply to this game is greyed. */
 section.group.na > h3 .group-toggle {
   --hc: var(--faint);
+}
+
+/* Fold all: pinned to the top of a panel while it scrolls. */
+.fold-bar {
+  position: sticky;
+  top: -14px;
+  z-index: 3;
+  display: flex;
+  justify-content: flex-end;
+  margin: -14px -14px -10px;
+  padding: 8px 14px 6px;
+  background: var(--surface);
+}
+
+.fold-all {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px 3px 7px;
+  border: 1px solid var(--line-2);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--muted);
+  font: 12px/1.3 var(--f-ui);
+  cursor: pointer;
+}
+
+.fold-all:hover {
+  color: var(--text);
+  border-color: var(--muted);
+}
+
+.fold-all .ic {
+  width: 14px;
+  height: 14px;
 }
 
 .group-toggle .sec-ic {
