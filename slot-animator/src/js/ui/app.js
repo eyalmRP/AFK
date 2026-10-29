@@ -489,6 +489,12 @@ function revealSection(node) {
   if (fold && !fold.classList.contains('open')) setFold(fold, true);
   const card = node.closest('.feat-card.folded');
   if (card) card.querySelector('.feat-toggle')?.click();
+  const menu = node.closest('.feat-menu');
+  if (menu?.hidden) {
+    insp.menu = true;
+    menu.hidden = false;
+    document.getElementById('feat-add')?.setAttribute('aria-expanded', 'true');
+  }
 }
 
 // Round features not in the round yet are found in "Add a feature".
@@ -3197,7 +3203,11 @@ function showTip(target) {
   document.body.append(el.tip);
   target.setAttribute('aria-describedby', 'tip-card');
   // Beside the target: right of it when there is room, else left, else below.
-  const r = target.getBoundingClientRect();
+  // In the rounds panel the card sits left of the whole panel, so it never
+  // covers the menu or the card next to what you point at.
+  const t = target.getBoundingClientRect();
+  const side = !narrow() && target.closest('.side.right')?.getBoundingClientRect();
+  const r = side ? { left: side.left, right: side.right + innerWidth, top: t.top, bottom: t.bottom, height: t.height } : t;
   const w = el.tip.offsetWidth;
   const hh = el.tip.offsetHeight;
   let x = r.right + 12;
