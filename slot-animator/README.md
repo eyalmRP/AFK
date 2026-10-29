@@ -173,9 +173,14 @@ the result as an editable **After Effects project**.
     Wins (tiers, winning symbols, win timing), Effects (intensity, win
     particles, explosion templates, titles and font), Features (Hold & Spin,
     pots above the machine), Wheel, Sound, Export (output size, frame rate
-    and transparency first, then the exports). On a narrow settings panel
-    the tabs sit in two rows of four. Every section folds and remembers
-    it; Alt-click a section title folds them all.
+    and transparency first, then the exports). On desktop the tabs are a
+    rail at the window's left edge, an icon and a name each, with the Asset
+    Bank at its foot; clicking the open tab folds the settings panel away
+    and gives the preview its room (any tab brings it back, and it is
+    remembered; arrow keys move along the rail). Tablets and phones keep
+    the tabs on top of the panel, in two rows of four when it is narrow.
+    Every section folds and remembers it; Alt-click a section title folds
+    them all.
   - Round inspector: the round's basics on top (outcome, symbol, amount,
     pattern; winning lines show the picked ones until you change them),
     then a card for each feature the round uses: tumbles, multipliers,

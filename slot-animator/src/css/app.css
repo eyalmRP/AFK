@@ -475,8 +475,125 @@ input[type='color'] {
   flex: 1;
   min-height: 0;
   display: grid;
-  grid-template-columns: var(--left-w, 330px) 12px minmax(0, 1fr) 12px var(--right-w, 352px);
+  grid-template-columns: 72px var(--left-w, 330px) 12px minmax(0, 1fr) 12px var(--right-w, 352px);
   gap: 0;
+}
+
+@media (min-width: 1241px) {
+  .work > .rail { grid-column: 1; }
+  .work > .side.left { grid-column: 2; }
+  .work > .splitter.left { grid-column: 3; }
+  .work > .stage { grid-column: 4; }
+  .work > .splitter.right { grid-column: 5; }
+  .work > .side.right { grid-column: 6; }
+
+  /* Folded: the settings panel steps aside and the preview takes its room. */
+  .work.left-folded {
+    grid-template-columns: 72px 0 0 minmax(0, 1fr) 12px var(--right-w, 352px);
+  }
+
+  .work.left-folded > .side.left,
+  .work.left-folded > .splitter.left {
+    display: none;
+  }
+}
+
+/* The settings tabs as a rail at the window's left edge: an icon and a
+   name each, the Asset Bank at its foot. */
+.rail {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-right: 8px;
+  padding: 6px 5px;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: none;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+}
+
+.rail-tabs {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.rail-tabs button,
+.rail-bank {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  width: 100%;
+  padding: 8px 2px 7px;
+  border: 0;
+  border-radius: 9px;
+  background: none;
+  color: var(--faint);
+  font-size: 10.5px;
+  font-weight: 600;
+  line-height: 1.1;
+  cursor: pointer;
+}
+
+.rail-tabs .ic,
+.rail-bank .ic {
+  width: 20px;
+  height: 20px;
+}
+
+.rail-tabs button:hover,
+.rail-bank:hover {
+  color: var(--text);
+  background: var(--surface-2);
+}
+
+.rail-tabs button.on {
+  color: var(--gold-2);
+  background: var(--surface-3);
+}
+
+/* The open tab's marker; hollow while the panel is folded away. */
+.rail-tabs button.on::before {
+  content: '';
+  position: absolute;
+  left: -5px;
+  top: 10px;
+  bottom: 10px;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: var(--gold);
+}
+
+.rail.folded .rail-tabs button.on {
+  background: none;
+}
+
+.rail.folded .rail-tabs button.on::before {
+  background: var(--line-2);
+}
+
+.rail-bank {
+  margin-top: auto;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+  border-radius: 0 0 9px 9px;
+}
+
+.rail-bank.on {
+  color: var(--gold-2);
+}
+
+/* With the rail on screen, the tabs on top of the panel and the top bar's
+   Asset Bank button would repeat it. */
+@media (min-width: 1241px) {
+  .side.left > .tabs,
+  #top-bank {
+    display: none;
+  }
 }
 
 /* Drag (or arrow-key) handles between the panels and the stage. */
@@ -1844,6 +1961,10 @@ body.dragging * {
   body,
   .app {
     height: auto;
+  }
+
+  .work > .rail {
+    display: none;
   }
 
   .work {

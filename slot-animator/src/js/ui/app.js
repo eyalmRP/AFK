@@ -147,9 +147,12 @@ function storageWorks() {
 
 // Side panel widths: drag the splitters, or focus one and use the arrow
 // keys (Shift for bigger steps, Home/End for the limits). Double-click resets.
+// The rail beside the settings panel (its column, with the gap).
+const RAIL_W = 72;
+
 function panelMax(side) {
-  const other = side === 'left' ? ui.right : ui.left;
-  return Math.max(PANEL_MIN[side], Math.min(760, window.innerWidth - other - STAGE_MIN - 64));
+  const other = side === 'left' ? ui.right : ui.leftFolded ? 0 : ui.left;
+  return Math.max(PANEL_MIN[side], Math.min(760, window.innerWidth - other - STAGE_MIN - 64 - RAIL_W));
 }
 
 function applyWidths() {
@@ -333,6 +336,8 @@ function openBank(filter, focus = true) {
   el.bank.hidden = false;
   el.bankBtn.setAttribute('aria-expanded', 'true');
   el.bankBtn.classList.add('on');
+  el.railBank.classList.add('on');
+  el.railBank.setAttribute('aria-expanded', 'true');
   renderPhoneBar();
   if (ui.bank.min) setBankMin(false);
   placeBank();
@@ -347,8 +352,10 @@ function closeBank() {
   el.bank.hidden = true;
   el.bankBtn.setAttribute('aria-expanded', 'false');
   el.bankBtn.classList.remove('on');
+  el.railBank.classList.remove('on');
+  el.railBank.setAttribute('aria-expanded', 'false');
   renderPhoneBar();
-  if (had) el.bankBtn.focus();
+  if (had) (el.railBank.offsetParent ? el.railBank : el.bankBtn).focus();
   saveUI();
 }
 
@@ -692,6 +699,11 @@ function buildProjectMenu() {
 // ---------- feature search ----------
 
 const SEARCH_ACTIONS = {
+  fold: () => {
+    if (window.matchMedia('(max-width: 1240px)').matches) return toast('The settings panel folds away on wider windows.', 'info');
+    setLeftFolded(!ui.leftFolded);
+    toast(ui.leftFolded ? 'Settings folded away. Click any tab on the left rail to bring them back.' : 'Settings are back.', 'info', 4000);
+  },
   new: () => newProject(),
   open: () => openProjectFile(),
   save: () => saveProjectFile(),
@@ -729,11 +741,7 @@ function goToFeature(f) {
   if (g.action) return SEARCH_ACTIONS[g.action]?.();
   let root = document;
   if (g.tab) {
-    if (state.tab !== g.tab) {
-      state.tab = g.tab;
-      renderTabs();
-      renderPanel();
-    }
+    if (state.tab !== g.tab || ui.leftFolded) showTab(g.tab);
   } else if (g.bank) {
     openBank(g.bank, false);
     root = el.bank;
@@ -1092,6 +1100,7 @@ const SHORTCUTS = [
   ['Ctrl O', 'Open a project file'],
   ['?', 'This list'],
   ['Alt-click a section title', 'Fold or unfold every section'],
+  ['Click the open tab on the rail', 'Fold the settings panel away (any tab brings it back)'],
 ];
 
 function showShortcuts() {
@@ -1507,13 +1516,18 @@ function buildShell() {
   el.phoneTp = h('div', { class: 'phone-tp', role: 'group', 'aria-label': 'Playback' });
   el.timeline = h('div', { class: 'timeline' });
   el.tabs = h('nav', { class: 'tabs', role: 'tablist', 'aria-label': 'Settings' });
+  el.railTabs = h('div', { class: 'rail-tabs', role: 'tablist', 'aria-label': 'Settings', 'aria-orientation': 'vertical' });
+  el.railBank = button('Assets', toggleBank, { class: 'rail-bank', icon: 'grid', id: 'rail-bank', title: 'Asset Bank: symbols, coins, particles and scene art (B)' });
+  el.railBank.setAttribute('aria-expanded', 'false');
+  el.railBank.setAttribute('aria-controls', 'asset-bank');
+  el.rail = h('nav', { class: 'rail', 'aria-label': 'Settings and assets' }, el.railTabs, el.railBank);
+  tabKeys(el.tabs, false);
+  tabKeys(el.railTabs, true);
   el.panel = h('div', { class: 'panel-body', id: 'settings-panel' });
   el.sequence = h('div', { class: 'panel-body' });
   el.toasts = h('div', { class: 'toasts', 'aria-live': 'polite' });
   const goExport = (fn) => () => {
-    state.tab = 'export';
-    renderTabs();
-    renderPanel();
+    showTab('export');
     fn();
   };
   clear(
@@ -1542,7 +1556,8 @@ function buildShell() {
     ),
     (el.work = h(
       'div',
-      { class: 'work' },
+      { class: `work${ui.leftFolded ? ' left-folded' : ''}` },
+      el.rail,
       h('aside', { class: 'side left', 'aria-label': 'Settings' }, el.tabs, el.panel),
       splitter('left'),
       h('main', { class: 'stage' }, el.viewport, el.phoneTp, el.timeline),
@@ -3107,25 +3122,67 @@ const TABS = [
   ['export', 'Export'],
 ];
 
+const TAB_ICONS = { machine: 'reels', spin: 'loop', wins: 'trophy', effects: 'sparkle', features: 'coin', wheel: 'wheel', sound: 'sound', export: 'download' };
+
+// On desktop the tabs are a rail at the window's left edge (icon and name,
+// the Asset Bank at its foot); clicking the open tab again folds the
+// settings panel away. Tablets and phones keep them on top of the panel.
 function renderTabs() {
-  clear(
-    el.tabs,
-    TABS.map(([k, label]) =>
-      h('button', {
+  const folded = !!ui.leftFolded;
+  const tab = (k, label, rail) => {
+    const on = state.tab === k;
+    const b = h(
+      'button',
+      {
         type: 'button',
         role: 'tab',
-        id: `tab-${k}`,
-        class: state.tab === k ? 'on' : '',
-        'aria-selected': String(state.tab === k),
+        id: rail ? `tab-${k}` : `tabn-${k}`,
+        class: on ? 'on' : '',
+        'aria-selected': String(on),
         'aria-controls': 'settings-panel',
-        onclick: () => {
-          state.tab = k;
-          renderTabs();
-          renderPanel();
-        },
-      }, label)
-    )
-  );
+        tabindex: on ? 0 : -1,
+        title: rail ? (on ? (folded ? `Show the ${label} settings` : 'Fold the settings away') : `${label} settings`) : null,
+        onclick: () => (rail && on ? setLeftFolded(!folded) : showTab(k)),
+      },
+      rail ? [icon(TAB_ICONS[k]), h('span', null, label)] : label
+    );
+    return b;
+  };
+  clear(el.tabs, TABS.map(([k, l]) => tab(k, l, false)));
+  clear(el.railTabs, TABS.map(([k, l]) => tab(k, l, true)));
+  el.rail.classList.toggle('folded', folded);
+}
+
+function showTab(k) {
+  state.tab = k;
+  if (ui.leftFolded) setLeftFolded(false);
+  renderTabs();
+  renderPanel();
+}
+
+function setLeftFolded(v) {
+  ui.leftFolded = v;
+  el.work.classList.toggle('left-folded', v);
+  saveUI();
+  applyWidths();
+  renderTabs();
+  if (!v && state.tab === 'spin') drawMotionGraph();
+}
+
+// Arrow keys move along a tab list and open the tab they land on.
+function tabKeys(list, vertical) {
+  list.addEventListener('keydown', (e) => {
+    const keys = vertical ? { ArrowDown: 1, ArrowUp: -1 } : { ArrowRight: 1, ArrowLeft: -1 };
+    const i = TABS.findIndex(([k]) => k === state.tab);
+    let j;
+    if (e.key in keys) j = (i + keys[e.key] + TABS.length) % TABS.length;
+    else if (e.key === 'Home') j = 0;
+    else if (e.key === 'End') j = TABS.length - 1;
+    else return;
+    e.preventDefault();
+    showTab(TABS[j][0]);
+    list.querySelector('[aria-selected="true"]')?.focus();
+  });
 }
 
 function renderPanel() {
@@ -3876,7 +3933,7 @@ function particleArtSection() {
     'Win particles',
     h('p', { class: 'hint' }, 'The art the win explosions throw. Upload one PNG for a still particle, several PNGs for an animated one (a spinning coin, a flapping banknote), or one sprite sheet. Pick which particle each win moment uses in Effects → Win particles. In After Effects each particle is a placeholder comp.'),
     tiles,
-    h('div', { class: 'row' }, button('Add particle art', addParticleArt, { class: 'btn', icon: 'upload', id: 'pa-add' }), button('Win particles settings', () => { state.tab = 'effects'; renderTabs(); renderPanel(); document.getElementById('fx-particles')?.scrollIntoView({ block: 'start' }); }, { class: 'btn ghost small', icon: 'sparkle', id: 'pa-goto' }))
+    h('div', { class: 'row' }, button('Add particle art', addParticleArt, { class: 'btn', icon: 'upload', id: 'pa-add' }), button('Win particles settings', () => { showTab('effects'); document.getElementById('fx-particles')?.scrollIntoView({ block: 'start' }); }, { class: 'btn ghost small', icon: 'sparkle', id: 'pa-goto' }))
   );
 }
 
