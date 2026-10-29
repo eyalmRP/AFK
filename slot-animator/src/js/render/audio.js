@@ -6,6 +6,7 @@
 
 import { SOUND_EVENTS } from '../core/defaults.js';
 import { mulberry32, hash01 } from '../core/rng.js';
+import { encodeWav } from '../core/wav.js';
 
 const GROUP_OF = Object.fromEntries(SOUND_EVENTS.map((e) => [e.id, e.group]));
 const SR = 48000;
@@ -388,34 +389,6 @@ function renderChunk(list, offset, length, sound, custom) {
 }
 
 export function audioBufferToWav(buffer, from = 0, to = buffer.duration) {
-  const sr = buffer.sampleRate;
-  const a = Math.max(0, Math.floor(from * sr));
-  const b = Math.min(buffer.length, Math.ceil(to * sr));
-  const n = Math.max(0, b - a);
-  const ch = buffer.numberOfChannels;
-  const out = new DataView(new ArrayBuffer(44 + n * ch * 2));
-  const w = (o, s) => [...s].forEach((c, i) => out.setUint8(o + i, c.charCodeAt(0)));
-  w(0, 'RIFF');
-  out.setUint32(4, 36 + n * ch * 2, true);
-  w(8, 'WAVE');
-  w(12, 'fmt ');
-  out.setUint32(16, 16, true);
-  out.setUint16(20, 1, true);
-  out.setUint16(22, ch, true);
-  out.setUint32(24, sr, true);
-  out.setUint32(28, sr * ch * 2, true);
-  out.setUint16(32, ch * 2, true);
-  out.setUint16(34, 16, true);
-  w(36, 'data');
-  out.setUint32(40, n * ch * 2, true);
-  const data = Array.from({ length: ch }, (_, c) => buffer.getChannelData(c));
-  let o = 44;
-  for (let i = a; i < b; i++) {
-    for (let c = 0; c < ch; c++) {
-      const v = Math.max(-1, Math.min(1, data[c][i]));
-      out.setInt16(o, v < 0 ? v * 0x8000 : v * 0x7fff, true);
-      o += 2;
-    }
-  }
-  return new Blob([out.buffer], { type: 'audio/wav' });
+  const channels = Array.from({ length: buffer.numberOfChannels }, (_, c) => buffer.getChannelData(c));
+  return new Blob([encodeWav(channels, buffer.sampleRate, from, to)], { type: 'audio/wav' });
 }

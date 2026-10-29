@@ -2100,9 +2100,14 @@ export function renderFrame(ctx, scene, t, opts = {}) {
     ctx.scale(cam.z, cam.z);
     ctx.translate(-cam.x, -cam.y);
   }
-  ctx.drawImage(res.bg, 0, 0);
-  if (Number(fx.bokeh) > 0) drawBokeh(ctx, scene, t);
-  drawFsTint(ctx, scene, t);
+  // A transparent frame leaves out what After Effects switches off for
+  // transparency: the background (with its lights and tint) and the vignette.
+  const clear = !!opts.transparent;
+  if (!clear) {
+    ctx.drawImage(res.bg, 0, 0);
+    if (Number(fx.bokeh) > 0) drawBokeh(ctx, scene, t);
+    drawFsTint(ctx, scene, t);
+  }
   let sx = 0;
   let sy = 0;
   const shakeK = Number(fx.shake) || 0;
@@ -2155,7 +2160,7 @@ export function renderFrame(ctx, scene, t, opts = {}) {
   drawOverParticles(ctx, scene, t);
   ctx.setTransform(base, 0, 0, base, 0, 0);
   drawFlashes(ctx, scene, t);
-  ctx.drawImage(res.vignette, 0, 0);
+  if (!clear) ctx.drawImage(res.vignette, 0, 0);
   ctx.restore();
   if (!opts.noBloom) bloomPass(ctx, scene);
 }

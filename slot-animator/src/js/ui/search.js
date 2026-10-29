@@ -217,7 +217,8 @@ export const FEATURES = [
   T('Transparent background', 'Export › After Effects project', 'alpha prores no background', { tab: 'export', id: 'x-transparent' }),
   T('Render an MP4 preview', 'Export › Quick preview (MP4)', 'video movie', { tab: 'export', id: 'x-mp4' }),
   T('MP4 quality', 'Export › Quick preview (MP4)', 'bitrate', { tab: 'export', id: 'x-bitrate' }),
-  T('Save this frame as PNG', 'Export › Still frame', 'screenshot image still', { tab: 'export', id: 'x-png' }),
+  T('Save this frame as PNG', 'Export › Still frame', 'screenshot image still transparent alpha', { tab: 'export', id: 'x-png' }),
+  T('Download the soundtrack (WAV)', 'Export › Soundtrack (WAV)', 'sound track audio music mix wav file edit elsewhere', { tab: 'export', id: 'x-wav' }),
   // Asset Bank
   T('Upload symbol art', 'Asset Bank › Symbols', 'add symbols png images icons', { bank: 'symbols', id: 'a-add' }),
   T('Symbol win animation', 'Asset Bank › Symbols', 'sprite sheet png sequence frames animate', { bank: 'symbols', section: 'symbols' }),
