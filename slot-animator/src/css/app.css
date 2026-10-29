@@ -371,6 +371,12 @@ input[type='color'] {
   cursor: pointer;
 }
 
+/* Four winning-symbol styles sit as a 2 x 2 grid of equal buttons. */
+#wf-style.seg {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+
 .seg button.on {
   background: var(--surface-3);
   color: var(--gold-2);
@@ -562,6 +568,24 @@ body.dragging * {
 .tabs button.on {
   color: var(--gold-2);
   border-bottom-color: var(--gold);
+}
+
+/* Eight tabs: one row on a wide settings panel, two rows of four on a
+   narrow one, so none scrolls out of sight. */
+.side.left {
+  container: settings / inline-size;
+}
+
+@container settings (max-width: 560px) {
+  .tabs {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    padding-top: 4px;
+  }
+
+  .tabs button {
+    padding: 7px 2px 8px;
+  }
 }
 
 .group {
@@ -1518,6 +1542,22 @@ body.dragging * {
 
 .line-chip.on svg {
   opacity: 1;
+}
+
+.lines.picked .line-chip {
+  cursor: default;
+}
+
+.label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.label-row .btn.small {
+  padding: 3px 8px;
+  font-size: 12px;
 }
 
 .cells {
@@ -2638,6 +2678,241 @@ body.dragging .bank-head {
 
 .insp-actions {
   margin-top: -2px;
+}
+
+/* Features a round uses: a card each, with what it is set to when folded. */
+.feat-card {
+  border: 1px solid var(--line-2);
+  border-radius: 11px;
+  background: var(--surface-2);
+}
+
+.feat-card > header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 4px 4px 6px;
+}
+
+.feat-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: none;
+  padding: 5px 4px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  cursor: pointer;
+  text-align: left;
+}
+
+.feat-toggle .ic {
+  width: 13px;
+  height: 13px;
+  color: var(--faint);
+  transform: rotate(90deg);
+  transition: transform 0.15s;
+}
+
+.feat-card.folded .feat-toggle .ic {
+  transform: rotate(0deg);
+}
+
+.feat-toggle strong {
+  font-size: 13.5px;
+}
+
+.feat-sum {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--muted);
+  font-size: 12px;
+  text-align: right;
+}
+
+.feat-card:not(.folded) .feat-sum {
+  visibility: hidden;
+}
+
+.feat-card .icon-btn.tiny {
+  flex: none;
+}
+
+.feat-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 2px 12px 12px;
+}
+
+.feat-body[hidden] {
+  display: none;
+}
+
+.feat-none {
+  margin: 0;
+}
+
+.feat-add {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.btn.accent {
+  border-color: color-mix(in srgb, var(--gold) 55%, var(--line-2));
+  color: var(--gold-2);
+}
+
+.btn.accent[aria-expanded="true"] {
+  background: color-mix(in srgb, var(--gold) 14%, var(--surface-3));
+}
+
+.feat-menu {
+  align-self: stretch;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 4px;
+  padding: 5px;
+  border: 1px solid var(--line-2);
+  border-radius: 11px;
+  background: var(--surface-2);
+}
+
+.feat-menu[hidden] {
+  display: none;
+}
+
+.feat-offer {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 7px 9px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+}
+
+.feat-offer:hover,
+.feat-offer:focus-visible {
+  background: var(--surface-3);
+}
+
+.feat-offer strong {
+  font-size: 13px;
+}
+
+.feat-offer small {
+  color: var(--faint);
+  font-size: 11.5px;
+  line-height: 1.3;
+}
+
+/* Look and Spin and timing: one line that says what they are set to. */
+.insp-fold {
+  border-top: 1px solid var(--line);
+}
+
+.insp-fold-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 2px 2px;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  text-align: left;
+}
+
+.insp-fold-title {
+  flex: none;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.insp-fold-sum {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: right;
+  font-size: 12.5px;
+  color: var(--text);
+}
+
+.insp-fold-head .ic {
+  flex: none;
+  align-self: center;
+  width: 13px;
+  height: 13px;
+  color: var(--faint);
+  transition: transform 0.15s;
+}
+
+.insp-fold.open .insp-fold-head .ic {
+  transform: rotate(90deg);
+}
+
+.insp-fold-head:hover .insp-fold-title {
+  color: var(--text);
+}
+
+.insp-fold-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 12px;
+}
+
+.insp-fold-body[hidden] {
+  display: none;
+}
+
+/* No rounds yet: a first round, or the quick sequence. */
+.insp-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 14px;
+  border: 1px dashed var(--line-2);
+  border-radius: 12px;
+}
+
+.insp-empty h2 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.insp-empty .hint {
+  margin: 0;
+}
+
+.insp-empty-outs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.out-btn .dot {
+  width: 8px;
+  height: 8px;
+}
+
+.tab-intro {
+  margin: 0 0 4px;
 }
 
 /* ---------- placing a landing spot on the preview ---------- */

@@ -414,11 +414,12 @@ function renderAssets() {
 const SECTION_OPEN = {
   machine: ['game', 'reels', 'how-it-pays'],
   spin: ['spin-type', 'motion-curve', 'anticipation'],
-  wins: ['win-tiers', 'winning-symbols', 'win-particles'],
-  effects: ['intensity'],
+  wins: ['win-tiers', 'winning-symbols'],
+  effects: ['intensity', 'win-particles'],
+  features: ['hold-spin', 'pots-above-the-machine'],
   wheel: ['segments', 'framing', 'pointer', 'look', 'spin'],
   sound: ['sound-track'],
-  export: ['after-effects-project', 'quick-preview-mp4'],
+  export: ['output', 'after-effects-project', 'quick-preview-mp4'],
   seq: [],
 };
 const slugOf = (t) => String(t).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
@@ -482,6 +483,25 @@ function collapsify(root, scope) {
 // sections too).
 function revealSection(node) {
   for (let sec = node.closest('section.group'); sec; sec = sec.parentElement?.closest('section.group')) if (sec.classList.contains('closed')) setSection(sec, true);
+  const fold = node.closest('.insp-fold');
+  if (fold && !fold.classList.contains('open')) setFold(fold, true);
+  const card = node.closest('.feat-card.folded');
+  if (card) card.querySelector('.feat-toggle')?.click();
+}
+
+// Round features not in the round yet are found in "Add a feature".
+const FEATURE_OF_ID = { 'ri-tumble': 'tumble', 'ri-chain-add': 'tumble', 'ri-mult': 'mult', 'ri-mult-add': 'mult', 'ri-expand': 'expand', 'ri-wmult': 'wmult', 'ri-extra-wilds': 'extra', 'ri-mystery': 'mystery', 'ri-cash': 'cash', 'ri-collector': 'cash', 'ri-boost': 'boost' };
+
+function offerFeature(id) {
+  const offer = FEATURE_OF_ID[id] && document.getElementById(`feat-add-${FEATURE_OF_ID[id]}`);
+  if (!offer) return false;
+  insp.menu = true;
+  offer.closest('.feat-menu').hidden = false;
+  document.getElementById('feat-add')?.setAttribute('aria-expanded', 'true');
+  spotlight(offer);
+  offer.focus({ preventScroll: true });
+  toast('Not in this round yet: add it from Add a feature.', 'info', 4000);
+  return true;
 }
 
 // ---------- undo / redo ----------
@@ -722,6 +742,7 @@ function goToFeature(f) {
     let node = g.id ? document.getElementById(g.id) : null;
     if (!node && g.section) node = (root === document ? document : root).querySelector(`section.group[data-key$="${g.section}"]`);
     if (!node && g.tab) node = el.panel;
+    if (!node && g.round && offerFeature(g.id)) return;
     if (!node) return toast(f.when || `“${f.title}” is not shown for this project right now.`, 'info', 5000);
     revealSection(node);
     if (f.when && g.id && !document.getElementById(g.id)) toast(f.when, 'info', 5000);
@@ -2137,29 +2158,28 @@ function countField(id, pattern, value, onInput) {
   return rangeField({ id, label: 'Symbols in a row', value: Math.min(reels, Math.max(3, value)), min: Math.min(3, reels), max: reels, step: 1, onInput });
 }
 
-// A list of values as removable chips, with a picker to add one.
 // A round's boosters: chips to remove, a picker to add, and which pot fires.
+const boostName = (b, cur) => (b.kind === 'mult' ? `x${b.value || 2} wild` : b.kind === 'cash' ? `${cur}${b.value || 5}` : BOOST_KINDS.find((k) => k.id === b.kind)?.label || b.kind);
+const boostNames = (list, cur) => list.map((b) => boostName(b, cur)).join(', ') || 'None yet';
+
 function boostField(r, set, cur, tumbles) {
   const P = state.project;
   const cfg = potsConfig(P);
   if (cfg.on && !potsUpgrade(cfg)) {
-    return [h('div', { class: 'field', id: 'ri-boost' }, h('span', { class: 'label' }, 'Boosters'), h('p', { class: 'hint' }, 'No pot upgrades cells: set one to Upgrades or Both in Machine → Pots above the machine.'))];
+    return [h('p', { class: 'hint', id: 'ri-boost' }, 'No pot upgrades cells: set one to Upgrades or Both in Features → Pots above the machine.')];
   }
   if (!cfg.on) {
-    return [
-      h('div', { class: 'field', id: 'ri-boost' }, h('span', { class: 'label' }, 'Boosters'), h('p', { class: 'hint' }, 'Pots above the machine fire beams that upgrade cells. Turn the pots on to add them.'), button('Turn on the pots', () => turnOnPots(), { class: 'btn small', icon: 'plus', id: 'ri-boost-pots' })),
-    ];
+    return [h('div', { class: 'field', id: 'ri-boost' }, h('p', { class: 'hint' }, 'Boosters come from the pots above the machine. Turn them on to fire beams at cells.'), button('Turn on the pots', () => turnOnPots(), { class: 'btn small', icon: 'plus', id: 'ri-boost-pots' }))];
   }
   const list = (r.boosts || []).map((b) => (typeof b === 'string' ? { kind: b } : b));
-  const name = (b) => (b.kind === 'mult' ? `x${b.value || 2} wild` : b.kind === 'cash' ? `${cur}${b.value || 5}` : BOOST_KINDS.find((k) => k.id === b.kind)?.label || b.kind);
-  const sel = h('select', { id: 'ri-boost-value', 'aria-label': 'Booster to add' }, BOOST_CHOICES.map(([k, v], i) => h('option', { value: i }, name({ kind: k, value: v }))));
+  const sel = h('select', { id: 'ri-boost-value', 'aria-label': 'Booster to add' }, BOOST_CHOICES.map(([k, v], i) => h('option', { value: i }, boostName({ kind: k, value: v }, cur))));
   const setList = (l) => set('boosts', true)(l);
   const out = [
     h(
       'div',
       { class: 'field', id: 'ri-boost' },
-      h('span', { class: 'label' }, 'Boosters'),
-      h('div', { class: 'mults' }, list.map((b, k) => button(name(b), () => setList(list.filter((_, j) => j !== k)), { class: 'chip on', icon: 'x', id: `ri-boost-${k}`, title: 'Remove' }))),
+      h('span', { class: 'label' }, 'Cells they make'),
+      h('div', { class: 'mults' }, list.map((b, k) => button(boostName(b, cur), () => setList(list.filter((_, j) => j !== k)), { class: 'chip on', icon: 'x', id: `ri-boost-${k}`, title: 'Remove' }))),
       list.length < 8
         ? h('div', { class: 'add-row' }, sel, button('Add', () => {
             const [kind, value] = BOOST_CHOICES[Number(sel.value)];
@@ -2169,18 +2189,21 @@ function boostField(r, set, cur, tumbles) {
       h('p', { class: 'hint' }, LINE_WINS.includes(r.outcome) ? `After the spin the pots fire at cells of the win: they land as a low symbol and turn into what you add here.${tumbles ? ' In a tumble a multiplier lands as a bomb.' : ''} Cash goes to a free cell.` : 'After the spin the pots fire at free cells; nothing they make pays here. Cash goes to a collector if one lands.')
     ),
   ];
-  if (list.length || winStyleIsCollect(r)) {
-    out.push(
-      selectField({
-        id: 'ri-pot-aim',
-        label: 'Which pot fires or catches',
-        value: r.potAim || 'auto',
-        options: [{ value: 'auto', label: `Machine default (${POT_AIMS.find((a) => a.id === cfg.aim)?.label})` }, ...potAims(cfg.count)],
-        onChange: (v) => set('potAim')(v === 'auto' ? null : v),
-      })
-    );
-  }
+  if (list.length) out.push(potAimField(r, set, cfg));
   return out;
+}
+
+function valueChips({ id, label, list, values, fmt, max, set, hint }) {
+  const cur = list || [];
+  const sel = h('select', { id: `${id}-value`, 'aria-label': `${label}: value to add` }, values.map((v) => h('option', { value: v }, fmt(v))));
+  return h(
+    'div',
+    { class: 'field', id },
+    h('span', { class: 'label' }, label),
+    h('div', { class: 'mults' }, cur.map((v, k) => button(fmt(v), () => set(cur.filter((_, j) => j !== k)), { class: 'chip on', icon: 'x', id: `${id}-${k}`, title: 'Remove' }))),
+    cur.length < max ? h('div', { class: 'add-row' }, sel, button('Add', () => set([...cur, Number(sel.value)]), { class: 'btn small', icon: 'plus', id: `${id}-add` })) : null,
+    hint ? h('p', { class: 'hint' }, hint) : null
+  );
 }
 
 function winStyleIsCollect(r) {
@@ -2198,19 +2221,6 @@ function turnOnPots() {
   changed('all');
   renderPanel();
   renderInspector();
-}
-
-function valueChips({ id, label, list, values, fmt, max, set, hint }) {
-  const cur = list || [];
-  const sel = h('select', { id: `${id}-value`, 'aria-label': `${label}: value to add` }, values.map((v) => h('option', { value: v }, fmt(v))));
-  return h(
-    'div',
-    { class: 'field', id },
-    h('span', { class: 'label' }, label),
-    h('div', { class: 'mults' }, cur.map((v, k) => button(fmt(v), () => set(cur.filter((_, j) => j !== k)), { class: 'chip on', icon: 'x', id: `${id}-${k}`, title: 'Remove' }))),
-    cur.length < max ? h('div', { class: 'add-row' }, sel, button('Add', () => set([...cur, Number(sel.value)]), { class: 'btn small', icon: 'plus', id: `${id}-add` })) : null,
-    hint ? h('p', { class: 'hint' }, hint) : null
-  );
 }
 
 function symbolOptions(withAuto = true) {
@@ -2290,13 +2300,25 @@ function holdInspector(r, set) {
   return parts;
 }
 
+// The round inspector: the round's basics, then a card for each feature the
+// round uses; the others wait in "Add a feature". Look and spin timing fold
+// to one line that says what they are set to.
+const insp = { round: null, added: new Set(), menu: false };
+
 function renderInspector() {
   if (!el.inspector) return;
   const P = state.project;
   const r = P.rounds[state.sel];
   if (!r) {
-    clear(el.inspector);
+    clear(el.inspector, emptyInspector());
     return;
+  }
+  // A card added from the menu stays while this round is selected, even at
+  // its starting value.
+  if (insp.round !== r) {
+    insp.round = r;
+    insp.added = new Set();
+    insp.menu = false;
   }
   const kind = 'timeline';
   const set = (k, rerender = false) => (v) => {
@@ -2308,34 +2330,41 @@ function renderInspector() {
   const reels = P.grid.reels;
   const rows = P.grid.rows;
   const parts = [];
-  parts.push(
-    selectField({
-      id: 'ri-outcome',
-      label: 'Outcome',
-      value: r.outcome,
-      options: OUTCOMES.filter((o) => (GAME_OUTCOMES[gameOf()] || GAME_OUTCOMES.slot).includes(o.id) || o.id === r.outcome).map((o) => ({ value: o.id, label: o.label })),
-      onChange: (v) => {
-        const fresh = newRound(v);
-        r.outcome = v;
-        if (LINE_WINS.includes(v)) {
-          r.lines = fresh.lines;
-          r.count = Math.max(r.count || 0, chainCount(v === 'small' ? 0 : 1));
-          r.wildAssist = fresh.wildAssist;
-        }
-        if (v === 'freespins' || v === 'fstotal' || HS_OUTCOMES.includes(v)) r.free = false;
-        if (v === 'hstrigger' || v === 'respin') r.coinsIn = fresh.coinsIn;
-        changed(kind);
-        refreshList();
-        renderInspector();
-      },
-    })
-  );
   const ctx2 = makeContext(P, state.scene?.tl.paylines || generatePaylines(reels, rows, P.machine.maxLines));
   const cur = P.machine.currency || '';
   const dec = P.machine.decimals | 0;
   const isHS = HS_OUTCOMES.includes(r.outcome);
   const canFree = gameOf() === 'slot' && r.outcome !== 'fstotal' && !isHS;
   const noBlock = r.free && !P.rounds.slice(0, state.sel).some((x) => x.outcome === 'freespins' && !x.free);
+  const lineWin = LINE_WINS.includes(r.outcome);
+  const slotRound = r.outcome !== 'wheel' && r.outcome !== 'fstotal' && !isHS && gameOf() === 'slot';
+  const mode = P.machine.payMode;
+  const base = defaultPattern(mode);
+  const pattern = r.pattern || base;
+  const tumbles = lineWin && tumbleEnabled(ctx2, r) && pattern !== 'full';
+  const cfg = potsConfig(P);
+
+  const outcomeField = selectField({
+    id: 'ri-outcome',
+    label: 'Outcome',
+    value: r.outcome,
+    options: OUTCOMES.filter((o) => (GAME_OUTCOMES[gameOf()] || GAME_OUTCOMES.slot).includes(o.id) || o.id === r.outcome).map((o) => ({ value: o.id, label: o.label })),
+    onChange: (v) => {
+      const fresh = newRound(v);
+      r.outcome = v;
+      if (LINE_WINS.includes(v)) {
+        r.lines = fresh.lines;
+        r.count = Math.max(r.count || 0, chainCount(v === 'small' ? 0 : 1));
+        r.wildAssist = fresh.wildAssist;
+      }
+      if (v === 'freespins' || v === 'fstotal' || HS_OUTCOMES.includes(v)) r.free = false;
+      if (v === 'hstrigger' || v === 'respin') r.coinsIn = fresh.coinsIn;
+      changed(kind);
+      refreshList();
+      renderInspector();
+    },
+  });
+  parts.push(outcomeField);
   if (canFree)
     parts.push(
       toggleField({
@@ -2352,10 +2381,8 @@ function renderInspector() {
         hint: noBlock ? 'Add a Free spins trigger round before this one to start the counter.' : null,
       })
     );
-  if (LINE_WINS.includes(r.outcome)) {
-    const mode = P.machine.payMode;
-    const base = defaultPattern(mode);
-    const pattern = r.pattern || base;
+  if (r.free && slotRound) parts.push(toggleField({ id: 'ri-sticky', label: 'Wilds stick for the rest of the free spins', checked: !!r.sticky, onChange: set('sticky') }));
+  if (lineWin) {
     const baseLabel = { lines: 'Paylines', ways: 'Ways', anywhere: 'Anywhere', cluster: 'Cluster' }[base];
     const patOpts = [{ value: base, label: baseLabel }];
     if (mode === 'lines') patOpts.push({ value: 'ways', label: 'Ways' });
@@ -2368,34 +2395,63 @@ function renderInspector() {
           value: Math.min(P.tiers.length - 1, r.tier | 0),
           options: P.tiers.map((t, i) => ({ value: i, label: `${t.title} (${t.x}× bet)` })),
           onChange: (v) => set('tier')(Number(v)),
-          hint: 'The overlay climbs through every tier the amount crosses. Edit tiers in Effects.',
+          hint: 'The overlay climbs through every tier the amount crosses. Edit tiers in Wins.',
         })
       );
     }
     parts.push(
-      selectField({ id: 'ri-symbol', label: 'Winning symbol', value: r.symbol, options: symbolOptions(), onChange: set('symbol') }),
-      segmented({ id: 'ri-pattern', label: 'Win pattern', value: patOpts.some((o) => o.value === pattern) ? pattern : base, options: patOpts, onChange: (v) => set('pattern', true)(v === base ? null : v) })
+      h(
+        'div',
+        { class: 'row2' },
+        selectField({ id: 'ri-symbol', label: 'Winning symbol', value: r.symbol, options: symbolOptions(), onChange: set('symbol') }),
+        textField({
+          id: 'ri-amount',
+          label: 'Win amount',
+          type: 'number',
+          value: r.amount ?? '',
+          placeholder: `Auto: ${cur}${autoAmount(ctx2, P, r).toFixed(dec)}`,
+          // Empty is automatic; a win is never below zero.
+          onChange: (v) => set('amount', true)(v === '' || v == null || Number.isNaN(Number(v)) ? null : Math.max(0, Number(v))),
+          hint: r.multipliers?.length ? 'The total after multipliers.' : null,
+        })
+      )
     );
+    parts.push(segmented({ id: 'ri-pattern', label: 'Win pattern', value: patOpts.some((o) => o.value === pattern) ? pattern : base, options: patOpts, onChange: (v) => set('pattern', true)(v === base ? null : v) }));
     parts.push(countField('ri-count', pattern, r.count, set('count')));
     if (pattern === 'lines') {
+      // The picked lines; the full set opens to change them.
       const lines = state.scene?.tl.paylines || generatePaylines(reels, rows, P.machine.maxLines);
-      const wrap = h('div', { class: 'lines', role: 'group', 'aria-label': 'Winning paylines' });
-      lines.forEach((line, i) => {
-        const on = (r.lines || []).includes(i);
-        const b = h('button', { type: 'button', class: `line-chip${on ? ' on' : ''}`, id: `ri-line-${i}`, 'aria-pressed': String(on), title: `Line ${i + 1}` }, lineSVG(line, rows, lineColor(i)), h('span', null, i + 1));
-        b.addEventListener('click', () => {
-          const set2 = new Set(r.lines || []);
-          if (set2.has(i)) set2.delete(i);
-          else set2.add(i);
-          r.lines = [...set2].sort((a, c) => a - c);
-          b.classList.toggle('on', set2.has(i));
-          b.setAttribute('aria-pressed', String(set2.has(i)));
-          changed(kind);
-          refreshList();
+      const picking = !!ui.inspOpen?.lines;
+      const toggle = button(picking ? 'Done' : 'Change lines', () => {
+        ui.inspOpen = { ...(ui.inspOpen || {}), lines: !picking };
+        saveUI();
+        renderInspector();
+        document.getElementById('ri-lines-edit')?.focus({ preventScroll: true });
+      }, { class: 'btn small ghost', id: 'ri-lines-edit' });
+      toggle.setAttribute('aria-expanded', String(picking));
+      let body;
+      if (picking) {
+        body = h('div', { class: 'lines', role: 'group', 'aria-label': 'Winning paylines' });
+        lines.forEach((line, i) => {
+          const on = (r.lines || []).includes(i);
+          const b = h('button', { type: 'button', class: `line-chip${on ? ' on' : ''}`, id: `ri-line-${i}`, 'aria-pressed': String(on), title: `Line ${i + 1}` }, lineSVG(line, rows, lineColor(i)), h('span', null, i + 1));
+          b.addEventListener('click', () => {
+            const set2 = new Set(r.lines || []);
+            if (set2.has(i)) set2.delete(i);
+            else set2.add(i);
+            r.lines = [...set2].sort((a, c) => a - c);
+            b.classList.toggle('on', set2.has(i));
+            b.setAttribute('aria-pressed', String(set2.has(i)));
+            changed(kind);
+            refreshList();
+          });
+          body.append(b);
         });
-        wrap.append(b);
-      });
-      parts.push(h('div', { class: 'field' }, h('span', { class: 'label' }, 'Winning lines'), wrap, h('p', { class: 'hint' }, 'Lines that cross the same symbols light up too, as on a real machine.')));
+      } else {
+        const picked = (r.lines || []).filter((i) => i < lines.length);
+        body = h('div', { class: 'lines picked' }, picked.length ? picked.map((i) => h('span', { class: 'line-chip on', title: `Line ${i + 1}` }, lineSVG(lines[i], rows, lineColor(i)), h('span', null, i + 1))) : h('span', { class: 'hint' }, 'No line picked: line 1 wins.'));
+      }
+      parts.push(h('div', { class: 'field' }, h('div', { class: 'label-row' }, h('span', { class: 'label' }, 'Winning lines'), toggle), body, picking ? h('p', { class: 'hint' }, 'Lines that cross the same symbols light up too, as on a real machine.') : null));
     }
     if (pattern === 'cells') {
       const grid = h('div', { class: 'cells', style: { gridTemplateColumns: `repeat(${reels}, 1fr)` }, role: 'group', 'aria-label': 'Winning cells' });
@@ -2414,142 +2470,9 @@ function renderInspector() {
         }
       parts.push(h('div', { class: 'field' }, h('span', { class: 'label' }, 'Winning cells'), grid, h('p', { class: 'hint' }, 'Tap cells to paint the win pattern.')));
     }
-    parts.push(
-      textField({
-        id: 'ri-amount',
-        label: 'Win amount',
-        type: 'number',
-        value: r.amount ?? '',
-        placeholder: `Auto: ${cur}${autoAmount(ctx2, P, r).toFixed(dec)}`,
-        // Empty is automatic; a win is never below zero.
-        onChange: (v) => set('amount', true)(v === '' || v == null || Number.isNaN(Number(v)) ? null : Math.max(0, Number(v))),
-        hint: r.multipliers?.length ? 'The total after multipliers.' : null,
-      })
-    );
-
-    // Tumbles (cascades) with a chain of follow-up wins.
-    const tumbles = tumbleEnabled(ctx2, r) && pattern !== 'full';
-    parts.push(
-      h('div', { class: 'divider' }),
-      segmented({
-        id: 'ri-tumble',
-        label: 'Tumble after the win',
-        value: r.tumble === true ? 'on' : r.tumble === false ? 'off' : 'auto',
-        options: [
-          { value: 'auto', label: tumbleMode() ? 'Auto (on)' : 'Auto (off)', hint: 'On for pay anywhere, clusters and cascade spins' },
-          { value: 'on', label: 'On' },
-          { value: 'off', label: 'Off' },
-        ],
-        onChange: (v) => set('tumble', true)(v === 'on' ? true : v === 'off' ? false : null),
-      })
-    );
-    if (r.expandWild) parts.push(h('p', { class: 'hint' }, 'Expanding wilds hold the reels still, so this round does not tumble.'));
-    if (tumbles) {
-      const list = h('div', { class: 'chain' });
-      (r.chain || []).forEach((st, k) => {
-        const stPattern = st.pattern || base;
-        list.append(
-          h(
-            'div',
-            { class: 'chain-step' },
-            h('div', { class: 'chain-head' }, h('strong', null, `Tumble ${k + 1}`), button('', () => {
-              r.chain.splice(k, 1);
-              changed(kind);
-              refreshList();
-              renderInspector();
-            }, { class: 'icon-btn tiny', icon: 'x', title: 'Remove this tumble win', id: `ri-chain-del-${k}` })),
-            selectField({ id: `ri-chain-sym-${k}`, label: 'Symbol', value: st.symbol || 'auto', options: symbolOptions(), onChange: (v) => { st.symbol = v; changed(kind); } }),
-            countField(`ri-chain-n-${k}`, stPattern, st.count || chainCount(0), (v) => {
-              st.count = v;
-              changed(kind);
-              refreshList();
-            })
-          )
-        );
-      });
-      parts.push(
-        h(
-          'div',
-          { class: 'field' },
-          h('span', { class: 'label' }, 'Tumble chain'),
-          h('p', { class: 'hint' }, 'The winners pop, the rest fall, new symbols drop in and pay again. Each step is one more win; after the last one the refill pays nothing.'),
-          list,
-          (r.chain || []).length < 6
-            ? button('Add a tumble win', () => {
-                r.chain = [...(r.chain || []), { symbol: 'auto', count: chainCount((r.chain || []).length % 2) }];
-                changed(kind);
-                refreshList();
-                renderInspector();
-              }, { class: 'btn small', icon: 'plus', id: 'ri-chain-add' })
-            : null
-        )
-      );
-    }
-
-    // Multipliers collected at the end of the round.
-    const mults = h('div', { class: 'mults' });
-    (r.multipliers || []).forEach((m, k) =>
-      mults.append(
-        button(`x${m}`, () => {
-          r.multipliers.splice(k, 1);
-          changed(kind);
-          refreshList();
-          renderInspector();
-        }, { class: 'chip on', icon: 'x', id: `ri-mult-${k}`, title: 'Remove this multiplier' })
-      )
-    );
-    const multSel = h('select', { id: 'ri-mult-value', 'aria-label': 'Multiplier value' }, MULT_VALUES.map((v) => h('option', { value: v }, `x${v}`)));
-    parts.push(
-      h(
-        'div',
-        { class: 'field' },
-        h('span', { class: 'label' }, 'Multipliers'),
-        mults,
-        (r.multipliers || []).length < 8
-          ? h('div', { class: 'add-row' }, multSel, button('Add', () => {
-              r.multipliers = [...(r.multipliers || []), Number(multSel.value)];
-              changed(kind);
-              refreshList();
-              renderInspector();
-            }, { class: 'btn small', icon: 'plus', id: 'ri-mult-add' }))
-          : null,
-        h('p', { class: 'hint' }, 'Multiplier symbols land with the win, then fly into the total: the win is multiplied by their sum.')
-      )
-    );
-
-    // Wilds.
-    parts.push(
-      h('div', { class: 'divider' }),
-      toggleField({ id: 'ri-wild', label: 'Include a Wild in the win', checked: r.wildAssist, onChange: set('wildAssist') })
-    );
-    if (pattern === 'lines' || pattern === 'ways' || pattern === 'cells') {
-      parts.push(toggleField({ id: 'ri-expand', label: 'Expanding wild (fills its reel)', checked: !!r.expandWild, onChange: set('expandWild', true) }));
-      parts.push(valueChips({ id: 'ri-wmult', label: 'Multiplier wilds', list: r.wildMults, values: WILD_MULT_VALUES, fmt: (v) => `x${v}`, max: 5, set: (list) => set('wildMults', true)(list), hint: tumbles ? 'A tumble would carry the wilds away, so a tumbling round has none.' : 'Wilds in the win carry these; the win is multiplied by their sum after it shows.' }));
-    }
+    parts.push(toggleField({ id: 'ri-wild', label: 'Include a Wild in the win', checked: r.wildAssist, onChange: set('wildAssist') }));
   }
   if (isHS) parts.push(...holdInspector(r, set));
-  if (r.outcome !== 'wheel' && r.outcome !== 'fstotal' && !isHS && gameOf() === 'slot') {
-    parts.push(rangeField({ id: 'ri-extra-wilds', label: 'Extra wilds on the grid', value: r.extraWilds || 0, min: 0, max: Math.min(8, reels * rows - 3), step: 1, onInput: set('extraWilds') }));
-    if (r.free) parts.push(toggleField({ id: 'ri-sticky', label: 'Wilds stick for the rest of the free spins', checked: !!r.sticky, onChange: set('sticky') }));
-    // Mystery blocks: on a win they reveal the winning symbol.
-    if (LINE_WINS.includes(r.outcome) || r.outcome === 'none') {
-      parts.push(
-        h('div', { class: 'divider' }),
-        rangeField({ id: 'ri-mystery', label: 'Mystery symbols', value: r.mystery || 0, min: 0, max: Math.min(10, reels * rows - 3), step: 1, onInput: set('mystery', true), hint: LINE_WINS.includes(r.outcome) ? 'They land on winners and turn over to the winning symbol.' : 'They turn over to one symbol, kept from paying.' })
-      );
-      if (r.outcome === 'none' && r.mystery > 0) parts.push(selectField({ id: 'ri-mystery-sym', label: 'Mystery reveals', value: r.mysterySymbol || 'auto', options: symbolOptions(), onChange: set('mysterySymbol') }));
-    }
-    // Cash symbols, and the collector that takes them.
-    if (LINE_WINS.includes(r.outcome) || ['none', 'nearmiss', 'freespins', 'bonus'].includes(r.outcome)) {
-      parts.push(
-        h('div', { class: 'divider' }),
-        valueChips({ id: 'ri-cash', label: 'Cash symbols', list: r.cash, values: CASH_VALUES, fmt: (v) => `${cur}${v}`, max: 10, set: (list) => set('cash', true)(list), hint: 'Coins carrying a value (in bets). On their own they just land; a collector takes them all.' }),
-        toggleField({ id: 'ri-collector', label: 'A collector lands and takes the cash', checked: !!r.collector, onChange: set('collector', true), hint: r.collector && !(r.cash || []).length ? 'Add cash symbols for it to collect.' : null })
-      );
-    }
-    // Boosters: the pots above the machine fire at cells that upgrade.
-    if (LINE_WINS.includes(r.outcome) || ['none', 'nearmiss', 'freespins', 'bonus', 'wheel'].includes(r.outcome)) parts.push(h('div', { class: 'divider' }), ...boostField(r, set, cur, LINE_WINS.includes(r.outcome) && tumbleEnabled(ctx2, r)));
-  }
   if (SCATTER_WINS.includes(r.outcome)) {
     const trig = P.machine.scatterTrigger || 3;
     parts.push(rangeField({ id: 'ri-scatters', label: 'Scatters landing', value: Math.max(trig, r.scatterCount || trig), min: Math.min(trig, reels), max: Math.max(trig, P.machine.payMode === 'lines' || P.machine.payMode === 'ways' ? reels : reels * rows - 4), step: 1, onInput: set('scatterCount') }));
@@ -2643,45 +2566,286 @@ function renderInspector() {
     );
   }
 
-  // How it looks: winning symbols and particles, from the Wins tab or the
-  // round's own.
-  const showsWin = !['none', 'nearmiss', 'respin'].includes(r.outcome);
-  if (showsWin) parts.push(h('h4', { class: 'insp-sub' }, 'Look'));
-  if (LINE_WINS.includes(r.outcome)) {
-    const def = WIN_STYLES.find((x) => x.id === winFxConfig(P).style)?.label || 'Pop in place';
-    parts.push(
-      selectField({
-        id: 'ri-winstyle',
-        label: 'Winning symbols',
-        value: r.winStyle || 'auto',
-        options: [{ value: 'auto', label: `Wins tab default (${def})` }, ...WIN_STYLES.map((x) => ({ value: x.id, label: x.label }))],
-        onChange: (v) => set('winStyle')(v === 'auto' ? null : v),
-      })
-    );
+  // Features: what the round uses shows as cards.
+  const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
+  const boosts = (r.boosts || []).map((b) => (typeof b === 'string' ? { kind: b } : b));
+  const cashLike = lineWin || ['none', 'nearmiss', 'freespins', 'bonus'].includes(r.outcome);
+  const feats = [
+    {
+      id: 'tumble',
+      tip: 'ri-tumble',
+      title: 'Tumbles',
+      desc: 'Winners pop, new symbols drop in and can win again',
+      show: lineWin && pattern !== 'full' && !r.expandWild,
+      used: tumbles,
+      add: () => (r.tumble = true),
+      clear: () => {
+        r.tumble = false;
+        r.chain = [];
+      },
+      sum: () => ((r.chain || []).length ? `${plural(r.chain.length, 'more win')}` : 'Once, then nothing pays'),
+      body: () => {
+        const out = [
+          segmented({
+            id: 'ri-tumble',
+            label: 'Tumble after the win',
+            value: r.tumble === true ? 'on' : r.tumble === false ? 'off' : 'auto',
+            options: [
+              { value: 'auto', label: tumbleMode() ? 'Auto (on)' : 'Auto (off)', hint: 'On for pay anywhere, clusters and cascade spins' },
+              { value: 'on', label: 'On' },
+              { value: 'off', label: 'Off' },
+            ],
+            onChange: (v) => set('tumble', true)(v === 'on' ? true : v === 'off' ? false : null),
+          }),
+        ];
+        if (!tumbles) return out;
+        const list = h('div', { class: 'chain' });
+        (r.chain || []).forEach((st, k) => {
+          const stPattern = st.pattern || base;
+          list.append(
+            h(
+              'div',
+              { class: 'chain-step' },
+              h('div', { class: 'chain-head' }, h('strong', null, `Tumble ${k + 1}`), button('', () => {
+                r.chain.splice(k, 1);
+                changed(kind);
+                refreshList();
+                renderInspector();
+              }, { class: 'icon-btn tiny', icon: 'x', title: 'Remove this tumble win', id: `ri-chain-del-${k}` })),
+              selectField({ id: `ri-chain-sym-${k}`, label: 'Symbol', value: st.symbol || 'auto', options: symbolOptions(), onChange: (v) => { st.symbol = v; changed(kind); } }),
+              countField(`ri-chain-n-${k}`, stPattern, st.count || chainCount(0), (v) => {
+                st.count = v;
+                changed(kind);
+                refreshList();
+              })
+            )
+          );
+        });
+        out.push(
+          h(
+            'div',
+            { class: 'field' },
+            h('span', { class: 'label' }, 'Tumble chain'),
+            h('p', { class: 'hint' }, 'Each step is one more win; after the last one the refill pays nothing.'),
+            list,
+            (r.chain || []).length < 6
+              ? button('Add a tumble win', () => {
+                  r.chain = [...(r.chain || []), { symbol: 'auto', count: chainCount((r.chain || []).length % 2) }];
+                  changed(kind);
+                  refreshList();
+                  renderInspector();
+                }, { class: 'btn small', icon: 'plus', id: 'ri-chain-add' })
+              : null
+          )
+        );
+        return out;
+      },
+    },
+    {
+      id: 'mult',
+      tip: 'ri-mult',
+      title: 'Multipliers',
+      desc: 'Bombs that land with the win and multiply it at the end',
+      show: lineWin,
+      used: (r.multipliers || []).length > 0,
+      add: () => (r.multipliers = [2]),
+      clear: () => (r.multipliers = []),
+      sum: () => r.multipliers.map((m) => `x${m}`).join(' '),
+      body: () => {
+        const mults = h('div', { class: 'mults' });
+        (r.multipliers || []).forEach((m, k) =>
+          mults.append(
+            button(`x${m}`, () => {
+              r.multipliers.splice(k, 1);
+              changed(kind);
+              refreshList();
+              renderInspector();
+            }, { class: 'chip on', icon: 'x', id: `ri-mult-${k}`, title: 'Remove this multiplier' })
+          )
+        );
+        const multSel = h('select', { id: 'ri-mult-value', 'aria-label': 'Multiplier value' }, MULT_VALUES.map((v) => h('option', { value: v }, `x${v}`)));
+        return [
+          h(
+            'div',
+            { class: 'field', id: 'ri-mult' },
+            mults,
+            (r.multipliers || []).length < 8
+              ? h('div', { class: 'add-row' }, multSel, button('Add', () => {
+                  r.multipliers = [...(r.multipliers || []), Number(multSel.value)];
+                  changed(kind);
+                  refreshList();
+                  renderInspector();
+                }, { class: 'btn small', icon: 'plus', id: 'ri-mult-add' }))
+              : null,
+            h('p', { class: 'hint' }, 'They land with the win, then fly into the total: the win is multiplied by their sum.')
+          ),
+        ];
+      },
+    },
+    {
+      id: 'expand',
+      tip: 'ri-expand',
+      title: 'Expanding wild',
+      desc: 'A wild in the win grows to fill its reel',
+      show: lineWin && ['lines', 'ways', 'cells'].includes(pattern),
+      used: !!r.expandWild,
+      add: () => (r.expandWild = true),
+      clear: () => (r.expandWild = false),
+      sum: () => 'Fills its reel',
+      body: () => [h('p', { class: 'hint', id: 'ri-expand' }, 'A wild in the win grows to fill its whole reel. It holds the reels still, so this round does not tumble.')],
+    },
+    {
+      id: 'wmult',
+      tip: 'ri-wmult',
+      title: 'Multiplier wilds',
+      desc: 'Wilds in the win carry x2, x3… badges',
+      show: lineWin && ['lines', 'ways', 'cells'].includes(pattern),
+      offer: !tumbles,
+      used: (r.wildMults || []).length > 0,
+      add: () => (r.wildMults = [2]),
+      clear: () => (r.wildMults = []),
+      sum: () => r.wildMults.map((m) => `x${m}`).join(' '),
+      body: () => [valueChips({ id: 'ri-wmult', label: 'Badges', list: r.wildMults, values: WILD_MULT_VALUES, fmt: (v) => `x${v}`, max: 5, set: (list) => set('wildMults', true)(list), hint: tumbles ? 'A tumble would carry the wilds away, so a tumbling round has none.' : 'The win is multiplied by their sum after it shows.' })],
+    },
+    {
+      id: 'extra',
+      tip: 'ri-extra-wilds',
+      title: 'Extra wilds',
+      desc: 'More wilds land on the grid',
+      show: slotRound,
+      used: (r.extraWilds | 0) > 0,
+      add: () => (r.extraWilds = Math.min(2, Math.min(8, reels * rows - 3))),
+      clear: () => (r.extraWilds = 0),
+      sum: () => plural(r.extraWilds, 'wild'),
+      body: () => [rangeField({ id: 'ri-extra-wilds', label: 'How many', value: Math.max(1, r.extraWilds || 0), min: 1, max: Math.max(1, Math.min(8, reels * rows - 3)), step: 1, onInput: set('extraWilds') })],
+    },
+    {
+      id: 'mystery',
+      tip: 'ri-mystery',
+      title: 'Mystery symbols',
+      desc: 'Blocks that turn over together into one symbol',
+      show: slotRound && (lineWin || r.outcome === 'none'),
+      used: (r.mystery | 0) > 0,
+      add: () => (r.mystery = Math.min(3, Math.min(10, reels * rows - 3))),
+      clear: () => (r.mystery = 0),
+      sum: () => plural(r.mystery, 'block'),
+      body: () => [
+        rangeField({ id: 'ri-mystery', label: 'How many', value: Math.max(1, r.mystery || 0), min: 1, max: Math.max(1, Math.min(10, reels * rows - 3)), step: 1, onInput: set('mystery', true), hint: lineWin ? 'They land on winners and turn over to the winning symbol.' : 'They turn over to one symbol, kept from paying.' }),
+        r.outcome === 'none' ? selectField({ id: 'ri-mystery-sym', label: 'Mystery reveals', value: r.mysterySymbol || 'auto', options: symbolOptions(), onChange: set('mysterySymbol') }) : null,
+      ],
+    },
+    {
+      id: 'cash',
+      tip: 'ri-cash',
+      title: 'Cash and collector',
+      desc: 'Coins with values; a collector takes them all',
+      show: slotRound && cashLike,
+      used: (r.cash || []).length > 0 || !!r.collector,
+      add: () => {
+        r.cash = [2, 5, 10];
+        r.collector = true;
+      },
+      clear: () => {
+        r.cash = [];
+        r.collector = false;
+      },
+      sum: () => `${plural((r.cash || []).length, 'coin')}${r.collector ? ' and a collector' : ''}`,
+      body: () => [
+        valueChips({ id: 'ri-cash', label: 'Cash values (in bets)', list: r.cash, values: CASH_VALUES, fmt: (v) => `${cur}${v}`, max: 10, set: (list) => set('cash', true)(list), hint: 'On their own they just land; a collector takes them all.' }),
+        toggleField({ id: 'ri-collector', label: 'A collector lands and takes the cash', checked: !!r.collector, onChange: set('collector', true), hint: r.collector && !(r.cash || []).length ? 'Add cash symbols for it to collect.' : null }),
+      ],
+    },
+    {
+      id: 'boost',
+      tip: 'ri-boost',
+      title: 'Boosters',
+      desc: 'The pots fire beams that turn cells into wilds or better symbols',
+      show: slotRound && cashLike,
+      used: boosts.length > 0,
+      add: () => {
+        if (cfg.on && potsUpgrade(cfg)) r.boosts = [{ kind: 'wild' }];
+      },
+      clear: () => (r.boosts = []),
+      sum: () => boostNames(boosts, cur),
+      body: () => boostField(r, set, cur, lineWin && tumbleEnabled(ctx2, r)),
+    },
+  ];
+  const shown = feats.filter((f) => f.show && (f.used || insp.added.has(f.id)));
+  const offers = feats.filter((f) => f.show && f.offer !== false && !f.used && !insp.added.has(f.id));
+  if (shown.length || offers.length) {
+    parts.push(h('h4', { class: 'insp-sub' }, 'Features in this round'));
+    for (const f of shown)
+      parts.push(
+        featCard(f, () => {
+          f.clear();
+          insp.added.delete(f.id);
+          changed(kind);
+          refreshList();
+          renderInspector();
+        })
+      );
+    if (!shown.length) parts.push(h('p', { class: 'hint feat-none' }, 'None yet: a plain spin.'));
+    if (offers.length)
+      parts.push(
+        featMenu(offers, (f) => {
+          f.add();
+          insp.added.add(f.id);
+          insp.menu = false;
+          changed(kind);
+          refreshList();
+          renderInspector();
+          requestAnimationFrame(() => el.inspector.querySelector(`[data-feat="${f.id}"]`)?.scrollIntoView({ block: 'nearest', behavior: reducedMotion() ? 'auto' : 'smooth' }));
+        })
+      );
   }
+
+  // How it looks: winning symbols and particles, from the Wins and Effects
+  // tabs or the round's own.
+  const showsWin = !['none', 'nearmiss', 'respin'].includes(r.outcome);
   if (showsWin) {
+    const look = [];
+    const sum = [];
+    if (lineWin) {
+      const def = WIN_STYLES.find((x) => x.id === winFxConfig(P).style)?.label || 'Pop in place';
+      const own = WIN_STYLES.find((x) => x.id === r.winStyle)?.label;
+      sum.push(own || `${def} (default)`);
+      look.push(
+        selectField({
+          id: 'ri-winstyle',
+          label: 'Winning symbols',
+          value: r.winStyle || 'auto',
+          options: [{ value: 'auto', label: `Wins tab default (${def})` }, ...WIN_STYLES.map((x) => ({ value: x.id, label: x.label }))],
+          onChange: (v) => set('winStyle', true)(v === 'auto' ? null : v),
+        })
+      );
+      if (cfg.on && winStyleIsCollect(r) && !boosts.length) look.push(potAimField(r, set, cfg));
+    }
     const rp = r.particles || { fx: 'auto', asset: 'auto' };
     const setP = (k) => (v) => {
       r.particles = { fx: 'auto', asset: 'auto', ...(r.particles || {}), [k]: v };
       changed(kind);
       renderInspector();
     };
-    parts.push(
+    const fxName = PARTICLE_TEMPLATES.find((t) => t.id === rp.fx)?.name;
+    sum.push(rp.fx === 'none' ? 'no particles' : fxName ? `${fxName} particles` : 'default particles');
+    look.push(
       h(
         'div',
         { class: 'row2' },
-        h('div', { class: 'field' }, h('label', { class: 'label', for: 'ri-pfx' }, 'Win particles'), h('select', { id: 'ri-pfx', onchange: (e) => setP('fx')(e.target.value) }, h('option', { value: 'auto', selected: (rp.fx || 'auto') === 'auto' }, 'Wins tab default'), templateOptions(rp.fx || 'auto'))),
+        h('div', { class: 'field' }, h('label', { class: 'label', for: 'ri-pfx' }, 'Win particles'), h('select', { id: 'ri-pfx', onchange: (e) => setP('fx')(e.target.value) }, h('option', { value: 'auto', selected: (rp.fx || 'auto') === 'auto' }, 'Default (Effects)'), templateOptions(rp.fx || 'auto'))),
         selectField({ id: 'ri-passet', label: 'Particle', value: rp.asset || 'auto', options: [{ value: 'auto', label: 'Auto' }, ...particleAssetChoices()], onChange: setP('asset') })
       )
     );
+    parts.push(foldRow('look', 'Look', sum.join(' · '), look));
   }
 
   // Spin timing and order for this round (nothing spins in a collect, or in
   // the wheel game's machine).
   const spins = r.outcome !== 'collect' && gameOf() !== 'wheel' && !(gameOf() === 'holdspin' && r.outcome === 'wheel');
   const useDefault = r.midDuration == null || r.midDuration === '';
-  parts.push(h('h4', { class: 'insp-sub' }, 'Spin and timing'));
-  if (spins) parts.push(
+  const timing = [];
+  const tsum = [];
+  if (spins) timing.push(
     toggleField({
       id: 'ri-mid-default',
       label: 'Use the default spin length',
@@ -2693,23 +2857,28 @@ function renderInspector() {
       },
     })
   );
-  if (spins && !useDefault) parts.push(rangeField({ id: 'ri-mid', label: 'Spin length (mid phase)', unit: 's', value: r.midDuration, min: 0, max: 6, step: 0.05, onInput: set('midDuration') }));
+  if (spins && !useDefault) {
+    timing.push(rangeField({ id: 'ri-mid', label: 'Spin length (mid phase)', unit: 's', value: r.midDuration, min: 0, max: 6, step: 0.05, onInput: set('midDuration') }));
+    tsum.push(`spin ${Number(r.midDuration).toFixed(2).replace(/\.?0+$/, '')} s`);
+  }
   const orderName = ORDERS.find((o) => o.id === (P.spin.stopOrder || 'ltr'))?.label || 'Left to right';
-  parts.push(rangeField({ id: 'ri-hold', label: 'Pause after this round', unit: 's', value: r.hold || 0, min: 0, max: 4, step: 0.05, onInput: set('hold') }));
-  if (spins) parts.push(
+  timing.push(rangeField({ id: 'ri-hold', label: 'Pause after this round', unit: 's', value: r.hold || 0, min: 0, max: 4, step: 0.05, onInput: set('hold') }));
+  if (r.hold) tsum.push(`pause ${Number(r.hold).toFixed(2).replace(/\.?0+$/, '')} s`);
+  if (spins) timing.push(
     selectField({
       id: 'ri-stop-order',
       label: 'Stop order',
       value: r.stopOrder || 'default',
       options: [{ value: 'default', label: `Project default (${orderName})` }, ...ORDERS.map((o) => ({ value: o.id, label: o.id === 'custom' ? 'Custom (set in Spin)' : o.label }))],
-      onChange: (v) => set('stopOrder')(v === 'default' ? null : v),
+      onChange: (v) => set('stopOrder', true)(v === 'default' ? null : v),
     })
   );
+  if (spins && r.stopOrder) tsum.push(`stops ${(ORDERS.find((o) => o.id === r.stopOrder)?.label || r.stopOrder).toLowerCase()}`);
   // Respins tease on their own: the last cells when the board is about to
   // fill, and the last cell on a last-chance respin.
   const manual = Array.isArray(r.antic);
   const teases = spins && r.outcome !== 'respin';
-  if (teases) parts.push(
+  if (teases) timing.push(
     segmented({
       id: 'ri-antic',
       label: 'Anticipation',
@@ -2722,7 +2891,7 @@ function renderInspector() {
     })
   );
   if (teases && manual) {
-    parts.push(
+    timing.push(
       reelChips('ri-antic-reel', r.antic, (c) => {
         r.antic = r.antic.includes(c) ? r.antic.filter((x) => x !== c) : [...r.antic, c].sort((a, b) => a - b);
         changed(kind);
@@ -2730,9 +2899,13 @@ function renderInspector() {
       }),
       h('p', { class: 'hint' }, r.antic.length ? 'These reels slow down with the glow, in stop order. Set the stop order so the teased reel lands last.' : 'No reel is teased in this round.')
     );
+    tsum.push(r.antic.length ? `teases reel${r.antic.length === 1 ? '' : 's'} ${r.antic.map((c) => c + 1).join(', ')}` : 'no tease');
   } else if (teases) {
-    parts.push(toggleField({ id: 'ri-tease', label: 'Also tease the last reel to stop', checked: !!r.tease, onChange: set('tease') }));
+    timing.push(toggleField({ id: 'ri-tease', label: 'Also tease the last reel to stop', checked: !!r.tease, onChange: set('tease', true) }));
+    if (r.tease) tsum.push('teases the last reel');
   }
+  parts.push(foldRow('timing', 'Spin and timing', tsum.length ? tsum.join(' · ') : 'Project defaults', timing));
+
   const actions = h(
     'div',
     { class: 'row insp-actions' },
@@ -2752,6 +2925,101 @@ function renderInspector() {
   markTips(el.inspector);
 }
 
+// A feature the round uses: its name, what it is set to when folded, its
+// settings, and a button that takes it out of the round.
+function featCard(f, onRemove) {
+  ui.featFold = ui.featFold || {};
+  const open = !ui.featFold[f.id];
+  const body = h('div', { class: 'feat-body', id: `feat-body-${f.id}`, hidden: !open }, f.body());
+  const sum = h('span', { class: 'feat-sum' }, f.sum());
+  const toggle = h('button', { type: 'button', class: 'feat-toggle', id: `feat-${f.id}`, 'aria-expanded': String(open), 'aria-controls': body.id, 'data-tip': f.tip }, icon('chevron'), h('strong', null, f.title));
+  const card = h('section', { class: `feat-card${open ? '' : ' folded'}`, 'data-feat': f.id }, h('header', null, toggle, sum, button('', onRemove, { class: 'icon-btn tiny', icon: 'x', title: `Take ${f.title.toLowerCase()} out of this round`, id: `feat-del-${f.id}` })), body);
+  toggle.addEventListener('click', () => {
+    const now = card.classList.toggle('folded');
+    body.hidden = now;
+    toggle.setAttribute('aria-expanded', String(!now));
+    ui.featFold[f.id] = now;
+    saveUI();
+  });
+  return card;
+}
+
+// "Add a feature": the features this round can still use, each with a line
+// on what it does (hover one for its demo).
+function featMenu(offers, onAdd) {
+  const list = h(
+    'div',
+    { class: 'feat-menu', id: 'feat-menu', role: 'group', 'aria-label': 'Features to add', hidden: !insp.menu },
+    offers.map((f) => h('button', { type: 'button', class: 'feat-offer', id: `feat-add-${f.id}`, 'data-tip': f.tip, onclick: () => onAdd(f) }, h('strong', null, f.title), h('small', null, f.desc)))
+  );
+  const btn = button('Add a feature', () => {
+    insp.menu = !insp.menu;
+    list.hidden = !insp.menu;
+    btn.setAttribute('aria-expanded', String(insp.menu));
+    if (insp.menu) list.querySelector('button')?.focus();
+  }, { class: 'btn small accent', icon: 'plus', id: 'feat-add' });
+  btn.setAttribute('aria-expanded', String(insp.menu));
+  btn.setAttribute('aria-controls', 'feat-menu');
+  list.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape') return;
+    e.stopPropagation();
+    insp.menu = false;
+    list.hidden = true;
+    btn.setAttribute('aria-expanded', 'false');
+    btn.focus();
+  });
+  return h('div', { class: 'feat-add' }, btn, list);
+}
+
+// A folded group in the inspector: one line saying what it is set to, the
+// settings inside. Open or folded is remembered.
+function foldRow(key, title, summary, body) {
+  ui.inspOpen = ui.inspOpen || {};
+  const open = !!ui.inspOpen[key];
+  const inner = h('div', { class: 'insp-fold-body', id: `insp-${key}-body`, hidden: !open }, body);
+  const head = h('button', { type: 'button', class: 'insp-fold-head', id: `insp-${key}`, 'aria-expanded': String(open), 'aria-controls': inner.id }, h('span', { class: 'insp-fold-title' }, title), h('span', { class: 'insp-fold-sum' }, summary), icon('chevron'));
+  const sec = h('section', { class: `insp-fold${open ? ' open' : ''}`, 'data-fold': key }, head, inner);
+  head.addEventListener('click', () => setFold(sec, !sec.classList.contains('open')));
+  return sec;
+}
+
+function setFold(sec, open) {
+  sec.classList.toggle('open', open);
+  sec.querySelector(':scope > .insp-fold-body').hidden = !open;
+  sec.querySelector(':scope > .insp-fold-head').setAttribute('aria-expanded', String(open));
+  ui.inspOpen = { ...(ui.inspOpen || {}), [sec.dataset.fold]: open };
+  saveUI();
+}
+
+function potAimField(r, set, cfg) {
+  return selectField({
+    id: 'ri-pot-aim',
+    label: 'Which pot fires or catches',
+    value: r.potAim || 'auto',
+    options: [{ value: 'auto', label: `Pots default (${POT_AIMS.find((a) => a.id === cfg.aim)?.label})` }, ...potAims(cfg.count)],
+    onChange: (v) => set('potAim')(v === 'auto' ? null : v),
+  });
+}
+
+// With no rounds the inspector offers a first round, or the quick sequence.
+function emptyInspector() {
+  const outs = OUTCOMES.filter((o) => (GAME_OUTCOMES[gameOf()] || GAME_OUTCOMES.slot).includes(o.id)).slice(0, 6);
+  return h(
+    'div',
+    { class: 'insp-empty' },
+    h('h2', null, 'No rounds yet'),
+    h('p', { class: 'hint' }, 'A round is one spin and what it lands. Add a first one, or build a whole run of warm-up spins and a finale in one go.'),
+    h('div', { class: 'insp-empty-outs', role: 'group', 'aria-label': 'Add a first round' }, outs.map((o) => h('button', { type: 'button', class: 'btn small out-btn', id: `ie-add-${o.id}`, style: { '--c': o.color }, onclick: () => addRound(o.id) }, h('span', { class: 'dot' }), h('span', null, o.label)))),
+    button('Build a quick sequence', () => {
+      const qs = el.sequence.querySelector('section.group[data-key="seq/quick-sequence"]');
+      if (!qs) return;
+      setSection(qs, true);
+      spotlight(qs);
+      qs.querySelector('#qb-build')?.focus({ preventScroll: true });
+    }, { class: 'btn small primary', icon: 'bolt', id: 'ie-quick' })
+  );
+}
+
 // ---------- settings (left panel) ----------
 
 const TABS = [
@@ -2759,6 +3027,7 @@ const TABS = [
   ['spin', 'Spin'],
   ['wins', 'Wins'],
   ['effects', 'Effects'],
+  ['features', 'Features'],
   ['wheel', 'Wheel'],
   ['sound', 'Sound'],
   ['export', 'Export'],
@@ -2786,7 +3055,7 @@ function renderTabs() {
 }
 
 function renderPanel() {
-  const fn = { machine: panelMachine, spin: panelSpin, wins: panelWins, effects: panelEffects, wheel: panelWheel, sound: panelSound, export: panelExport }[state.tab] || panelMachine;
+  const fn = { machine: panelMachine, spin: panelSpin, wins: panelWins, effects: panelEffects, features: panelFeatures, wheel: panelWheel, sound: panelSound, export: panelExport }[state.tab] || panelMachine;
   clear(el.panel, fn());
   collapsify(el.panel, state.tab);
   markApplies(el.panel);
@@ -3178,7 +3447,6 @@ function ownerTable(cfg) {
 
 function panelMachine() {
   const P = state.project;
-  const fmt = `${P.canvas.width}x${P.canvas.height}`;
   const pm = P.machine.payMode;
   const game = gameOf();
   return [
@@ -3186,23 +3454,6 @@ function panelMachine() {
       'Game',
       segmented({ id: 'm-game', value: game, options: GAMES.map((g) => ({ value: g.id, label: g.label, hint: g.hint })), onChange: setGame }),
       h('p', { class: 'hint' }, GAMES.find((g) => g.id === game).hint)
-    ),
-    section(
-      'Output',
-      textField({ id: 'm-name', label: 'Project name', value: P.name, onChange: (v) => (P.name = v) && save() }),
-      selectField({
-        id: 'm-format',
-        label: 'Canvas',
-        value: FORMATS.some(([k]) => k === fmt) ? fmt : '1920x1080',
-        options: FORMATS.map(([value, label]) => ({ value, label })),
-        onChange: (v) => {
-          const [w, hh] = v.split('x').map(Number);
-          P.canvas.width = w;
-          P.canvas.height = hh;
-          changed('all');
-        },
-      }),
-      segmented({ id: 'm-fps', label: 'Frame rate', value: P.canvas.fps, options: [24, 25, 30, 50, 60].map((f) => ({ value: f, label: `${f}` })), onChange: (v) => num(P.canvas, 'fps', 'timeline')(Number(v)) })
     ),
     section(
       'Reels',
@@ -3234,8 +3485,6 @@ function panelMachine() {
       pm === 'cluster' ? rangeField({ id: 'm-min-cluster', label: 'Smallest paying cluster', value: P.machine.minCluster, min: 3, max: 12, step: 1, onInput: num(P.machine, 'minCluster', 'timeline', () => renderInspector()) }) : null,
       rangeField({ id: 'm-scatter', label: 'Scatters to trigger a feature', value: P.machine.scatterTrigger, min: 2, max: 6, step: 1, onInput: num(P.machine, 'scatterTrigger', 'timeline', () => renderInspector()) })
     ),
-    holdSettings(),
-    potsSettings(),
     section(
       'Look',
       selectField({ id: 'm-theme', label: 'Theme', value: P.machine.theme, options: Object.entries(THEMES).map(([k, t]) => ({ value: k, label: t.name })), onChange: (v) => num(P.machine, 'theme', 'all')(v) }),
@@ -3265,6 +3514,17 @@ function panelMachine() {
         changed('timeline');
       }, { class: 'btn small', icon: 'dice', id: 'm-seed' })
     ),
+  ];
+}
+
+// Features that sit on the machine. Per-round features (free spins,
+// wilds, mystery, multipliers, the collector, boosters) are in the round
+// inspector.
+function panelFeatures() {
+  return [
+    h('p', { class: 'hint tab-intro' }, 'Features built into the machine. What happens in a single round (free spins, wilds, mystery, multipliers, the collector, boosters) is added in the round inspector.'),
+    holdSettings(),
+    potsSettings(),
   ];
 }
 
@@ -3925,7 +4185,7 @@ function panelSpin() {
     hsGame
       ? section(
           'Respins',
-          h('p', { class: 'hint' }, 'Every empty cell spins on its own and stops in the cell order. The start, mid and end phases below shape each cell; the respin length is in Machine → Hold & Spin.'),
+          h('p', { class: 'hint' }, 'Every empty cell spins on its own and stops in the cell order. The start, mid and end phases below shape each cell; the respin length is in Features → Hold & Spin.'),
           segmented({ id: 'spin-dir', label: 'Direction', value: sp.direction, options: [{ value: 'down', label: 'Spin down' }, { value: 'up', label: 'Spin up' }], onChange: num(sp, 'direction') }),
           selectField({ id: 'spin-cell-order', label: 'Cell order', value: sp.cellOrder || 'columns', options: CELL_ORDERS.map((o) => ({ value: o.id, label: o.label })), onChange: num(sp, 'cellOrder') })
         )
@@ -4115,32 +4375,10 @@ function tierEditor() {
 
 function panelWins() {
   const P = state.project;
-  const fx = P.effects;
   const tm = P.timing;
-  const titles = fx.titles;
   return [
     section('Win tiers', tierEditor()),
     winSymbolsSection(),
-    particleSettings(),
-    templateGallery(),
-    section(
-      'Titles and font',
-      selectField({ id: 'fx-font', label: 'Display font', value: fx.font, options: projectFonts(P).map((f) => ({ value: f, label: f })), onChange: num(fx, 'font', 'all') }),
-      h(
-        'div',
-        { class: 'row2' },
-        ...[
-          ['freespins', 'Free spins'],
-          ['retrigger', 'Free spins retrigger'],
-          ['total', 'Free spins total'],
-          ['bonus', 'Bonus'],
-          ['wheel', 'Wheel title'],
-          ['nearmiss', 'Near miss'],
-          ['holdspin', 'Hold & Spin'],
-          ['grand', 'Grand (full board)'],
-        ].map(([k, l]) => textField({ id: `fx-t-${k}`, label: l, value: titles[k], onChange: num(titles, k, 'all') }))
-      )
-    ),
     section(
       'Win timing',
       rangeField({ id: 'tm-small', label: 'Small win show', unit: 's', value: tm.small, min: 0.8, max: 5, step: 0.05, onInput: num(tm, 'small') }),
@@ -4164,6 +4402,7 @@ function panelWins() {
 function panelEffects() {
   const P = state.project;
   const fx = P.effects;
+  const titles = fx.titles;
   return [
     section(
       'Intensity',
@@ -4176,7 +4415,27 @@ function panelEffects() {
       rangeField({ id: 'fx-bloom', label: 'Bloom glow', value: fx.bloom, min: 0, max: 1.2, step: 0.01, onInput: num(fx, 'bloom'), hint: 'Preview and MP4 only.' }),
       rangeField({ id: 'fx-bokeh', label: 'Background lights', value: fx.bokeh, min: 0, max: 2, step: 0.01, onInput: num(fx, 'bokeh') })
     ),
-    h('p', { class: 'hint' }, 'Win tiers, winning symbols, particles and win timing are in the Wins tab.'),
+    particleSettings(),
+    templateGallery(),
+    section(
+      'Titles and font',
+      selectField({ id: 'fx-font', label: 'Display font', value: fx.font, options: projectFonts(P).map((f) => ({ value: f, label: f })), onChange: num(fx, 'font', 'all') }),
+      h(
+        'div',
+        { class: 'row2' },
+        ...[
+          ['freespins', 'Free spins'],
+          ['retrigger', 'Free spins retrigger'],
+          ['total', 'Free spins total'],
+          ['bonus', 'Bonus'],
+          ['wheel', 'Wheel title'],
+          ['nearmiss', 'Near miss'],
+          ['holdspin', 'Hold & Spin'],
+          ['grand', 'Grand (full board)'],
+        ].map(([k, l]) => textField({ id: `fx-t-${k}`, label: l, value: titles[k], onChange: num(titles, k, 'all') }))
+      )
+    ),
+    h('p', { class: 'hint' }, 'Win tiers, winning symbols and win timing are in the Wins tab.'),
   ];
 }
 
@@ -4292,9 +4551,9 @@ function winSymbolsSection() {
   } else if (W.style === 'collect') {
     parts.push(
       potsCollect(potsConfig(P))
-        ? h('p', { class: 'hint' }, 'Which pot each winner goes to, and the beams\' curve, thickness and timing, are in Machine → Pots above the machine.')
+        ? h('p', { class: 'hint' }, 'Which pot each winner goes to, and the beams\' curve, thickness and timing, are in Features → Pots above the machine.')
         : potsConfig(P).on
-        ? h('p', { class: 'hint' }, 'No pot collects, so winners pop in place. Set a pot to Collects or Both in Machine → Pots above the machine.')
+        ? h('p', { class: 'hint' }, 'No pot collects, so winners pop in place. Set a pot to Collects or Both in Features → Pots above the machine.')
         : h('div', { class: 'field' }, h('p', { class: 'hint' }, 'The pots are off, so winners pop in place.'), button('Turn on the pots', () => turnOnPots(), { class: 'btn small', icon: 'plus', id: 'wf-pots-on' }))
     );
   } else if (W.style === 'merge') {
@@ -4796,7 +5055,18 @@ function panelSound() {
         : null,
       button('Download the sound track (WAV in a zip)', downloadWav, { class: 'btn small', icon: 'download', id: 'snd-wav', disabled: S.enabled === false })
     ),
-    S.enabled !== false ? section('Your own sounds', h('p', { class: 'hint' }, 'Replace any cue with a WAV, MP3 or OGG file. It plays from its start at each cue.'), h('div', { class: 'sounds' }, rows)) : null,
+    S.enabled !== false
+      ? section(
+          'Your own sounds',
+          h('p', { class: 'hint' }, 'Replace any cue with a WAV, MP3 or OGG file. It plays from its start at each cue. The cues are grouped as in the mix above.'),
+          groups.map(([k, l]) => {
+            const list = SOUND_EVENTS.map((ev, i) => [ev, rows[i]]).filter(([ev]) => (ev.group || 'ui') === k);
+            if (!list.length) return null;
+            const mine = list.filter(([ev]) => S.custom[ev.id]).length;
+            return foldRow(`snd-${k}`, l, mine ? `${mine} of ${list.length} yours` : `${list.length} built-in`, h('div', { class: 'sounds' }, list.map(([, row]) => row)));
+          })
+        )
+      : null,
   ];
 }
 
@@ -4958,8 +5228,26 @@ function panelExport() {
   const P = state.project;
   el.progress = h('div', { class: 'progress', hidden: !state.busy }, h('div', { class: 'progress-track' }, (el.progressBar = h('div', { class: 'progress-bar', style: { width: `${Math.round((state.busy?.progress || 0) * 100)}%` } }))), h('div', { class: 'progress-row' }, (el.progressLabel = h('span', null, state.busy?.label || '')), button('Cancel', () => abortCtl?.abort(), { class: 'btn small ghost', id: 'x-cancel' })));
   const n = P.output.formats.length;
+  const fmt = `${P.canvas.width}x${P.canvas.height}`;
   return [
     el.progress,
+    section(
+      'Output',
+      textField({ id: 'm-name', label: 'Project name', value: P.name, onChange: (v) => (P.name = v) && save() }),
+      selectField({
+        id: 'm-format',
+        label: 'Canvas',
+        value: FORMATS.some(([k]) => k === fmt) ? fmt : '1920x1080',
+        options: FORMATS.map(([value, label]) => ({ value, label })),
+        onChange: (v) => {
+          const [w, hh] = v.split('x').map(Number);
+          P.canvas.width = w;
+          P.canvas.height = hh;
+          changed('all');
+        },
+      }),
+      segmented({ id: 'm-fps', label: 'Frame rate', value: P.canvas.fps, options: [24, 25, 30, 50, 60].map((f) => ({ value: f, label: `${f}` })), onChange: (v) => num(P.canvas, 'fps', 'timeline')(Number(v)) })
+    ),
     section(
       'After Effects project',
       h('p', null, 'The main export: a zip with a script that rebuilds this animation as a layered, editable After Effects project (2026 or any CC version), plus every image and every sound cue.'),

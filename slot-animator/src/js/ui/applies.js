@@ -11,10 +11,11 @@ export const APPLIES = {
   'machine/reels': { games: REELS },
   'm-row-lines': { games: SLOT, not: ['cells'] },
   'machine/how-it-pays': { games: SLOT },
-  'machine/hold-spin': { games: REELS },
-  'machine/pots-above-the-machine': { games: SLOT },
   'm-marquee': { games: REELS },
   'm-hud': { games: REELS },
+  // Features
+  'features/hold-spin': { games: REELS },
+  'features/pots-above-the-machine': { games: SLOT },
   // Spin
   'spin/spin-type': { games: SLOT },
   'spin/reel-order': { games: SLOT },
