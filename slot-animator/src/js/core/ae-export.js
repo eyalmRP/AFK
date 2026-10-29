@@ -48,8 +48,6 @@ export const AE_ASSETS = {
     hud: `${dir}/hud_panel.png`,
     logo: `${dir}/logo.png`,
     vignette: `${dir}/vignette.png`,
-    rays: `${dir}/rays.png`,
-    raysSmall: `${dir}/rays_small.png`,
     wheelFace: `${dir}/wheel_face.png`,
     wheelSegments: `${dir}/wheel_segments.png`,
     wheelHub: `${dir}/wheel_hub.png`,
@@ -64,7 +62,7 @@ export const AE_ASSETS = {
   }),
 };
 
-// Full-screen art (titles, logo, rays, particles) is painted this many
+// Full-screen art (titles, logo, particles) is painted this many
 // times larger for After Effects, so it can be scaled up and stay sharp.
 export const AE_HD = 2;
 
@@ -598,8 +596,9 @@ export function buildAEData(project, tl, L, extras = {}) {
     accent: rgb(extras.accent || '#ffd25a'),
     font: extras.fontPostScript || 'Bungee-Regular',
     titlePx,
-    // Titles, the logo, rays and particles are painted at hd times the size
-    // they show; their uses are scaled down by it.
+    // Titles, the logo and particles are painted at hd times the size they
+    // show; their uses are scaled down by it. The rays are vector shapes,
+    // drawn hd times as big as their biggest use.
     hd: AE_HD,
     titleTexts: Object.fromEntries(Object.entries(extras.titleTexts || {}).map(([k, v]) => [k, clean(v)])),
     logoText: extras.logoText ? { text: clean(extras.logoText.text), px: r4(extras.logoText.px) } : null,
@@ -648,8 +647,6 @@ export function buildAEData(project, tl, L, extras = {}) {
       hud: L.hud ? A.hud : '',
       logo: extras.hasLogo === false ? '' : A.logo,
       vignette: A.vignette,
-      rays: A.rays,
-      raysSmall: A.raysSmall,
       wheelFace: project.wheel.art?.face ? A.wheelFace : '',
       wheelSegments: A.wheelSegments,
       wheelHub: wcfg.show.hub ? A.wheelHub : '',
@@ -688,14 +685,9 @@ export function aeAssetFiles(data) {
   const title = (k) => add(A.titles[k]);
   let wheel = false;
   for (const R of data.rounds) {
-    if (R.overlay || R.grand || R.banner || R.wheel) add(A.rays);
-    if ((R.celebrate && R.scatters.length) || R.steps.some((st) => st.fx?.style === 'merge')) add(A.raysSmall);
     R.overlay?.tiers.forEach(title);
     if (R.grand) title('grand');
-    (R.jpShows || []).forEach((sh) => {
-      add(A.rays);
-      title(sh.title);
-    });
+    (R.jpShows || []).forEach((sh) => title(sh.title));
     if (R.banner) title(R.banner.kind);
     if (R.nearmiss) title('nearmiss');
     if (R.wheel) {
@@ -1058,12 +1050,12 @@ export const AE_SCRIPT = String.raw`// Slot animation rebuilt for After Effects 
   // Every effect placeholder holds an "FX CONTROLS" null: its sliders and
   // switches drive every use of that effect (size, opacity, colour, speed,
   // and whether the uses move by themselves). Replace the art inside with a
-  // prerendered movie and every use plays it from its start.
+  // prerendered movie, or swap the whole comp, and every use plays it from
+  // its start.
   var FX_STD = [["Size %", 100], ["Opacity %", 100], ["Colour", true]];
   var FX_RAYS = [["Size %", 100], ["Opacity %", 100], ["Spin %", 100], ["Built-in Motion", true]];
   var FX_RING = [["Size %", 100], ["Opacity %", 100], ["Colour", true], ["Speed %", 100]];
   var FX_TITLE = [["Size %", 100], ["Built-in Motion", true], ["Light Sweep", true]];
-  var FXC = {};
   function fxControls(c, list) {
     var n = c.layers.addNull(c.duration), i;
     n.name = "FX CONTROLS";
@@ -1071,35 +1063,28 @@ export const AE_SCRIPT = String.raw`// Slot animation rebuilt for After Effects 
       if (list[i][1] === true) fx(n, "ADBE Checkbox Control", list[i][0]).property(1).setValue(1);
       else slider(n, list[i][0]).setValue(list[i][1]);
     }
-    FXC[c.name] = list;
     return n;
   }
-  function hasFx(src, name) {
-    var list = src && FXC[src.name], i;
-    if (list) for (i = 0; i < list.length; i++) if (list[i][0] === name) return true;
-    return false;
-  }
-  // A control of a use's placeholder, as an expression value.
-  function fxv(src, name) {
-    return "comp(\"" + src.name + "\").layer(\"FX CONTROLS\").effect(\"" + name + "\")(1).value";
-  }
+  // A use reads the controls of whatever comp it shows (its source), so a
+  // placeholder can be swapped for any comp: one without FX CONTROLS gets
+  // the defaults (100%, on). fxc is that lookup inside an expression.
+  var FXC_FN = "function fxc(n, d) { try { return thisLayer.source.layer(\"FX CONTROLS\").effect(n)(1).value; } catch (err) { return d; } }\n";
+  function fxc(name, def) { return "fxc(\"" + name + "\", " + def + ")"; }
   // A use's opacity and scale times its placeholder's Opacity % and Size %:
   // e is the value (an expression after the statements in pre), or the
   // layer's own keyframes or value.
   function fxOpacity(L, pre, e) {
     if (!L) return;
-    var src = L.source;
-    P(L, "ADBE Opacity").expression = (pre || "") + "(" + (e || "value") + ")" + (hasFx(src, "Opacity %") ? " * " + fxv(src, "Opacity %") + " / 100" : "") + ";";
+    P(L, "ADBE Opacity").expression = FXC_FN + (pre || "") + "(" + (e || "value") + ") * " + fxc("Opacity %", 100) + " / 100;";
   }
   function fxScale(L, pre, e) {
     if (!L) return;
-    var src = L.source;
-    P(L, "ADBE Scale").expression = (pre || "") + "var sv_ = " + (e || "value") + ";" + (hasFx(src, "Size %") ? " var sk_ = " + fxv(src, "Size %") + " / 100; [sv_[0] * sk_, sv_[1] * sk_];" : " sv_;");
+    P(L, "ADBE Scale").expression = FXC_FN + (pre || "") + "var sv_ = " + (e || "value") + "; var sk_ = " + fxc("Size %", 100) + " / 100; [sv_[0] * sk_, sv_[1] * sk_];";
   }
   // Whether a use moves by itself (rays spin, titles spring): off for a
   // prerendered movie that brings its own motion.
-  function fxMotion(src) {
-    return hasFx(src, "Built-in Motion") ? fxv(src, "Built-in Motion") : "1";
+  function fxMotion() {
+    return fxc("Built-in Motion", 1);
   }
   // Effect placeholders are white; each use is tinted to its colour. Untick
   // "Colour" in an effect's FX CONTROLS (or "FX Colour" on SLOT CONTROL for
@@ -1108,8 +1093,7 @@ export const AE_SCRIPT = String.raw`// Slot animation rebuilt for After Effects 
     try {
       var t = fx(L, "ADBE Tint", "Colour");
       try { t.property("ADBE Tint-0002").setValue(rgbv); } catch (e1) { t.property("Map White To").setValue(rgbv); }
-      var own = hasFx(L.source, "Colour") ? " && " + fxv(L.source, "Colour") : "";
-      try { t.property("ADBE Tint-0003").expression = "(" + ctrl("FX Colour") + ".value" + own + ") ? value : 0;"; } catch (e2) {}
+      try { t.property("ADBE Tint-0003").expression = FXC_FN + "(" + ctrl("FX Colour") + ".value && " + fxc("Colour", 1) + ") ? value : 0;"; } catch (e2) {}
     } catch (e) {}
   }
 
@@ -1531,7 +1515,7 @@ export const AE_SCRIPT = String.raw`// Slot animation rebuilt for After Effects 
       stroke(g, [1, 1, 1], 14 * k);
       P(L, "ADBE Anchor Point").setValue([m, m]);
       pos(L, [m, m]);
-      var sp = "var sp = thisComp.layer(\"FX CONTROLS\").effect(\"Speed %\")(1).value / 100;\n";
+      var sp = "var sp = 1; try { sp = thisComp.layer(\"FX CONTROLS\").effect(\"Speed %\")(1).value / 100; } catch (err) {}\n";
       P(L, "ADBE Scale").expression = EASE_LIB + sp + "var a = c01(time * sp / 0.7); var s = 100 * (1 - Math.pow(1 - a, 3)); [s, s];";
       P(L, "ADBE Opacity").expression = sp + "var a = time * sp / 0.7; a > 1 ? 0 : 100 * Math.pow(1 - a, 1.5);";
       glow(L, 26 * k, 1);
@@ -1574,13 +1558,49 @@ export const AE_SCRIPT = String.raw`// Slot animation rebuilt for After Effects 
     P(L, "ADBE Opacity").expression = "value * " + ctrl("Dim %") + " / 100;";
     return L;
   }
+  // A circle as a mask or path shape.
+  function circle(cx, cy, R) {
+    var s = new Shape(), t = R * 0.5523;
+    s.vertices = [[cx + R, cy], [cx, cy + R], [cx - R, cy], [cx, cy - R]];
+    s.inTangents = [[0, -t], [t, 0], [0, t], [-t, 0]];
+    s.outTangents = [[0, t], [-t, 0], [0, -t], [t, 0]];
+    s.closed = true;
+    return s;
+  }
+  // Light rays: wedges of light fading out from the middle. A shape layer,
+  // so nothing ships and it stays sharp: the comp is hd times as big as the
+  // biggest use (a full-screen win's rays, or the merge and scatter rays for
+  // the small ones). A feathered mask does the fade; recolour the fill.
   function raysPH(small) {
-    return small ? imagePH("FX Small Rays", "Effects", DATA.assets.raysSmall, FX_RAYS) : imagePH("FX Light Rays", "Effects", DATA.assets.rays, FX_RAYS);
+    var key = small ? "FX Small Rays" : "FX Light Rays";
+    if (PH.hasOwnProperty(key)) return PH[key];
+    var S = small ? DATA.cellW * 6 : Math.max(H * 1.8, DATA.wheel ? DATA.wheel.R * 3.4 : 0);
+    S = Math.min(16000, Math.max(256, Math.round(S * DATA.hd)));
+    var n = small ? 12 : 18;
+    return ph(key, "Effects", S, S, DUR + 2, function (c) {
+      var r = S / 2, i, k;
+      var L = shapeLayer(c, "Rays");
+      var g = group(L);
+      for (i = 0; i < n; i++) {
+        var a = i / n * Math.PI * 2, w = Math.PI / n * (i % 2 ? 0.45 : 0.75), pts = [[r, r]];
+        for (k = 0; k <= 4; k++) {
+          var b = a - w + 2 * w * k / 4;
+          pts.push([r + Math.cos(b) * r, r + Math.sin(b) * r]);
+        }
+        path(g, pts, true);
+      }
+      fill(g, small ? [1, 0.94, 0.78] : [1, 0.86, 0.55], 100);
+      var m = L.property("ADBE Mask Parade").addProperty("ADBE Mask Atom");
+      m.name = "Fade";
+      m.property("ADBE Mask Shape").setValue(circle(r, r, r * 0.45));
+      m.property("ADBE Mask Feather").setValue([r * 0.9, r * 0.9]);
+      P(L, "ADBE Opacity").setValue(small ? 80 : 75);
+      fxControls(c, FX_RAYS);
+    });
   }
   // Rays spinning at speed (degrees a second), times the placeholder's Spin %.
   function spin(L, speed, add) {
-    var src = L.source;
-    P(L, "ADBE Rotate Z").expression = fxMotion(src) + " ? time * " + speed + (hasFx(src, "Spin %") ? " * " + fxv(src, "Spin %") + " / 100" : "") + (add ? " + " + add : "") + " : " + (add || 0) + ";";
+    P(L, "ADBE Rotate Z").expression = FXC_FN + fxMotion() + " ? time * " + speed + " * " + fxc("Spin %", 100) + " / 100" + (add ? " + " + add : "") + " : " + (add || 0) + ";";
   }
   // Light rays diam pixels across, popping in at a and fading out by b.
   function rays(comp, xy, a, b, diam, speed, alpha) {
@@ -1589,7 +1609,7 @@ export const AE_SCRIPT = String.raw`// Slot animation rebuilt for After Effects 
     var sc = r4(100 * diam / L.source.width);
     L.blendingMode = BlendingMode.ADD;
     spin(L, speed);
-    fxScale(L, EASE_LIB + "var k = " + fxMotion(L.source) + " ? outBack(c01((time - " + a + ") / 0.45)) : 1;\n", "[" + sc + " * k, " + sc + " * k]");
+    fxScale(L, EASE_LIB + "var k = " + fxMotion() + " ? outBack(c01((time - " + a + ") / 0.45)) : 1;\n", "[" + sc + " * k, " + sc + " * k]");
     fadeKeys(L, a, b, 0.45, 0.6, alpha);
     fxOpacity(L);
     return L;
@@ -1611,7 +1631,7 @@ export const AE_SCRIPT = String.raw`// Slot animation rebuilt for After Effects 
         try { sw.property("Center").expression = "var p = (time % 1.7) / 1.7 * 1.6 - 0.3; [p * thisLayer.width, thisLayer.height / 2];"; } catch (e1) {}
         try { sw.property("Width").setValue(Math.round(DATA.titlePx * 0.45 * DATA.hd)); } catch (e2) {}
         try { sw.property("Sweep Intensity").setValue(70); } catch (e3) {}
-        try { sw.property("Sweep Intensity").expression = "thisComp.layer(\"FX CONTROLS\").effect(\"Light Sweep\")(1).value ? value : 0;"; } catch (e5) {}
+        try { sw.property("Sweep Intensity").expression = "var on = 1; try { on = thisComp.layer(\"FX CONTROLS\").effect(\"Light Sweep\")(1).value; } catch (err) {}\non ? value : 0;"; } catch (e5) {}
       } catch (e4) {}
       var tw = text(c, "Text (editable)", DATA.titleTexts[key] || key.toUpperCase(), Math.round(it.height / 1.75), [c.width / 2, c.height / 2], [1, 0.86, 0.4]);
       glow(tw, Math.round(it.height * 0.12), 1);
@@ -1625,7 +1645,7 @@ export const AE_SCRIPT = String.raw`// Slot animation rebuilt for After Effects 
     if (!L) return null;
     var shown = src.width / DATA.hd;
     var fit = r4((maxW && shown > maxW ? maxW / shown : 1) * 100 / DATA.hd);
-    fxScale(L, EASE_LIB + "var a = time - inPoint; var s = " + fxMotion(src) + " ? (" + r4(fit * 0.15) + " + " + r4(fit * 0.85) + " * outElastic(c01(a / 0.8))) * (1 + 0.025 * Math.sin(time * 5)) : " + fit + ";\n", "[s, s]");
+    fxScale(L, EASE_LIB + "var a = time - inPoint; var s = " + fxMotion() + " ? (" + r4(fit * 0.15) + " + " + r4(fit * 0.85) + " * outElastic(c01(a / 0.8))) * (1 + 0.025 * Math.sin(time * 5)) : " + fit + ";\n", "[s, s]");
     return L;
   }
   function winCtrl(comp, keys, tOff, name) {
@@ -1728,7 +1748,7 @@ export const AE_SCRIPT = String.raw`// Slot animation rebuilt for After Effects 
     if (rr) {
       rr.blendingMode = BlendingMode.ADD;
       spin(rr, 52);
-      fxScale(rr, EASE_LIB + "var a = c01((time - " + M + ") / 0.6); var s = " + r4(100 * DATA.cellW * F.big * 1.7 / rr.source.width) + " * (" + fxMotion(rr.source) + " ? outElastic(a) : 1);\n", "[s, s]");
+      fxScale(rr, EASE_LIB + "var a = c01((time - " + M + ") / 0.6); var s = " + r4(100 * DATA.cellW * F.big * 1.7 / rr.source.width) + " * (" + fxMotion() + " ? outElastic(a) : 1);\n", "[s, s]");
       fadeKeys(rr, M, lb, 0.05, 0.3, 70);
       fxOpacity(rr);
     }

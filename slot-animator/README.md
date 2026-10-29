@@ -318,7 +318,10 @@ comp, the round comps place them in time, and a few controls sit on
     (rays), `Built-in Motion` (rays and titles: off for art that brings its
     own motion) and `Light Sweep` (titles). A prerendered movie dropped into
     a placeholder plays from the start of every use; shockwave uses last
-    4 s so a movie that long plays in full.
+    4 s so a movie that long plays in full. Uses read the controls of the
+    comp they show (`thisLayer.source`, defaults when it has none), so a
+    placeholder can be swapped for any comp and deleted. The rays are shape
+    layers (wedges faded by a feathered mask), so no ray image ships.
   - `Titles/` (with the light sweep and the words as an editable text
     layer in the Main Font, switched off), `Paylines/` (each draws itself on),
     `Plaques/`, `Wheel/` and `Counters/Counter Digits` (the 0-9 strip every
@@ -364,8 +367,9 @@ comp, the round comps place them in time, and a few controls sit on
   (After Effects 2020+), so one font change restyles all the text. Painted
   words (titles, a logo painted from the name, jackpot names) also come as
   editable text layers, switched off, in their placeholders.
-- Full-screen art is HD: titles, the logo, the rays and the particle art are
-  painted `AE_HD` (2) times their size and their uses scaled down; counters
+- Full-screen art is HD: titles, the logo and the particle art are painted
+  `AE_HD` (2) times their size and their uses scaled down; the ray comps
+  are `AE_HD` times their biggest use; counters
   are built at twice the biggest amount; the shockwave ring is drawn as big
   as its biggest use; a merged symbol is drawn from its full-size art
   (Collapse Transformations).
@@ -400,8 +404,8 @@ comp, the round comps place them in time, and a few controls sit on
 `assets/` holds what the script imports and nothing else: the symbols,
 their win frames, pots and particle art once for every format, the sound
 cues in `sfx/`, and each format's machine art, effects, titles and wheel
-parts in `<W>x<H>/`. A file identical to one already stored (the same rays
-or title in two formats, two cues that sound the same) is not stored again:
+parts in `<W>x<H>/`. A file identical to one already stored (the same
+title in two formats, two cues that sound the same) is not stored again:
 the script points every use at the one copy.
 
 Preview-only: reel curvature and bloom. The AE reels are flat.

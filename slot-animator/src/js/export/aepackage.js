@@ -8,7 +8,7 @@ import { FilePack, remapPaths } from '../core/pack.js';
 import { encodeWav } from '../core/wav.js';
 import { computeLayout } from '../core/layout.js';
 import { paintHudLayer, paintBulbLayer, paintWheelBulbLayer } from '../render/renderer.js';
-import { canvas, buildResources, paintTitles, paintRays, paintLogo } from '../render/sprites.js';
+import { canvas, buildResources, paintTitles, paintLogo } from '../render/sprites.js';
 import { paintParticle, fitParticle, PARTICLE_PX } from '../render/particles.js';
 import { decodeCustomSounds, renderCue } from '../render/audio.js';
 import { sfxCues } from '../core/sfx.js';
@@ -95,7 +95,9 @@ timing lives in the round comps, and a few controls sit on SLOT CONTROL.
     bulbs blink inside it, faster during wins), Logo, Win Meter Panel,
     Vignette.
   - Effects/: FX Shockwave (a ring that grows and fades in 0.7 s), FX Light
-    Rays, FX Small Rays, FX Cell Frame (win highlight), FX Anticipation,
+    Rays and FX Small Rays (shape layers: wedges with a feathered mask that
+    fades them out; change the fill to recolour them, or edit the paths),
+    FX Cell Frame (win highlight), FX Anticipation,
     FX Tease Cell, FX Sticky Frame, FX Coin Lock, FX Special Coin Lock,
     FX Near Miss, FX Wild Beam, FX Collected, FX Mystery Glow, FX
     Collector Glow, FX Pot Glow, FX Boost Target, FX Boost Flash, FX Beam
@@ -144,17 +146,25 @@ Effects and their controls
   to 4 s plays in full; frames and glows last as long as they show (set a
   looping movie to loop in Interpret Footage). Untick "Colour" for a
   coloured movie and "Built-in Motion" for one that moves by itself.
+- Or swap the whole comp: select the uses and Alt-drag (Option-drag on a
+  Mac) your own comp onto them in the timeline. Each use reads the
+  controls of the comp it shows, so your comp can bring its own "FX
+  CONTROLS" null (copy it from the placeholder); without one, the uses
+  play it at 100%, untinted and moving by themselves. Nothing refers to the
+  placeholder by name, so you can delete it.
 - Particle explosions: replace the art in Particles/ and every explosion
   follows; to swap one explosion for a movie, open its comp in
   Rounds/Particles, switch its particle layers off and drop the movie in.
 
 Full-screen wins in HD
-- Titles, the logo, the light rays and the particle art are painted twice
-  the size they show, and their uses are scaled to 50% (or less). Enlarge
-  a title, the rays or a particle up to 200% and it stays sharp. The
-  counters are built at twice the size of the biggest amount, and the
-  shockwave ring is drawn as big as its biggest use. A winning symbol that
-  merges into a big one is drawn from its full-size art.
+- Titles, the logo and the particle art are painted twice the size they
+  show, and their uses are scaled to 50% (or less): enlarge a title or a
+  particle up to 200% and it stays sharp. The light rays are vector shapes
+  in comps twice the size of their biggest use (nothing to ship, same
+  sharpness). The counters are built at twice the size of the biggest
+  amount, and the shockwave ring is drawn as big as its biggest use. A
+  winning symbol that merges into a big one is drawn from its full-size
+  art.
 - Reels/: one precomp per reel (or per cell for per-cell spins). Each has a
   CTRL null with a "Spin" slider: its keyframes are the start, mid and end
   phases from Reel Studio, with the same speed and influence eases. Open the
@@ -334,11 +344,10 @@ export async function buildAEPackage(scene, images, onProgress, signal = null) {
       res.front = buildResources(flat, computeLayout(flat), images).front;
     }
     const sc = { project: p, tl, L, res };
-    // Full-screen art at AE_HD times its size: titles, the logo and the rays
-    // (as big as their largest use, a full-screen win's, times AE_HD).
+    // Full-screen art at AE_HD times its size: the titles and the logo (the
+    // rays are vector shapes in the script).
     const hdTitles = paintTitles(p, L, AE_HD);
     const hdLogo = () => res.logo && paintLogo({ ...L, logo: { ...L.logo, w: L.logo.w * AE_HD, h: L.logo.h * AE_HD } }, p, res.theme, images.logo);
-    const raysPx = Math.min(4096, Math.round(L.H * 1.8 * AE_HD));
     const assetDir = `assets/${fmt[0]}x${fmt[1]}`;
     const A = AE_ASSETS.format(assetDir);
     const data = buildAEData(p, tl, L, {
@@ -370,8 +379,6 @@ export async function buildAEPackage(scene, images, onProgress, signal = null) {
       [A.hud, () => (L.hud ? paintHudLayer(sc) : null)],
       [A.logo, hdLogo],
       [A.vignette, () => res.vignette],
-      [A.rays, () => paintRays(raysPx, 18, 'rgba(255,220,140,0.75)')],
-      [A.raysSmall, () => paintRays(512 * AE_HD, 12, 'rgba(255,240,200,0.8)')],
       [A.wheelFace, () => res.wheel.face],
       [A.wheelSegments, () => res.wheel.segs],
       [A.wheelHub, () => res.wheel.hub],

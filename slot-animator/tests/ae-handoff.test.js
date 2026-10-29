@@ -30,10 +30,15 @@ function run(script, data, { root = '/pkg', os = 'Windows', sizes = {}, files } 
 }
 
 // An expression's value, with comp(...).layer(...).effect(...) reading ctl.
+// (ctl.none: the use shows a comp without FX CONTROLS.)
 const evalExpr = (expr, { time = 0, value = 100, ctl = {}, inPoint = 0 } = {}) => {
-  const layer = () => ({ effect: (n) => () => ({ value: n in ctl ? ctl[n] : / %$/.test(n) ? 100 : 1 }), text: { sourceText: { style: { font: ctl.font } } } });
+  const layer = (name) => {
+    if (name === 'FX CONTROLS' && ctl.none) throw new Error('no layer');
+    return { effect: (n) => () => ({ value: n in ctl ? ctl[n] : / %$/.test(n) ? 100 : 1 }), text: { sourceText: { style: { font: ctl.font } } } };
+  };
   const comp = () => ({ layer });
-  return new Function('time', 'comp', 'thisComp', 'value', 'inPoint', 'text', `return eval(${JSON.stringify(expr)})`)(time, comp, { layer }, value, inPoint, ctl.text);
+  const thisLayer = { source: { layer } };
+  return new Function('time', 'comp', 'thisComp', 'thisLayer', 'value', 'inPoint', 'text', `return eval(${JSON.stringify(expr)})`)(time, comp, { layer }, thisLayer, value, inPoint, ctl.text);
 };
 const exprOf = (l, prop) => l.property('ADBE Transform Group').property(prop).expression;
 const under = (item, name) => {
@@ -129,19 +134,41 @@ test('HD: full-screen art is painted larger and only ever scaled down', () => {
   const p = jackpotsProject();
   const { L, data, script } = build(p);
   assert.equal(data.hd, AE_HD);
-  // Titles and rays as the package paints them: AE_HD times their size.
+  // Titles as the package paints them: AE_HD times their size.
   const sizes = {};
   for (const [k, f] of Object.entries(data.assets.titles)) sizes[f] = [Math.round(L.H * 0.55 * AE_HD), Math.round(data.titlePx * 1.75 * AE_HD)];
-  const raysPx = Math.min(4096, Math.round(L.H * 1.8 * AE_HD));
-  sizes[data.assets.rays] = [raysPx, raysPx];
   const log = run(script, data, { sizes });
+  // The rays are vector shapes: no file ships, their comps are AE_HD times
+  // their biggest use.
+  assert.ok(![...aeAssetFiles(data)].some((f) => /rays/.test(f)));
+  const rayComps = log.comps.filter((c) => /Rays$/.test(c.name));
+  assert.ok(rayComps.length >= 1);
+  for (const c of rayComps) assert.ok(c.layers.list.some((l) => l.name === 'Rays' && l.property('ADBE Mask Parade').children.length === 1));
+  // The classic preset uses both: the big rays (wheel, big win) and the
+  // small ones (scatters celebrating), each drawn larger than any use.
+  const cl = build(defaultProject());
+  const clog = run(cl.script, cl.data);
+  for (const key of ['FX Light Rays', 'FX Small Rays']) {
+    const c = clog.comps.find((x) => x.name === key);
+    assert.ok(c, key);
+    for (const l of clog.comps.flatMap((x) => x.layers.list).filter((x) => x.source === c)) {
+      const v = evalExpr(exprOf(l, 'ADBE Scale'), { time: 99, value: l.property('ADBE Transform Group').property('ADBE Scale').value })[0];
+      assert.ok(v <= 100 / AE_HD + 0.5, `${l.name} at ${v}%`);
+    }
+  }
   const uses = log.comps.flatMap((c) => c.layers.list.map((l) => [c, l]));
   // Titles: at most 1 / AE_HD of the art, springing and breathing.
   const titles = uses.filter(([, l]) => /^Title /.test(l.name) && l.source?.layers);
   assert.ok(titles.length >= 3);
   for (const [, l] of titles) for (const t of [0.4, 0.8, 3]) assert.ok(evalExpr(exprOf(l, 'ADBE Scale'), { time: t, inPoint: 0 })[0] <= (100 / AE_HD) * 1.04, l.name);
-  // Rays, shockwaves and counters never past 100%.
-  for (const [, l] of uses.filter(([, x]) => x.name === 'Light Rays')) assert.ok(evalExpr(exprOf(l, 'ADBE Scale'), { time: 99 })[0] <= 100);
+  // Rays at most 1 / AE_HD; shockwaves and counters never past 100%.
+  const rayUses = uses.filter(([, l]) => /Rays$/.test(l.name) && l.source?.layers);
+  assert.ok(rayUses.length >= 3);
+  for (const [, l] of rayUses) {
+    const e = exprOf(l, 'ADBE Scale');
+    const v = evalExpr(e, { time: 99, value: l.property('ADBE Transform Group').property('ADBE Scale').value })[0];
+    assert.ok(v <= 100 / AE_HD + 0.5, `${l.name} at ${v}%`);
+  }
   const rings = uses.filter(([, l]) => l.name === 'Shockwave');
   assert.ok(rings.length > 5);
   for (const [, l] of rings) assert.ok(l.property('ADBE Transform Group').property('ADBE Scale').value[0] <= 100, `ring at ${l.property('ADBE Transform Group').property('ADBE Scale').value[0]}%`);
@@ -165,16 +192,20 @@ test('effects: every effect placeholder has FX CONTROLS that drive its uses; a p
   assert.ok(uses.length > 30);
   for (const [c, l] of uses) {
     const name = l.source.name;
-    assert.ok(exprOf(l, 'ADBE Opacity').includes(`comp("${name}").layer("FX CONTROLS").effect("Opacity %")`), `${c.name} > ${l.name} opacity`);
-    assert.ok(exprOf(l, 'ADBE Scale').includes(`comp("${name}").layer("FX CONTROLS").effect("Size %")`), `${c.name} > ${l.name} size`);
+    assert.ok(exprOf(l, 'ADBE Opacity').includes('thisLayer.source.layer("FX CONTROLS")') && exprOf(l, 'ADBE Opacity').includes('fxc("Opacity %", 100)'), `${c.name} > ${l.name} opacity`);
+    assert.ok(exprOf(l, 'ADBE Scale').includes('fxc("Size %", 100)'), `${c.name} > ${l.name} size`);
+    assert.ok(!exprOf(l, 'ADBE Opacity').includes(`comp("${name}")`), 'not tied to the placeholder by name');
   }
   // Opacity % and Size % scale a use.
   const [, ring] = uses.find(([, l]) => l.name === 'Shockwave');
   assert.equal(evalExpr(exprOf(ring, 'ADBE Opacity'), { ctl: { 'Opacity %': 40 } }), 40);
   assert.deepEqual(evalExpr(exprOf(ring, 'ADBE Scale'), { value: [80, 80], ctl: { 'Size %': 150 } }), [120, 120]);
+  // Swapped for a comp of your own without FX CONTROLS: the defaults.
+  assert.equal(evalExpr(exprOf(ring, 'ADBE Opacity'), { value: 70, ctl: { none: true } }), 70);
+  assert.deepEqual(evalExpr(exprOf(ring, 'ADBE Scale'), { value: [80, 80], ctl: { none: true } }), [80, 80]);
   // Colour: the use's tint follows its effect's switch and the global one.
   const tintAmt = ring.property('ADBE Effect Parade').children.find((e) => e.matchName === 'ADBE Tint').property('ADBE Tint-0003').expression;
-  assert.ok(tintAmt.includes('effect("Colour")') && tintAmt.includes('effect("FX Colour")'));
+  assert.ok(tintAmt.includes('fxc("Colour", 1)') && tintAmt.includes('effect("FX Colour")'));
   // A shockwave use lasts long enough for a 4 second movie (or to the end).
   const shock = effects.find((c) => c.name === 'FX Shockwave');
   assert.ok(shock.duration >= 4);

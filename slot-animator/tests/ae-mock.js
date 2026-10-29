@@ -14,7 +14,7 @@ const KNOWN_MATCH = new Set([
   'ADBE Vector Filter - Trim', 'ADBE Vector Trim Start', 'ADBE Vector Trim End', 'ADBE Vector Stroke Opacity',
   'ADBE Drop Shadow-0002', 'ADBE Drop Shadow-0004', 'ADBE Drop Shadow-0005',
   'ADBE Checkbox Control', 'ADBE Tint', 'ADBE Tint-0002', 'ADBE Tint-0003', 'ADBE Audio Group', 'ADBE Audio Levels',
-  'ADBE Mask Parade', 'ADBE Mask Atom', 'ADBE Mask Shape', 'ADBE Mask Opacity',
+  'ADBE Mask Parade', 'ADBE Mask Atom', 'ADBE Mask Shape', 'ADBE Mask Opacity', 'ADBE Mask Feather',
 ]);
 
 // sizes: image sizes by path ([w, h]; else 512 square); os: what $.os says.

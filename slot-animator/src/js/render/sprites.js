@@ -622,7 +622,7 @@ function paintGlow(size, color = '#ffffff') {
   return c;
 }
 
-export function paintRays(size, count, color) {
+function paintRays(size, count, color) {
   const c = canvas(size, size);
   const g = c.getContext('2d');
   const r = size / 2;
