@@ -2089,8 +2089,12 @@ export function renderFrame(ctx, scene, t, opts = {}) {
   const ri = roundIndexAt(tl, t);
   const R = ri >= 0 ? tl.rounds[ri] : null;
   const base = opts.scale || 1;
+  // A view (the tooltip demos) shows the frame from (x, y) on: the canvas
+  // is a window onto a bigger frame.
+  const ox = opts.view ? -opts.view.x * base : 0;
+  const oy = opts.view ? -opts.view.y * base : 0;
   ctx.save();
-  ctx.setTransform(base, 0, 0, base, 0, 0);
+  ctx.setTransform(base, 0, 0, base, ox, oy);
   ctx.globalAlpha = 1;
   ctx.globalCompositeOperation = 'source-over';
   // Camera: push in on anticipation. Flashes and the vignette stay put.
@@ -2158,7 +2162,7 @@ export function renderFrame(ctx, scene, t, opts = {}) {
     drawWheel(ctx, scene, R, t);
   }
   drawOverParticles(ctx, scene, t);
-  ctx.setTransform(base, 0, 0, base, 0, 0);
+  ctx.setTransform(base, 0, 0, base, ox, oy);
   drawFlashes(ctx, scene, t);
   if (!clear) ctx.drawImage(res.vignette, 0, 0);
   ctx.restore();

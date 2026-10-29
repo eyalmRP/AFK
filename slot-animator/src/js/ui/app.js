@@ -45,7 +45,7 @@ import { POT_ARTS, POT_AIMS, POT_ROLES, BOOST_KINDS, BEAM_CURVES, defaultPots, p
 import { searchFeatures, buildIndex } from './search.js';
 import { APPLIES, notApplying } from './applies.js';
 import { TIPS, tipEntries } from './tips.js';
-import { DEMOS, demoWindow } from './demos.js';
+import { DEMOS, demoPlan, demoAt } from './demos.js';
 import { WHEEL_FRAMINGS, WHEEL_LANDINGS, POINTER_SIDES, LABEL_PALETTES, WHEEL_ICONS, SEGMENT_KINDS, wheelConfig, iconName, autoIcons, autoHeights, segmentKind, wheelLandings } from '../core/wheel.js';
 import { projectFonts, parseFontNames } from '../core/fonts.js';
 import { renderFrame } from '../render/renderer.js';
@@ -3133,7 +3133,8 @@ function renderPanel() {
 
 // ---------- tooltips with mini demos ----------
 // Hover (or focus) an option with a tip: a card explains it and, where it
-// helps, loops a small render of it made with the real renderer.
+// helps, loops a small render of it made with the real renderer. A demo
+// with variants plays them in turn (off, then on) under a corner label.
 
 function markTips(root) {
   for (const [key, tip] of Object.entries(TIPS)) {
@@ -3162,11 +3163,9 @@ function demoScene(id) {
     demoScenes.set(
       id,
       (async () => {
-        const project = DEMOS[id].make();
-        const tl = buildTimeline(project);
-        const L = computeLayout(project);
-        const res = buildResources(project, L, await loadImages(project));
-        return { scene: { project, tl, L, res }, win: demoWindow(id, tl) };
+        const plan = demoPlan(id);
+        for (const s of plan) s.scene = { project: s.project, tl: s.tl, L: s.L, res: buildResources(s.project, s.L, await loadImages(s.project)) };
+        return plan;
       })().catch(() => null)
     );
   }
@@ -3192,7 +3191,9 @@ function showTip(target) {
   const na = target.closest('.na');
   const reason = na ? na.querySelector('.na-note, .na-badge')?.textContent : null;
   const canvasEl = tip.demo ? h('canvas', { class: 'tip-demo', width: 480, height: 270, 'aria-hidden': 'true' }) : null;
-  el.tip = h('div', { class: 'tip-card', role: 'tooltip', id: 'tip-card' }, canvasEl ? h('div', { class: 'tip-frame' }, canvasEl) : null, h('strong', null, tip.title), h('p', null, tip.text), reason ? h('p', { class: 'tip-na' }, reason) : null);
+  // The variant playing (Off / On, Low / High), in the frame's corner.
+  const labelEl = tip.demo && DEMOS[tip.demo].variants ? h('span', { class: 'tip-ab', 'aria-hidden': 'true' }) : null;
+  el.tip = h('div', { class: 'tip-card', role: 'tooltip', id: 'tip-card' }, canvasEl ? h('div', { class: 'tip-frame' }, canvasEl, labelEl) : null, h('strong', null, tip.title), h('p', null, tip.text), reason ? h('p', { class: 'tip-na' }, reason) : null);
   document.body.append(el.tip);
   target.setAttribute('aria-describedby', 'tip-card');
   // Beside the target: right of it when there is room, else left, else below.
@@ -3208,16 +3209,23 @@ function showTip(target) {
   el.tip.style.top = `${Math.round(y)}px`;
   if (!canvasEl) return;
   const card = el.tip;
-  demoScene(tip.demo).then((d) => {
-    if (!d || el.tip !== card) return;
+  demoScene(tip.demo).then((plan) => {
+    if (!plan || el.tip !== card) return;
     const g = canvasEl.getContext('2d');
-    const { a, b, speed } = d.win;
     const still = reducedMotion();
     const t0 = performance.now();
+    let shown = -1;
     const frame = (now) => {
       if (el.tip !== card) return;
-      const t = still ? (a + b) / 2 : a + ((((now - t0) / 1000) * speed) % (b - a));
-      renderFrame(g, d.scene, t);
+      // Reduced motion: one still of the last variant (the option on).
+      const last = plan[plan.length - 1];
+      const at = still ? { i: plan.length - 1, t: (last.a + last.b) / 2 } : demoAt(plan, (now - t0) / 1000);
+      const s = plan[at.i];
+      renderFrame(g, s.scene, at.t, s.view ? { view: s.view } : undefined);
+      if (labelEl && at.i !== shown) {
+        shown = at.i;
+        labelEl.textContent = s.label;
+      }
       card.classList.add('playing');
       if (!still) tipState.raf = requestAnimationFrame(frame);
     };
