@@ -153,6 +153,8 @@ function drawValueLabel(ctx, scene, sym, value, x, y, s = 1, alpha = 1) {
     drawMultLabel(ctx, scene, value, x, y, s, alpha);
     return;
   }
+  // A jackpot coin shows its name only; its box shows the value.
+  if (tl.jackpots?.coinSyms.includes(sym)) return;
   const text = formatPrize(value, project.machine.currency || '', project.machine.decimals | 0);
   const img = cachedTitle(res, 'coinval', text, Math.round(L.cellH * 0.2), 'silver');
   const dy = res.coinLabelled?.[sym - tl.lay.coinBase] ? -L.cellH * 0.1 : 0;
@@ -1482,7 +1484,7 @@ function drawJackpots(ctx, scene, t) {
 function drawJackpotFly(ctx, scene, R, t) {
   const j = R.pres.jackpot;
   const { L, res, project } = scene;
-  if (!j || !L.jackpots || t < j.fly[0] || t > j.fly[1] + 0.25) return;
+  if (!j || !j.fly || !L.jackpots || t < j.fly[0] || t > j.fly[1] + 0.25) return;
   const i = jackpotsConfig(project).tiers.findIndex((x) => x.id === j.tier);
   const b = L.jackpots[i];
   if (!b) return;
@@ -2115,6 +2117,39 @@ function drawGrand(ctx, scene, R, t) {
   ctx.restore();
 }
 
+// A Major jackpot takes the whole screen: its name and JACKPOT, the amount
+// counting up, the Grand's particles (pres.jpShows).
+function drawJackpotShows(ctx, scene, R, t) {
+  const { L, res, project } = scene;
+  for (const sh of R.pres.jpShows || []) {
+    if (t < sh.start || t > sh.end) continue;
+    const a = Math.min(clamp01((t - sh.start) / 0.4), clamp01((sh.end - t) / 0.5));
+    const i = jackpotsConfig(project).tiers.findIndex((x) => x.id === sh.tier);
+    const col = res.jackpots[i]?.color || '#ff5a1f';
+    darken(ctx, L, 0.7 * a);
+    const cx = L.W / 2;
+    const cy = L.H * 0.44;
+    drawGlow(ctx, res, col, cx, cy, L.H * 1.5, 0.6 * a);
+    if (Number(project.effects.rays) > 0) {
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      drawCentered(ctx, res.rays, cx, cy, ((L.H * 1.8) / res.rays.width) * ease.outBack(clamp01((t - sh.start) / 0.45)), 0.6 * a, t * 0.3);
+      ctx.restore();
+    }
+    drawRing(ctx, cx, cy, (t - sh.start) / 0.8, L.H * 0.8, col, L.H * 0.022);
+    drawRoundParticles(ctx, scene, R, t, ['jackpot']);
+    const title = res.titles[`jp_${sh.tier}`];
+    const s = (0.15 + 0.85 * ease.outElastic(clamp01((t - sh.start) / 0.8))) * (1 + 0.03 * Math.sin(t * 5));
+    const fit = title ? Math.min(1, (L.W * 0.9) / title.width) : 1;
+    drawCentered(ctx, title, cx, cy - L.H * 0.06, s * fit, a);
+    drawShimmer(ctx, res, title, cx, cy - L.H * 0.06, s * fit, (((t - sh.start) % 1.5) / 1.5) * 1.6 - 0.3, a);
+    ctx.save();
+    ctx.globalAlpha = a;
+    drawOdometer(ctx, res, evalKeys(sh.keys, t), cx, cy + L.H * 0.14, Math.round(res.titlePx * 0.66), { currency: project.machine.currency || '', decimals: project.machine.decimals | 0, rate: evalVelocity(sh.keys, t), scale: ease.outBack(clamp01((t - sh.start - 0.3) / 0.5)) });
+    ctx.restore();
+  }
+}
+
 function drawFlashes(ctx, scene, t) {
   const k = Number(scene.project.effects.flash) || 0;
   if (k <= 0) return;
@@ -2236,6 +2271,7 @@ export function renderFrame(ctx, scene, t, opts = {}) {
     drawJackpotFly(ctx, scene, R, t);
     drawBeams(ctx, scene, R, t);
     drawGrand(ctx, scene, R, t);
+    drawJackpotShows(ctx, scene, R, t);
     drawBigWin(ctx, scene, R, t);
     drawBanner(ctx, scene, R, t);
     drawWheel(ctx, scene, R, t);

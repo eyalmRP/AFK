@@ -91,7 +91,7 @@ timing lives in the round comps, and a few controls sit on SLOT CONTROL.
   - Pots/: "Pot 1 <name>" ... the art of each pot above the machine.
     Replace it with your own and every use follows.
   - Jackpots/: "Jackpot Grand", "Jackpot Major", "Jackpot Minor", "Jackpot
-    Mini": each box's plate with its name painted in, at its size. The
+    Mini": each box's plate (or your own box art) with its name, at its size. The
     value is a text layer over it in the main comp.
   - Particles/: "Particle <name>" for each particle the win explosions
     throw (gold coin, stars, confetti, your own art...). A set of variants
@@ -136,7 +136,9 @@ timing lives in the round comps, and a few controls sit on SLOT CONTROL.
   "Beam Head n" glow riding on the head. Edit the path to reshape a beam.
   A winner that beams to its pot darkens under a "Drained n" shade.
   A round that awards a jackpot sends its amount from the box down into
-  the win meter as a "Jackpot <tier> Win" text with a "Fly Glow".
+  the win meter as a "Jackpot <tier> Win" text with a "Fly Glow". A Major
+  takes the whole screen instead, like the Grand: "Title jp_major" and a
+  counter reading its own "MAJOR JACKPOT n CTRL" slider.
   While a cell is held (a sticky or walking wild, a mystery block turning,
   a booster landing) a "Sticky n" or "Reveal n" mask cuts it out of its
   reel.

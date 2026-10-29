@@ -149,8 +149,10 @@ export function buildAEData(project, tl, L, extras = {}) {
   const coinColor = (sym) => rgb(COIN_GLOW[hsc.coins[sym - lay.coinBase]?.palette] || COIN_GLOW.gold);
   // A value riding on a symbol: [text, offset in cells, scale]. "x5" sits low
   // on a multiplier; a coin's prize sits in its middle.
-  const label = (sym, v) => (isCoinSym(lay, sym) ? [clean(formatPrize(v, cur, dec)), labelled[sym - lay.coinBase] ? -0.1 : 0, 0.7] : [`x${v}`, 0.2, 1]);
-  const labelsOf = (strip, values) => [...values.entries()].map(([j, v]) => [j, ...label(strip[j], v)]);
+  // A jackpot coin shows its name only (no label); its box shows the value.
+  const jpCoins = new Set(tl.jackpots?.coinSyms || []);
+  const label = (sym, v) => (jpCoins.has(sym) ? null : isCoinSym(lay, sym) ? [clean(formatPrize(v, cur, dec)), labelled[sym - lay.coinBase] ? -0.1 : 0, 0.7] : [`x${v}`, 0.2, 1]);
+  const labelsOf = (strip, values) => [...values.entries()].filter(([j]) => !jpCoins.has(strip[j])).map(([j, v]) => [j, ...label(strip[j], v)]);
   // Particle art used by the emitters, in order of first use.
   const amount = Number(project.effects.coins ?? 1);
   const partAssets = usedParticleAssets(tl, project);
@@ -278,6 +280,7 @@ export function buildAEData(project, tl, L, extras = {}) {
         t: r4(l.t),
         until: r4(landUntil(teaseWindows(R), l.t, keepLit)),
         lab: l.coin ? label(R.grid[l.c][l.r], l.coin.value) : null,
+        coin: l.coin ? 1 : 0,
       })),
     };
     if (R.cells) {
@@ -356,11 +359,11 @@ export function buildAEData(project, tl, L, extras = {}) {
       out.collect = {
         start: r4(p.collect.start),
         end: r4(p.collect.end),
-        items: p.collect.items.map((it) => ({ x: cellX(it.c), y: cellY(it.r), at: r4(it.at), arrive: r4(it.arrive), s: it.sym, text: label(it.sym, it.value)[0], color: it.special ? coinColor(it.sym) : rgb(extras.accent || '#ffd25a') })),
+        items: p.collect.items.map((it) => ({ x: cellX(it.c), y: cellY(it.r), at: r4(it.at), arrive: r4(it.arrive), s: it.sym, text: clean(formatPrize(it.value, cur, dec)), color: it.special ? coinColor(it.sym) : rgb(extras.accent || '#ffd25a') })),
       };
     }
     // A round's jackpot: its amount flies from the box to the win meter.
-    if (p.jackpot && L.jackpots) {
+    if (p.jackpot && p.jackpot.fly && L.jackpots) {
       const i = jcfg.tiers.findIndex((x) => x.id === p.jackpot.tier);
       const b = L.jackpots[i];
       if (b) {
@@ -369,6 +372,13 @@ export function buildAEData(project, tl, L, extras = {}) {
       }
     }
     if (p.grand) out.grand = { start: r4(p.grand.start), end: r4(p.grand.end), countEnd: r4(p.grand.countEnd), keys: exportKeys(p.grand.keys), amount: p.grand.amount };
+    // A Major jackpot's full-screen moment, built like the Grand's.
+    if (p.jpShows) {
+      out.jpShows = p.jpShows.map((sh) => {
+        const ti = jcfg.tiers.findIndex((x) => x.id === sh.tier);
+        return { title: `jp_${sh.tier}`, name: clean(jcfg.tiers[ti]?.label || sh.tier), color: rgb(COIN_GLOW[jcfg.tiers[ti]?.palette] || COIN_GLOW.fire), start: r4(sh.start), end: r4(sh.end), countEnd: r4(sh.countEnd), keys: exportKeys(sh.keys), amount: sh.amount };
+      });
+    }
     if (p.wheel) {
       const w = p.wheel;
       out.wheel = {
@@ -664,6 +674,10 @@ export function aeAssetFiles(data) {
     if ((R.celebrate && R.scatters.length) || R.steps.some((st) => st.fx?.style === 'merge')) add(A.raysSmall);
     R.overlay?.tiers.forEach(title);
     if (R.grand) title('grand');
+    (R.jpShows || []).forEach((sh) => {
+      add(A.rays);
+      title(sh.title);
+    });
     if (R.banner) title(R.banner.kind);
     if (R.nearmiss) title('nearmiss');
     if (R.wheel) {
@@ -1868,7 +1882,7 @@ export const AE_SCRIPT = String.raw`// Slot animation rebuilt for After Effects 
   function buildRound(R) {
     var P0 = R.start, len = Math.max(0.6, (R.fxEnd !== null && R.fxEnd !== undefined ? R.fxEnd : R.next + 0.6) - P0), i, k;
     var hs = R.holdspin && (R.holdspin.hits.length || R.holdspin.tease.length);
-    var hasFx = R.steps.length || R.overlay || R.banner || R.wheel || R.celebrate || R.nearmiss || R.expand || R.mult || R.mystery || R.collector || R.pops.length || hs || R.collect || R.grand || R.particles.length || R.boost || R.beams || R.jackpot;
+    var hasFx = R.steps.length || R.overlay || R.banner || R.wheel || R.celebrate || R.nearmiss || R.expand || R.mult || R.mystery || R.collector || R.pops.length || hs || R.collect || R.grand || R.particles.length || R.boost || R.beams || R.jackpot || R.jpShows;
     if (!hasFx) return null;
     RBASE = "R" + pad2(R.index + 1) + " " + R.label;
     var comp = addComp(RBASE + SUFFIX, W, H, len, fRounds);
@@ -1946,6 +1960,7 @@ export const AE_SCRIPT = String.raw`// Slot animation rebuilt for After Effects 
     if (hs) buildRespin(comp, R, rel);
     if (R.collect) buildCollect(comp, R, rel);
     if (R.grand) buildGrand(comp, R, rel);
+    if (R.jpShows) buildJackpotShows(comp, R, rel);
     if (R.jackpot && DATA.jackpots) buildJackpotFly(comp, R, rel);
     if (R.overlay) buildBigWin(comp, R, rel);
     if (R.banner) buildBanner(comp, R, rel);
@@ -2331,7 +2346,7 @@ export const AE_SCRIPT = String.raw`// Slot animation rebuilt for After Effects 
       for (i = 0; i < RR.lands.length; i++) {
         var ld = RR.lands[i];
         kids.push(ring(main, [ld.x, ld.y], ld.t, DATA.cellW * 0.95, DATA.accent));
-        var LL = inst(main, symComps[ld.s] || symComps[0], (ld.lab ? "Coin Lands R" : "Scatter Lands R") + (r + 1), [ld.x, ld.y], ld.t, ld.until);
+        var LL = inst(main, symComps[ld.s] || symComps[0], (ld.coin ? "Coin Lands R" : "Scatter Lands R") + (r + 1), [ld.x, ld.y], ld.t, ld.until);
         P(LL, "ADBE Scale").expression = "var u = Math.max(0, Math.min(1, (time - " + ld.t + ") / " + TE.fade + ")); var s = 100 * (1 + 0.25 * Math.sin(u * Math.PI)); [s, s];";
         var lit = "var a = time - " + ld.t + "; var k = a < 0 ? 0 : (a < " + TE.pop + " ? 1 - Math.max(0, Math.min(1, (a - " + TE.fade + ") / " + (TE.pop - TE.fade) + ")) : 0);\n";
         if (TE.keepLit && RR.tease.length) lit += rowsExpr("W", RR.tease) + envFn + "if (a >= 0) for (var j = 0; j < W.length; j++) k = Math.max(k, tEnv(W[j]));\n";
@@ -2410,6 +2425,26 @@ export const AE_SCRIPT = String.raw`// Slot animation rebuilt for After Effects 
     winCtrl(comp, G.keys, -R.start, "GRAND CTRL");
     var od = counters(comp, [cx, cy + H * 0.14], Math.round(DATA.titlePx * 0.66), G.amount, rel(G.countEnd), "GRAND CTRL");
     fadeKeys(od, a + 0.2, b, 0.3, 0.5);
+  }
+
+  // A Major jackpot takes the whole screen: its name and JACKPOT, the amount
+  // counting up on its own control, the Grand's particles.
+  function buildJackpotShows(comp, R, rel) {
+    var cx = W / 2, cy = H * 0.44, k;
+    for (k = 0; k < R.jpShows.length; k++) {
+      var S = R.jpShows[k];
+      var a = rel(S.start), b = rel(S.end);
+      darkLayer(comp, a, b, 70);
+      rays(comp, [cx, cy], a, b, 100 * H * 1.8 / 1024, 17, 60);
+      ring(comp, [cx, cy], a, H * 0.8, S.color);
+      if (k === 0) emitters(comp, R, "under", ["jackpot"]);
+      var T = titleLayer(comp, S.title, [cx, cy - H * 0.06], a, b, W * 0.9);
+      if (T) fadeKeys(T, a, b, 0.05, 0.5);
+      var ctrl = S.name + " JACKPOT " + (k + 1) + " CTRL";
+      winCtrl(comp, S.keys, -R.start, ctrl);
+      var od = counters(comp, [cx, cy + H * 0.14], Math.round(DATA.titlePx * 0.66), S.amount, rel(S.countEnd), ctrl);
+      fadeKeys(od, a + 0.2, b, 0.3, 0.5);
+    }
   }
 
   function buildBanner(comp, R, rel) {

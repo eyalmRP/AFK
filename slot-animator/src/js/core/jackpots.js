@@ -8,6 +8,7 @@
 // the After Effects export. Pure.
 
 import { holdSpinConfig, coinValues } from './coins.js';
+import { key } from './keys.js';
 
 // Tiers from the top. scale: the box size when the boxes are sized by tier.
 export const JP_TIERS = [
@@ -57,6 +58,10 @@ export function defaultJackpots() {
     growth: 0.15,
     grandLabel: 'GRAND',
     grandPalette: 'gold',
+    // Your own box art per tier (data URLs), and whether the names are
+    // written on it.
+    art: {},
+    artNames: true,
   };
 }
 
@@ -86,6 +91,7 @@ export function jackpotsConfig(project) {
       label: t.id === 'grand' ? String(j.grandLabel ?? 'GRAND') : (c?.label || t.label),
       palette: t.id === 'grand' ? j.grandPalette || 'gold' : c?.palette || t.palette,
       scale: j.sizing === 'same' ? 0.86 : t.scale,
+      art: (j.art && typeof j.art[t.id] === 'string' && j.art[t.id]) || null,
       base,
       rate: running ? base * growth : 0,
     };
@@ -99,6 +105,7 @@ export function jackpotsConfig(project) {
     padding: clamp(num(j.padding, d.padding), -1, 2),
     spacing: clamp(num(j.spacing, d.spacing), -0.3, 1.5),
     running,
+    artNames: j.artNames !== false,
     tiers,
   };
 }
@@ -247,4 +254,25 @@ export function jackpotFx(jt, id, t) {
     glow = Math.max(glow, 0.8 * k);
   }
   return { scale, glow, sweep, held };
+}
+
+// Tiers whose win also takes the whole screen: the box's name and
+// "JACKPOT", the amount counting up (the Grand has its own for a full
+// Hold & Spin board).
+export const JP_SHOW_TIERS = ['major'];
+export const JP_SHOW = { lead: 0.55, count: 1.4, tail: 1.0 };
+
+// The full-screen moment for a tier won at t0, paying amount.
+export function jackpotShow(tier, start, amount) {
+  const countStart = start + JP_SHOW.lead;
+  const countEnd = countStart + JP_SHOW.count;
+  return {
+    tier,
+    start,
+    countStart,
+    countEnd,
+    end: countEnd + JP_SHOW.tail,
+    amount,
+    keys: [key(countStart, 0, { outSpeed: (amount / JP_SHOW.count) * 1.25 }), key(countEnd, amount, { inInf: 0.6, hold: true })],
+  };
 }

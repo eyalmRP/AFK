@@ -36,7 +36,7 @@ import { lineColor, generatePaylines } from '../core/paylines.js';
 import { autoAmount, makeContext, defaultPattern, tumbleEnabled } from '../core/outcomes.js';
 import { orderList } from '../core/order.js';
 import { FORMAT_CHOICES } from '../core/ae-export.js';
-import { loadImage, loadWinAnim, buildResources, fontStack, extraSymbolImages, loadWheelArt, loadPotArt, paintWheelIcon } from '../render/sprites.js';
+import { loadImage, loadWinAnim, buildResources, fontStack, extraSymbolImages, loadWheelArt, loadPotArt, loadJackpotArt, paintWheelIcon } from '../render/sprites.js';
 import { paintBuiltin, paintPot } from '../render/paint.js';
 import { loadParticleSprites, drawParticleList } from '../render/particles.js';
 import { PARTICLE_TEMPLATES, TEMPLATE_BY_ID, BUILTIN_PARTICLES, PARTICLE_MOTIONS, PARTICLE_MOMENTS, PARTICLE_LENGTHS, tierParticles, spawnParticles, particleAssetInfo } from '../core/particles.js';
@@ -458,7 +458,7 @@ function setSection(sec, open, remember = true) {
 
 // An icon for each section, so a tab reads at a glance.
 const SECTION_ICONS = {
-  game: 'grid', output: 'film', reels: 'reels', framing: 'target', 'jackpot-boxes': 'trophy', 'pots-above-the-machine': 'coin', 'how-it-pays': 'coin', 'hold-spin': 'coin', look: 'palette', money: 'coin', randomness: 'dice',
+  game: 'grid', output: 'film', reels: 'reels', 'jackpot-boxes': 'trophy', 'pots-above-the-machine': 'coin', 'how-it-pays': 'coin', 'hold-spin': 'coin', look: 'palette', money: 'coin', randomness: 'dice',
   'spin-type': 'loop', respins: 'loop', 'reel-order': 'order', 'motion-curve': 'curve', start: 'play', mid: 'loop', end: 'target', 'reel-timing': 'clock', anticipation: 'eye', 'between-rounds': 'clock',
   'win-tiers': 'trophy', 'winning-symbols': 'sparkle', 'win-particles': 'sparkle', 'explosion-templates': 'bolt', 'titles-and-font': 'text', 'win-timing': 'clock',
   intensity: 'bolt', segments: 'wheel', framing: 'target', pointer: 'pointer', spin: 'loop',
@@ -1290,6 +1290,7 @@ async function loadImages(project) {
     particles: await loadParticleSprites(project, (src) => optImage(src).then((i) => i || Promise.reject(new Error('bad image')))),
     wheel: await loadWheelArt(project, optImage),
     pots: await loadPotArt(project, optImage),
+    jackpots: await loadJackpotArt(project, optImage),
   };
 }
 
@@ -3721,6 +3722,29 @@ function panelFeatures() {
   ];
 }
 
+// A box's own art: upload (a thumbnail once there), and back to painted.
+function jpArtCell(J, t) {
+  const set = (v) => {
+    J.art = { ...(J.art || {}), [t.id]: v };
+    if (!v) delete J.art[t.id];
+    changed('all');
+    renderPanel();
+  };
+  const up = async () => {
+    const [f] = await pickFiles('image/*');
+    if (!f) return;
+    if (f.size > 4e6) return toast('Keep box art under 4 MB.', 'warn');
+    set(await readFileAsDataURL(f));
+  };
+  if (!t.art) return button('', up, { class: 'icon-btn tiny', icon: 'upload', title: `Upload your own ${t.label} box art`, id: `jp-art-${t.id}` });
+  return h(
+    'div',
+    { class: 'jp-art' },
+    h('button', { type: 'button', class: 'jp-thumb', id: `jp-art-${t.id}`, title: 'Replace the art', onclick: up }, h('img', { src: t.art, alt: '' })),
+    button('', () => set(null), { class: 'icon-btn tiny', icon: 'x', title: 'Back to the painted box', id: `jp-art-clear-${t.id}` })
+  );
+}
+
 // Progressive jackpot boxes: how many, where around the machine, their
 // size, values (fixed or running), names and colours, and what wins them.
 function jackpotSettings() {
@@ -3766,7 +3790,8 @@ function jackpotSettings() {
       { class: 'jp-row' },
       h('input', { type: 'text', id: `jp-label-${t.id}`, value: t.label, 'aria-label': `${t.id} box name`, onchange: (e) => setLabel(e.target.value.slice(0, 16)) }),
       h('input', { type: 'number', id: `jp-value-${t.id}`, min: 0, value, 'aria-label': `${t.label} seed value in bets`, onchange: (e) => setValue(e.target.value) }),
-      h('select', { id: `jp-pal-${t.id}`, 'aria-label': `${t.label} colour`, onchange: (e) => setPalette(e.target.value) }, COIN_PALETTES.map((pl) => h('option', { value: pl, selected: t.palette === pl }, pl[0].toUpperCase() + pl.slice(1))))
+      h('select', { id: `jp-pal-${t.id}`, 'aria-label': `${t.label} colour`, onchange: (e) => setPalette(e.target.value) }, COIN_PALETTES.map((pl) => h('option', { value: pl, selected: t.palette === pl }, pl[0].toUpperCase() + pl.slice(1)))),
+      jpArtCell(J, t)
     );
   };
   const placeOpts = JP_PLACES.map((pl) => ({ value: pl.id, label: pl.label, hint: pl.four && cfg.count < 4 ? 'Four boxes only' : (pl.id === 'above' || pl.id === 'ends') && potsOn ? 'The pots stand above the machine' : null }));
@@ -3818,10 +3843,11 @@ function jackpotSettings() {
     h('h4', { class: 'insp-sub' }, 'Values'),
     segmented({ id: 'jp-values', label: 'Values', value: J.running ? 'running' : 'fixed', options: [{ value: 'fixed', label: 'Fixed' }, { value: 'running', label: 'Running', hint: 'The numbers climb like a progressive' }], onChange: (v) => all('running')(v === 'running') }),
     J.running ? rangeField({ id: 'jp-growth', label: 'Running speed', unit: '% / s', value: Number(J.growth ?? 0.15), min: 0.01, max: 2, step: 0.01, onInput: num(J, 'growth'), hint: 'How much of its seed a box adds every second. Won, it shows what it paid for a moment, then starts again from its seed.' }) : null,
-    h('div', { class: 'jp-rows' }, h('div', { class: 'jp-row jp-head', 'aria-hidden': 'true' }, h('span', null, 'Name'), h('span', null, 'Seed (× bet)'), h('span', null, 'Colour')), cfg.tiers.map(boxRow)),
-    h('p', { class: 'hint' }, 'Name, seed value (in bets) and colour per box. They are the Hold & Spin jackpots: the Mini, Minor and Major coins and the Grand prize.'),
+    h('div', { class: 'jp-rows' }, h('div', { class: 'jp-row jp-head', 'aria-hidden': 'true' }, h('span', null, 'Name'), h('span', null, 'Seed (× bet)'), h('span', null, 'Colour'), h('span', null, 'Art')), cfg.tiers.map(boxRow)),
+    h('p', { class: 'hint' }, 'Name, seed value (in bets), colour and art per box. They are the Hold & Spin jackpots: the Mini, Minor and Major coins and the Grand prize. Your art fills the box; the value is written over it.'),
+    cfg.tiers.some((t) => t.art) ? toggleField({ id: 'jp-art-names', label: 'Write the names on your art', checked: J.artNames !== false, onChange: (v) => { J.artNames = v; changed('all'); }, hint: 'Off when your art already says GRAND, MAJOR…' }) : null,
     h('h4', { class: 'insp-sub' }, 'What wins them'),
-    h('p', { class: 'hint', id: 'jp-wins' }, 'Collecting a Mini, Minor or Major coin wins its box, and a full Hold & Spin board the Grand: each pays what its box shows then. A round can award a box too (round inspector → Add a feature → Jackpot), and a wheel segment can pay one.'),
+    h('p', { class: 'hint', id: 'jp-wins' }, 'Collecting a Mini, Minor or Major coin wins its box, and a full Hold & Spin board the Grand: each pays what its box shows then. A round can award a box too (round inspector → Add a feature → Jackpot), and a wheel segment can pay one. A Major also takes the whole screen.'),
     wheelRows
   );
 }

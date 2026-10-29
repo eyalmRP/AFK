@@ -7,6 +7,7 @@ import { defaultProject, slotHoldSpinProject, slotWheelProject, jackpotsProject,
 import { buildTimeline } from '../src/js/core/timeline.js';
 import { computeLayout } from '../src/js/core/layout.js';
 import { evalKeys } from '../src/js/core/keys.js';
+import { holdSpinConfig } from '../src/js/core/coins.js';
 import { jackpotsConfig, jackpotLedger, jackpotValue, wheelJackpot, JP_HOLD } from '../src/js/core/jackpots.js';
 
 const near = (a, b, eps = 1e-6) => Math.abs(a - b) <= eps;
@@ -176,4 +177,62 @@ test('a round can award a box: it lights up, its amount flies to the meter and c
   const off = buildTimeline(p);
   assert.equal(off.jackpots, null);
   assert.ok(!off.rounds.some((r) => r.pres.jackpot));
+});
+
+test('a Major jackpot takes the whole screen: the collect waits for it and counts it in; a round award shows it instead of the flight', () => {
+  const p = withBoxes(jackpotsProject());
+  const tl = buildTimeline(p);
+  const R = tl.rounds.find((r) => r.outcome === 'collect');
+  const items = R.pres.collect.items;
+  const k = items.findIndex((it) => it.jackpot === 'major');
+  assert.ok(k >= 0, 'the preset collects a Major coin');
+  const [sh] = R.pres.jpShows;
+  assert.equal(R.pres.jpShows.length, 1);
+  assert.equal(sh.tier, 'major');
+  assert.equal(sh.amount, items[k].value);
+  assert.ok(near(sh.start, items[k].arrive + 0.15));
+  assert.ok(sh.start < sh.countStart && sh.countStart < sh.countEnd && sh.countEnd < sh.end);
+  assert.ok(items.slice(k + 1).every((it) => it.at > sh.end), 'the next coins wait');
+  assert.ok(R.pres.collect.end > sh.end, 'and the total');
+  const before = items.slice(0, k).reduce((a, it) => a + it.value, 0);
+  assert.ok(near(evalKeys(tl.hold.collectKeys, sh.countStart - 0.01), before, 0.01), 'nothing counted before the moment');
+  assert.ok(near(evalKeys(tl.hold.collectKeys, sh.countEnd + 0.01), before + sh.amount, 0.01));
+  assert.ok(near(evalKeys(sh.keys, sh.countEnd), sh.amount, 0.01));
+  assert.ok(tl.sfx.some((e) => e.type === 'bigWin' && near(e.t, sh.start)));
+  // Other tiers celebrate on their box only.
+  assert.ok(!tl.rounds.some((r) => r.pres.jpShows?.some((s) => s.tier !== 'major')));
+  // A round awarding the Major: the moment, no flight; the meter counts with it.
+  const q = withBoxes(jackpotsProject());
+  q.rounds.find((r) => r.jackpot === 'minor').jackpot = 'major';
+  const tq = buildTimeline(q);
+  const Q = tq.rounds.find((r) => r.pres.jackpot);
+  const j = Q.pres.jackpot;
+  assert.equal(j.fly, null);
+  assert.equal(Q.pres.jpShows[0].tier, 'major');
+  assert.equal(j.countStart, Q.pres.jpShows[0].countStart);
+  const m0 = evalKeys(tq.meterKeys, j.countStart - 0.01);
+  assert.ok(near(evalKeys(tq.meterKeys, j.countEnd + 0.01), m0 + j.amount, 0.01));
+  assert.ok(Q.end >= Q.pres.jpShows[0].end);
+});
+
+test('jackpot coins show only their name; uploaded box art rides on the tier', () => {
+  const p = withBoxes(jackpotsProject());
+  const tl = buildTimeline(p);
+  const cfg = jackpotsConfig(p);
+  const hs = holdSpinConfig(p).coins;
+  // Every coin linked to a shown box, and only those.
+  assert.deepEqual(tl.jackpots.coinSyms.length, hs.filter((c) => cfg.tiers.some((t) => t.id === c.id)).length);
+  p.jackpots.count = 2;
+  const two = buildTimeline(p).jackpots.coinSyms;
+  assert.equal(two.length, hs.filter((c) => ['grand', 'major'].includes(c.id)).length);
+  // Box art: per tier, names on it by default.
+  assert.equal(cfg.artNames, true);
+  assert.ok(cfg.tiers.every((t) => !t.art));
+  p.jackpots.count = 4;
+  p.jackpots.art = { major: 'data:image/png;base64,AAAA' };
+  p.jackpots.artNames = false;
+  const c2 = jackpotsConfig(p);
+  assert.equal(c2.tiers.find((t) => t.id === 'major').art, 'data:image/png;base64,AAAA');
+  assert.ok(c2.tiers.filter((t) => t.id !== 'major').every((t) => !t.art));
+  assert.equal(c2.artNames, false);
 });

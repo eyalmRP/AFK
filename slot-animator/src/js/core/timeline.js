@@ -19,7 +19,7 @@ import { winFxConfig, winStyleOf, scheduleWinFx } from './winfx.js';
 import { scheduleCamera } from './camera.js';
 import { wheelConfig, wheelLandings, segmentKind, SLIP } from './wheel.js';
 import { potsConfig, pickPot, ownerOf, symbolKey } from './pots.js';
-import { jackpotsConfig, jackpotLedger, jackpotTier, wheelJackpot, JP_CELEBRATE } from './jackpots.js';
+import { jackpotsConfig, jackpotLedger, jackpotTier, wheelJackpot, jackpotShow, JP_CELEBRATE, JP_SHOW_TIERS } from './jackpots.js';
 
 // Rounds that can award a jackpot box at their end.
 export const JACKPOT_ROUNDS = ['none', 'nearmiss', 'small', 'medium', 'big', 'freespins', 'bonus', 'wheel'];
@@ -221,6 +221,12 @@ export function buildTimeline(project) {
     if (!jpCfg.on || !isCoinSym(lay, sym)) return null;
     const id = hsCfg.coins[sym - lay.coinBase]?.id;
     return jpShown(id) ? id : null;
+  };
+  // A full-screen jackpot moment: a sting, the count and a shake.
+  const showFx = (sh) => {
+    sfx.push({ t: sh.start, type: 'bigWin' }, { t: sh.start, type: 'whoosh' }, { t: sh.countStart, type: 'count', dur: sh.countEnd - sh.countStart, big: true }, { t: sh.countStart, type: 'coins', dur: 1.4 }, { t: sh.countEnd, type: 'countEnd' });
+    flashes.push({ t: sh.start + 0.05, amp: 0.5, dur: 0.35 });
+    shakes.push({ t: sh.start + 0.1, amp: 0.9, dur: 0.5 });
   };
   const nCells = reels * rows;
   const rngHS = mulberry32(hashSeed(project.seed, 'holdspin'));
@@ -1119,22 +1125,38 @@ export function buildTimeline(project) {
         const n = locks.length;
         const per = Math.max(0.11, Math.min(num(tm.collectEach, 0.22), 5 / n));
         let sum = 0;
-        const t1 = tcur + 0.35;
+        let cursor = tcur + 0.35;
+        const shows = [];
         const items = locks.map((l, j) => {
-          const at = t1 + j * per;
+          const at = cursor;
           const arrive = at + 0.42;
           const prev = sum;
-          // A jackpot coin pays what its box shows as it is collected.
+          cursor += per;
+          // A jackpot coin pays what its box shows as it is collected; a
+          // Major takes the whole screen before the collect goes on.
           const jt = jpOfSym(l.sym);
           const value = jt ? jp.award(jt, at, 'coin') : l.value;
           sum += value;
-          pushKeys(collectKeys, [key(arrive, prev), key(arrive + 0.1, sum, { hold: true })]);
-          pushKeys(meterKeys, [key(arrive, prev), key(arrive + 0.1, sum, { hold: true })]);
           sfx.push({ t: at, type: 'collect', i: j, n });
+          if (jt && JP_SHOW_TIERS.includes(jt)) {
+            // The total counts it in with the full-screen count.
+            const sh = jackpotShow(jt, arrive + 0.15, value);
+            const ks = [key(sh.countStart, prev, { outSpeed: (value / (sh.countEnd - sh.countStart)) * 1.25 }), key(sh.countEnd, sum, { inInf: 0.6, hold: true })];
+            pushKeys(collectKeys, ks);
+            pushKeys(meterKeys, ks);
+            shows.push(sh);
+            showFx(sh);
+            cursor = Math.max(cursor, sh.end + 0.1);
+          } else {
+            pushKeys(collectKeys, [key(arrive, prev), key(arrive + 0.1, sum, { hold: true })]);
+            pushKeys(meterKeys, [key(arrive, prev), key(arrive + 0.1, sum, { hold: true })]);
+          }
           l.collectAt = at;
           return { c: l.c, r: l.r, sym: l.sym, value, at, arrive, special: l.special, jackpot: jt };
         });
-        let tA = items[n - 1].arrive + 0.45;
+        if (shows.length) pres.jpShows = shows;
+        // The total waits for a Major's moment to end.
+        let tA = Math.max(items[n - 1].arrive + 0.45, ...shows.map((sh) => sh.end + 0.1));
         if (hs.full && hsCfg.grand.enabled) {
           const g = jpShown('grand') ? jp.award('grand', tA, 'grand') : Math.max(0, Number(hsCfg.grand.value) || 0) * bet;
           const cs = tA + 0.55;
@@ -1165,15 +1187,26 @@ export function buildTimeline(project) {
       const at = end - 0.1;
       const amount = jp.award(round.jackpot, at, 'round');
       const prev = evalKeys(meterKeys, at);
-      const fly = [at + 0.55, at + 1.15];
-      const cs = fly[1];
-      const ce = cs + 1.4;
-      pushKeys(meterKeys, [key(cs, prev, { outSpeed: (amount / 1.4) * 1.25 }), key(ce, prev + amount, { inInf: 0.6, hold: true })]);
       win.amount = (win.amount || 0) + amount;
-      pres.jackpot = { tier: round.jackpot, at, fly, countStart: cs, countEnd: ce, amount, end: Math.max(ce + 0.6, at + JP_CELEBRATE) };
       flashes.push({ t: at + 0.05, amp: 0.45, dur: 0.3 });
       shakes.push({ t: at + 0.1, amp: 0.5, dur: 0.4 });
-      sfx.push({ t: at, type: 'jackpot' }, { t: fly[0], type: 'whoosh' }, { t: cs, type: 'count', dur: 1.4 }, { t: ce, type: 'countEnd' });
+      sfx.push({ t: at, type: 'jackpot' });
+      if (JP_SHOW_TIERS.includes(round.jackpot)) {
+        // The whole screen: the box's name and JACKPOT, the amount counting
+        // up there and in the meter.
+        const sh = jackpotShow(round.jackpot, at + 0.35, amount);
+        pushKeys(meterKeys, [key(sh.countStart, prev, { outSpeed: (amount / 1.4) * 1.25 }), key(sh.countEnd, prev + amount, { inInf: 0.6, hold: true })]);
+        showFx(sh);
+        pres.jpShows = [sh];
+        pres.jackpot = { tier: round.jackpot, at, fly: null, countStart: sh.countStart, countEnd: sh.countEnd, amount, end: sh.end };
+      } else {
+        const fly = [at + 0.55, at + 1.15];
+        const cs = fly[1];
+        const ce = cs + 1.4;
+        pushKeys(meterKeys, [key(cs, prev, { outSpeed: (amount / 1.4) * 1.25 }), key(ce, prev + amount, { inInf: 0.6, hold: true })]);
+        pres.jackpot = { tier: round.jackpot, at, fly, countStart: cs, countEnd: ce, amount, end: Math.max(ce + 0.6, at + JP_CELEBRATE) };
+        sfx.push({ t: fly[0], type: 'whoosh' }, { t: cs, type: 'count', dur: 1.4 }, { t: ce, type: 'countEnd' });
+      }
       end = pres.jackpot.end;
     }
 
@@ -1307,7 +1340,8 @@ export function buildTimeline(project) {
     rounds,
     pots: potCfg.on ? { count: potCfg.count, hits: potHits.sort((a, b) => a[0] - b[0]), charges: potCharges, show: potShow, valueKeys: potValueKeys } : null,
     // Jackpot boxes: when each is won (and for how much) or blinks.
-    jackpots: jpCfg.on ? { hits: jp.hits.sort((a, b) => a.t - b.t), blinks: jp.blinks.sort((a, b) => a.t - b.t) } : null,
+    // Jackpot coins (coinSyms) show only their name: their box shows the value.
+    jackpots: jpCfg.on ? { hits: jp.hits.sort((a, b) => a.t - b.t), blinks: jp.blinks.sort((a, b) => a.t - b.t), coinSyms: hsCfg.coins.map((c, i) => (jpShown(c.id) ? lay.coinBase + i : null)).filter((x) => x != null) } : null,
     initialGrid,
     tiers,
     orbSym: ctx.orbSym,

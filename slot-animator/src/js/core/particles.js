@@ -199,6 +199,8 @@ export function scheduleParticles(tl, project) {
       }
     }
     if (p.grand) add('grand', 'Grand', cfg.grand, p.grand.start + 0.1, p.grand.countEnd, p.grand.end, { kind: 'screen' }, 'under');
+    // A Major jackpot's full-screen moment throws the Grand's particles.
+    for (const sh of p.jpShows || []) add('jackpot', 'Major jackpot', cfg.grand, sh.start + 0.1, sh.countEnd, sh.end, { kind: 'screen' }, 'under');
     if (p.banner) add('feature', 'Feature', cfg.feature, p.banner.start + 0.1, p.banner.end - 0.5, p.banner.end + 0.6, { kind: 'screen' }, 'over');
     if (p.wheel && !p.wheel.noWin) add('wheel', 'Wheel prize', cfg.wheel, p.wheel.prizeStart, p.wheel.prizeStart + 1.2, p.wheel.outEnd, { kind: 'wheel' }, 'under');
     if (p.coinBurst) add('medium', 'Medium win', cfg.medium, p.coinBurst.start, p.coinBurst.start + 0.6, (p.steps?.length ? p.steps[p.steps.length - 1].end : p.coinBurst.start + 2) + 0.6, { kind: 'window' }, 'over');

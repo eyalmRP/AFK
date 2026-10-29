@@ -73,8 +73,14 @@ the result as an editable **After Effects project**.
     counts on top). A won box pops, glows and a light sweeps across it, a
     ring and sparks burst from it, and a running box shows what it paid for
     a moment before it starts again from its seed; a jackpot coin landing
-    makes its box blink. Each pays what its box shows at that moment. With
-    the pots on, boxes stand at the sides or below. `core/jackpots.js`.
+    makes its box blink. Each pays what its box shows at that moment. A
+    Major (from a coin or a round) also takes the whole screen: MAJOR
+    JACKPOT and its amount counting up, the meter counting with it, the
+    collect waiting for it to end (`JP_SHOW_TIERS`). Jackpot coins show
+    only their name; their box shows the value. Your own box art can
+    replace each painted plate (the name written on it or not); in After
+    Effects it is the plate in that box's comp. With the pots on, boxes
+    stand at the sides or below. `core/jackpots.js`.
   - Pots above the machine (Features tab): a pot of gold, a pot of gems
     and a pot of fruits stand on the frame's top edge, peeking over it,
     where the title was. 1 to 3 pots; their size, spacing, how much hides

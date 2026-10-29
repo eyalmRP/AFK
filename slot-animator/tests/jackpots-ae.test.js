@@ -182,3 +182,37 @@ test('After Effects: boxes split on both sides, running, through every format; n
   wq.game = 'wheel';
   assert.equal(buildAEData(wq, buildTimeline(wq), computeLayout(wq), {}).jackpots, null);
 });
+
+test('After Effects: a Major jackpot gets its full-screen moment (title, count on its own control); jackpot coins carry no value', () => {
+  const p = jackpotsProject();
+  const tl = buildTimeline(p);
+  const L = computeLayout(p);
+  const data = buildAEData(p, tl, L, { titleKeys: ['total', 'holdspin', 'grand', 'jp_major', ...p.tiers.map((t) => t.id)], hasLogo: true });
+  const files = [...aeAssetFiles(data)];
+  assert.ok(files.includes(data.assets.titles.jp_major), 'the MAJOR JACKPOT title ships');
+  const { env, log } = createAE({ files: new Set(files.map((f) => `/pkg/${f}`)) });
+  runScript(buildAEScript([data]), env);
+  assert.deepEqual(log.alerts, []);
+  const R = data.rounds.find((r) => r.jpShows);
+  const [S] = R.jpShows;
+  assert.equal(S.name, 'MAJOR');
+  const comp = log.comps.find((c) => c.layers?.list.some((l) => l.name === 'MAJOR JACKPOT 1 CTRL'));
+  assert.ok(comp, 'its count has its own control');
+  assert.ok(comp.layers.list.some((l) => l.name === 'Title jp_major'));
+  const sh = tl.rounds[R.index].pres.jpShows[0];
+  const ctrl = comp.layers.list.find((l) => l.name === 'MAJOR JACKPOT 1 CTRL');
+  const amount = ctrl.property('ADBE Effect Parade').children[0].property(1);
+  // Keyed from 0 at the count's start to the amount at its end, in the round's time.
+  const ks = amount.keys;
+  assert.equal(ks.length, 2);
+  assert.ok(near(ks[0].t, sh.countStart - R.start) && ks[0].v === 0);
+  assert.ok(near(ks[1].t, sh.countEnd - R.start) && near(ks[1].v, sh.amount, 0.01));
+  // Jackpot coins show their name only: no value text rides on them.
+  const jpSyms = new Set(tl.jackpots.coinSyms);
+  assert.ok(jpSyms.size > 0);
+  for (const r of data.rounds) for (const h of r.holdspin?.hits || []) assert.equal(h.lab == null, jpSyms.has(h.s), `hit ${h.s}`);
+  for (const r of data.rounds) for (const ld of r.lands) if (jpSyms.has(ld.s)) assert.ok(ld.coin && !ld.lab);
+  // The collect still names each prize.
+  const C = data.rounds.find((r) => r.collect);
+  assert.ok(C.collect.items.every((it) => /^\$/.test(it.text)));
+});

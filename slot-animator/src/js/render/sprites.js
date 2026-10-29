@@ -7,7 +7,7 @@ import { symbolLayout, holdSpinConfig } from '../core/coins.js';
 import { wheelConfig, segmentLayout, labelPalette, iconName } from '../core/wheel.js';
 import { paintBuiltin, paintCoinSymbol, paintEmptyCell, paintPot, metalGradient, roundRect, starPath, sparkle, METALS } from './paint.js';
 import { potsConfig } from '../core/pots.js';
-import { jackpotsConfig, JP_TEXT } from '../core/jackpots.js';
+import { jackpotsConfig, JP_TEXT, JP_SHOW_TIERS } from '../core/jackpots.js';
 import { COIN_GLOW } from '../core/coins.js';
 
 export function canvas(w, h) {
@@ -62,6 +62,7 @@ export async function loadProjectImages(project) {
     logo: await opt(project.assets.logo),
     wheel: await loadWheelArt(project, opt),
     pots: await loadPotArt(project, opt),
+    jackpots: await loadJackpotArt(project, opt),
   };
 }
 
@@ -70,6 +71,13 @@ export async function loadPotArt(project, load) {
   const cfg = potsConfig(project);
   if (!cfg.on) return [];
   return Promise.all(cfg.items.map(async (it) => (it.src && (await load(it.src).catch(() => null))) || paintPot(it.art, 512)));
+}
+
+// Your own jackpot box art, per box (null: the painted plate).
+export async function loadJackpotArt(project, load) {
+  const cfg = jackpotsConfig(project);
+  if (!cfg.on) return [];
+  return Promise.all(cfg.tiers.map(async (t) => (t.art && (await load(t.art).catch(() => null))) || null));
 }
 
 // The wheel's uploaded parts, segment icons and the centre icon. Built-in
@@ -495,11 +503,23 @@ function paintLogo(L, project, theme, img) {
 // the tier's name at the top; the value is drawn live under it. Painted at
 // the box's size, with room around it for the glow. Returns { img, pad }.
 const JP_PANELS = { gold: ['#3a2304', '#120801'], fire: ['#3b0d05', '#140302'], violet: ['#2a0b4d', '#0c0219'], aqua: ['#05304d', '#010e1c'], emerald: ['#053d26', '#01140c'], rose: ['#43082c', '#16020e'], silver: ['#2a3140', '#0b0e14'] };
-export function paintJackpotBox(w, h, palette, label, font) {
+export function paintJackpotBox(w, h, palette, label, font, art = null, names = true) {
   const pad = Math.ceil(h * 0.22);
   const c = canvas(Math.ceil(w + pad * 2), Math.ceil(h + pad * 2));
   const g = c.getContext('2d');
   const titlePal = TITLE_PALETTES[palette] ? palette : palette === 'emerald' ? 'aqua' : 'gold';
+  // Your own art: fitted inside the box, the name on it if you want it.
+  if (art) {
+    const f = fit(art.naturalWidth || art.width, art.naturalHeight || art.height, w, h);
+    g.drawImage(art, pad + (w - f.w) / 2, pad + (h - f.h) / 2, f.w, f.h);
+    const name = String(label || '').trim();
+    if (names && name) {
+      const t = paintTitle(name, font, Math.round(h * JP_TEXT.labelPx), titlePal);
+      const k = Math.min(1, (w * 0.8) / t.width);
+      g.drawImage(t, pad + w / 2 - (t.width * k) / 2, pad + h * (0.5 + JP_TEXT.labelY) - (t.height * k) / 2, t.width * k, t.height * k);
+    }
+    return { img: c, pad };
+  }
   const metal = ['violet', 'aqua', 'silver', 'emerald'].includes(palette) ? 'chrome' : 'gold';
   const glow = COIN_GLOW[palette] || COIN_GLOW.gold;
   const r = h * 0.26;
@@ -935,6 +955,9 @@ export function buildResources(project, L, images) {
   make('nearmiss', 'silver', 0.55);
   make('holdspin', 'gold', 0.8);
   make('grand', 'fire', 1.05);
+  // A Major jackpot's full-screen title: its box's name and JACKPOT.
+  const jpc = jackpotsConfig(project);
+  if (jpc.on) for (const tier of jpc.tiers) if (JP_SHOW_TIERS.includes(tier.id)) titles[`jp_${tier.id}`] = paintTitle(`${tier.label} JACKPOT`.trim(), font, Math.round(titlePx * 0.9), TITLE_PALETTES[tier.palette] ? tier.palette : tier.palette === 'emerald' ? 'aqua' : 'gold');
   const segs = project.wheel.segments.length >= 2 ? project.wheel.segments : [{ label: '?', value: 0 }, { label: '?', value: 0 }];
   return {
     theme,
@@ -960,8 +983,8 @@ export function buildResources(project, L, images) {
     pots: L.pots ? L.pots.map((_, i) => (images.pots || [])[i] || paintPot(potsConfig(project).items[i].art, 512)) : [],
     potColors: potsConfig(project).items.map((it) => it.color || '#ffd25a'),
     jackpots: L.jackpots ? L.jackpots.map((b, i) => {
-      const tier = jackpotsConfig(project).tiers[i];
-      return { ...paintJackpotBox(b.w, b.h, tier.palette, tier.label, font), color: COIN_GLOW[tier.palette] || COIN_GLOW.gold };
+      const tier = jpc.tiers[i];
+      return { ...paintJackpotBox(b.w, b.h, tier.palette, tier.label, font, (images.jackpots || [])[i] || null, jpc.artNames), color: COIN_GLOW[tier.palette] || COIN_GLOW.gold };
     }) : [],
     digitCache: new Map(),
     titleCache: new Map(),
