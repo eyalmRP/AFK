@@ -3548,7 +3548,15 @@ function initTips() {
     if (target && target !== tipState.target) later(target, 650);
   });
   document.addEventListener('focusout', () => hideTip());
-  document.addEventListener('pointerdown', () => hideTip(), true);
+  document.addEventListener('pointerdown', (e) => !e.target.closest?.('.help-chip') && hideTip(), true);
+  // Glossary chips open their card on a tap or click too (phones have no
+  // hover, and Safari does not focus a tapped button); again closes it.
+  document.addEventListener('click', (e) => {
+    const chip = e.target.closest?.('.help-chip[data-tip]');
+    if (!chip) return;
+    if (tipState.target === chip) hideTip();
+    else showTip(chip);
+  });
   document.addEventListener('keydown', (e) => e.key === 'Escape' && el.tip && hideTip(), true);
   document.addEventListener('scroll', () => el.tip && hideTip(), true);
 }

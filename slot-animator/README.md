@@ -200,8 +200,8 @@ the result as an editable **After Effects project**.
     next to the cash coin's (the regular coin, changed in Coins). The
     glossary uses the app's tooltip cards: chips under the symbols (each
     role and the cash coin) and under the coins (regular, special, jackpot,
-    empty cell) open the card with its demo, as does each symbol's role
-    menu. The bonus role has its own built-in art (the scatter star,
+    empty cell) open the card with its demo (hover, or tap on a phone;
+    tap again or elsewhere to close), as does each symbol's role menu. The bonus role has its own built-in art (the scatter star,
     BONUS) and demo.
   - Particle art: a built-in particle takes your art (one PNG, or several
     for an animation) from the upload button on its card, keeping its
