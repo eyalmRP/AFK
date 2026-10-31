@@ -487,7 +487,7 @@ const SECTION_ICONS = {
   'win-tiers': 'trophy', 'winning-symbols': 'sparkle', 'win-particles': 'sparkle', 'explosion-templates': 'bolt', 'titles-and-font': 'text', 'win-timing': 'clock',
   intensity: 'bolt', segments: 'wheel', framing: 'target', pointer: 'pointer', spin: 'loop',
   'sound-track': 'sound', 'your-own-sounds': 'sound', 'win-effects': 'bolt', 'after-effects-project': 'download', 'quick-preview-mp4': 'film',
-  symbols: 'grid', 'symbol-types': 'reels', coins: 'coin', 'pot-art': 'coin', 'jackpot-box-art': 'trophy', 'wheel-art': 'wheel', 'scene-art': 'palette', fonts: 'text', 'particle-art': 'sparkle',
+  symbols: 'grid', coins: 'coin', 'pot-art': 'coin', 'jackpot-box-art': 'trophy', 'wheel-art': 'wheel', 'scene-art': 'palette', fonts: 'text', 'particle-art': 'sparkle',
 };
 
 // Each section title gets its own colour, kept from render to render and
@@ -775,7 +775,7 @@ const SEARCH_ACTIONS = {
 };
 
 function spotlight(node) {
-  const target = node.closest('.field, .toggle, .pfx-row, .sym, .stype, .asset-row, .jp-rows, section.group') || node;
+  const target = node.closest('.field, .toggle, .pfx-row, .sym, .asset-row, .jp-rows, section.group') || node;
   target.scrollIntoView({ block: 'center', behavior: reducedMotion() ? 'auto' : 'smooth' });
   target.classList.remove('found');
   void target.offsetWidth;
@@ -4161,7 +4161,8 @@ function coinSection() {
   H.coins.forEach((ct, i) => tiles.append(coinTile(ct, i)));
   return section(
     'Hold & Spin coins',
-    h('p', { class: 'hint' }, 'Their own set, separate from the machine symbols. The first is the regular coin; the others are specials you place in respins. Values are in bets and are shown on the coin (5 shows $5 at a $1 bet). A label is painted on the built-in coin art; uploaded art is used as it is. In After Effects each coin is its own comp.'),
+    h('p', { class: 'hint' }, 'The first is the regular coin; the others are specials you place in respins.'),
+    helpChips({ id: 'coin-kinds' }, 'What each coin does', COIN_CHIPS.map(([k, n]) => helpChip({ id: `coin-kinds-help-${k}` }, n))),
     tiles,
     H.coins.length < 8
       ? button('Add a coin type', () => {
@@ -4255,7 +4256,7 @@ function jackpotArtSection() {
   };
   return section(
     'Jackpot box art',
-    h('p', { class: 'hint' }, 'Your art fills the box and its value is written over it; a wide PNG suits it best. In After Effects each box is its own placeholder comp.'),
+    h('p', { class: 'hint' }, 'A wide PNG fills the box; its value is written over it.'),
     cfg.tiers.map(row),
     cfg.tiers.some((t) => t.art) ? toggleField({ id: 'jp-art-names', label: 'Write the names on your art', checked: J.artNames !== false, onChange: (v) => { J.artNames = v; changed('all'); renderAssets(); }, hint: 'Off when your art already says GRAND, MAJOR…' }) : null,
     link
@@ -4296,100 +4297,45 @@ function potArtSection() {
     );
   return section(
     'Pot art',
-    h('p', { class: 'hint' }, 'A PNG of the pot alone, its base at the bottom: it stands on the frame. In After Effects each pot is a placeholder comp in Placeholder Comps/Pots.'),
+    h('p', { class: 'hint' }, 'A PNG of the pot alone, its base at the bottom.'),
     T.items.slice(0, cfg.count).map(row),
     link
   );
 }
 
-// What each tab of the bank holds, in a line or two at its top; All lists
-// every tab and opens it.
-const BANK_INTRO = {
-  symbols: 'Every symbol on the reels: its art, role, pay and how often it shows up. Symbol types below says what each role does, with the art it uses (built-in when you have none of your own).',
-  coins: 'The Hold & Spin coins: the regular coin, specials with your own labels and values, and the jackpot coins (Mini, Minor, Major) that win their box. Cash symbols on the slot reels use the regular coin. Plus what an empty cell shows.',
-  effects: 'The particle art the win explosions throw, built-in or yours, and how the drawn win effects (rays, shockwaves, frames) are replaced in After Effects.',
-  wheel: 'The wheel\'s face, rim, hub and pointer, and an icon for every segment and the centre.',
-  scene: 'Everything around the machine: background, frame overlay and logo, and the pots and jackpot boxes while they are on.',
-  sounds: 'Every sound cue, grouped as in the mix. Play one to hear it; upload a file to make it yours.',
-  fonts: 'Fonts you upload for the titles, counters and wheel labels. The font list offers about a hundred more without uploading.',
-};
-
-function bankIntro(filter, game) {
-  if (filter !== 'all') return BANK_INTRO[filter] ? h('p', { class: 'bank-intro' }, icon('info'), h('span', null, BANK_INTRO[filter])) : null;
-  const tabs = bankFilters().filter(([k]) => k !== 'all');
-  return h(
-    'div',
-    { class: 'bank-overview' },
-    tabs.map(([k, label, ic]) =>
-      h('button', { type: 'button', class: 'bank-ov', id: `bank-ov-${k}`, onclick: () => document.getElementById(`bank-f-${k}`)?.click() }, h('span', { class: 'bank-ov-ic' }, icon(ic)), h('strong', null, label), h('span', null, BANK_INTRO[k]))
-    )
-  );
-}
-
-// Every kind of symbol, what it does and the art it uses: yours when the set
-// has one, else the built-in (mystery, collector and the multiplier orb are
-// drawn without one); a missing wild, scatter or bonus can be added.
-const SYMBOL_TYPES = [
-  { role: 'normal', name: 'Paying symbols', text: 'Make the wins: along lines, ways or in clusters. Low or high pay decides which a round set to Auto wins with; Shows up, how often each fills the reels.' },
-  { role: 'wild', name: 'Wild', art: 'wild', text: 'Stands in for any paying symbol to complete a win. A round can make it expand, stick, walk or carry a multiplier.' },
-  { role: 'scatter', name: 'Scatter', art: 'scatter', text: 'Counts anywhere on the reels. Enough of them trigger free spins or the bonus; one short is a near miss, teased on the last reel.' },
-  { role: 'bonus', name: 'Bonus', art: 'bonus', text: 'Triggers the bonus. A machine without a scatter uses it as its scatter.' },
-  { role: 'multiplier', name: 'Multiplier', art: 'orb', builtin: true, text: 'Lands with an x value and flies into the win to multiply it; in tumbles it is an orb that bursts.' },
-  { role: 'mystery', name: 'Mystery', art: 'mystery', builtin: true, text: 'Blocks that land, glow and turn over together into one symbol, revealing a win or keeping a near miss.' },
-  { role: 'collector', name: 'Collector', art: 'collector', builtin: true, text: 'Gathers the value of every cash coin on the reels into the win.' },
-  { role: 'cash', name: 'Cash coin', text: 'A coin with a value on the slot reels; a collector gathers them. Its art is the regular coin in Coins.' },
-];
-
-function addRoleSymbol(type, src = null) {
-  const P = state.project;
-  P.symbols.push({ id: `${type.role}${Date.now().toString(36)}`, name: type.name, role: type.role, tier: 'high', weight: 0, builtin: type.art, src, winAnim: null });
+// Built-in art the machine draws for a role your set lacks (the multiplier
+// orb, the mystery block, the collector) and the cash coin's art, after your
+// symbols, so it can be found and made yours.
+function addRoleSymbol({ role, art, name }, src) {
+  state.project.symbols.push({ id: `${role}${Date.now().toString(36)}`, name, role, tier: 'high', weight: 0, builtin: art, src, winAnim: null });
   changed('all');
   renderAssets();
   renderInspector();
-  toast(`${type.name} added to your symbols${src ? ' with your art' : ''}.`);
 }
 
-function symbolTypesSection() {
-  const P = state.project;
-  const lay = symbolLayout(P);
-  const card = (T) => {
-    const mine = T.role === 'normal' ? P.symbols.filter((s) => !SPECIAL_ROLES.includes(s.role)) : T.role === 'cash' ? [] : P.symbols.filter((s) => s.role === T.role);
-    const virtual = T.builtin && !mine.length;
-    let thumb;
-    if (mine.length) thumb = thumbCanvas(P.symbols.indexOf(mine[0]));
-    else if (T.role === 'cash') thumb = thumbCanvas(lay.coinBase);
-    else if (virtual) thumb = thumbCanvas(T.role === 'multiplier' ? lay.orbSym : T.role === 'mystery' ? lay.mysterySym : lay.collectorSym);
-    else {
-      thumb = h('canvas', { class: 'thumb', width: 96, height: 96 });
-      thumb.getContext('2d').drawImage(paintBuiltin(T.art, 96, fontStack(P.effects.font)), 0, 0);
-    }
-    const status =
-      T.role === 'normal' ? `${mine.length} in your set` : T.role === 'cash' ? 'The regular coin' : mine.length ? `In your set: ${mine.map((s) => s.name).join(', ')}` : virtual ? 'Built-in art' : 'Not in your set';
-    const upload = (label) =>
-      button(label, async () => {
+function builtinSymbolTiles() {
+  const lay = symbolLayout(state.project);
+  const tile = (key, sym, name, note, action) => h('div', { class: 'sym ghost', id: `sg-${key}` }, thumbCanvas(sym), h('div', { class: 'sym-fields' }, h('strong', { class: 'ptile-name', 'data-tip': `sym-roles-help-${key}` }, name), h('span', { class: 'hint' }, note), action));
+  return [
+    ...lay.virtual.map((v) =>
+      tile(v.role, v.sym, v.name, 'Built-in · drawn when a round needs it', button('Use your art', async () => {
         const [f] = await pickFiles('image/*');
-        if (f) addRoleSymbol(T, await readFileAsDataURL(f));
-      }, { class: 'btn small', icon: 'upload', id: `st-up-${T.role}` });
-    const actions =
-      T.role === 'cash'
-        ? moreLink('Asset Bank › Coins', { bank: 'coins', section: 'hold-spin-coins' }, 'Its art')
-        : T.role === 'normal' || mine.length
-          ? button('Show', () => {
-              const tile = document.getElementById(`sym-name-${mine[0].id}`);
-              if (tile) spotlight(tile);
-            }, { class: 'btn small ghost', id: `st-show-${T.role}` })
-          : virtual
-            ? upload('Use your art')
-            : h('div', { class: 'stype-actions' }, button('Add the built-in', () => addRoleSymbol(T), { class: 'btn small', icon: 'plus', id: `st-add-${T.role}` }), upload('Upload'));
-    return h(
-      'div',
-      { class: 'stype', id: `st-${T.role}` },
-      h('div', { class: 'asset-thumb' }, thumb),
-      h('div', { class: 'stype-text' }, h('strong', null, T.name), h('span', { class: 'stype-status' }, status), h('span', { class: 'hint' }, T.text), actions)
-    );
-  };
-  return section('Symbol types', h('div', { class: 'stypes' }, SYMBOL_TYPES.map(card)));
+        if (f) addRoleSymbol(v, await readFileAsDataURL(f));
+      }, { class: 'btn small', icon: 'upload', id: `sg-up-${v.role}` }))
+    ),
+    tile('cash', lay.coinBase, 'Cash coin', 'The regular coin from Coins', button('Change it in Coins', () => goToFeature({ title: 'Asset Bank › Coins', go: { bank: 'coins', section: 'hold-spin-coins' } }), { class: 'btn small ghost', id: 'sg-cash-go' })),
+  ];
 }
+
+// A glossary of chips: each opens the same tooltip card as everywhere else
+// (its demo and a line on what it does). The keys live in ui/tips.js.
+function helpChips(attrs, label, chips) {
+  return h('div', { class: 'help-chips', ...attrs }, h('span', { class: 'help-chips-label' }, label), chips);
+}
+
+const helpChip = (attrs, name) => h('button', { type: 'button', class: 'help-chip', ...attrs }, name);
+const ROLE_CHIPS = [...ROLES.map(([r, l]) => [r, r === 'normal' ? 'Paying' : l]), ['cash', 'Cash coin']];
+const COIN_CHIPS = [['regular', 'Regular coin'], ['special', 'Special coins'], ['jackpot', 'Jackpot coins'], ['empty', 'Empty cell']];
 
 function panelAssets(filter = 'all') {
   const P = state.project;
@@ -4399,6 +4345,7 @@ function panelAssets(filter = 'all') {
   const show = (k) => filter === 'all' || filter === k;
   const tiles = h('div', { class: 'symbols' });
   P.symbols.forEach((s, i) => tiles.append(symbolTile(s, i)));
+  if (game === 'slot') tiles.append(...builtinSymbolTiles());
   const useSet = (set, name) =>
     button(name, () => {
       P.symbols = set.map((s, i) => ({ id: `${set === CANDY_SYMBOLS ? 'c' : 's'}${i}`, src: null, winAnim: null, ...s }));
@@ -4408,14 +4355,13 @@ function panelAssets(filter = 'all') {
       renderInspector();
     }, { class: 'btn ghost small', id: `a-set-${set === CANDY_SYMBOLS ? 'candy' : 'classic'}` });
   return [
-    bankIntro(filter, game),
     game !== 'slot' || !show('symbols') ? null : section(
       'Symbols',
-      h('p', { class: 'hint' }, 'PNGs with transparent backgrounds work best; each symbol is fitted to its cell. Give one symbol each the Wild, Scatter and Multiplier roles. Shows up: how often a symbol fills the reels around the wins, with its share of them. Low or high pay: a round whose symbol is Auto wins with a low-pay symbol on a small win and a high-pay one on a bigger win. In After Effects every symbol becomes its own comp.'),
+      h('p', { class: 'hint' }, 'Transparent PNGs work best; each becomes its own comp in After Effects.'),
       tiles,
-      h('div', { class: 'row' }, button('Add symbol images', addSymbols, { class: 'btn', icon: 'upload', id: 'a-add' }), useSet(BUILTIN_SYMBOLS, 'Classic set'), useSet(CANDY_SYMBOLS, 'Candy set'))
+      h('div', { class: 'row' }, button('Add symbol images', addSymbols, { class: 'btn', icon: 'upload', id: 'a-add' }), useSet(BUILTIN_SYMBOLS, 'Classic set'), useSet(CANDY_SYMBOLS, 'Candy set')),
+      helpChips({ id: 'sym-roles' }, 'What each role does', ROLE_CHIPS.map(([k, n]) => helpChip({ id: `sym-roles-help-${k}` }, n)))
     ),
-    game !== 'slot' || !show('symbols') ? null : symbolTypesSection(),
     game === 'wheel' || !show('coins') ? null : coinSection(),
     show('effects') ? particleArtSection() : null,
     show('effects') ? effectsNote() : null,
@@ -4595,7 +4541,7 @@ function particleArtSection() {
   for (const a of P.particles.assets) if (!a.replaces) tiles.append(particleTile(a));
   return section(
     'Particle art',
-    h('p', { class: 'hint' }, 'The art the win explosions throw. Upload one PNG for a still particle, several PNGs for an animated one (a spinning coin, a flapping banknote), or one sprite sheet. A built-in takes your art with the upload button on its card, keeping its name and every place that uses it. Pick which particle each win moment uses in the win particle settings. In After Effects each particle is a placeholder comp.'),
+    h('p', { class: 'hint' }, 'One PNG for a still particle, several for an animation.'),
     tiles,
     h('div', { class: 'row' }, button('Add particle art', addParticleArt, { class: 'btn', icon: 'upload', id: 'pa-add' })),
     moreLink('Effects › Win particles', { tab: 'effects', section: 'win-particles' }, 'Which moment uses which particle')
@@ -4607,7 +4553,7 @@ function particleArtSection() {
 function effectsNote() {
   return section(
     'Win effects',
-    h('p', { class: 'hint' }, 'Light rays, shockwaves, cell frames, coin bursts and the other win effects are drawn live, so there is nothing to upload here. In After Effects each is a placeholder comp in Placeholder Comps/Effects with an FX CONTROLS layer (size, opacity, colour, motion); drop a prerendered movie into one and every use plays it.'),
+    h('p', { class: 'hint' }, 'Drawn live; you replace them in After Effects.'),
     moreLink('Effects › Intensity', { tab: 'effects', section: 'intensity' }, 'How strong each effect is')
   );
 }
@@ -4927,7 +4873,7 @@ function symbolTile(s, i) {
       h(
         'div',
         { class: 'sym-row' },
-        h('select', { id: `sym-role-${s.id}`, 'aria-label': 'Role', onchange: (e) => { s.role = e.target.value; changed('all'); renderAssets(); renderInspector(); } }, ROLES.map(([r, l]) => h('option', { value: r, selected: s.role === r }, l))),
+        h('select', { id: `sym-role-${s.id}`, 'aria-label': 'Role', 'data-tip': `sym-roles-help-${s.role}`, onchange: (e) => { s.role = e.target.value; changed('all'); renderAssets(); renderInspector(); } }, ROLES.map(([r, l]) => h('option', { value: r, selected: s.role === r }, l))),
         h('select', { id: `sym-tier-${s.id}`, 'aria-label': 'Pay', title: 'A round whose symbol is Auto wins with a low-pay symbol on a small win, a high-pay one on a bigger win', onchange: (e) => { s.tier = e.target.value; changed('timeline'); } }, [['low', 'Low pay'], ['high', 'High pay']].map(([v, l]) => h('option', { value: v, selected: s.tier === v }, l)))
       ),
       showsUpField(s),
@@ -5729,7 +5675,7 @@ function wheelArtSection() {
   );
   return section(
     'Wheel art',
-    h('p', { class: 'hint' }, 'Every part of the wheel can be your own art. In After Effects each is a placeholder comp in Placeholder Comps/Wheel.'),
+    h('p', { class: 'hint' }, 'Every part of the wheel can be your own art.'),
     wheelArtRow('Wheel face', 'face', 'Square art for the whole disc. It turns with the wheel and shows through segments with no colour.'),
     wheelArtRow('Rim', 'rim', 'Square art around the wheel; the disc edge sits at 85% of its width.'),
     wheelArtRow('Hub', 'hub', 'The centre piece. Hub size and whether it turns are in the Wheel tab.'),
@@ -5854,7 +5800,7 @@ function fontsSection() {
   );
   return section(
     'Fonts',
-    h('p', { class: 'hint' }, 'Upload TTF or OTF fonts to use for the titles, counters and wheel labels. They ship in the After Effects package; install them there.'),
+    h('p', { class: 'hint' }, 'TTF or OTF, for the titles, counters and wheel labels.'),
     rows.length ? h('div', { class: 'font-rows' }, rows) : h('p', { class: 'hint' }, 'None yet. Without them, pick any font in the font list.'),
     button('Upload fonts', addFonts, { class: 'btn small', icon: 'upload', id: 'font-add' }),
     moreLink('Effects › Titles and font', { tab: 'effects', id: 'fx-font' }, 'Display font')
@@ -6191,7 +6137,7 @@ function soundsSection() {
   };
   return section(
     'Your own sounds',
-    h('p', { class: 'hint' }, 'Replace any cue with a WAV, MP3 or OGG file. It plays from its start at each cue. In After Effects each cue is its own audio layer in the SFX comp.'),
+    h('p', { class: 'hint' }, 'Play any cue; upload a WAV, MP3 or OGG to replace it.'),
     SOUND_GROUPS.map(([k, l]) => {
       const list = SOUND_EVENTS.filter((ev) => (ev.group || 'ui') === k);
       if (!list.length) return null;

@@ -50,6 +50,30 @@ export const TIPS = {
   'jp-decimals-auto': T('features', 'Decimals as the bet', 'Amounts show cents when the bet is typed with them (1.00), whole numbers when not (1). The same setting as Machine › Money, for every amount.'),
   'jp-decimals-0': T('features', 'Whole numbers', 'Every amount without cents: 1,250.'),
   'jp-decimals-2': T('features', 'Two decimals', 'Every amount with cents, even a whole one: 1,250.00.'),
+  // Asset Bank sections: the fuller story behind each one-line hint.
+  'sec:bank/symbols': T('bank:symbols', 'Symbols', 'Each symbol is fitted to its cell. Role: what it does (point at a role, or at the role chips under the symbols). Low or high pay: a round set to Auto wins with a low-pay symbol on a small win, a high-pay one on a bigger win. Shows up: how often it fills the reels around the wins. Built-in art for roles your set lacks sits after your symbols.'),
+  'sec:bank/hold-spin-coins': T('bank:coins', 'Hold & Spin coins', 'Their own set, apart from the symbols. Values are in bets and shown on the coin (5 shows $5 at a $1 bet). The jackpot coins (Mini, Minor, Major) win their box. A label is painted on built-in coin art; your art is used as it is. Cash symbols on the slot reels use the regular coin. In After Effects each coin is its own comp.'),
+  'sec:bank/particle-art': T('bank:effects', 'Particle art', 'The art the win explosions throw: one PNG, several PNGs for an animation (a spinning coin, a flapping banknote), or a sprite sheet. A built-in takes your art from the upload button on its card and keeps its name and every use. Pick which particle each win moment uses in Effects › Win particles. In After Effects each particle is a placeholder comp.'),
+  'sec:bank/win-effects': T('bank:effects', 'Win effects', 'Light rays, shockwaves, cell frames and coin bursts are drawn live. In After Effects each is a placeholder comp in Placeholder Comps/Effects with an FX CONTROLS layer (size, opacity, colour, motion); drop a prerendered movie into one and every use plays it.'),
+  'sec:bank/jackpot-box-art': T('bank:scene', 'Jackpot box art', 'Each box is painted in its colour until you give it art. Names, seeds and colours are with the boxes in Features. In After Effects each box is its own placeholder comp.'),
+  'sec:bank/pot-art': T('bank:scene', 'Pot art', 'Each pot stands on the frame. Which pot is which, its colour and role are with the pots in Features. In After Effects each pot is a placeholder comp in Placeholder Comps/Pots.'),
+  'sec:bank/wheel-art': T('bank:wheel', 'Wheel art', 'The face turns with the wheel and shows through segments with no colour; the rim frames it; the hub sits in the middle; the pointer hinges near its top. In After Effects each is a placeholder comp in Placeholder Comps/Wheel.'),
+  'sec:bank/your-own-sounds': T('bank:sounds', 'Your own sounds', 'Your file plays from its start at each cue, at the track volume and its group level. In After Effects each cue is its own audio layer in the SFX comp.'),
+  'sec:bank/fonts': T('bank:fonts', 'Fonts', 'Your fonts come first in the font list. They ship in the After Effects package; install them there.'),
+  // What each symbol role and coin does: the chips under the symbols and
+  // the coins, and each symbol's role menu.
+  'sym-roles-help-normal': T('bank:symbols', 'Paying symbols', 'Make the wins, along lines, ways or in clusters. Low or high pay decides which one a round set to Auto wins with.', 'pay-mode'),
+  'sym-roles-help-wild': T('bank:symbols', 'Wild', 'Stands in for any paying symbol to complete a win. A round can make it expand, stick, walk or carry a multiplier.', 'expand'),
+  'sym-roles-help-scatter': T('bank:symbols', 'Scatter', 'Counts anywhere on the reels; enough of them trigger free spins or the bonus. One short is a near miss, teased on the last reel.', 'scatter-lit'),
+  'sym-roles-help-multiplier': T('bank:symbols', 'Multiplier', 'Lands with an x value and flies into the win to multiply it. Without one in your set the machine draws its built-in orb.', 'mult'),
+  'sym-roles-help-mystery': T('bank:symbols', 'Mystery', 'Blocks land, glow and turn over together into one symbol. Without one in your set the machine draws its built-in block.', 'mystery'),
+  'sym-roles-help-collector': T('bank:symbols', 'Collector', 'Gathers the value of every cash coin on the reels into the win. Without one in your set the machine draws its built-in collector.', 'collector'),
+  'sym-roles-help-bonus': T('bank:symbols', 'Bonus', 'Triggers the bonus. A machine without a scatter uses it as its scatter.', 'bonus'),
+  'sym-roles-help-cash': T('bank:symbols', 'Cash coin', 'A coin with a value on the slot reels; a collector gathers them. Its art is the regular coin in Coins.', 'cash'),
+  'coin-kinds-help-regular': T('bank:coins', 'Regular coin', 'Lands and locks with a value in Hold & Spin; on the slot reels it is the cash coin.', 'holdspin'),
+  'coin-kinds-help-special': T('bank:coins', 'Special coins', 'Your own coins with a label and values, placed in the respins of a round.'),
+  'coin-kinds-help-jackpot': T('bank:coins', 'Jackpot coins', 'Mini, Minor and Major: collecting one wins its jackpot box; a full board wins the Grand.', 'jackpots'),
+  'coin-kinds-help-empty': T('bank:coins', 'Empty cell', 'What a cell shows before a coin lands. Built-in: a dark socket.'),
   'jp-art-names': T('bank:scene', 'Names on your box art', 'Writes each box\'s name on your uploaded art. Turn it off when your art already says GRAND, MAJOR and so on.'),
   'm-beam-curve-arc': T('features', 'Simple arc beams', 'Each beam bows out in one smooth curve.', 'beam-collect'),
   'm-beam-curve-s': T('features', 'S-curve beams', 'Each beam swings out one way, then the other, like a whip.', 's-curve'),
@@ -148,7 +172,8 @@ export function tipEntries() {
   for (const [key, t] of Object.entries(TIPS)) {
     if (key.startsWith('sec:')) {
       const [tab, section] = key.slice(4).split('/');
-      out.push({ title: t.title, where: WHERE[tab] || tab, keys: t.text, go: { tab, section } });
+      if (tab === 'bank') out.push({ title: t.title, where: 'Asset Bank', keys: t.text, go: { bank: t.tab.slice(5), section } });
+      else out.push({ title: t.title, where: WHERE[tab] || tab, keys: t.text, go: { tab, section } });
     } else if (t.tab === 'round') out.push({ title: t.title, where: WHERE.round, keys: t.text, go: { id: key, round: t.rounds || 'any' } });
     else if (t.tab.startsWith('bank:')) out.push({ title: t.title, where: WHERE[t.tab] || 'Asset Bank', keys: t.text, go: { bank: t.tab.slice(5), id: key } });
     else out.push({ title: t.title, where: WHERE[t.tab] || t.tab, keys: t.text, go: { tab: t.tab, id: key } });

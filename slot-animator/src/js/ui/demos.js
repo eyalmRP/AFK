@@ -575,6 +575,14 @@ export const DEMOS = {
       return [R.pres.steps[0].start - 0.2, R.pres.mult.end + 0.2];
     },
   },
+  // Scatters trigger the bonus: its banner.
+  bonus: {
+    make: () => slot(() => [newRound('bonus', { seed: 4 })]),
+    window: (tl) => {
+      const b = R0(tl).pres.banner;
+      return b ? [b.start - 0.8, b.start + 2] : landed(tl);
+    },
+  },
   mult: {
     make: () => slot(() => [newRound('medium', { seed: 52, lines: [1], count: 4, multipliers: [2, 5] })]),
     window: (tl) => {

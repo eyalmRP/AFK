@@ -193,14 +193,16 @@ the result as an editable **After Effects project**.
     saying why. Section headers have icons and each its own colour (a
     tinted title, never the same as the few above it). Search also reads
     the tooltip texts.
-  - Asset Bank explanations: each tab opens with a line on what it holds;
-    All lists every tab with its line and opens it. Symbol types (in
-    Symbols) is the glossary: a card per kind (paying, wild, scatter,
-    bonus, multiplier, mystery, collector, cash coin) with what it does
-    and the art it uses: yours, the built-in one the machine draws when
-    the set has none (mystery, collector, the multiplier orb: Use your
-    art adds it to the set), or Add the built-in / Upload for a missing
-    wild, scatter or bonus. Cash coins use the regular coin (Coins).
+  - Asset Bank explanations stay short: each section has one line, and
+    hovering its title gives the rest. Under the symbols, the built-in art
+    the machine draws for a role your set lacks (the multiplier orb, the
+    mystery block, the collector) shows as dashed tiles with Use your art,
+    next to the cash coin's (the regular coin, changed in Coins). The
+    glossary uses the app's tooltip cards: chips under the symbols (each
+    role and the cash coin) and under the coins (regular, special, jackpot,
+    empty cell) open the card with its demo, as does each symbol's role
+    menu. The bonus role has its own built-in art (the scatter star,
+    BONUS) and demo.
   - Particle art: a built-in particle takes your art (one PNG, or several
     for an animation) from the upload button on its card, keeping its
     name, its motion and every place that uses it; the trash can puts the
