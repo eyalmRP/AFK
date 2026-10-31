@@ -78,16 +78,17 @@ the result as an editable **After Effects project**.
     Major (from a coin or a round) also takes the whole screen: MAJOR
     JACKPOT and its amount counting up, the meter counting with it, the
     collect waiting for it to end (`JP_SHOW_TIERS`). Jackpot coins show
-    only their name; their box shows the value. Your own box art can
-    replace each painted plate (the name written on it or not); in After
-    Effects it is the plate in that box's comp. With the pots on, boxes
+    only their name; their box shows the value. Your own box art (Asset
+    Bank › Jackpots) can replace each painted plate (the name written on
+    it or not); in After Effects it is the plate in that box's comp. With the pots on, boxes
     stand at the sides or below. `core/jackpots.js`.
   - Pots above the machine (Features tab): a pot of gold, a pot of gems
     and a pot of fruits stand on the frame's top edge, peeking over it,
     where the title was. 1 to 3 pots; their size, spacing, how much hides
     behind the frame and how much room they get above the machine (the
-    machine scales down) are settings, and each pot takes painted or
-    uploaded art and a colour for its beams, glow and nameplate. Beams are
+    machine scales down) are settings, and each pot is gold, gems or
+    fruits (painted) with a colour for its beams, glow and nameplate; your
+    own art for it goes in Asset Bank › Pots. Beams are
     saber beams: a simple arc by default or an S-curve, with bend,
     thickness, travel time and the time between beams. Each cell goes to
     the nearest pot (the pot above its reels), or by symbol (each symbol
@@ -192,6 +193,13 @@ the result as an editable **After Effects project**.
     saying why. Section headers have icons and each its own colour (a
     tinted title, never the same as the few above it). Search also reads
     the tooltip texts.
+  - Art lives in the Asset Bank, one place for everything you can
+    replace (as in After Effects, where each is a placeholder comp):
+    symbols, coins, jackpot box art, pot art, particles, wheel and scene
+    art, fonts. A feature's own settings stay with the feature, which
+    links to its art (and the art back to the feature). Jackpots and Pots
+    show under All while the feature is on; their own filter says how to
+    turn it on.
   - More settings: a setting whose companions live elsewhere links to
     them (Wins › Beam to pots → Features › Pots above the machine, the
     pots → winning symbols, boosters and zoom, Hold & Spin ↔ Asset Bank ›

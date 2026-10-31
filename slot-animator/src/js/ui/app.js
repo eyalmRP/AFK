@@ -36,7 +36,7 @@ import { lineColor, generatePaylines } from '../core/paylines.js';
 import { autoAmount, makeContext, defaultPattern, tumbleEnabled } from '../core/outcomes.js';
 import { orderList } from '../core/order.js';
 import { FORMAT_CHOICES } from '../core/ae-export.js';
-import { loadImage, loadWinAnim, buildResources, fontStack, extraSymbolImages, loadWheelArt, loadPotArt, loadJackpotArt, paintWheelIcon } from '../render/sprites.js';
+import { loadImage, loadWinAnim, buildResources, fontStack, extraSymbolImages, loadWheelArt, loadPotArt, loadJackpotArt, paintWheelIcon, paintJackpotBox } from '../render/sprites.js';
 import { paintBuiltin, paintPot } from '../render/paint.js';
 import { loadParticleSprites, drawParticleList } from '../render/particles.js';
 import { PARTICLE_TEMPLATES, TEMPLATE_BY_ID, BUILTIN_PARTICLES, PARTICLE_MOTIONS, PARTICLE_MOMENTS, PARTICLE_LENGTHS, tierParticles, spawnParticles, particleAssetInfo } from '../core/particles.js';
@@ -228,6 +228,8 @@ const BANK_FILTERS = [
   ['all', 'All'],
   ['symbols', 'Symbols'],
   ['coins', 'Coins'],
+  ['jackpots', 'Jackpots'],
+  ['pots', 'Pots'],
   ['particles', 'Particles'],
   ['wheel', 'Wheel'],
   ['scene', 'Scene'],
@@ -369,7 +371,7 @@ function toggleBank() {
 
 function bankFilters() {
   const game = gameOf();
-  return BANK_FILTERS.filter(([k]) => !(k === 'symbols' && game !== 'slot') && !(k === 'coins' && game === 'wheel'));
+  return BANK_FILTERS.filter(([k]) => !((k === 'symbols' || k === 'pots') && game !== 'slot') && !((k === 'coins' || k === 'jackpots') && game === 'wheel'));
 }
 
 function renderBank() {
@@ -484,7 +486,7 @@ const SECTION_ICONS = {
   'win-tiers': 'trophy', 'winning-symbols': 'sparkle', 'win-particles': 'sparkle', 'explosion-templates': 'bolt', 'titles-and-font': 'text', 'win-timing': 'clock',
   intensity: 'bolt', segments: 'wheel', framing: 'target', pointer: 'pointer', spin: 'loop',
   'sound-track': 'sound', 'your-own-sounds': 'upload', 'after-effects-project': 'download', 'quick-preview-mp4': 'film',
-  symbols: 'grid', coins: 'coin', 'wheel-art': 'wheel', 'scene-art': 'palette', fonts: 'text', 'particle-art': 'sparkle',
+  symbols: 'grid', coins: 'coin', 'pot-art': 'coin', 'jackpot-box-art': 'trophy', 'wheel-art': 'wheel', 'scene-art': 'palette', fonts: 'text', 'particle-art': 'sparkle',
 };
 
 // Each section title gets its own colour, kept from render to render and
@@ -772,7 +774,7 @@ const SEARCH_ACTIONS = {
 };
 
 function spotlight(node) {
-  const target = node.closest('.field, .toggle, .pfx-row, .sym, .asset-row, section.group') || node;
+  const target = node.closest('.field, .toggle, .pfx-row, .sym, .asset-row, .jp-rows, section.group') || node;
   target.scrollIntoView({ block: 'center', behavior: reducedMotion() ? 'auto' : 'smooth' });
   target.classList.remove('found');
   void target.offsetWidth;
@@ -3689,6 +3691,7 @@ function potsSettings() {
     on,
     segmented({ id: 'm-pots-count', label: 'Pots', value: cfg.count, options: [1, 2, 3].map((n) => ({ value: n, label: String(n) })), onChange: (v) => all('count')(Number(v)) }),
     ...T.items.slice(0, cfg.count).map((it, i) => potRow(it, i)),
+    moreLink('Asset Bank › Pot art', { bank: 'pots', id: 'pot-up-0' }, 'Your own pot art'),
     h('h4', { class: 'insp-sub' }, 'What they do'),
     toggleField({
       id: 'm-pots-collect',
@@ -3723,9 +3726,8 @@ function potsSettings() {
   );
 }
 
-// One pot: its art (painted or uploaded) and its colour (beams, glow and
-// nameplate).
-function potRow(it, i) {
+// A pot's art, painted or yours, standing on the thumbnail's floor.
+function potThumb(it) {
   const thumb = h('canvas', { class: 'thumb', width: 96, height: 96 });
   const g = thumb.getContext('2d');
   const paint = (img) => {
@@ -3737,10 +3739,16 @@ function potRow(it, i) {
   };
   if (it.src) optImage(it.src).then((img) => img && paint(img));
   else paint(paintPot(it.art, 192));
+  return thumb;
+}
+
+// One pot: which it is (gold, gems or fruits), its colour (beams, glow and
+// nameplate) and what it does. Your own art for it is in the Asset Bank.
+function potRow(it, i) {
   return h(
     'div',
     { class: 'asset-row pot-row', id: `m-pot-${i}` },
-    h('div', { class: 'asset-thumb' }, thumb),
+    h('div', { class: 'asset-thumb' }, potThumb(it)),
     h(
       'div',
       { class: 'pot-fields' },
@@ -3751,14 +3759,6 @@ function potRow(it, i) {
         renderPanel();
       } }, POT_ARTS.map((a) => h('option', { value: a.id, selected: it.art === a.id }, a.label))),
       h('input', { type: 'color', id: `m-pot-color-${i}`, value: it.color, 'aria-label': `${it.name}: beam colour`, title: 'Beam, glow and nameplate colour', onchange: (e) => { it.color = e.target.value; changed('all'); } }),
-      button('', async () => {
-        const [f] = await pickFiles('image/*');
-        if (!f) return;
-        it.src = await readFileAsDataURL(f);
-        changed('all');
-        renderPanel();
-      }, { class: 'icon-btn tiny', icon: 'upload', title: it.src ? 'Replace the art' : 'Upload your own pot art', id: `m-pot-up-${i}` }),
-      it.src ? button('', () => { it.src = null; changed('all'); renderPanel(); }, { class: 'icon-btn tiny', icon: 'dice', title: 'Back to the painted pot', id: `m-pot-paint-${i}` }) : null,
       h('select', { id: `m-pot-role-${i}`, class: 'pot-role', 'aria-label': `${it.name}: what it does`, onchange: (e) => {
         it.role = e.target.value;
         changed('timeline');
@@ -3902,29 +3902,6 @@ function panelFeatures() {
   ];
 }
 
-// A box's own art: upload (a thumbnail once there), and back to painted.
-function jpArtCell(J, t) {
-  const set = (v) => {
-    J.art = { ...(J.art || {}), [t.id]: v };
-    if (!v) delete J.art[t.id];
-    changed('all');
-    renderPanel();
-  };
-  const up = async () => {
-    const [f] = await pickFiles('image/*');
-    if (!f) return;
-    if (f.size > 4e6) return toast('Keep box art under 4 MB.', 'warn');
-    set(await readFileAsDataURL(f));
-  };
-  if (!t.art) return button('', up, { class: 'icon-btn tiny', icon: 'upload', title: `Upload your own ${t.label} box art`, id: `jp-art-${t.id}` });
-  return h(
-    'div',
-    { class: 'jp-art' },
-    h('button', { type: 'button', class: 'jp-thumb', id: `jp-art-${t.id}`, title: 'Replace the art', onclick: up }, h('img', { src: t.art, alt: '' })),
-    button('', () => set(null), { class: 'icon-btn tiny', icon: 'x', title: 'Back to the painted box', id: `jp-art-clear-${t.id}` })
-  );
-}
-
 // The bet (kept as typed: "1" or "1.00" decides the decimals), the currency
 // (none, a common sign, or your own) and how many decimals amounts show.
 const CURRENCIES = ['', '$', '€', '£', '¥', '₹', '₪', 'R$'];
@@ -4045,8 +4022,7 @@ function jackpotSettings() {
       { class: 'jp-row' },
       h('input', { type: 'text', id: `jp-label-${t.id}`, value: t.label, 'aria-label': `${t.id} box name`, onchange: (e) => setLabel(e.target.value.slice(0, 16)) }),
       h('input', { type: 'number', id: `jp-value-${t.id}`, min: 0, value, 'aria-label': `${t.label} seed value in bets`, onchange: (e) => setValue(e.target.value) }),
-      h('select', { id: `jp-pal-${t.id}`, 'aria-label': `${t.label} colour`, onchange: (e) => setPalette(e.target.value) }, COIN_PALETTES.map((pl) => h('option', { value: pl, selected: t.palette === pl }, pl[0].toUpperCase() + pl.slice(1)))),
-      jpArtCell(J, t)
+      h('select', { id: `jp-pal-${t.id}`, 'aria-label': `${t.label} colour`, onchange: (e) => setPalette(e.target.value) }, COIN_PALETTES.map((pl) => h('option', { value: pl, selected: t.palette === pl }, pl[0].toUpperCase() + pl.slice(1))))
     );
   };
   const placeOpts = JP_PLACES.map((pl) => ({ value: pl.id, label: pl.label, hint: pl.four && cfg.count < 4 ? 'Four boxes only' : (pl.id === 'above' || pl.id === 'ends') && potsOn ? 'The pots stand above the machine' : null }));
@@ -4112,10 +4088,10 @@ function jackpotSettings() {
     }),
     h('p', { class: 'hint' }, `Every amount follows this. Now: ${formatPrize(1250, P.machine.currency || '', moneyDecimals(P))}.`),
     moreLink('Machine › Money', { tab: 'machine', id: 'm-bet' }, 'Bet and currency'),
-    h('div', { class: 'jp-rows' }, h('div', { class: 'jp-row jp-head', 'aria-hidden': 'true' }, h('span', null, 'Name'), h('span', null, 'Seed (× bet)'), h('span', null, 'Colour'), h('span', null, 'Art')), cfg.tiers.map(boxRow)),
-    h('p', { class: 'hint' }, 'Name, seed value (in bets), colour and art per box. They are the Hold & Spin jackpots: the Mini, Minor and Major coins and the Grand prize. Your art fills the box; the value is written over it.'),
+    h('div', { class: 'jp-rows' }, h('div', { class: 'jp-row jp-head', 'aria-hidden': 'true' }, h('span', null, 'Name'), h('span', null, 'Seed (× bet)'), h('span', null, 'Colour')), cfg.tiers.map(boxRow)),
+    h('p', { class: 'hint' }, 'Name, seed value (in bets) and colour per box. They are the Hold & Spin jackpots: the Mini, Minor and Major coins and the Grand prize.'),
+    moreLink('Asset Bank › Jackpot box art', { bank: 'jackpots', id: 'jpa-up-grand' }, 'Your own box art'),
     moreLink('Asset Bank › Coins', { bank: 'coins', section: 'hold-spin-coins' }, 'The jackpot coins'),
-    cfg.tiers.some((t) => t.art) ? toggleField({ id: 'jp-art-names', label: 'Write the names on your art', checked: J.artNames !== false, onChange: (v) => { J.artNames = v; changed('all'); }, hint: 'Off when your art already says GRAND, MAJOR…' }) : null,
     h('h4', { class: 'insp-sub' }, 'What wins them'),
     h('p', { class: 'hint', id: 'jp-wins' }, 'Collecting a Mini, Minor or Major coin wins its box, and a full Hold & Spin board the Grand: each pays what its box shows then. A round can award a box too (Add a feature → Jackpot), and a wheel segment can pay one. A Major also takes the whole screen.'),
     moreLink('Round inspector › Jackpot', { round: JACKPOT_ROUNDS, id: 'ri-jackpot' }, 'A round awards a box'),
@@ -4216,6 +4192,100 @@ function coinSection() {
   );
 }
 
+// Asset Bank: each jackpot box's art, painted in its colour or yours. Its
+// name, seed and colour stay with the boxes in the Features tab.
+function jackpotArtSection() {
+  const P = state.project;
+  const cfg = jackpotsConfig(P);
+  const link = moreLink('Features › Jackpot boxes', { tab: 'features', section: 'jackpot-boxes', id: cfg.on ? 'jp-label-grand' : 'jp-on' }, cfg.on ? 'Names, seeds and colours' : 'Turn them on');
+  if (!cfg.on) return section('Jackpot box art', h('p', { class: 'hint' }, 'The jackpot boxes are off.'), link);
+  const J = P.jackpots;
+  const font = fontStack(P.effects.font);
+  const set = (t, v) => {
+    J.art = { ...(J.art || {}), [t.id]: v };
+    if (!v) delete J.art[t.id];
+    changed('all');
+    renderAssets();
+    if (state.tab === 'features') renderPanel();
+  };
+  const row = (t) => {
+    const thumb = h('canvas', { class: 'thumb', width: 96, height: 96 });
+    const paint = (img) => {
+      const box = paintJackpotBox(150, 76, t.palette, t.label, font, img, cfg.artNames).img;
+      const g = thumb.getContext('2d');
+      const k = Math.min(96 / box.width, 96 / box.height);
+      g.clearRect(0, 0, 96, 96);
+      g.drawImage(box, (96 - box.width * k) / 2, (96 - box.height * k) / 2, box.width * k, box.height * k);
+    };
+    if (t.art) optImage(t.art).then((img) => img && paint(img));
+    else paint(null);
+    return h(
+      'div',
+      { class: 'asset-row' },
+      h('div', { class: 'asset-thumb' }, thumb),
+      h('div', { class: 'asset-text' }, h('strong', null, t.label), h('span', { class: 'hint' }, t.art ? 'Your art.' : `Painted, ${t.palette}.`)),
+      h(
+        'div',
+        { class: 'asset-actions' },
+        button(t.art ? 'Replace' : 'Upload', async () => {
+          const [f] = await pickFiles('image/*');
+          if (!f) return;
+          if (f.size > 4e6) return toast('Keep box art under 4 MB.', 'warn');
+          set(t, await readFileAsDataURL(f));
+        }, { class: 'btn small', id: `jpa-up-${t.id}` }),
+        t.art ? button('Painted', () => set(t, null), { class: 'btn small ghost', id: `jpa-clear-${t.id}`, title: 'Back to the painted box' }) : null
+      )
+    );
+  };
+  return section(
+    'Jackpot box art',
+    h('p', { class: 'hint' }, 'Your art fills the box and its value is written over it; a wide PNG suits it best. In After Effects each box is its own placeholder comp.'),
+    cfg.tiers.map(row),
+    cfg.tiers.some((t) => t.art) ? toggleField({ id: 'jp-art-names', label: 'Write the names on your art', checked: J.artNames !== false, onChange: (v) => { J.artNames = v; changed('all'); renderAssets(); }, hint: 'Off when your art already says GRAND, MAJOR…' }) : null,
+    link
+  );
+}
+
+// Asset Bank: each pot's art, painted or yours. Which pot it is (gold, gems
+// or fruits), its colour and what it does stay with the pots in Features.
+function potArtSection() {
+  const P = state.project;
+  const cfg = potsConfig(P);
+  const link = moreLink('Features › Pots above the machine', { tab: 'features', section: 'pots-above-the-machine', id: cfg.on ? 'm-pot-art-0' : 'm-pots' }, cfg.on ? 'Which pot is which, colours and roles' : 'Turn them on');
+  if (!cfg.on) return section('Pot art', h('p', { class: 'hint' }, 'The pots are off.'), link);
+  const d = defaultPots();
+  const T = P.pots;
+  T.items = d.items.map((it, i) => ({ ...it, ...((T.items || [])[i] || {}) }));
+  const set = (it, v) => {
+    it.src = v;
+    changed('all');
+    renderAssets();
+    if (state.tab === 'features') renderPanel();
+  };
+  const row = (it, i) =>
+    h(
+      'div',
+      { class: 'asset-row' },
+      h('div', { class: 'asset-thumb' }, potThumb(it)),
+      h('div', { class: 'asset-text' }, h('strong', null, it.name), h('span', { class: 'hint' }, it.src ? 'Your art.' : 'Painted.')),
+      h(
+        'div',
+        { class: 'asset-actions' },
+        button(it.src ? 'Replace' : 'Upload', async () => {
+          const [f] = await pickFiles('image/*');
+          if (f) set(it, await readFileAsDataURL(f));
+        }, { class: 'btn small', id: `pot-up-${i}` }),
+        it.src ? button('Painted', () => set(it, null), { class: 'btn small ghost', id: `pot-clear-${i}`, title: 'Back to the painted pot' }) : null
+      )
+    );
+  return section(
+    'Pot art',
+    h('p', { class: 'hint' }, 'A PNG of the pot alone, its base at the bottom: it stands on the frame. In After Effects each pot is a placeholder comp in Placeholder Comps/Pots.'),
+    T.items.slice(0, cfg.count).map(row),
+    link
+  );
+}
+
 function panelAssets(filter = 'all') {
   const P = state.project;
   el.thumbs = [];
@@ -4240,6 +4310,9 @@ function panelAssets(filter = 'all') {
       h('div', { class: 'row' }, button('Add symbol images', addSymbols, { class: 'btn', icon: 'upload', id: 'a-add' }), useSet(BUILTIN_SYMBOLS, 'Classic set'), useSet(CANDY_SYMBOLS, 'Candy set'))
     ),
     game === 'wheel' || !show('coins') ? null : coinSection(),
+    // Off, they show only under their own filter, saying how to turn them on.
+    game !== 'wheel' && show('jackpots') && (filter === 'jackpots' || jackpotsConfig(P).on) ? jackpotArtSection() : null,
+    game === 'slot' && show('pots') && (filter === 'pots' || potsConfig(P).on) ? potArtSection() : null,
     show('particles') ? particleArtSection() : null,
     show('wheel') ? wheelArtSection() : null,
     !show('scene') ? null : section(

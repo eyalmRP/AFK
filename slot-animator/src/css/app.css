@@ -3090,38 +3090,9 @@ body.dragging .bank-head {
 
 .jp-row {
   display: grid;
-  grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr) minmax(0, 0.95fr) 52px;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr) minmax(0, 0.95fr);
   gap: 6px;
   align-items: center;
-}
-
-.jp-art {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-}
-
-.jp-thumb {
-  display: grid;
-  place-items: center;
-  width: 28px;
-  height: 22px;
-  padding: 1px;
-  border: 1px solid var(--line-2);
-  border-radius: 5px;
-  background: var(--surface-2);
-  cursor: pointer;
-}
-
-.jp-thumb img {
-  max-width: 100%;
-  max-height: 100%;
-  object-fit: contain;
-}
-
-.jp-art .icon-btn.tiny {
-  width: 22px;
-  height: 22px;
 }
 
 .jp-row input,
