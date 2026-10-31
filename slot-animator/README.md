@@ -199,7 +199,8 @@ the result as an editable **After Effects project**.
     slider (only in wins, rarely, sometimes, often, very often) for how
     often it fills the reels around the wins, with its share of them. Wilds,
     scatters and the like show up only where a round puts them. Removing
-    anything in the bank is a trash can.
+    anything in the bank, a win tier, a wheel segment or a tumble win is
+    a trash can.
   - Art and sounds live in the Asset Bank, one place for everything you
     can replace (as in After Effects, where each is a placeholder comp or
     its own layer). A side bar like the main rail picks the kind (a row

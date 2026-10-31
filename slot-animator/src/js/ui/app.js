@@ -2866,7 +2866,7 @@ function renderInspector() {
                 changed(kind);
                 refreshList();
                 renderInspector();
-              }, { class: 'icon-btn tiny', icon: 'x', title: 'Remove this tumble win', id: `ri-chain-del-${k}` })),
+              }, { class: 'icon-btn tiny', icon: 'trash', title: 'Remove this tumble win', id: `ri-chain-del-${k}` })),
               selectField({ id: `ri-chain-sym-${k}`, label: 'Symbol', value: st.symbol || 'auto', options: symbolOptions(), onChange: (v) => { st.symbol = v; changed(kind); } }),
               countField(`ri-chain-n-${k}`, stPattern, st.count || chainCount(0), (v) => {
                 st.count = v;
@@ -5116,7 +5116,7 @@ function tierEditor() {
           changed('all');
           renderPanel();
           renderSequence();
-        }, { class: 'icon-btn tiny', icon: 'x', title: P.tiers.length <= 1 ? 'Keep at least one tier' : 'Remove tier', id: `tier-del-${t.id}`, disabled: P.tiers.length <= 1 })
+        }, { class: 'icon-btn tiny', icon: 'trash', title: P.tiers.length <= 1 ? 'Keep at least one tier' : 'Remove tier', id: `tier-del-${t.id}`, disabled: P.tiers.length <= 1 })
       )
     );
   });
@@ -5429,7 +5429,7 @@ function segmentRow(P, W, s, i) {
       changed('all');
       renderPanel();
       renderInspector();
-    }, { class: 'icon-btn tiny', icon: 'x', title: 'Remove segment', id: `seg-del-${i}` })
+    }, { class: 'icon-btn tiny', icon: 'trash', title: 'Remove segment', id: `seg-del-${i}` })
   );
 }
 
