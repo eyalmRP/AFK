@@ -51,3 +51,8 @@ python3 scripts/sync_roster.py             # list heroes that are new in the gam
 Code layout: `src/js/engine.js` (team scoring and search), `src/js/learn.js` (the battle log model), `src/js/store.js` (bank, formations and battle log persistence), `src/js/ai.js` (Claude calls), `src/js/ui/*` (tabs), `src/css/app.css`.
 
 Fan-made and not affiliated with Lilith Games. Hero art belongs to its owners.
+
+## Reel Studio
+
+The slot machine win animator that used to live in `slot-animator/` has its
+own repository now: https://github.com/eyalmRP/reel-studio.
