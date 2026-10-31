@@ -8,8 +8,10 @@ import { ASCENSIONS, LIMITS, CLASSES, ELDER_MAX, BEAST_LEVEL_MAX, BEAST_BUFF_TOT
 const LOCAL_KEY = 'afk-codex-bank-v1';
 const LOCAL_FORMATIONS = 'afk-codex-formations-v1';
 const LOCAL_BATTLES = 'afk-codex-battles-v1';
+const LOCAL_TOP = 'afk-codex-top-formations-v1';
 // One cloud document holds the whole log; 400 battles stay well inside its 256 KiB.
 export const BATTLES_MAX = 400;
+export const TOP_MAX = 600;
 
 const listeners = new Set();
 
@@ -111,9 +113,14 @@ export const formations = { updatedAt: 0, items: [] };
 // their combined power kept in `power` as it was when saved).
 export const battles = { updatedAt: 0, items: [] };
 
+// Top players' formations (Battles tab): lineups with no opponent, for which
+// heroes top players field together and where they place them.
+// An item is {id, at, mode, src, heroes: {F1: id, ...}, beast, label}.
+export const topFormations = { updatedAt: 0, items: [] };
+
 export const sync = { mode: 'local', status: 'idle' }; // mode: local | cloud
 
-let remote = null; // { bankRef, formationsRef, battlesRef }
+let remote = null; // { bankRef, formationsRef, battlesRef, topRef }
 
 export function defaultEntry() {
   return {
@@ -312,6 +319,40 @@ export function deleteBattle(id) {
   touchBattles();
 }
 
+export function sanitizeTop(f) {
+  const heroes = {};
+  for (const p of POSITIONS) if (f?.heroes?.[p]) heroes[p] = String(f.heroes[p]).slice(0, 60);
+  return {
+    id: String(f?.id || 't' + Date.now().toString(36)).slice(0, 40),
+    at: Number(f?.at) || Date.now(),
+    mode: f?.mode ? String(f.mode).slice(0, 60) : null,
+    src: f?.src === 'screenshot' ? 'screenshot' : 'manual',
+    heroes,
+    beast: f?.beast ? String(f.beast).slice(0, 60) : null,
+    label: f?.label ? String(f.label).slice(0, 80) : '',
+  };
+}
+
+export function addTopFormations(list) {
+  const now = Date.now();
+  const items = list.map((f, i) => sanitizeTop({ ...f, id: 't' + (now + i).toString(36) + Math.random().toString(36).slice(2, 5), at: f.at || now - i }));
+  topFormations.items = [...items, ...topFormations.items].slice(0, TOP_MAX);
+  touchTop();
+  return items;
+}
+
+export function deleteTopFormation(id) {
+  topFormations.items = topFormations.items.filter((f) => f.id !== id);
+  touchTop();
+}
+
+function touchTop() {
+  topFormations.updatedAt = Date.now();
+  local.set(LOCAL_TOP, topFormations);
+  emit();
+  pushTop();
+}
+
 function touchBattles() {
   battles.updatedAt = Date.now();
   local.set(LOCAL_BATTLES, battles);
@@ -390,6 +431,30 @@ const pushBattles = debounce(async () => {
   }
 }, 700);
 
+let topWriting = false;
+let topDirty = false;
+const pushTop = debounce(async () => {
+  if (!remote) return;
+  if (topWriting) {
+    topDirty = true;
+    return;
+  }
+  topWriting = true;
+  try {
+    await remote.topRef.set(JSON.parse(JSON.stringify(topFormations)));
+  } catch (e) {
+    sync.status = 'error';
+    sync.error = e?.code || 'unavailable';
+    emitSync();
+  } finally {
+    topWriting = false;
+    if (topDirty) {
+      topDirty = false;
+      pushTop();
+    }
+  }
+}, 700);
+
 const syncListeners = new Set();
 export function onSyncChange(fn) {
   syncListeners.add(fn);
@@ -408,6 +473,11 @@ export function loadLocal() {
     battles.updatedAt = b.updatedAt || 0;
     battles.items = b.items.map(sanitizeBattle).slice(0, BATTLES_MAX);
   }
+  const t = local.get(LOCAL_TOP);
+  if (t && Array.isArray(t.items)) {
+    topFormations.updatedAt = t.updatedAt || 0;
+    topFormations.items = t.items.map(sanitizeTop).slice(0, TOP_MAX);
+  }
 }
 
 export async function connectRemote() {
@@ -421,8 +491,9 @@ export async function connectRemote() {
     const bankRef = db.doc(`data/users/${uid}/bank`);
     const formationsRef = db.doc(`data/users/${uid}/formations`);
     const battlesRef = db.doc(`data/users/${uid}/battles`);
-    const [snap, fsnap, bsnap] = await Promise.all([bankRef.get(), formationsRef.get(), battlesRef.get()]);
-    remote = { bankRef, formationsRef, battlesRef };
+    const topRef = db.doc(`data/users/${uid}/topFormations`);
+    const [snap, fsnap, bsnap, tsnap] = await Promise.all([bankRef.get(), formationsRef.get(), battlesRef.get(), topRef.get()]);
+    remote = { bankRef, formationsRef, battlesRef, topRef };
     sync.mode = 'cloud';
     const cloud = snap.exists ? snap.data() : null;
     if (cloud && (cloud.updatedAt || 0) >= bank.updatedAt) {
@@ -449,6 +520,15 @@ export async function connectRemote() {
       emit();
     } else if (battles.items.length) {
       pushBattles();
+    }
+    const tc = tsnap.exists ? tsnap.data() : null;
+    if (tc && (tc.updatedAt || 0) >= topFormations.updatedAt) {
+      topFormations.updatedAt = tc.updatedAt || 0;
+      topFormations.items = (Array.isArray(tc.items) ? tc.items : []).map(sanitizeTop).slice(0, TOP_MAX);
+      local.set(LOCAL_TOP, topFormations);
+      emit();
+    } else if (topFormations.items.length) {
+      pushTop();
     }
     // Pick up edits made on another device while this page is open.
     bankRef.onSnapshot(

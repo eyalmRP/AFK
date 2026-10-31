@@ -10,7 +10,7 @@ import { ICON } from './icons.js';
 import { board, pickHero, pickBeast, portrait, slotsFromList, beastAllowed, entryCR, heroCR, fmtCR, CR_NOTE, playerLevel } from './common.js';
 import { openHeroDetail } from './heroDetail.js';
 import { openBeastDetail } from './beastDetail.js';
-import { battleRecords, logStatus, logLine } from './battles.js';
+import { battleRecords, logStatus, logLine, learnedTeamFor, learnedLine } from './battles.js';
 import { learnedMap, winChance } from '../learn.js';
 
 const ui = {
@@ -101,8 +101,14 @@ function context() {
     power: ui.pool === 'mine' && ui.weigh === 'power' ? new Map(ownedIds().map((id) => [id, heroCR(getHero(id))])) : null,
     // The battle log: its results always, what it learned only once that proved itself (learn.js).
     records: battleRecords(),
-    learned: learnedMap(logStatus()),
+    // Lessons from battles and top formations are about PvP.
+    learned: pvp() ? learnedMap(logStatus()) : null,
+    learnedTeam: pvp() ? learnedTeamFor(enemyIds()) : null,
   });
+}
+
+function pvp() {
+  return data.modeById.get(ui.modeId)?.category === 'pvp';
 }
 
 function threatChips(ctx) {
@@ -237,6 +243,7 @@ function renderResult(ctx) {
       ${bp.html}
       <ul class="reasons">${reasons}</ul>
       ${s.synergies.length ? `<p class="small"><span class="muted">Synergy:</span> ${s.synergies.map((x) => `${esc(getHero(x.a).name)} + ${esc(getHero(x.b).name)}`).join(', ')}</p>` : ''}
+      ${learnedLine(s.learned)}
     </article>
     <p class="small muted bt-line">${esc(logLine())}</p>`;
   // Individual hero ranking against this enemy.

@@ -10,17 +10,19 @@
 import { esc, $, toast } from '../util.js';
 import { data, hero as getHero, POSITIONS, LIMITS, ASSUMED_BUILDS, BEAST_BUFF_TOTAL, assumedEntry } from '../data.js';
 import { bank, battles, addBattle, addBattles, updateBattle, deleteBattle, BATTLES_MAX } from '../store.js';
-import { learnBattles, LEARN } from '../learn.js';
+import { learnBattles, learnedPairs, learnedTraits, topPairs, topPositions, LEARN } from '../learn.js';
 import { aiState, initAi, readBattleScreenshots, errorCopy } from '../ai.js';
 import { ICON } from './icons.js';
 import { board, pickHero, pickBeast, portrait, heroTile, entryCR, heroCR, fmtCR, playerLevel, beastAllowed, openDrawer, gameFilterBar, handleGameFilter, syncGameFilter } from './common.js';
 import { openHeroDetail } from './heroDetail.js';
 import { openBeastDetail } from './beastDetail.js';
+import { topStatus, renderTop, onTopClick, onTopChange } from './topFormations.js';
 
 const BUILDS = [...Object.entries(ASSUMED_BUILDS).map(([k, b]) => [k, b.label]), ['mine', 'My bank copies (where owned)']];
 const emptySide = () => ({ heroes: {}, level: null, build: 'max', beast: null, beastLevel: 18 });
 
 const ui = {
+  view: 'battles', // battles | top (top players' formations)
   mode: 'arena-of-heroes',
   // The full form (levels, upgrades, beasts): open when asked for, or to edit.
   form: false,
@@ -72,9 +74,41 @@ export function battleRecords() {
   return battles.items.map((b) => ({ id: b.id, date: new Date(b.at).toISOString().slice(0, 10), mode: b.mode, win: sideIds(b.win), lose: sideIds(b.lose), winBeast: b.win.beast, loseBeast: b.lose.beast, winPower: sidePower(b.win), losePower: sidePower(b.lose) }));
 }
 
+// The team-level lessons for makeContext (engine.js learnedTeam): from the
+// battle log, team makeup against this enemy (needs one) and pairs; from top
+// formations, the pairs top players field and where they place heroes. Each
+// part is null until it has proved itself or has enough formations.
+export function learnedTeamFor(enemyIds = []) {
+  const st = logStatus();
+  const top = topStatus();
+  const out = {
+    traits: learnedTraits(st, enemyIds, data.heroById),
+    pairs: learnedPairs(st),
+    topPairs: topPairs(top),
+    positions: topPositions(top),
+  };
+  return Object.values(out).some(Boolean) ? out : null;
+}
+
+const LAYER_NAMES = { traits: 'team makeup', heroes: 'single heroes', pairs: 'hero pairs' };
+
+// "From your logs: ..." for a scored team (engine.js scoreTeam learned).
+export function learnedLine(learned) {
+  if (!learned) return '';
+  const name = (id) => getHero(id)?.name || id;
+  const bits = [];
+  for (const w of learned.why || []) bits.push(`${w.label} ${w.points > 0 ? 'helps' : 'hurts'} against this enemy (${w.points > 0 ? '+' : ''}${w.points.toFixed(1)})`);
+  for (const p of learned.pairs || []) bits.push(`${name(p.a)} + ${name(p.b)} ${p.points > 0 ? 'win more' : 'win less'} together (${p.w}–${p.l} in ${p.n} battles)`);
+  for (const t of learned.top || []) bits.push(`top players field ${name(t.a)} + ${name(t.b)} together ${t.lift.toFixed(1)}× as often as chance (${t.n} formations)`);
+  return bits.length ? `<p class="small"><span class="muted">From your logs:</span> ${esc(bits.join(' · '))}</p>` : '';
+}
+
 // One line for the counter about the learned part.
 export function logLine(st = logStatus()) {
-  if (st.active) return `Your battle log (${st.n} battles) is on: it adjusts ${st.ready} hero${st.ready === 1 ? '' : 'es'} that win more or less than power and tiers predict.`;
+  if (st.active) {
+    const on = Object.entries(st.layers).filter(([, l]) => l.on).map(([k]) => LAYER_NAMES[k]);
+    return `Your battle log (${st.n} battles) is on for ${on.join(', ')}: it adjusts teams that win more or less than power and tiers predict.`;
+  }
   if (st.need) return `Battle log: ${st.n} of ${st.minBattles} battles. The learned part stays off until ${st.minBattles}: add ${st.need} more in the Battles tab (any battles you see, not only yours).`;
   return `Battle log: ${st.n} battles, the learned part is still off (it doesn't beat power and tiers yet on battles it hasn't seen). Keep adding battles.`;
 }
@@ -97,10 +131,23 @@ const pvpModes = () => data.modes.filter((m) => m.category === 'pvp');
 const shotsOn = () => aiState.images && !aiState.disabled;
 
 function render() {
-  root.innerHTML = `
-    <div class="view-head"><div><p class="eyebrow">Teach the counter</p><h2>Battle log</h2>
-      <p>Log any battle you see, yours or other players' (arena records, Legends Championship replays): just the two teams and who won. The more you log, the more the counter learns.</p>
-      <p class="bt-progress"><b>${progressText()}</b></p></div></div>
+  const head = `<div class="view-head"><div><p class="eyebrow">Teach the counter</p><h2>Battle log</h2>
+      <p>Log any battle you see, yours or other players' (arena records, Legends Championship replays): just the two teams and who won. Top players' formations, without opponents, teach which heroes go together. The more you log, the more the counter learns.</p></div></div>
+    <div class="seg bt-views" role="tablist" aria-label="What to log">
+      <button type="button" role="tab" data-view="battles" aria-selected="${ui.view === 'battles'}" aria-pressed="${ui.view === 'battles'}">Battles <span class="count">${battles.items.length || ''}</span></button>
+      <button type="button" role="tab" data-view="top" aria-selected="${ui.view === 'top'}" aria-pressed="${ui.view === 'top'}">Top formations <span class="count">${topStatus().n || ''}</span></button>
+    </div>`;
+  if (ui.view === 'top') {
+    root.innerHTML = `${head}<div id="bt-top"></div>`;
+    renderTop($('#bt-top', root), { shotsOn: shotsOn() });
+    initAi().then(() => {
+      const b = $('[data-top="shot"]', root);
+      if (b) b.hidden = !shotsOn();
+    });
+    return;
+  }
+  root.innerHTML = `${head}
+    <p class="bt-progress"><b>${progressText()}</b></p>
     <section class="bt-add">
       <div class="bt-ways">
         <button class="bt-way" type="button" data-act="shot" id="bt-shot" ${shotsOn() ? '' : 'hidden'} ${ui.reading ? 'disabled' : ''}>${ICON.upload}<span><b>${ui.reading ? `Reading ${ui.reading.done} of ${ui.reading.total}…` : 'Add screenshots'}</b><span class="small muted">Pick as many as you like: Victory or Defeat screens, their stats, battle records or replays. Claude reads them; you confirm.</span></span></button>
@@ -130,7 +177,7 @@ function render() {
 
 // One line on where the log stands, for the top of the tab.
 function progressText(st = logStatus()) {
-  if (st.active) return `${st.n} battles logged. Learning is on: the counter uses them.`;
+  if (st.active) return `${st.n} battles logged. Learning is on for ${Object.entries(st.layers).filter(([, l]) => l.on).map(([k]) => LAYER_NAMES[k]).join(', ')}.`;
   if (st.need) return `${st.n} of ${st.minBattles} battles logged: ${st.need} more before it starts learning.`;
   return `${st.n} battles logged. Learning switches on once it predicts better than power and tiers (details below).`;
 }
@@ -449,38 +496,52 @@ function renderStatus() {
   if (st.need) {
     body = `<p><strong>${st.n} of ${st.minBattles} battles.</strong> Add <strong>${st.need} more</strong> and it starts learning. Until then the counter doesn't use any statistics from the log.</p>
       ${bar}
+      <p class="small muted">It learns in three layers, each switched on only when it predicts battles it hasn't seen better than without it: <b>team makeup</b> (tanks, healers, burst, control, faction stacking and so on, usually the first to switch on), <b>single heroes</b> (each needs ${LEARN.minHeroBattles} battles), and <b>hero pairs</b> (each needs ${LEARN.minPairBattles} battles together, and in practice several hundred battles in all).</p>
       <p class="small muted">Results in the log count straight away, though: when the counter meets a lineup that's in the log (4 or more of the same heroes), it shows how that went and favours the team that beat it, if you have those heroes.</p>
       ${chips ? `<p class="small muted">Heroes logged most:</p>${chips}` : ''}`;
-  } else if (!st.active) {
-    const close = st.heroes.filter((h) => h.n < LEARN.minHeroBattles).slice(0, 4);
-    body = `<p><strong>${st.n} battles: learning is still off.</strong> On battles it wasn't fitted on, what it learned doesn't yet pick winners reliably better than power and tiers alone. It checks again after every battle you add.</p>
-      <p class="small">Each hero needs ${LEARN.minHeroBattles} battles before it gets an adjustment: ${st.ready} ${st.ready === 1 ? 'hero has' : 'heroes have'} that many${close.length ? `; closest: ${close.map((h) => `${esc(getHero(h.id)?.name || h.id)} ${h.n} (${LEARN.minHeroBattles - h.n} more)`).join(', ')}` : ''}. Battles with heroes you meet often teach it fastest; it can take 100 or more when the log mixes many different heroes.</p>
-      ${checkLine(st)}${powerLine(st)}`;
   } else {
-    const ready = st.heroes
-      .filter((h) => h.n >= LEARN.minHeroBattles)
-      .map((h) => ({ ...h, pts: Math.round(Math.max(-LEARN.maxPoints, Math.min(LEARN.maxPoints, h.delta * LEARN.pointsPerDelta)) * 10) / 10 }))
-      .sort((a, b) => b.pts - a.pts);
-    // A long list shows the six biggest each way.
-    const shown = ready.length > 12 ? [...ready.slice(0, 6), ...ready.slice(-6)] : ready;
-    const rows = shown
-      .map((h, i) => {
-        const word = Math.abs(h.pts) < 0.3 ? 'as expected' : h.pts > 0 ? 'wins more than expected' : 'wins less than expected';
-        const gap = ready.length > 12 && i === 6 ? `<tr><td colspan="5" class="small muted">${ready.length - 12} more heroes in between</td></tr>` : '';
-        return `${gap}<tr><td><span class="hero-cell" data-hero="${esc(h.id)}">${portrait(getHero(h.id), { size: 34 })}${esc(getHero(h.id)?.name || h.id)}</span></td><td class="num">${h.n}</td><td class="num">${h.w}–${h.l}</td><td class="num ${h.pts >= 0.3 ? 'bt-up' : h.pts <= -0.3 ? 'bt-down' : ''}">${h.pts >= 0 ? '+' : ''}${h.pts.toFixed(1)}</td><td>${word}</td></tr>`;
-      })
-      .join('');
-    body = `<p><strong>Learning is on: the counter uses your battle log.</strong> With ${st.n} battles it picks winners it wasn't fitted on better than power and tiers alone, so the heroes below get the adjustment shown (counter points; one tier step is 1.5).</p>
-      ${checkLine(st)}${powerLine(st)}
-      <div class="table-wrap"><table class="bank bt-learned"><thead><tr><th>Hero</th><th>Battles</th><th>Won–lost</th><th>Points</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`;
+    body = `<p><strong>${st.n} battles.</strong> ${st.active ? 'The layers marked On are used by the counter.' : "No layer has switched on yet: what it learned doesn't yet pick winners reliably better than power and tiers alone. It checks again after every battle you add."}</p>
+      <div class="bt-layers">${layerRow('traits', st)}${layerRow('heroes', st)}${layerRow('pairs', st)}</div>
+      ${powerLine(st)}`;
   }
   host.innerHTML = `<article class="result-card bt-status ${st.active ? 'on' : ''}"><header><h4>${ICON.spark} What the log has learned</h4><span class="score">${st.active ? 'On' : 'Off'}</span></header>${body}</article>`;
 }
 
-// How the check went, in numbers, for anyone who wants them.
-function checkLine(st) {
-  if (!st.cv) return '';
-  return `<p class="small muted">Check on battles left out of the fit: log-loss ${st.cv.full.toFixed(3)} with the learned adjustments, ${st.cv.base.toFixed(3)} with power and tiers alone (lower is better; it needs to be ${LEARN.margin.toFixed(2)} lower, with room for luck).</p>`;
+const pts = (logit, max = LEARN.maxPoints) => Math.round(Math.max(-max, Math.min(max, logit * LEARN.pointsPerDelta)) * 10) / 10;
+const signed = (v) => `${v >= 0 ? '+' : ''}${v.toFixed(1)}`;
+const cls = (v) => (v >= 0.3 ? 'bt-up' : v <= -0.3 ? 'bt-down' : '');
+
+// One learning layer: on or off, why, and what it learned.
+function layerRow(name, st) {
+  const l = st.layers[name];
+  let detail = '';
+  let table = '';
+  if (name === 'traits') {
+    const shown = st.traits.map((t) => ({ ...t, p: pts(t.w, LEARN.maxTraitPoints) })).filter((t) => Math.abs(t.p) >= 0.3).sort((a, b) => Math.abs(b.p) - Math.abs(a.p)).slice(0, 6);
+    detail = 'Tanks, healers and shielders, burst, control, area damage, buffers, debuffers, faction stacking, and burst against healers.';
+    if (l.on && shown.length) table = `<ul class="bt-traits">${shown.map((t) => `<li><span class="num ${cls(t.p)}">${signed(t.p)}</span> ${esc(t.label)}</li>`).join('')}</ul>`;
+  } else if (name === 'heroes') {
+    const close = st.heroes.filter((h) => h.n < LEARN.minHeroBattles).slice(0, 3);
+    detail = `${l.ready} hero${l.ready === 1 ? ' has' : 'es have'} the ${LEARN.minHeroBattles} battles each needs${close.length ? `; closest: ${close.map((h) => `${esc(getHero(h.id)?.name || h.id)} ${h.n}`).join(', ')}` : ''}.`;
+    if (l.on) {
+      const ready = st.heroes.filter((h) => h.n >= LEARN.minHeroBattles && Number.isFinite(h.delta)).map((h) => ({ ...h, p: pts(h.delta) })).sort((a, b) => b.p - a.p);
+      const shown = ready.length > 12 ? [...ready.slice(0, 6), ...ready.slice(-6)] : ready;
+      table = `<div class="table-wrap"><table class="bank bt-learned"><thead><tr><th>Hero</th><th>Battles</th><th>Won–lost</th><th>Points</th></tr></thead><tbody>${shown
+        .map((h) => `<tr><td><span class="hero-cell" data-hero="${esc(h.id)}">${portrait(getHero(h.id), { size: 34 })}${esc(getHero(h.id)?.name || h.id)}</span></td><td class="num">${h.n}</td><td class="num">${h.w}–${h.l}</td><td class="num ${cls(h.p)}">${signed(h.p)}</td></tr>`)
+        .join('')}</tbody></table></div>`;
+    }
+  } else {
+    detail = `${l.ready} pair${l.ready === 1 ? ' has' : 's have'} the ${LEARN.minPairBattles} battles together each needs. Only pairs whose results clearly stand out are tried, and in simulations even a strong synergy took about 600 battles to show; for synergy sooner, add top formations.`;
+    if (l.on) {
+      const shown = st.pairs.filter((p) => p.screened).map((p) => ({ ...p, p: pts(p.gamma) })).sort((a, b) => b.p - a.p);
+      table = `<div class="table-wrap"><table class="bank bt-learned"><thead><tr><th>Pair</th><th>Together</th><th>Won–lost</th><th>Points</th></tr></thead><tbody>${shown
+        .map((p) => `<tr><td>${esc(getHero(p.a)?.name || p.a)} + ${esc(getHero(p.b)?.name || p.b)}</td><td class="num">${p.n}</td><td class="num">${p.w}–${p.l}</td><td class="num ${cls(p.p)}">${signed(p.p)}</td></tr>`)
+        .join('')}</tbody></table></div>`;
+    }
+  }
+  const cv = l.cv ? `<span class="small muted">Check on unseen battles: log-loss ${l.cv.with.toFixed(3)} with it, ${l.cv.without.toFixed(3)} without (needs ${LEARN.margin.toFixed(2)} lower, with room for luck).</span>` : '';
+  return `<div class="bt-layer ${l.on ? 'on' : ''}"><div class="bt-layer-head"><strong>${esc(LAYER_NAMES[name][0].toUpperCase() + LAYER_NAMES[name].slice(1))}</strong><span class="bt-tag ${l.on ? 'win' : ''}">${l.on ? 'On' : 'Off'}</span></div>
+    <p class="small">${detail}</p>${cv}${table}</div>`;
 }
 
 // What the log says about power: the chance a team 10% stronger wins.
@@ -529,6 +590,18 @@ function openForm() {
 
 function onClick(ev) {
   const t = ev.target;
+  const v = t.closest('[data-view]');
+  if (v) {
+    ui.view = v.dataset.view;
+    render();
+    return;
+  }
+  if (ui.view === 'top') {
+    if (onTopClick(ev, render)) return;
+    const hb = t.closest('[data-hero]');
+    if (hb && root.contains(hb)) openHeroDetail(hb.dataset.hero);
+    return;
+  }
   const sideEl = t.closest('[data-side]');
   const slot = t.closest('[data-slot]');
   if (slot && sideEl) {
@@ -649,6 +722,10 @@ function onClick(ev) {
 
 function onChange(ev) {
   const t = ev.target;
+  if (ui.view === 'top') {
+    onTopChange(ev, render);
+    return;
+  }
   if (t.id === 'bt-mode') {
     ui.mode = t.value;
     render();

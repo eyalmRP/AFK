@@ -196,7 +196,12 @@ export function elderTreeFactors(tree) {
 // used straight away.
 // `learned` is what the battle log taught (learn.js learnedMap): hero id ->
 // {points, n}, passed only once that model has proved itself.
-export function makeContext({ heroes, entries = null, mode = null, category, enemy = [], combos = [], archetypes = [], elderTree = null, power = null, matchups = [], records = [], learned = null }) {
+// `learnedTeam` holds the team-level lessons, each null until it has proved
+// itself: traits (ids -> {points, why}, scoring a team's makeup against this
+// enemy), pairs (pair key -> {points, n}, from the battle log), topPairs
+// (pair key -> {points, n, lift}, heroes top players field together) and
+// positions (hero id -> share of top formations with it in the front line).
+export function makeContext({ heroes, entries = null, mode = null, category, enemy = [], combos = [], archetypes = [], elderTree = null, power = null, matchups = [], records = [], learned = null, learnedTeam = null }) {
   const cat = category || mode?.category || 'pve';
   const ctx = {
     heroes,
@@ -212,6 +217,7 @@ export function makeContext({ heroes, entries = null, mode = null, category, ene
     power: power && power.size ? power : null,
     powerRef: 0,
     learned: learned && learned.size ? learned : null,
+    learnedTeam,
     cache: new Map(),
   };
   if (ctx.power) {
@@ -438,7 +444,36 @@ export function scoreTeam(ctx, ids) {
     coverage.push({ group: g, need, have: groups[g], ok: groups[g] >= need });
   }
 
-  const layout = assignPositions(hs);
+  // What the logs taught about whole teams: the team's makeup against this
+  // enemy, pairs that win together, and pairs top players field together.
+  let learned = null;
+  const lt = ctx.learnedTeam;
+  if (lt && hs.length >= 2) {
+    learned = { traits: 0, why: [], pairs: [], top: [] };
+    const tr = lt.traits?.(hs.map((h) => h.id));
+    if (tr) {
+      learned.traits = tr.points;
+      learned.why = tr.why;
+      total += tr.points;
+    }
+    for (let i = 0; i < hs.length; i++)
+      for (let j = i + 1; j < hs.length; j++) {
+        const k = hs[i].id < hs[j].id ? `${hs[i].id}+${hs[j].id}` : `${hs[j].id}+${hs[i].id}`;
+        const p = lt.pairs?.get(k);
+        if (p) {
+          total += p.points;
+          learned.pairs.push({ a: hs[i].id, b: hs[j].id, ...p });
+        }
+        const t = lt.topPairs?.get(k);
+        if (t) {
+          total += t.points;
+          learned.top.push({ a: hs[i].id, b: hs[j].id, ...t });
+        }
+      }
+    if (!learned.traits && !learned.pairs.length && !learned.top.length) learned = null;
+  }
+
+  const layout = assignPositions(hs, lt?.positions);
   total -= layout.penalty;
 
   let template = null;
@@ -495,17 +530,20 @@ export function scoreTeam(ctx, ids) {
     total += own.bonus;
   }
 
-  return { total, members, synergies, combos, coverage, layout: layout.slots, template, beats, own };
+  return { total, members, synergies, combos, coverage, layout: layout.slots, template, beats, own, learned };
 }
 
 // Two front slots, three back slots. Front goes to the sturdiest heroes.
-export function assignPositions(hs) {
-  const sorted = [...hs].sort((a, b) => frontness(b) - frontness(a));
+// `pref`: hero id -> share of top players' formations with that hero in the
+// front line; where known it replaces the guess from class and role.
+export function assignPositions(hs, pref = null) {
+  const fr = (h) => (pref?.has(h.id) ? 4 * pref.get(h.id) - 0.5 : frontness(h));
+  const sorted = [...hs].sort((a, b) => fr(b) - fr(a));
   const front = sorted.slice(0, 2);
   const back = sorted.slice(2);
   let penalty = 0;
-  for (const h of front) if (frontness(h) < 1) penalty += 1.5;
-  for (const h of back) if (h.position === 'front' && h.class === 'Tank') penalty += 1.0;
+  for (const h of front) if (fr(h) < 1) penalty += 1.5;
+  for (const h of back) if (pref?.has(h.id) ? pref.get(h.id) >= 0.75 : h.position === 'front' && h.class === 'Tank') penalty += 1.0;
   const slots = {};
   front.forEach((h, i) => (slots[POSITIONS[i]] = h.id));
   back.forEach((h, i) => (slots[POSITIONS[2 + i]] = h.id));

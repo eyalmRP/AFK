@@ -192,6 +192,50 @@ Reply with only JSON: {"battles":[{"left":{"heroes":[{"id":"hero id","pos":"F1|F
   return { battles, notes: String(out?.notes || '').slice(0, 400) };
 }
 
+// Read top players' formations (Legends Championship leaders, arena top
+// ranks): lineups only, no opponent. Returns {formations:[{slots, beast, label}], notes}.
+export async function readTopFormations(files, { signal } = {}) {
+  const sample = await initAi();
+  if (!sample) throw { code: 'not_granted' };
+  const prompt = `These are ${files.length} screenshot(s) from the mobile game AFK Arena (not AFK Journey) showing formations of top players: a Legends Championship page or leaderboard, a top player's defense or lineup panel, or a replay. Read every formation shown. A player may show several formations (one per team).
+
+A formation has up to 5 heroes in 2 front slots and 3 back slots.
+- On a lineup panel with a row of 2 above a row of 3, the 2 are the front line (F1, F2 left to right) and the 3 the back line (B1, B2, B3 left to right).
+- On a battle screen each team's front line (2 heroes) is its column nearer the middle and its back line (3) the outer column; number each line top to bottom (F1 top, F2 bottom; B1 top, B2 middle, B3 bottom).
+- When positions are not shown, give pos null and keep the order shown.
+Report the formation's beast if shown, otherwise null. "label" is a short note of where it sits on the screen (for example "rank 1, team 2"); do not include player names.
+
+Heroes (id|name|faction|class):
+${rosterLines()}
+
+Beasts (id|name):
+${(data.beasts || []).map((b) => `${b.id}|${b.name}`).join('\n')}
+
+Reply with only JSON: {"formations":[{"heroes":[{"id":"hero id","pos":"F1|F2|B1|B2|B3|null"}],"beast":null,"label":"rank 1, team 1"}],"notes":"anything the player should check"}`;
+  const out = await sample.json(prompt, { images: files, signal, modelTier: 'default', cache: false });
+  const valid = new Set(data.heroes.map((h) => h.id));
+  const formations = (Array.isArray(out?.formations) ? out.formations : [])
+    .map((f) => {
+      const list = (Array.isArray(f?.heroes) ? f.heroes : [])
+        .filter((h) => h && valid.has(String(h.id)))
+        .slice(0, 5)
+        .map((h) => ({ id: String(h.id), pos: POSITIONS.includes(h.pos) ? h.pos : null }));
+      const slots = {};
+      const seen = new Set();
+      for (const h of list) if (h.pos && !slots[h.pos] && !seen.has(h.id)) (slots[h.pos] = h.id), seen.add(h.id);
+      for (const h of list) {
+        if (seen.has(h.id)) continue;
+        const free = POSITIONS.find((p) => !slots[p]);
+        if (free) (slots[free] = h.id), seen.add(h.id);
+      }
+      const beast = f?.beast && data.beastById?.has(String(f.beast)) ? String(f.beast) : null;
+      return { slots, beast, label: String(f?.label || '').slice(0, 60), positioned: list.some((h) => h.pos) };
+    })
+    .filter((f) => Object.keys(f.slots).length >= 3)
+    .slice(0, 30);
+  return { formations, notes: String(out?.notes || '').slice(0, 400) };
+}
+
 // Read the Elder Tree screen. Returns {core, Warrior, Tank, Ranger, Mage, Support, notes}.
 export async function readElderTree(file, { signal } = {}) {
   const sample = await initAi();

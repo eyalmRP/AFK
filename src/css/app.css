@@ -1214,3 +1214,17 @@ table.bank .input, table.bank .select { padding: 3px 6px; min-height: 30px; font
 .qe-badge.win { background: var(--good); }
 .qe-badge.lose { background: var(--bad); }
 .qe-head { position: sticky; top: -16px; z-index: 6; margin: -16px -16px 0; padding: 12px 16px 10px; background: var(--surface); border-bottom: 1px solid var(--line); display: flex; flex-direction: column; gap: 8px; }
+.bt-views { margin: 4px 0 14px; }
+.bt-views .count { font-family: var(--font-data); font-size: 0.75rem; color: var(--ink-3); margin-left: 4px; }
+.bt-views .count:empty { display: none; }
+.bt-layers { display: flex; flex-direction: column; gap: 10px; }
+.bt-layer { border: 1px solid var(--line); border-radius: var(--r-sm); padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; }
+.bt-layer.on { border-color: color-mix(in srgb, var(--good) 55%, var(--line)); }
+.bt-layer-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.bt-layer p { margin: 0; }
+.bt-tag:not(.win):not(.lose) { color: var(--ink-3); background: var(--surface-2); }
+.bt-traits { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 3px; font-size: 0.9rem; }
+.bt-traits .num { display: inline-block; min-width: 3.2em; font-weight: 700; }
+.bt-traits .bt-up, .bt-list .bt-up { color: var(--good); }
+.bt-traits .bt-down { color: var(--bad); }
+.top-list { grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr)); }

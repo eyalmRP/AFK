@@ -11,6 +11,7 @@ import { ICON } from './icons.js';
 import { board, panel, pickHero, bindFolding, portrait, beastAllowed, heroCR } from './common.js';
 import { openHeroDetail } from './heroDetail.js';
 import { openBeastDetail } from './beastDetail.js';
+import { learnedTeamFor, learnedLine } from './battles.js';
 
 const GROUP_LABEL = { pve: 'Campaign & towers', boss: 'Bosses & realms', pvp: 'PvP', event: 'Events & other' };
 
@@ -82,6 +83,9 @@ function context() {
     archetypes: data.archetypes,
     elderTree: ui.pool === 'mine' && ui.weigh === 'upgrades' ? bank.settings.elderTree : null,
     power: ui.pool === 'mine' && ui.weigh === 'power' ? new Map(ownedIds().map((id) => [id, heroCR(getHero(id))])) : null,
+    // Pairs and placements from the battle log and top formations (PvP only;
+    // team makeup needs an enemy, so it stays with the counter).
+    learnedTeam: mode()?.category === 'pvp' ? learnedTeamFor([]) : null,
   });
 }
 
@@ -158,6 +162,7 @@ function teamCard(t, i, ctx, { label = 'Team', saveable = true } = {}) {
     })
     .join('');
   const syn = score.synergies.slice(0, 4).map((s) => `<li><b>${esc(getHero(s.a).name)} + ${esc(getHero(s.b).name)}</b><span>${esc(s.why || 'known synergy')}</span></li>`).join('');
+  const fromLogs = learnedLine(score.learned);
   const up = ctx.entries ? nextUpgrade(ctx, Object.values(slots)) : null;
   let beastHtml = '';
   let beastId = null;
@@ -186,7 +191,7 @@ function teamCard(t, i, ctx, { label = 'Team', saveable = true } = {}) {
     ${score.template ? `<p class="small"><span class="tag accent">Community template</span> matches "${esc(score.template.name)}" (${score.template.overlap}/${score.template.size} heroes)${swaps ? `, swapping ${swaps}` : ''}</p>` : ''}
     ${t.why ? `<p class="small prose">${esc(t.why)}</p>` : ''}
     ${t.risks ? `<p class="small muted">Risk: ${esc(t.risks)}</p>` : ''}
-    <details><summary class="small">Why these heroes</summary><ul class="reasons" style="margin-top:6px">${members}${syn}</ul></details>
+    <details><summary class="small">Why these heroes</summary><ul class="reasons" style="margin-top:6px">${members}${syn}</ul></details>${fromLogs}
     ${up ? `<p class="small"><strong>Best next upgrade:</strong> ${esc(getHero(up.id).name)} ${esc(up.label)}</p>` : ''}
     ${saveable ? `<div class="toolbar"><button class="btn small" type="button" data-save='${esc(JSON.stringify({ slots, beast: beastId, name: title || `${mode()?.name || 'Team'} ${i + 1}` }))}'>${ICON.save} Save formation</button></div>` : ''}
   </article>`;
