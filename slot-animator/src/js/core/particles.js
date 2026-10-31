@@ -107,17 +107,20 @@ export function tierParticles(project, k) {
 
 // Everything the renderer and the exporter need to know about a particle
 // asset without loading it.
+// An uploaded asset with a built-in's id replaces that built-in's art
+// (replaces: true), keeping its name, its motion unless changed, and every
+// place that picks it.
 export function particleAssetInfo(project, id) {
   const b = BUILTIN_PARTICLES.find((p) => p.id === id);
-  if (b) return { id, name: b.name, motion: b.motion, count: b.variants, anim: false, fps: 24, builtin: true };
   const a = (project.particles?.assets || []).find((p) => p.id === id);
+  if (b && !a) return { id, name: b.name, motion: b.motion, count: b.variants, anim: false, fps: 24, builtin: true };
   if (!a) return particleAssetInfo(project, 'coin');
   const count = a.kind === 'frames' ? a.srcs.length : a.kind === 'sheet' ? Math.max(1, a.count | 0) : 1;
-  return { id, name: a.name || 'Particle', motion: a.motion || 'spin', count, anim: count > 1, fps: a.fps || 24, builtin: false };
+  return { id, name: b?.name || a.name || 'Particle', motion: a.motion || b?.motion || 'spin', count, anim: count > 1, fps: a.fps || 24, builtin: false };
 }
 
 export function particleAssets(project) {
-  return [...BUILTIN_PARTICLES.map((b) => b.id), ...(project.particles?.assets || []).map((a) => a.id)];
+  return [...new Set([...BUILTIN_PARTICLES.map((b) => b.id), ...(project.particles?.assets || []).map((a) => a.id)])];
 }
 
 // ---------- scheduling ----------

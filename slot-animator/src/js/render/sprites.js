@@ -437,20 +437,28 @@ export function paintTitle(text, font, px, paletteName = 'gold') {
   g.lineJoin = 'round';
   const x = w / 2;
   const y = h / 2 + px * 0.04;
+  // The thick outline once, then drawn with its glow and its drop shadow.
+  // The shadows go on the image, not on the text: Safari on iPhone paints
+  // a large text's shadow as a solid box.
+  const o = canvas(w, h);
+  const og = o.getContext('2d');
+  og.font = g.font;
+  og.textAlign = 'center';
+  og.textBaseline = 'middle';
+  og.lineJoin = 'round';
+  og.lineWidth = px * 0.2;
+  og.strokeStyle = pal.outline;
+  og.strokeText(text, x, y);
   g.save();
   g.shadowColor = pal.glow;
   g.shadowBlur = px * 0.32;
-  g.lineWidth = px * 0.2;
-  g.strokeStyle = pal.outline;
-  g.strokeText(text, x, y);
+  g.drawImage(o, 0, 0);
   g.restore();
   g.save();
   g.shadowColor = 'rgba(0,0,0,0.7)';
   g.shadowBlur = px * 0.12;
   g.shadowOffsetY = px * 0.08;
-  g.lineWidth = px * 0.2;
-  g.strokeStyle = pal.outline;
-  g.strokeText(text, x, y);
+  g.drawImage(o, 0, 0);
   g.restore();
   g.lineWidth = px * 0.12;
   g.strokeStyle = metalGradient(g, 0, y - px * 0.6, 0, y + px * 0.6, pal.metal);

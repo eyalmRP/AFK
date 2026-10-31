@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { defaultProject, candyProject, holdSpinProject, wheelProject, newRound } from '../src/js/core/defaults.js';
 import { buildTimeline } from '../src/js/core/timeline.js';
 import { computeLayout } from '../src/js/core/layout.js';
-import { PARTICLE_TEMPLATES, BUILTIN_PARTICLES, PARTICLE_MOTIONS, LOOP, spawnParticles, particleAt, particleCount, particleAssetInfo, particleTime } from '../src/js/core/particles.js';
+import { PARTICLE_TEMPLATES, BUILTIN_PARTICLES, PARTICLE_MOTIONS, LOOP, spawnParticles, particleAt, particleCount, particleAssetInfo, particleAssets, particleTime } from '../src/js/core/particles.js';
 import { buildAEData, buildAEScript } from '../src/js/core/ae-export.js';
 import { createAE, runScript } from './ae-mock.js';
 
@@ -128,6 +128,11 @@ test('particles: asset info for built-ins and uploads', () => {
   assert.deepEqual([particleAssetInfo(p, 'u1').anim, particleAssetInfo(p, 'u1').count, particleAssetInfo(p, 'u1').fps], [true, 8, 30]);
   assert.deepEqual([particleAssetInfo(p, 'u2').anim, particleAssetInfo(p, 'u2').motion], [false, 'flutter']);
   assert.equal(particleAssetInfo(p, 'missing').id, 'coin');
+  // Your art for a built-in: its name and place stay, the art is yours.
+  p.particles.assets.push({ id: 'confetti', replaces: true, kind: 'frames', srcs: ['a', 'b', 'c'], fps: 12 });
+  const c = particleAssetInfo(p, 'confetti');
+  assert.deepEqual([c.name, c.builtin, c.count, c.anim, c.fps, c.motion], ['Confetti', false, 3, true, 12, BUILTIN_PARTICLES.find((b) => b.id === 'confetti').motion]);
+  assert.equal(particleAssets(p).filter((x) => x === 'confetti').length, 1);
 });
 
 test('particles: continuous templates can run until the next round or to the end, looping', () => {

@@ -487,7 +487,7 @@ const SECTION_ICONS = {
   'win-tiers': 'trophy', 'winning-symbols': 'sparkle', 'win-particles': 'sparkle', 'explosion-templates': 'bolt', 'titles-and-font': 'text', 'win-timing': 'clock',
   intensity: 'bolt', segments: 'wheel', framing: 'target', pointer: 'pointer', spin: 'loop',
   'sound-track': 'sound', 'your-own-sounds': 'sound', 'win-effects': 'bolt', 'after-effects-project': 'download', 'quick-preview-mp4': 'film',
-  symbols: 'grid', coins: 'coin', 'pot-art': 'coin', 'jackpot-box-art': 'trophy', 'wheel-art': 'wheel', 'scene-art': 'palette', fonts: 'text', 'particle-art': 'sparkle',
+  symbols: 'grid', 'symbol-types': 'reels', coins: 'coin', 'pot-art': 'coin', 'jackpot-box-art': 'trophy', 'wheel-art': 'wheel', 'scene-art': 'palette', fonts: 'text', 'particle-art': 'sparkle',
 };
 
 // Each section title gets its own colour, kept from render to render and
@@ -775,7 +775,7 @@ const SEARCH_ACTIONS = {
 };
 
 function spotlight(node) {
-  const target = node.closest('.field, .toggle, .pfx-row, .sym, .asset-row, .jp-rows, section.group') || node;
+  const target = node.closest('.field, .toggle, .pfx-row, .sym, .stype, .asset-row, .jp-rows, section.group') || node;
   target.scrollIntoView({ block: 'center', behavior: reducedMotion() ? 'auto' : 'smooth' });
   target.classList.remove('found');
   void target.offsetWidth;
@@ -3221,7 +3221,7 @@ function featCard(f, onRemove) {
   const body = h('div', { class: 'feat-body', id: `feat-body-${f.id}`, hidden: !open }, f.body());
   const sum = h('span', { class: 'feat-sum' }, f.sum());
   const toggle = h('button', { type: 'button', class: 'feat-toggle', id: `feat-${f.id}`, 'aria-expanded': String(open), 'aria-controls': body.id, 'data-tip': f.tip }, icon('chevron'), h('strong', null, f.title));
-  const card = h('section', { class: `feat-card${open ? '' : ' folded'}`, 'data-feat': f.id }, h('header', null, toggle, sum, button('', onRemove, { class: 'icon-btn tiny', icon: 'x', title: `Take ${f.title.toLowerCase()} out of this round`, id: `feat-del-${f.id}` })), body);
+  const card = h('section', { class: `feat-card${open ? '' : ' folded'}`, 'data-feat': f.id }, h('header', null, toggle, sum, button('', onRemove, { class: 'icon-btn tiny', icon: 'trash', title: `Take ${f.title.toLowerCase()} out of this round`, id: `feat-del-${f.id}` })), body);
   toggle.addEventListener('click', () => {
     const now = card.classList.toggle('folded');
     body.hidden = now;
@@ -4302,6 +4302,95 @@ function potArtSection() {
   );
 }
 
+// What each tab of the bank holds, in a line or two at its top; All lists
+// every tab and opens it.
+const BANK_INTRO = {
+  symbols: 'Every symbol on the reels: its art, role, pay and how often it shows up. Symbol types below says what each role does, with the art it uses (built-in when you have none of your own).',
+  coins: 'The Hold & Spin coins: the regular coin, specials with your own labels and values, and the jackpot coins (Mini, Minor, Major) that win their box. Cash symbols on the slot reels use the regular coin. Plus what an empty cell shows.',
+  effects: 'The particle art the win explosions throw, built-in or yours, and how the drawn win effects (rays, shockwaves, frames) are replaced in After Effects.',
+  wheel: 'The wheel\'s face, rim, hub and pointer, and an icon for every segment and the centre.',
+  scene: 'Everything around the machine: background, frame overlay and logo, and the pots and jackpot boxes while they are on.',
+  sounds: 'Every sound cue, grouped as in the mix. Play one to hear it; upload a file to make it yours.',
+  fonts: 'Fonts you upload for the titles, counters and wheel labels. The font list offers about a hundred more without uploading.',
+};
+
+function bankIntro(filter, game) {
+  if (filter !== 'all') return BANK_INTRO[filter] ? h('p', { class: 'bank-intro' }, icon('info'), h('span', null, BANK_INTRO[filter])) : null;
+  const tabs = bankFilters().filter(([k]) => k !== 'all');
+  return h(
+    'div',
+    { class: 'bank-overview' },
+    tabs.map(([k, label, ic]) =>
+      h('button', { type: 'button', class: 'bank-ov', id: `bank-ov-${k}`, onclick: () => document.getElementById(`bank-f-${k}`)?.click() }, h('span', { class: 'bank-ov-ic' }, icon(ic)), h('strong', null, label), h('span', null, BANK_INTRO[k]))
+    )
+  );
+}
+
+// Every kind of symbol, what it does and the art it uses: yours when the set
+// has one, else the built-in (mystery, collector and the multiplier orb are
+// drawn without one); a missing wild, scatter or bonus can be added.
+const SYMBOL_TYPES = [
+  { role: 'normal', name: 'Paying symbols', text: 'Make the wins: along lines, ways or in clusters. Low or high pay decides which a round set to Auto wins with; Shows up, how often each fills the reels.' },
+  { role: 'wild', name: 'Wild', art: 'wild', text: 'Stands in for any paying symbol to complete a win. A round can make it expand, stick, walk or carry a multiplier.' },
+  { role: 'scatter', name: 'Scatter', art: 'scatter', text: 'Counts anywhere on the reels. Enough of them trigger free spins or the bonus; one short is a near miss, teased on the last reel.' },
+  { role: 'bonus', name: 'Bonus', art: 'bonus', text: 'Triggers the bonus. A machine without a scatter uses it as its scatter.' },
+  { role: 'multiplier', name: 'Multiplier', art: 'orb', builtin: true, text: 'Lands with an x value and flies into the win to multiply it; in tumbles it is an orb that bursts.' },
+  { role: 'mystery', name: 'Mystery', art: 'mystery', builtin: true, text: 'Blocks that land, glow and turn over together into one symbol, revealing a win or keeping a near miss.' },
+  { role: 'collector', name: 'Collector', art: 'collector', builtin: true, text: 'Gathers the value of every cash coin on the reels into the win.' },
+  { role: 'cash', name: 'Cash coin', text: 'A coin with a value on the slot reels; a collector gathers them. Its art is the regular coin in Coins.' },
+];
+
+function addRoleSymbol(type, src = null) {
+  const P = state.project;
+  P.symbols.push({ id: `${type.role}${Date.now().toString(36)}`, name: type.name, role: type.role, tier: 'high', weight: 0, builtin: type.art, src, winAnim: null });
+  changed('all');
+  renderAssets();
+  renderInspector();
+  toast(`${type.name} added to your symbols${src ? ' with your art' : ''}.`);
+}
+
+function symbolTypesSection() {
+  const P = state.project;
+  const lay = symbolLayout(P);
+  const card = (T) => {
+    const mine = T.role === 'normal' ? P.symbols.filter((s) => !SPECIAL_ROLES.includes(s.role)) : T.role === 'cash' ? [] : P.symbols.filter((s) => s.role === T.role);
+    const virtual = T.builtin && !mine.length;
+    let thumb;
+    if (mine.length) thumb = thumbCanvas(P.symbols.indexOf(mine[0]));
+    else if (T.role === 'cash') thumb = thumbCanvas(lay.coinBase);
+    else if (virtual) thumb = thumbCanvas(T.role === 'multiplier' ? lay.orbSym : T.role === 'mystery' ? lay.mysterySym : lay.collectorSym);
+    else {
+      thumb = h('canvas', { class: 'thumb', width: 96, height: 96 });
+      thumb.getContext('2d').drawImage(paintBuiltin(T.art, 96, fontStack(P.effects.font)), 0, 0);
+    }
+    const status =
+      T.role === 'normal' ? `${mine.length} in your set` : T.role === 'cash' ? 'The regular coin' : mine.length ? `In your set: ${mine.map((s) => s.name).join(', ')}` : virtual ? 'Built-in art' : 'Not in your set';
+    const upload = (label) =>
+      button(label, async () => {
+        const [f] = await pickFiles('image/*');
+        if (f) addRoleSymbol(T, await readFileAsDataURL(f));
+      }, { class: 'btn small', icon: 'upload', id: `st-up-${T.role}` });
+    const actions =
+      T.role === 'cash'
+        ? moreLink('Asset Bank › Coins', { bank: 'coins', section: 'hold-spin-coins' }, 'Its art')
+        : T.role === 'normal' || mine.length
+          ? button('Show', () => {
+              const tile = document.getElementById(`sym-name-${mine[0].id}`);
+              if (tile) spotlight(tile);
+            }, { class: 'btn small ghost', id: `st-show-${T.role}` })
+          : virtual
+            ? upload('Use your art')
+            : h('div', { class: 'stype-actions' }, button('Add the built-in', () => addRoleSymbol(T), { class: 'btn small', icon: 'plus', id: `st-add-${T.role}` }), upload('Upload'));
+    return h(
+      'div',
+      { class: 'stype', id: `st-${T.role}` },
+      h('div', { class: 'asset-thumb' }, thumb),
+      h('div', { class: 'stype-text' }, h('strong', null, T.name), h('span', { class: 'stype-status' }, status), h('span', { class: 'hint' }, T.text), actions)
+    );
+  };
+  return section('Symbol types', h('div', { class: 'stypes' }, SYMBOL_TYPES.map(card)));
+}
+
 function panelAssets(filter = 'all') {
   const P = state.project;
   el.thumbs = [];
@@ -4319,12 +4408,14 @@ function panelAssets(filter = 'all') {
       renderInspector();
     }, { class: 'btn ghost small', id: `a-set-${set === CANDY_SYMBOLS ? 'candy' : 'classic'}` });
   return [
+    bankIntro(filter, game),
     game !== 'slot' || !show('symbols') ? null : section(
       'Symbols',
       h('p', { class: 'hint' }, 'PNGs with transparent backgrounds work best; each symbol is fitted to its cell. Give one symbol each the Wild, Scatter and Multiplier roles. Shows up: how often a symbol fills the reels around the wins, with its share of them. Low or high pay: a round whose symbol is Auto wins with a low-pay symbol on a small win and a high-pay one on a bigger win. In After Effects every symbol becomes its own comp.'),
       tiles,
       h('div', { class: 'row' }, button('Add symbol images', addSymbols, { class: 'btn', icon: 'upload', id: 'a-add' }), useSet(BUILTIN_SYMBOLS, 'Classic set'), useSet(CANDY_SYMBOLS, 'Candy set'))
     ),
+    game !== 'slot' || !show('symbols') ? null : symbolTypesSection(),
     game === 'wheel' || !show('coins') ? null : coinSection(),
     show('effects') ? particleArtSection() : null,
     show('effects') ? effectsNote() : null,
@@ -4382,30 +4473,56 @@ function forgetParticleAsset(id) {
   for (const r of P.rounds) if (r.particles?.asset === id) r.particles.asset = 'auto';
 }
 
-async function addParticleArt() {
+// One PNG is a still particle; several are the frames of an animated one.
+async function readParticleFiles() {
   const files = await pickFiles('image/png,image/webp,image/gif,image/svg+xml', true);
-  if (!files.length) return;
-  const P = state.project;
-  const id = `p${Date.now().toString(36)}`;
+  if (!files.length) return null;
   const name = files[0].name.replace(/\.[^.]+$/, '').replace(/[_-]?\d+$/, '').slice(0, 24) || 'Particle';
-  if (files.length > 1) {
-    files.sort((a, b) => byName.compare(a.name, b.name));
-    const srcs = [];
-    for (const f of files.slice(0, 120)) srcs.push(await readFileAsDataURL(f));
-    P.particles.assets.push({ id, name, kind: 'frames', srcs, fps: 24, motion: 'spin' });
-    toast(`${name}: a ${srcs.length}-frame particle. Each particle plays it from a random frame.`);
-  } else {
-    P.particles.assets.push({ id, name, kind: 'image', src: await readFileAsDataURL(files[0]), motion: 'spin' });
-    toast(`${name} added. Pick it for a win moment in Effects → Win particles.`);
-  }
+  if (files.length === 1) return { name, art: { kind: 'image', src: await readFileAsDataURL(files[0]) } };
+  files.sort((a, b) => byName.compare(a.name, b.name));
+  const srcs = [];
+  for (const f of files.slice(0, 120)) srcs.push(await readFileAsDataURL(f));
+  return { name, art: { kind: 'frames', srcs, fps: 24 } };
+}
+
+function particlesChanged() {
   changed('all');
   renderAssets();
   if (state.tab === 'effects') renderPanel();
 }
 
+async function addParticleArt() {
+  const got = await readParticleFiles();
+  if (!got) return;
+  const { name, art } = got;
+  state.project.particles.assets.push({ id: `p${Date.now().toString(36)}`, name, motion: 'spin', ...art });
+  toast(art.kind === 'frames' ? `${name}: a ${art.srcs.length}-frame particle. Each particle plays it from a random frame.` : `${name} added. Pick it for a win moment in Effects → Win particles.`);
+  particlesChanged();
+}
+
+// Your art for a built-in particle: it keeps its name, motion and every
+// place that uses it; going back drops your art.
+async function replaceParticleArt(b) {
+  const got = await readParticleFiles();
+  if (!got) return;
+  const P = state.project;
+  const old = P.particles.assets.find((x) => x.id === b.id);
+  P.particles.assets = P.particles.assets.filter((x) => x.id !== b.id);
+  P.particles.assets.push({ id: b.id, name: b.name, replaces: true, motion: old?.motion || b.motion, ...got.art });
+  toast(`${b.name} now uses your art.`);
+  particlesChanged();
+}
+
+function restoreParticleArt(id) {
+  const P = state.project;
+  P.particles.assets = P.particles.assets.filter((x) => x.id !== id);
+  particlesChanged();
+}
+
 function particleTile(a) {
   const P = state.project;
   const builtin = !a.kind;
+  const named = builtin || a.replaces;
   const info = particleAssetInfo(P, a.id);
   const edit = (k, min, max) =>
     h('label', { class: 'mini', for: `pa-${k}-${a.id}` }, h('span', null, k), h('input', { type: 'number', id: `pa-${k}-${a.id}`, min, max, step: 1, value: a[k], onchange: (e) => {
@@ -4415,7 +4532,7 @@ function particleTile(a) {
       changed('all');
       if (k === 'cols' || k === 'rows') renderAssets();
     } }));
-  const what = builtin ? `Built-in · ${info.count > 1 ? `${info.count} variants` : 'one image'}` : a.kind === 'image' ? 'Still image' : `${info.count} frames · ${a.fps} fps`;
+  const what = builtin ? `Built-in · ${info.count > 1 ? `${info.count} variants` : 'one image'}` : `${a.replaces ? 'Your art · ' : ''}${a.kind === 'image' ? 'still image' : `${info.count} frames · ${a.fps} fps`}`;
   return h(
     'div',
     { class: 'sym ptile' },
@@ -4423,7 +4540,7 @@ function particleTile(a) {
     h(
       'div',
       { class: 'sym-fields' },
-      builtin
+      named
         ? h('strong', { class: 'ptile-name' }, a.name)
         : h('input', { type: 'text', id: `pa-name-${a.id}`, value: a.name, 'aria-label': 'Particle name', onchange: (e) => { a.name = e.target.value.slice(0, 24) || 'Particle'; changed('timeline'); if (state.tab === 'effects') renderPanel(); } }),
       h('span', { class: 'hint' }, what),
@@ -4449,20 +4566,21 @@ function particleTile(a) {
           }, { class: 'btn small ghost', id: `pa-still-${a.id}` })
         : null
     ),
-    builtin
-      ? null
-      : h(
-          'div',
-          { class: 'sym-actions' },
-          button('', () => {
-            P.particles.assets = P.particles.assets.filter((x) => x !== a);
-            forgetParticleAsset(a.id);
-            changed('all');
-            renderAssets();
-            if (state.tab === 'effects') renderPanel();
-            renderInspector();
-          }, { class: 'icon-btn tiny', icon: 'trash', title: `Remove ${a.name}`, id: `pa-del-${a.id}` })
-        )
+    h(
+      'div',
+      { class: 'sym-actions' },
+      named ? button('', () => replaceParticleArt(BUILTIN_PARTICLES.find((b) => b.id === a.id)), { class: 'icon-btn tiny', icon: 'upload', title: `Replace the ${a.name} art (one PNG, or several for an animation)`, id: `pa-up-${a.id}` }) : null,
+      a.replaces
+        ? button('', () => restoreParticleArt(a.id), { class: 'icon-btn tiny', icon: 'trash', title: `Remove your art (back to the built-in ${a.name})`, id: `pa-restore-${a.id}` })
+        : builtin
+          ? null
+          : button('', () => {
+              P.particles.assets = P.particles.assets.filter((x) => x !== a);
+              forgetParticleAsset(a.id);
+              particlesChanged();
+              renderInspector();
+            }, { class: 'icon-btn tiny', icon: 'trash', title: `Remove ${a.name}`, id: `pa-del-${a.id}` })
+    )
   );
 }
 
@@ -4473,11 +4591,11 @@ function loadImageSafe(src) {
 function particleArtSection() {
   const P = state.project;
   const tiles = h('div', { class: 'symbols' });
-  for (const b of BUILTIN_PARTICLES) tiles.append(particleTile({ id: b.id, name: b.name }));
-  for (const a of P.particles.assets) tiles.append(particleTile(a));
+  for (const b of BUILTIN_PARTICLES) tiles.append(particleTile(P.particles.assets.find((x) => x.id === b.id) || { id: b.id, name: b.name }));
+  for (const a of P.particles.assets) if (!a.replaces) tiles.append(particleTile(a));
   return section(
     'Particle art',
-    h('p', { class: 'hint' }, 'The art the win explosions throw. Upload one PNG for a still particle, several PNGs for an animated one (a spinning coin, a flapping banknote), or one sprite sheet. Pick which particle each win moment uses in the win particle settings. In After Effects each particle is a placeholder comp.'),
+    h('p', { class: 'hint' }, 'The art the win explosions throw. Upload one PNG for a still particle, several PNGs for an animated one (a spinning coin, a flapping banknote), or one sprite sheet. A built-in takes your art with the upload button on its card, keeping its name and every place that uses it. Pick which particle each win moment uses in the win particle settings. In After Effects each particle is a placeholder comp.'),
     tiles,
     h('div', { class: 'row' }, button('Add particle art', addParticleArt, { class: 'btn', icon: 'upload', id: 'pa-add' })),
     moreLink('Effects › Win particles', { tab: 'effects', section: 'win-particles' }, 'Which moment uses which particle')
@@ -4575,7 +4693,7 @@ function templateOptions(cur, withNone = true) {
 
 function particleAssetChoices() {
   const P = state.project;
-  return [...BUILTIN_PARTICLES.map((b) => ({ value: b.id, label: b.name })), ...P.particles.assets.map((a) => ({ value: a.id, label: a.name }))];
+  return [...BUILTIN_PARTICLES.map((b) => ({ value: b.id, label: b.name })), ...P.particles.assets.filter((a) => !a.replaces).map((a) => ({ value: a.id, label: a.name }))];
 }
 
 function particleRow(id, label, hint, get, set, opts = {}) {

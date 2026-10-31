@@ -193,14 +193,26 @@ the result as an editable **After Effects project**.
     saying why. Section headers have icons and each its own colour (a
     tinted title, never the same as the few above it). Search also reads
     the tooltip texts.
+  - Asset Bank explanations: each tab opens with a line on what it holds;
+    All lists every tab with its line and opens it. Symbol types (in
+    Symbols) is the glossary: a card per kind (paying, wild, scatter,
+    bonus, multiplier, mystery, collector, cash coin) with what it does
+    and the art it uses: yours, the built-in one the machine draws when
+    the set has none (mystery, collector, the multiplier orb: Use your
+    art adds it to the set), or Add the built-in / Upload for a missing
+    wild, scatter or bonus. Cash coins use the regular coin (Coins).
+  - Particle art: a built-in particle takes your art (one PNG, or several
+    for an animation) from the upload button on its card, keeping its
+    name, its motion and every place that uses it; the trash can puts the
+    built-in back.
   - Symbols (Asset Bank): each has a role (normal, wild, scatter…), low or
     high pay (a round whose symbol is Auto wins with a low-pay symbol on a
     small win and a high-pay one on a bigger win) and Shows up, a stepped
     slider (only in wins, rarely, sometimes, often, very often) for how
     often it fills the reels around the wins, with its share of them. Wilds,
     scatters and the like show up only where a round puts them. Removing
-    anything in the bank, a win tier, a wheel segment or a tumble win is
-    a trash can.
+    anything in the bank, a win tier, a wheel segment, a tumble win or a
+    round's feature is a trash can.
   - Art and sounds live in the Asset Bank, one place for everything you
     can replace (as in After Effects, where each is a placeholder comp or
     its own layer). A side bar like the main rail picks the kind (a row

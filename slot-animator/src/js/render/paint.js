@@ -465,7 +465,8 @@ const PAINTERS = {
     ctx.restore();
     sparkle(ctx, 150, -150, 76, 1);
   },
-  scatter(ctx, font) {
+  // label and ribbon colours: the bonus symbol is the same star, BONUS.
+  scatter(ctx, font, label = 'SCATTER', ribbon3 = ['#ff5a7a', '#c4002d', '#5c0014']) {
     const glow = ctx.createRadialGradient(0, -20, 10, 0, -20, 250);
     glow.addColorStop(0, 'rgba(255,220,120,0.9)');
     glow.addColorStop(0.5, 'rgba(255,120,40,0.35)');
@@ -492,9 +493,9 @@ const PAINTERS = {
     ctx.restore();
     const ribbon = () => roundRect(ctx, -236, 104, 472, 104, 30);
     const rg = ctx.createLinearGradient(0, 104, 0, 208);
-    rg.addColorStop(0, '#ff5a7a');
-    rg.addColorStop(0.5, '#c4002d');
-    rg.addColorStop(1, '#5c0014');
+    rg.addColorStop(0, ribbon3[0]);
+    rg.addColorStop(0.5, ribbon3[1]);
+    rg.addColorStop(1, ribbon3[2]);
     layered(ctx, ribbon, { fill: rg, rim: metalGradient(ctx, 0, 100, 0, 210, 'gold'), rimWidth: 14, outlineWidth: 30, outline: '#2a0008' });
     ctx.font = `72px ${font}`;
     ctx.textAlign = 'center';
@@ -502,11 +503,14 @@ const PAINTERS = {
     ctx.lineJoin = 'round';
     ctx.lineWidth = 14;
     ctx.strokeStyle = '#3a0010';
-    ctx.strokeText('SCATTER', 0, 160);
+    ctx.strokeText(label, 0, 160);
     ctx.fillStyle = metalGradient(ctx, 0, 125, 0, 195, 'gold');
-    ctx.fillText('SCATTER', 0, 160);
+    ctx.fillText(label, 0, 160);
     sparkle(ctx, 120, -190, 70, 1);
     sparkle(ctx, -150, -60, 40, 0.8);
+  },
+  bonus(ctx, font) {
+    PAINTERS.scatter(ctx, font, 'BONUS', ['#c08cff', '#6a1fd0', '#26074f']);
   },
 };
 
