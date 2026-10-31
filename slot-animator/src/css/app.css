@@ -3990,8 +3990,8 @@ section.group.na > h3 .group-toggle .sec-ic {
 }
 
 /* A list that reaches its end stops there; the page behind does not take
-   over the drag. On phones the page itself is held still while the Asset
-   Bank sheet, the guide or a dialog covers it (syncScrollLock). */
+   over the drag. On phones a drag over the Asset Bank sheet, the guide or
+   a dialog moves nothing else (holdPageStill). */
 .bank-body,
 .bank-filter,
 .presets-body,
@@ -4006,11 +4006,6 @@ section.group.na > h3 .group-toggle .sec-ic {
 }
 
 @media (max-width: 760px) {
-  html.scroll-lock,
-  html.scroll-lock body {
-    overflow: hidden;
-  }
-
   .bank-filter {
     touch-action: pan-x;
   }

@@ -326,11 +326,23 @@ function placeBank() {
 }
 
 // Phones scroll the whole page: while the Asset Bank sheet, the guide or a
-// dialog covers it, the page stays put and a drag scrolls only what is on
-// top (the CSS applies it on phones only).
+// dialog covers it, a drag moves only a list on top that can scroll, and
+// the page behind holds still. (Not overflow: hidden on the page, which
+// Safari on iPhone does not take well with a scrolling sheet on top.)
 function syncScrollLock() {
-  const over = (ui.bank.open && !ui.bank.min) || !!document.querySelector('body > .modal-back, body > .guide');
+  const over = narrow() && ((ui.bank.open && !ui.bank.min) || !!document.querySelector('body > .modal-back, body > .guide'));
   document.documentElement.classList.toggle('scroll-lock', over);
+}
+
+const canScroll = (n) => {
+  const cs = getComputedStyle(n);
+  return (/auto|scroll/.test(cs.overflowY) && n.scrollHeight > n.clientHeight + 1) || (/auto|scroll/.test(cs.overflowX) && n.scrollWidth > n.clientWidth + 1);
+};
+
+function holdPageStill(e) {
+  if (!document.documentElement.classList.contains('scroll-lock')) return;
+  for (let n = e.target; n && n !== document.body && n !== document.documentElement; n = n.parentElement) if (canScroll(n)) return;
+  e.preventDefault();
 }
 
 function setBankMin(v) {
@@ -1689,6 +1701,8 @@ function buildShell() {
   document.addEventListener('keydown', onKey);
   // Dialogs and the guide come and go as children of the page.
   new MutationObserver(syncScrollLock).observe(document.body, { childList: true });
+  document.addEventListener('touchmove', holdPageStill, { passive: false });
+  window.addEventListener('resize', syncScrollLock);
   initTips();
 }
 
