@@ -17,6 +17,30 @@
  "cadence": "Lilith posts AFK Arena codes in pairs, one for Classic and one for Companions, on the official X, Facebook and Discord channels. Releases follow events, holidays and collabs: AFK anniversary (April), Labor Day (May 1), Lilith 13th anniversary (May 9), Kaiju No. 8 collab (Sep 23), Mid-Autumn (Sep 25), early October (Oct 1). In 2026 that worked out to about 1-3 new pairs a month: June 3, 19, 24 and 30; July 2 and 30; Aug 19; Sep 3, 23 and 25; Oct 1. Codes usually last 4-10 weeks and tend to expire at month-end (00:00 UTC+8), so checking every couple of weeks catches them all.",
  "codes": [
   {
+   "code": "a7g7e7hyj3",
+   "server": "classic",
+   "rewards": null,
+   "firstSeen": "2026-10-31",
+   "expires": "2026-11-30",
+   "status": "active",
+   "sources": [
+    "https://www.reddit.com/r/afkarena/comments/1xk8kvm/fine_shyt_and_code/"
+   ],
+   "note": "Halloween 2026 code (Classic). From a screenshot of the official @AFK_Arena X post shared on r/afkarena: valid 2026-10-22 00:00 to 2026-11-30 23:59 UTC+8, one redemption per UID. Rewards not listed. Paired with Companions code a7gcuga2tn."
+  },
+  {
+   "code": "a7gcuga2tn",
+   "server": "companions",
+   "rewards": null,
+   "firstSeen": "2026-10-31",
+   "expires": "2026-11-30",
+   "status": "active",
+   "sources": [
+    "https://www.reddit.com/r/afkarena/comments/1xk8kvm/fine_shyt_and_code/"
+   ],
+   "note": "Halloween 2026 code (Companions). From a screenshot of the official @AFK_Arena X post shared on r/afkarena: valid 2026-10-22 00:00 to 2026-11-30 23:59 UTC+8, one redemption per UID. Rewards not listed. Paired with Classic code a7g7e7hyj3."
+  },
+  {
    "code": "8VI6VSBQGE",
    "server": "classic",
    "rewards": null,
@@ -804,7 +828,7 @@
   "7BH6PUM7YN and 7BZV7M9B38: BoostBot's text says 'live now, checked Oct 20' but its table and MrGuider say they expired on 2026-09-30. They are marked expired here.",
   "Case-sensitivity is disputed between sources. Codes are recorded as most sources print them.",
   "Many large sites (Pocket Tactics Oct 7, Dexerto, PocketGamer, Gaming Deputy) still list codes from Dec 2025 to May 2026 as active even though their official expiry has passed. Treat those lists as stale.",
-  "Lordstrategist lists a code 'HALLOWEEN' with no date or rewards. It was not found anywhere else and is excluded as unreliable. No 2026 Halloween code was found as of 2026-10-31.",
+  "Lordstrategist lists a code 'HALLOWEEN' with no date or rewards. It was not found anywhere else and is excluded as unreliable. The 2026 Halloween pair (a7g7e7hyj3 / a7gcuga2tn) was found on 2026-10-31 in a screenshot of the official X post; the post itself was not opened.",
   "No Reddit r/afkarena or Discord posts came up in search, and Reddit could not be reached directly."
  ]
 }
