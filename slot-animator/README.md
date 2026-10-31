@@ -206,8 +206,10 @@ the result as an editable **After Effects project**.
     of tabs on phones): All, Symbols, Coins, Effects (the particle art,
     and how the win effects are replaced in After Effects), Wheel, Scene
     (background, frame, logo, and the pot and jackpot box art while they
-    are on; a line links to turning them on), Sounds (your own file for
-    any cue, grouped as in the mix) and Fonts. A feature's own settings
+    are on; a line links to turning them on), Sounds (a play button and
+    your own file for any cue, grouped as in the mix; play sounds it as
+    this animation first uses it, at the track's volume and mix) and
+    Fonts. A feature's own settings
     stay with the feature, which links to its art (and the art back to
     the feature): the Sound tab keeps the track, volume and mix.
   - More settings: a setting whose companions live elsewhere links to

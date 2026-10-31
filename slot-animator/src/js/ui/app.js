@@ -52,7 +52,7 @@ import { runGuide } from './guide.js';
 import { WHEEL_FRAMINGS, WHEEL_LANDINGS, POINTER_SIDES, LABEL_PALETTES, WHEEL_ICONS, SEGMENT_KINDS, wheelConfig, iconName, autoIcons, autoHeights, segmentKind, wheelLandings } from '../core/wheel.js';
 import { parseFontNames, BUILTIN_FONTS, FONT_CATALOG, FONT_CATS, googleFontURL } from '../core/fonts.js';
 import { renderFrame } from '../render/renderer.js';
-import { decodeCustomSounds, renderSoundtrack, audioBufferToWav } from '../render/audio.js';
+import { decodeCustomSounds, renderSoundtrack, renderCue, audioBufferToWav } from '../render/audio.js';
 import { exportMP4, frameToPNG, canEncodeVideo } from '../export/video.js';
 import { buildAEPackage } from '../export/aepackage.js';
 import { h, clear, icon, rangeField, selectField, segmented, toggleField, textField, section, button, readFileAsDataURL, pickFiles } from './dom.js';
@@ -352,6 +352,7 @@ function openBank(filter, focus = true) {
 }
 
 function closeBank() {
+  stopCue();
   const had = el.bank.contains(document.activeElement);
   ui.bank.open = false;
   el.bank.hidden = true;
@@ -5979,21 +5980,81 @@ function panelSound() {
   ];
 }
 
+// Hearing one cue on its own: the first time this animation plays it (its
+// pitch and length as there), else a typical one; your own file when you
+// gave one. At the track's volume and its group's level. One at a time.
+const cuePlay = { id: null, src: null };
+const CUE_DUR = { spinLoop: 1.5, anticipation: 1.5, count: 1.5, coins: 1.5, potCharge: 0.8, magnet: 0.8 };
+
+function setCueButton(id, on) {
+  const b = id && document.getElementById(`snd-play-${id}`);
+  if (!b) return;
+  clear(b, icon(on ? 'pause' : 'play'));
+  b.title = on ? 'Stop' : 'Play';
+  b.setAttribute('aria-label', b.title);
+  b.setAttribute('aria-pressed', String(on));
+}
+
+function stopCue() {
+  const { id, src } = cuePlay;
+  cuePlay.id = null;
+  cuePlay.src = null;
+  if (src) {
+    try {
+      src.stop();
+    } catch {
+      // already ended
+    }
+    src.disconnect();
+  }
+  setCueButton(id, false);
+}
+
+async function toggleCue(id) {
+  const again = cuePlay.id === id;
+  stopCue();
+  if (again) return;
+  const ac = ensureAudioContext();
+  if (!ac) return toast('This browser cannot play sound.', 'warn');
+  cuePlay.id = id;
+  setCueButton(id, true);
+  const S = state.project.sound;
+  const cue = state.scene?.tl.sfx.find((e) => e.type === id) || { type: id, dur: CUE_DUR[id] ?? 0.5 };
+  try {
+    const { buffer, duration } = await renderCue({ ...cue, t: 0 }, await customSounds(state.project));
+    if (cuePlay.id !== id) return;
+    const src = ac.createBufferSource();
+    src.buffer = buffer;
+    const gain = ac.createGain();
+    gain.gain.value = Number(S.volume ?? 1) * Number(S.mix?.[SOUND_EVENTS.find((e) => e.id === id)?.group || 'ui'] ?? 1);
+    src.connect(gain).connect(ac.destination);
+    src.onended = () => cuePlay.src === src && stopCue();
+    src.start(0, 0, duration);
+    cuePlay.src = src;
+  } catch {
+    stopCue();
+    toast('That sound could not be played.', 'warn');
+  }
+}
+
 // Asset Bank › Sounds: any cue can be your own file, grouped as in the mix.
 function soundsSection() {
   const S = state.project.sound;
   const link = moreLink('Sound › Sound track', { tab: 'sound', id: S.enabled === false ? 'snd-on' : 'snd-vol' }, S.enabled === false ? 'Turn it on' : 'Volume and mix');
   if (S.enabled === false) return section('Your own sounds', h('p', { class: 'hint' }, 'The sound track is off.'), link);
   const after = () => {
+    stopCue();
     soundChanged();
     renderAssets();
     if (state.tab === 'sound') renderPanel();
   };
   const row = (ev) => {
     const has = !!S.custom[ev.id];
+    const playing = cuePlay.id === ev.id;
     return h(
       'div',
       { class: 'sound-row' },
+      button('', () => toggleCue(ev.id), { class: 'icon-btn tiny snd-play', icon: playing ? 'pause' : 'play', title: playing ? 'Stop' : 'Play', id: `snd-play-${ev.id}` }),
       h('span', { class: 'sound-name' }, ev.label, h('span', { class: 'hint' }, has ? 'Your sound' : 'Built-in synth')),
       button(has ? 'Replace' : 'Upload', async () => {
         const [f] = await pickFiles('audio/*,.wav,.mp3,.ogg,.m4a');
