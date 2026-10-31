@@ -33,7 +33,7 @@ import { buildTimeline, roundIndexAt } from '../core/timeline.js';
 import { computeLayout } from '../core/layout.js';
 import { evalVelocity } from '../core/keys.js';
 import { lineColor, generatePaylines } from '../core/paylines.js';
-import { autoAmount, makeContext, defaultPattern, tumbleEnabled } from '../core/outcomes.js';
+import { autoAmount, makeContext, defaultPattern, tumbleEnabled, SPECIAL_ROLES } from '../core/outcomes.js';
 import { orderList } from '../core/order.js';
 import { FORMAT_CHOICES } from '../core/ae-export.js';
 import { loadImage, loadWinAnim, buildResources, fontStack, extraSymbolImages, loadWheelArt, loadPotArt, loadJackpotArt, paintWheelIcon, paintJackpotBox } from '../render/sprites.js';
@@ -4145,7 +4145,7 @@ function coinTile(ct, i) {
             changed('all');
             renderAssets();
             renderInspector();
-          }, { class: 'icon-btn tiny', icon: 'x', title: 'Remove this coin type', id: `coin-del-${ct.id}` })
+          }, { class: 'icon-btn tiny', icon: 'trash', title: 'Remove this coin type', id: `coin-del-${ct.id}` })
         : null
     )
   );
@@ -4320,7 +4320,7 @@ function panelAssets(filter = 'all') {
   return [
     game !== 'slot' || !show('symbols') ? null : section(
       'Symbols',
-      h('p', { class: 'hint' }, 'PNGs with transparent backgrounds work best; each symbol is fitted to its cell. Give one symbol each the Wild, Scatter and Multiplier roles. Weight sets how often it shows up as filler. In After Effects every symbol becomes its own comp.'),
+      h('p', { class: 'hint' }, 'PNGs with transparent backgrounds work best; each symbol is fitted to its cell. Give one symbol each the Wild, Scatter and Multiplier roles. Shows up: how often a symbol fills the reels around the wins, with its share of them. Low or high pay: a round whose symbol is Auto wins with a low-pay symbol on a small win and a high-pay one on a bigger win. In After Effects every symbol becomes its own comp.'),
       tiles,
       h('div', { class: 'row' }, button('Add symbol images', addSymbols, { class: 'btn', icon: 'upload', id: 'a-add' }), useSet(BUILTIN_SYMBOLS, 'Classic set'), useSet(CANDY_SYMBOLS, 'Candy set'))
     ),
@@ -4460,7 +4460,7 @@ function particleTile(a) {
             renderAssets();
             if (state.tab === 'effects') renderPanel();
             renderInspector();
-          }, { class: 'icon-btn tiny', icon: 'x', title: `Remove ${a.name}`, id: `pa-del-${a.id}` })
+          }, { class: 'icon-btn tiny', icon: 'trash', title: `Remove ${a.name}`, id: `pa-del-${a.id}` })
         )
   );
 }
@@ -4728,7 +4728,70 @@ function winAnimControls(s) {
       s.winAnim = null;
       changed('all');
       renderAssets();
-    }, { class: 'icon-btn tiny', icon: 'x', title: 'Remove the win animation', id: `sym-anim-del-${s.id}` })
+    }, { class: 'icon-btn tiny', icon: 'trash', title: 'Remove the win animation', id: `sym-anim-del-${s.id}` })
+  );
+}
+
+// How often a symbol fills the reels around the wins, in stages. The
+// weight behind a stage counts against the other symbols', so each also
+// shows its share of the filler. Wilds, scatters and the like are placed
+// by the rounds only.
+const SHOWS_UP = [[0, 'Only in wins'], [3, 'Rarely'], [6, 'Sometimes'], [9, 'Often'], [12, 'Very often']];
+
+function showsUpStage(w) {
+  const v = Math.max(0, Number(w) || 0);
+  if (!v) return 0;
+  let best = 1;
+  for (let k = 2; k < SHOWS_UP.length; k++) if (Math.abs(SHOWS_UP[k][0] - v) <= Math.abs(SHOWS_UP[best][0] - v)) best = k;
+  return best;
+}
+
+function fillShare(s) {
+  const fill = state.project.symbols.filter((x) => !SPECIAL_ROLES.includes(x.role));
+  const total = fill.reduce((a, x) => a + Math.max(0, Number(x.weight) || 0), 0);
+  if (total <= 0) return Math.round(100 / Math.max(1, fill.length));
+  return Math.round((100 * Math.max(0, Number(s.weight) || 0)) / total);
+}
+
+function showsUpText(s) {
+  const name = SHOWS_UP[showsUpStage(s.weight)][1];
+  return Number(s.weight) > 0 ? `${name} · ${fillShare(s)}%` : name;
+}
+
+// Every symbol's label follows a change: the shares move together.
+function refreshShowsUp() {
+  for (const s of state.project.symbols) {
+    const out = document.getElementById(`sym-w-${s.id}-val`);
+    if (!out) continue;
+    out.textContent = showsUpText(s);
+    document.getElementById(`sym-w-${s.id}`)?.setAttribute('aria-valuetext', out.textContent);
+  }
+}
+
+function showsUpField(s) {
+  if (SPECIAL_ROLES.includes(s.role)) return h('p', { class: 'sym-weight-note' }, 'Shows up only where a round puts it.');
+  if (!document.getElementById('shows-up-stages')) document.body.append(h('datalist', { id: 'shows-up-stages' }, SHOWS_UP.map((_, k) => h('option', { value: k }))));
+  const text = showsUpText(s);
+  return h(
+    'label',
+    { class: 'sym-weight', for: `sym-w-${s.id}`, title: 'How often it fills the reels around the wins, and its share of them' },
+    h('span', null, 'Shows up'),
+    h('input', {
+      type: 'range',
+      id: `sym-w-${s.id}`,
+      min: 0,
+      max: SHOWS_UP.length - 1,
+      step: 1,
+      list: 'shows-up-stages',
+      value: showsUpStage(s.weight),
+      'aria-valuetext': text,
+      oninput: (e) => {
+        s.weight = SHOWS_UP[Number(e.target.value)][0];
+        refreshShowsUp();
+        changed('timeline');
+      },
+    }),
+    h('output', { class: 'sym-weight-val', id: `sym-w-${s.id}-val` }, text)
   );
 }
 
@@ -4745,10 +4808,10 @@ function symbolTile(s, i) {
       h(
         'div',
         { class: 'sym-row' },
-        h('select', { id: `sym-role-${s.id}`, 'aria-label': 'Role', onchange: (e) => { s.role = e.target.value; changed('all'); renderInspector(); } }, ROLES.map(([r, l]) => h('option', { value: r, selected: s.role === r }, l))),
-        h('select', { id: `sym-tier-${s.id}`, 'aria-label': 'Value', onchange: (e) => { s.tier = e.target.value; changed('timeline'); } }, [['low', 'Low pay'], ['high', 'High pay']].map(([v, l]) => h('option', { value: v, selected: s.tier === v }, l)))
+        h('select', { id: `sym-role-${s.id}`, 'aria-label': 'Role', onchange: (e) => { s.role = e.target.value; changed('all'); renderAssets(); renderInspector(); } }, ROLES.map(([r, l]) => h('option', { value: r, selected: s.role === r }, l))),
+        h('select', { id: `sym-tier-${s.id}`, 'aria-label': 'Pay', title: 'A round whose symbol is Auto wins with a low-pay symbol on a small win, a high-pay one on a bigger win', onchange: (e) => { s.tier = e.target.value; changed('timeline'); } }, [['low', 'Low pay'], ['high', 'High pay']].map(([v, l]) => h('option', { value: v, selected: s.tier === v }, l)))
       ),
-      h('label', { class: 'sym-weight', for: `sym-w-${s.id}` }, h('span', null, 'Weight'), h('input', { type: 'range', id: `sym-w-${s.id}`, min: 0, max: 20, step: 1, value: s.weight, oninput: (e) => { s.weight = Number(e.target.value); changed('timeline'); } })),
+      showsUpField(s),
       winAnimControls(s)
     ),
     h(
@@ -4772,7 +4835,7 @@ function symbolTile(s, i) {
         changed('all');
         renderAssets();
         renderInspector();
-      }, { class: 'icon-btn tiny', icon: 'x', title: 'Remove symbol', id: `sym-del-${s.id}` })
+      }, { class: 'icon-btn tiny', icon: 'trash', title: 'Remove symbol', id: `sym-del-${s.id}` })
     )
   );
 }
@@ -5573,7 +5636,7 @@ function wheelIconThumb(v) {
 function iconControl(value, onPick, { id, title, cls = '', centre = false }) {
   const has = value && value !== 'none';
   const btn = button('', () => openIconPicker(btn, value, onPick, { title, centre }), { class: 'seg-icon-btn', icon: has ? null : 'plus', title: has ? `${title}: change` : `${title}: add`, id }, has ? h('img', { src: wheelIconThumb(value), alt: '' }) : null);
-  return h('div', { class: `icon-ctl ${cls}` }, btn, has ? button('', () => onPick(null), { class: 'seg-none-btn', icon: 'x', title: `${title}: remove`, id: `${id}-x` }) : null);
+  return h('div', { class: `icon-ctl ${cls}` }, btn, has ? button('', () => onPick(null), { class: 'seg-none-btn', icon: 'trash', title: `${title}: remove`, id: `${id}-x` }) : null);
 }
 
 function closeIconPicker() {
@@ -5667,7 +5730,7 @@ function fontsSection() {
         changed('all');
         renderAssets();
         renderPanel();
-      }, { class: 'icon-btn tiny', icon: 'x', title: `Remove ${f.family}`, id: `font-del-${f.id}` })
+      }, { class: 'icon-btn tiny', icon: 'trash', title: `Remove ${f.family}`, id: `font-del-${f.id}` })
     )
   );
   return section(
@@ -5943,7 +6006,7 @@ function soundsSection() {
         ? button('', () => {
             delete S.custom[ev.id];
             after();
-          }, { class: 'icon-btn tiny', icon: 'x', title: 'Back to the built-in sound', id: `snd-clear-${ev.id}` })
+          }, { class: 'icon-btn tiny', icon: 'trash', title: 'Remove your sound (back to the built-in one)', id: `snd-clear-${ev.id}` })
         : h('span')
     );
   };

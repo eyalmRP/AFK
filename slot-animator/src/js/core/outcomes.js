@@ -11,7 +11,8 @@ import { keyOf, cloneGrid, lineRuns, waysWins, anywhereWins, clusterWins, compon
 import { symbolLayout, holdSpinConfig, pickCoinValue, coinTypeIndex, isCoinSym } from './coins.js';
 import { potsConfig, potsUpgrade, BOOST_KINDS } from './pots.js';
 
-const SPECIAL_ROLES = ['wild', 'scatter', 'bonus', 'multiplier', 'mystery', 'collector'];
+// Symbols with these roles are placed by the rounds, never as filler.
+export const SPECIAL_ROLES = ['wild', 'scatter', 'bonus', 'multiplier', 'mystery', 'collector'];
 
 export function symbolRoles(symbols) {
   const roles = { normal: [], low: [], high: [], ...Object.fromEntries(SPECIAL_ROLES.map((r) => [r, []])) };

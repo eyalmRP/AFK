@@ -901,11 +901,35 @@ body.dragging * {
   font-size: 12.5px;
 }
 
+/* Shows up: its name and the stage on one line, the slider under them. */
 .sym-weight {
   display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 8px;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-areas: 'name val' 'range range';
+  gap: 1px 8px;
   align-items: center;
+  font-size: 11.5px;
+  color: var(--faint);
+}
+
+.sym-weight > span {
+  grid-area: name;
+}
+
+.sym-weight input {
+  grid-area: range;
+}
+
+.sym-weight-val {
+  grid-area: val;
+  justify-self: end;
+  color: var(--text);
+  font-size: 11.5px;
+  white-space: nowrap;
+}
+
+.sym-weight-note {
+  margin: 0;
   font-size: 11.5px;
   color: var(--faint);
 }

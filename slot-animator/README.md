@@ -193,6 +193,13 @@ the result as an editable **After Effects project**.
     saying why. Section headers have icons and each its own colour (a
     tinted title, never the same as the few above it). Search also reads
     the tooltip texts.
+  - Symbols (Asset Bank): each has a role (normal, wild, scatter…), low or
+    high pay (a round whose symbol is Auto wins with a low-pay symbol on a
+    small win and a high-pay one on a bigger win) and Shows up, a stepped
+    slider (only in wins, rarely, sometimes, often, very often) for how
+    often it fills the reels around the wins, with its share of them. Wilds,
+    scatters and the like show up only where a round puts them. Removing
+    anything in the bank is a trash can.
   - Art and sounds live in the Asset Bank, one place for everything you
     can replace (as in After Effects, where each is a placeholder comp or
     its own layer). A side bar like the main rail picks the kind (a row
