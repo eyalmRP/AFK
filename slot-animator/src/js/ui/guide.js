@@ -50,7 +50,7 @@ export const GUIDE_STEPS = [
     target: ['.rail', '.side.left'],
     fallback: ['#pb-settings'],
     title: 'Settings',
-    text: 'Everything that is the same for the whole animation, by topic: the machine, the spin, features, wins, effects, sound and export. Hover an underlined option for a tip, many with a small demo. “More settings” links jump to related settings, and Fold all tidies a long panel.',
+    text: 'Everything that is the same for the whole animation, by topic: the machine, the spin, features, wins, effects, sound and export. Hover an underlined option (press and hold on a phone) for its card, many with a small demo. “More settings” links jump to related settings, and Fold all tidies a long panel.',
   },
   {
     id: 'search',

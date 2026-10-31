@@ -487,7 +487,8 @@ const SECTION_ICONS = {
   'win-tiers': 'trophy', 'winning-symbols': 'sparkle', 'win-particles': 'sparkle', 'explosion-templates': 'bolt', 'titles-and-font': 'text', 'win-timing': 'clock',
   intensity: 'bolt', segments: 'wheel', framing: 'target', pointer: 'pointer', spin: 'loop',
   'sound-track': 'sound', 'your-own-sounds': 'sound', 'win-effects': 'bolt', 'after-effects-project': 'download', 'quick-preview-mp4': 'film',
-  symbols: 'grid', coins: 'coin', 'pot-art': 'coin', 'jackpot-box-art': 'trophy', 'wheel-art': 'wheel', 'scene-art': 'palette', fonts: 'text', 'particle-art': 'sparkle',
+  'soundtrack-wav': 'sound', 'still-frame': 'film', 'project-file': 'folder', 'quick-sequence': 'order',
+  symbols: 'grid', coins: 'coin', 'hold-spin-coins': 'coin', 'pot-art': 'coin', 'jackpot-box-art': 'trophy', 'wheel-art': 'wheel', 'scene-art': 'palette', fonts: 'text', 'particle-art': 'sparkle',
 };
 
 // Each section title gets its own colour, kept from render to render and
@@ -748,6 +749,12 @@ function buildProjectMenu() {
 // ---------- feature search ----------
 
 const SEARCH_ACTIONS = {
+  foldAll: () => {
+    const btn = document.querySelector('#settings-panel > .fold-bar .fold-all');
+    if (!btn) return toast('This tab has too few sections to fold.', 'info');
+    btn.click();
+    spotlight(btn);
+  },
   fold: () => {
     if (window.matchMedia('(max-width: 1240px)').matches) return toast('The settings panel folds away on wider windows.', 'info');
     setLeftFolded(!ui.leftFolded);
@@ -1968,6 +1975,7 @@ function renderSequence() {
     el.inspector
   );
   collapsify(el.sequence, 'seq');
+  markTips(el.sequence);
   // With no rounds yet, the quick sequence is the way in: show it open.
   if (!state.project.rounds.length) {
     const qs = el.sequence.querySelector('section.group[data-key="seq/quick-sequence"]');
@@ -3549,6 +3557,27 @@ function initTips() {
   });
   document.addEventListener('focusout', () => hideTip());
   document.addEventListener('pointerdown', (e) => !e.target.closest?.('.help-chip') && hideTip(), true);
+  // Phones have no hover: press and hold anything with a card to see it.
+  // The tap that ends the hold does not also press it.
+  let hold = 0;
+  let held = false;
+  document.addEventListener('pointerdown', (e) => {
+    held = false;
+    clearTimeout(hold);
+    const target = e.pointerType === 'touch' && e.target.closest?.('[data-tip]');
+    if (!target || target.classList.contains('help-chip')) return;
+    hold = setTimeout(() => {
+      held = true;
+      showTip(target);
+    }, 480);
+  });
+  for (const ev of ['pointerup', 'pointercancel']) document.addEventListener(ev, () => clearTimeout(hold));
+  document.addEventListener('click', (e) => {
+    if (!held) return;
+    held = false;
+    e.preventDefault();
+    e.stopPropagation();
+  }, true);
   // Glossary chips open their card on a tap or click too (phones have no
   // hover, and Safari does not focus a tapped button); again closes it.
   document.addEventListener('click', (e) => {
@@ -4848,7 +4877,7 @@ function showsUpField(s) {
   return h(
     'label',
     { class: 'sym-weight', for: `sym-w-${s.id}`, title: 'How often it fills the reels around the wins, and its share of them' },
-    h('span', null, 'Shows up'),
+    h('span', { 'data-tip': 'sym-w-help' }, 'Shows up'),
     h('input', {
       type: 'range',
       id: `sym-w-${s.id}`,
@@ -4882,7 +4911,7 @@ function symbolTile(s, i) {
         'div',
         { class: 'sym-row' },
         h('select', { id: `sym-role-${s.id}`, 'aria-label': 'Role', 'data-tip': `sym-roles-help-${s.role}`, onchange: (e) => { s.role = e.target.value; changed('all'); renderAssets(); renderInspector(); } }, ROLES.map(([r, l]) => h('option', { value: r, selected: s.role === r }, l))),
-        h('select', { id: `sym-tier-${s.id}`, 'aria-label': 'Pay', title: 'A round whose symbol is Auto wins with a low-pay symbol on a small win, a high-pay one on a bigger win', onchange: (e) => { s.tier = e.target.value; changed('timeline'); } }, [['low', 'Low pay'], ['high', 'High pay']].map(([v, l]) => h('option', { value: v, selected: s.tier === v }, l)))
+        h('select', { id: `sym-tier-${s.id}`, 'aria-label': 'Pay', 'data-tip': 'sym-tier-help', onchange: (e) => { s.tier = e.target.value; changed('timeline'); } }, [['low', 'Low pay'], ['high', 'High pay']].map(([v, l]) => h('option', { value: v, selected: s.tier === v }, l)))
       ),
       showsUpField(s),
       winAnimControls(s)

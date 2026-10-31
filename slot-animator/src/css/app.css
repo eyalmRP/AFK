@@ -969,6 +969,15 @@ body.dragging * {
   border-color: var(--muted);
 }
 
+/* Press and hold for a card on phones: no text selection or callout. */
+@media (hover: none) {
+  [data-tip] {
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+}
+
 .sym-weight-note {
   margin: 0;
   font-size: 11.5px;

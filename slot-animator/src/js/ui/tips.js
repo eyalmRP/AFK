@@ -50,6 +50,45 @@ export const TIPS = {
   'jp-decimals-auto': T('features', 'Decimals as the bet', 'Amounts show cents when the bet is typed with them (1.00), whole numbers when not (1). The same setting as Machine › Money, for every amount.'),
   'jp-decimals-0': T('features', 'Whole numbers', 'Every amount without cents: 1,250.'),
   'jp-decimals-2': T('features', 'Two decimals', 'Every amount with cents, even a whole one: 1,250.00.'),
+  // Every section title has its card: what the section is for, with a demo
+  // where one shows it.
+  'sec:machine/reels': T('machine', 'Reels', 'Reels and rows, the size of each cell, how much of the symbols above and below shows, a drum-like curve and lines between the rows.', 'peek'),
+  'sec:machine/how-it-pays': T('machine', 'How it pays', 'How wins are found (paylines, ways, anywhere or clusters), how many symbols pay, and how many scatters trigger a feature.', 'pay-mode'),
+  'sec:machine/framing': T('machine', 'Framing', 'Zoom scales the machine with its pots, title and win meter about their middle: out to fit tall pots, in to fill the screen.', 'machine-zoom'),
+  'sec:machine/look': T('machine', 'Look', 'The theme colours, the title (or your logo) above the machine, the marquee bulbs and the win meter under the reels.', 'marquee'),
+  'sec:machine/money': T('machine', 'Money', 'The bet, the currency sign (none by default) and how many decimals every amount shows. As the bet follows how you typed it: 1 shows whole numbers, 1.00 decimals.'),
+  'sec:machine/randomness': T('machine', 'Randomness', 'Filler symbols come from a seed, so every render is identical. Shuffle picks a new seed.'),
+  'sec:features/pots-above-the-machine': T('features', 'Pots above the machine', 'Up to three pots stand on the frame where the title was. Winners beam up into them, and they fire boosters that upgrade cells.', 'pots'),
+  'sec:features/jackpot-boxes': T('features', 'Jackpot boxes', 'Grand, Major, Minor and Mini boxes around the machine, with fixed or running values. A jackpot won lights its box.', 'jackpots'),
+  'sec:spin/spin-type': T('spin', 'Spin type', 'How the reels move: together, staggered, turbo, teasing the last reel, cascading or cell by cell. Point at a card to see it.'),
+  'sec:spin/respins': T('spin', 'Respins', 'How the empty Hold & Spin cells respin: their direction and the order they stop in.'),
+  'sec:spin/reel-order': T('spin', 'Reel order', 'Which reel starts and which stops first: left to right, right to left, centre out, outside in, random or your own order.', 'stop-order'),
+  'sec:spin/motion-curve': T('spin', 'Motion curve', 'A reel\'s speed over its spin, drawn as a graph. The Start, Mid and End sections below shape it.'),
+  'sec:spin/start': T('spin', 'Start', 'How a reel gets going: a wind-up pull back, an ease in, or instantly.', 'start-windup'),
+  'sec:spin/mid': T('spin', 'Mid', 'The full-speed stretch: how long it spins, how fast, and its motion blur.', 'blur'),
+  'sec:spin/end': T('spin', 'End', 'How a reel lands: bounce, elastic, hard stop or soft, how long it takes and how far it overshoots.', 'end-bounce'),
+  'sec:spin/reel-timing': T('spin', 'Reel timing', 'The delay between one reel starting, or stopping, and the next.', 'stop-stagger'),
+  'sec:spin/anticipation': T('spin', 'Anticipation', 'The tease on a reel that could still trigger: extra time, a slower crawl, a zoom in, and scatters kept lit.', 'antic-time'),
+  'sec:spin/between-rounds': T('spin', 'Between rounds', 'The gap between rounds, and the holds before the first and after the last.'),
+  'sec:wins/winning-symbols': T('wins', 'Winning symbols', 'How winners celebrate: pop in place, jump into the score, merge into one, or beam to the pots; with the winning lines and the rest dimmed.', 'winfx-jump'),
+  'sec:wins/win-timing': T('wins', 'Win timing', 'How long each kind of win shows, the count-up per big win tier, and the beats of tumbles, multipliers and wilds.'),
+  'sec:effects/intensity': T('effects', 'Intensity', 'How strong each effect is, from payline glow and sparkles to light rays, screen shake, flashes and bloom.', 'shake'),
+  'sec:effects/explosion-templates': T('effects', 'Explosion templates', 'Every particle explosion, playing live. Pick one for each win moment in Win particles.'),
+  'sec:effects/titles-and-font': T('effects', 'Titles and font', 'The display font for titles, counters and wheel labels, and the words of each feature title.'),
+  'sec:wheel/segments': T('wheel', 'Segments', 'Clockwise from the top: each segment\'s fill, icon, label and value, and whether it is a prize, a spin again or no win.', 'seg-icons'),
+  'sec:wheel/framing': T('wheel', 'Framing', 'How the wheel sits on screen: whole, half from below, a close-up or rising in, with its own zoom and centre.', 'frame-half'),
+  'sec:wheel/pointer': T('wheel', 'Pointer', 'Where the pointer sits, its size and art, and how pegs bend it as they pass.', 'pointer-top'),
+  'sec:wheel/look': T('wheel', 'Look', 'The labels\' font, colour, size and height, the icons, the centre icon, the hub and which parts show.', 'label-height'),
+  'sec:wheel/spin': T('wheel', 'Spin', 'How many turns it makes, how it lands by default (centre, random, tease, almost slips) and whether values are multiplied by the bet.', 'wheel-slip'),
+  'sec:sound/sound-track': T('sound', 'Sound track', 'Every cue is made in sync with the animation. Set the volume and each group\'s level; it plays with the preview, goes into the MP4 and ships to After Effects.'),
+  'sec:export/output': T('export', 'Output', 'The project name, canvas size, frame rate and transparent background for every export.'),
+  'sec:export/after-effects-project': T('export', 'After Effects project', 'The main export: a zip with a script that rebuilds this animation as an editable After Effects project, in every format you pick.'),
+  'sec:export/quick-preview-mp4': T('export', 'Quick preview (MP4)', 'A quick video to share, rendered frame by frame at full resolution, with or without the sound track.'),
+  'sec:export/soundtrack-wav': T('export', 'Soundtrack (WAV)', 'The whole mix as the preview plays it, for editing the sound elsewhere.'),
+  'sec:export/still-frame': T('export', 'Still frame', 'The frame under the playhead as a PNG, without the background when Output says transparent.'),
+  'sec:export/project-file': T('export', 'Project file', 'Everything in one .json file, your images and sounds included, to reopen the exact animation later.'),
+  'sec:seq/quick-sequence': T('seq', 'Quick sequence', 'Builds a whole run of rounds in one go: warm-up spins, then the finale you pick.'),
+  'sec:bank/scene-art': T('bank:scene', 'Scene art', 'The background, a frame overlay and your logo. With the pots and jackpot boxes on, their art follows here.'),
   // Asset Bank sections: the fuller story behind each one-line hint.
   'sec:bank/symbols': T('bank:symbols', 'Symbols', 'Each symbol is fitted to its cell. Role: what it does (point at a role, or at the role chips under the symbols). Low or high pay: a round set to Auto wins with a low-pay symbol on a small win, a high-pay one on a bigger win. Shows up: how often it fills the reels around the wins. Built-in art for roles your set lacks sits after your symbols.'),
   'sec:bank/hold-spin-coins': T('bank:coins', 'Hold & Spin coins', 'Their own set, apart from the symbols. Values are in bets and shown on the coin (5 shows $5 at a $1 bet). The jackpot coins (Mini, Minor, Major) win their box. A label is painted on built-in coin art; your art is used as it is. Cash symbols on the slot reels use the regular coin. In After Effects each coin is its own comp.'),
@@ -62,6 +101,8 @@ export const TIPS = {
   'sec:bank/fonts': T('bank:fonts', 'Fonts', 'Your fonts come first in the font list. They ship in the After Effects package; install them there.'),
   // What each symbol role and coin does: the chips under the symbols and
   // the coins, and each symbol's role menu.
+  'sym-w-help': T('bank:symbols', 'Shows up', 'How often a symbol fills the reels around the wins, in stages, with its share of them. Only in wins: never as filler, but it still wins when a round picks it. Wilds, scatters and the like only show where a round puts them.'),
+  'sym-tier-help': T('bank:symbols', 'Low or high pay', 'A round whose symbol is Auto wins with a low-pay symbol on a small win and a high-pay one on a bigger win. Pots that upgrade cells turn them into low-pay symbols. Amounts come from the round, not from this.'),
   'sym-roles-help-normal': T('bank:symbols', 'Paying symbols', 'Make the wins, along lines, ways or in clusters. Low or high pay decides which one a round set to Auto wins with.', 'pay-mode'),
   'sym-roles-help-wild': T('bank:symbols', 'Wild', 'Stands in for any paying symbol to complete a win. A round can make it expand, stick, walk or carry a multiplier.', 'expand'),
   'sym-roles-help-scatter': T('bank:symbols', 'Scatter', 'Counts anywhere on the reels; enough of them trigger free spins or the bonus. One short is a near miss, teased on the last reel.', 'scatter-lit'),
@@ -164,7 +205,7 @@ export const TIPS = {
   'ri-tumble': T('round', 'Tumbles', 'Winners pop, the rest fall, new symbols drop in and can win again.', 'tumble', ['small', 'medium', 'big']),
 };
 
-const WHERE = { machine: 'Machine', spin: 'Spin', wins: 'Wins', effects: 'Effects', features: 'Features', wheel: 'Wheel', round: 'Round inspector', 'bank:scene': 'Asset Bank › Scene' };
+const WHERE = { machine: 'Machine', spin: 'Spin', wins: 'Wins', effects: 'Effects', features: 'Features', wheel: 'Wheel', sound: 'Sound', export: 'Export', seq: 'Spin rounds', round: 'Round inspector', 'bank:scene': 'Asset Bank › Scene' };
 
 // Search entries made from the tooltips: their words find the control.
 export function tipEntries() {
@@ -173,6 +214,7 @@ export function tipEntries() {
     if (key.startsWith('sec:')) {
       const [tab, section] = key.slice(4).split('/');
       if (tab === 'bank') out.push({ title: t.title, where: 'Asset Bank', keys: t.text, go: { bank: t.tab.slice(5), section } });
+      else if (tab === 'seq') out.push({ title: t.title, where: WHERE.seq, keys: t.text, go: { section } });
       else out.push({ title: t.title, where: WHERE[tab] || tab, keys: t.text, go: { tab, section } });
     } else if (t.tab === 'round') out.push({ title: t.title, where: WHERE.round, keys: t.text, go: { id: key, round: t.rounds || 'any' } });
     else if (t.tab.startsWith('bank:')) out.push({ title: t.title, where: WHERE[t.tab] || 'Asset Bank', keys: t.text, go: { bank: t.tab.slice(5), id: key } });

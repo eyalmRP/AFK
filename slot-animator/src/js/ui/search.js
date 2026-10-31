@@ -84,6 +84,7 @@ export const FEATURES = [
   T('Keyboard shortcuts', 'Help', 'keys hotkeys help', { action: 'keys' }),
   T('Take the tour', 'Project menu', 'first run guide tour walkthrough tutorial onboarding help intro introduction getting started how to begin welcome', { action: 'guide' }),
   T('Asset Bank', 'Left rail (top bar on tablets)', 'assets library upload images symbols art window', { action: 'bank' }),
+  T('Fold all sections', 'Settings panel (top)', 'collapse close every section tidy shrink fold unfold expand all', { action: 'foldAll' }),
   T('Fold the settings panel away', 'Left rail', 'hide collapse close settings panel bigger larger preview more room wider stage focus', { action: 'fold' }),
   T('Resize the side panels', 'Layout', 'width wider narrower drag divider splitter panel', { action: 'splitters' }),
   // transport
@@ -214,6 +215,8 @@ export const FEATURES = [
   T('Sound on or off', 'Sound › Sound track', 'audio mute enable', { tab: 'sound', id: 'snd-on' }),
   T('Volume', 'Sound › Sound track', 'loud quiet master', { tab: 'sound', id: 'snd-vol' }),
   T('Download the sound track', 'Sound › Sound track', 'wav audio file', { tab: 'sound', id: 'snd-wav' }),
+  T('Play a sound cue', 'Asset Bank › Sounds', 'listen hear preview audio sfx cue play button', { bank: 'sounds', section: 'your-own-sounds' }),
+  T('Replace a built-in particle\'s art', 'Asset Bank › Effects', 'particle coin star confetti gem sparkle chip upload replace own art built-in', { bank: 'effects', id: 'pa-up-coin' }),
   T('Replace a sound with your own', 'Asset Bank › Sounds', 'upload custom sfx wav mp3 ogg audio file cue', { bank: 'sounds', section: 'your-own-sounds' }),
   // Export
   T('Export to After Effects', 'Export › After Effects project', 'ae jsx package download', { tab: 'export', id: 'x-ae' }),

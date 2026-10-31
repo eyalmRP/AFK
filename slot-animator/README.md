@@ -193,6 +193,15 @@ the result as an editable **After Effects project**.
     saying why. Section headers have icons and each its own colour (a
     tinted title, never the same as the few above it). Search also reads
     the tooltip texts.
+  - Help everywhere: every section title (settings, Asset Bank, Spin
+    rounds) has its tooltip card, most with a demo; glossary chips and
+    each symbol's role, pay and Shows up open cards too. On a phone, press
+    and hold anything with a card to see it (the tap that ends the hold
+    does not also press it); glossary chips open on a plain tap.
+    `tests/consistency.test.js` keeps it that way: every section has an
+    icon and a card, every demo is shown by a card, links and search
+    point at real tabs and Asset Bank filters, and removing is a trash
+    can (an X only closes or takes a chip off).
   - Asset Bank explanations stay short: each section has one line, and
     hovering its title gives the rest. Under the symbols, the built-in art
     the machine draws for a role your set lacks (the multiplier orb, the
