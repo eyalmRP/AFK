@@ -67,11 +67,18 @@ def main():
     have_game = {h.get('gameId') for h in doc['heroes']}
     units = json.loads(get(CDN + 'unit.json'))
     new = []
+    # Heroes added by hand from patch notes before the game data had them
+    # (no gameId yet): link them instead of adding a duplicate.
+    by_hand = {slug(h['name']): h for h in doc['heroes'] if not h.get('gameId')}
+    linked = []
     for u in units.values():
         # Heroes have ids below 1000; elite/legendary internal rarity = ascended tier.
         if u['id'] >= 1000 or u['id'] in have_game or u.get('rarity') not in ('elite', 'legendary'):
             continue
         name = u['names']['en']
+        if slug(name) in by_hand:
+            linked.append((by_hand.pop(slug(name)), u['id']))
+            continue
         if u.get('isAwakened') and slug('awakened ' + name) not in have_ids and any(x.get('gameId') != u['id'] and slug(x['name']) == slug(name) for x in doc['heroes']):
             name = 'Awakened ' + name
         hid = slug(name)
@@ -87,14 +94,24 @@ def main():
             'investment': None, 'modes': [], 'tiers': {}, 'raw': {}, 'consensus': None, 'trend': None,
             'tierNote': None, 'gameId': u['id'], 'needsReview': True,
         })
+    for h, gid in linked:
+        print(f"link: {h['name']} (added by hand) is game id {gid}")
     for h in new:
         print(f"new: {h['name']} ({h['faction']}, game id {h['gameId']})")
-    if not new:
+    if not new and not linked:
         print('roster is up to date')
         return
     if not write:
         print('dry run: pass --write to add them')
         return
+    for h, gid in linked:
+        h['gameId'] = gid
+        h['img'] = f"img/heroes/{h['id']}.webp"
+        try:
+            save_portrait(gid, ROOT / h['img'])
+        except Exception as e:
+            print(f"  no portrait for {h['name']}: {e}")
+            h['img'] = None
     for h in new:
         try:
             save_portrait(h['gameId'], ROOT / h['img'])

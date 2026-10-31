@@ -1,8 +1,8 @@
 {
- "asOf": "2026-10-24",
- "nextUpdate": "2026-10-31",
- "gameVersion": "v1.204 (Oct 6, 2026)",
- "summary": "Late October 2026. Envydiel, Liberta and Palmer are rated S+ by every recent list, and Hybris, Sung Jinwoo, Daemia, Ivan and Rosaline are close behind. Patch v1.204 (Oct 6) added new Temporal Rift and Golden Frontier seasons and updated Nightmare Corridor, with no hero balance changes. 2026's new heroes (Valeri, Thalassa, Kyno, Athena, Medusa, and the Kaiju No. 8 pair Kafka Hibino and Kikoru Shinomiya) are still settling into their tiers.",
+ "asOf": "2026-10-31",
+ "nextUpdate": "2026-11-07",
+ "gameVersion": "v1.206 (Oct 29, 2026)",
+ "summary": "End of October 2026. Two Graveborn heroes arrived this month: Awakened Theowyn (v1.205, around Oct 20) and Greisman - Endless Pursuit, a Mage who weakens enemies and passes their stats to allies (v1.206, Oct 29); neither is rated by a tier list yet. Envydiel, Liberta and Palmer are still S+ on every recent list, with Hybris, Sung Jinwoo, Daemia, Ivan and Rosaline close behind. New this week: community teams for Cursed Realm (boss Idre), Treasure Scramble (Pure Realm debuff) and the current Nightmare Corridor rotation, from Manuel Alcayaga's Oct 2026 guides.",
  "mustBuild": [
   "envydiel",
   "liberta",
@@ -16,6 +16,10 @@
   "sung-jinwoo"
  ],
  "metaShifts": [
+  {
+   "date": "2026-10",
+   "text": "v1.205 (around Oct 20): Awakened Theowyn (Graveborn). v1.206 (Oct 29): Greisman - Endless Pursuit, an Intelligence Mage (Graveborn) who deciphers enemies, lowers their attributes and transfers them to allies, plus Ghoulish Gallery West Zone collections. Cursed Realm's boss is Idre, who blocks ultimates and rewards normal attacks."
+  },
   {
    "date": "2026-10",
    "text": "v1.204 (Oct 6): new Temporal Rift and Golden Frontier seasons and a Nightmare Corridor update, with no hero balance changes. Pocket Gamer's list was refreshed Oct 2 for v1.203.01, AFK Global's on Oct 3 and Driffle's on Oct 16."
@@ -62,15 +66,17 @@
   "Most community teams this week are cores of 1-3 named heroes, not full 5-hero lineups. Guide sites show lineups as images that could not be read. Partial lineups are labelled.",
   "Formation positions were published only for the Twisted Realm teams. All other positions are inferred from hero class and role, and are labelled.",
   "Kits were verified for 23 heroes. The rest use the game's own role tags (main and secondary role).",
-  "No current community team sets were found for Legends Championship, Cursed Realm, King's Tower or the faction towers.",
+  "No current community team sets were found for King's Tower or the faction towers. Legends Championship (Groody, Oct 24), Cursed Realm (boss Idre), Treasure Scramble (Pure Realm debuff only) and Nightmare Corridor (current rotation) now have full teams; their positions are inferred.",
   "PvP ratings are thin for many Lightbearer, Mauler and Wilder heroes. Where a category rating is missing, the overall rating is used.",
   "Signature Item caps: patch 1.134 raised the cap to +50, but some 2025 guides still stop at +40. Check in game.",
   "Seraphic Tide (Support artifact) has no effect text or rating yet.",
   "Beast ratings come from one overall tier list (AFK Global, Oct 22 2026). PvE, PvP and boss grades only differ where a guide says a beast stands out in that mode, and beast picks per Nightmare Corridor comp could not be read. Bosses ratings now come from the r/afkarena usage tier list (Sept 2026) where it lists the beast.",
-  "113 heroes were missing from the tier lists as first read. 109 now have ratings from AFK Global's list and Pocket Tactics (Apr 30, 2026). AFK Global's list (page dated Oct 3) is AllClash's Aug 20, 2026 list with the bottom two tiers relabelled (AllClash C+ and C shown as C and D), so it counts as one source with AllClash. AllClash's A+ counts as A. Kafka Hibino is A from the r/afkarena usage tier list's notes (its full list is an image not read yet). Awakened Theowyn, Kikoru Shinomiya and Oren are not rated by any list yet and count as B in team building.",
+  "113 heroes were missing from the tier lists as first read. 109 now have ratings from AFK Global's list and Pocket Tactics (Apr 30, 2026). AFK Global's list (page dated Oct 3) is AllClash's Aug 20, 2026 list with the bottom two tiers relabelled (AllClash C+ and C shown as C and D), so it counts as one source with AllClash. AllClash's A+ counts as A. Kafka Hibino is A from the r/afkarena usage tier list's notes (its full list is an image not read yet). Awakened Theowyn, Kikoru Shinomiya, Oren and Greisman are not rated by any list yet and count as B in team building. AllClash's list (title updated about Oct 29 \"with Awakened Theowyn\") now includes her, but its grade could not be read: AllClash blocks scripts, so a PDF or copy of the page from the user would fill it in.",
   "Counter data (which heroes beat which) exists for almost no hero this week, so the counter builds your strongest team for the mode, adjusted for faction advantage, and says so on the result. AllClash's C+ and C tiers both count as C.",
   "afk.guide's 2026 PvP and Legends Championship pages list teams but say nothing about which team beats which; its counter guides date from 2020 and 2023 and are not used. Its January 2026 Legends Championship guide (22 teams) is left out in favour of Groody's October 2026 one. Arena of Heroes now has afk.guide's eight full PvP lineups (June 2026) in place of the partial cores; positions are inferred.",
-  "Team-vs-team results come from Groody's Legends Championship guides on r/afkarena (May to October 2026; for most older guides only the first gallery image could be read) and the 'Counter a team' thread (Sep 30 2026). Results the author or a player tested count fully, commenters' suggestions half. Opinions and 'beats every team' claims are not used."
+  "Team-vs-team results come from Groody's Legends Championship guides on r/afkarena (May to October 2026; for most older guides only the first gallery image could be read) and the 'Counter a team' thread (Sep 30 2026). Results the author or a player tested count fully, commenters' suggestions half. Opinions and 'beats every team' claims are not used.",
+  "Greisman (v1.206, Oct 29) was added by hand from the in-game patch notes: the game data the roster sync reads doesn't have him yet, so he has no portrait and only the patch notes' one-line kit. The sync links him once the data has him.",
+  "This week afk.global, MrGuider, LOLVVV and BoostBot pages could not be opened from the update environment (their hosts don't resolve), so patch and code checks relied on search summaries and r/afkarena. Groody's Oct 25 Nightmare Corridor profiles and TheAFKGuys' Treasure Scramble debuff guide were found but not read yet."
  ],
  "limits": {
   "level": 800,
@@ -822,9 +828,33 @@
    "url": "https://www.reddit.com/r/afkarena/comments/1wuuqbq/usage_tierlist_hero_investments_september_2026/",
    "date": "2026-10-01",
    "kind": "tiers"
+  },
+  {
+   "id": "alcayaga-oct",
+   "name": "r/afkarena - Manuel Alcayaga's guides (Cursed Realm Idre 276B, Nightmare Corridor 0:53, Treasure Scramble Pure Realm 7 teams)",
+   "url": "https://www.reddit.com/r/afkarena/comments/1xewo6z/cursed_realm_idre_276b_guide_with_investments/",
+   "date": "2026-10-25 to 2026-10-30",
+   "kind": "teams"
+  },
+  {
+   "id": "patch-1206",
+   "name": "r/afkarena - Oct 29 Patch Notes (in-game screenshot)",
+   "url": "https://www.reddit.com/r/afkarena/comments/1xhhy7n/oct_29_patch_notes/",
+   "date": "2026-10-28",
+   "kind": "patch"
   }
  ],
  "changelog": [
+  {
+   "date": "2026-10-31",
+   "changes": [
+    "New hero Greisman - Endless Pursuit (Graveborn Intelligence Mage, Oct 29 patch), from the in-game patch notes. No rating or portrait yet.",
+    "Cursed Realm: six teams for the boss Idre, and Idre's mechanic. Treasure Scramble: seven teams for the Pure Realm debuff, with how often each appears among top players. Nightmare Corridor: one team per boss for the current rotation, with kill times. All from Manuel Alcayaga's Oct 2026 guides on r/afkarena; heroes and beasts read from the guides' portraits.",
+    "AI lineups recalculated with the new teams and hero.",
+    "Redeem codes: no new codes this week. The daily code check is off; codes are now checked in this weekly update.",
+    "The roster sync now links a hero added by hand from patch notes instead of adding a duplicate when the game data catches up."
+   ]
+  },
   {
    "date": "2026-10-24",
    "changes": [

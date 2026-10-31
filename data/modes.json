@@ -646,42 +646,6 @@
      "name": "Team 1",
      "heroes": [
       {
-       "id": "athena",
-       "pos": "F1"
-      },
-      {
-       "id": "awakened-athalia",
-       "pos": "F2"
-      },
-      {
-       "id": "medusa",
-       "pos": "B1"
-      },
-      {
-       "id": "awakened-baden",
-       "pos": "B2"
-      },
-      {
-       "id": "awakened-lyca",
-       "pos": "B3"
-      }
-     ],
-     "artifacts": {
-      "athena": "duras-call",
-      "awakened-athalia": "duras-eye",
-      "medusa": "duras-eye",
-      "awakened-baden": "duras-eye",
-      "awakened-lyca": "duras-eye"
-     },
-     "score": 64.3,
-     "why": "Built around Awakened Baden (S+ PVE) and Awakened Lyca (S+ PVE). Covers frontline, sustain, damage, control. Synergy: Athena + Medusa.",
-     "differs": "No community lineup was found for this mode this week, so there is nothing to compare against.",
-     "confidence": "medium"
-    },
-    {
-     "name": "Team 2",
-     "heroes": [
-      {
        "id": "jerome",
        "pos": "F1"
       },
@@ -694,7 +658,7 @@
        "pos": "B1"
       },
       {
-       "id": "awakened-pippa",
+       "id": "awakened-baden",
        "pos": "B2"
       },
       {
@@ -706,11 +670,47 @@
       "jerome": "duras-eye",
       "hybris": "duras-eye",
       "sion": "duras-eye",
-      "awakened-pippa": "duras-eye",
+      "awakened-baden": "duras-eye",
       "awakened-solise": "duras-call"
      },
-     "score": 63.5,
-     "why": "Built around Sion (S+ PVE) and Jerome (S+ PVE). Covers frontline, sustain, damage, control.",
+     "score": 64.5,
+     "why": "Built around Sion (S+ PVE) and Awakened Baden (S+ PVE). Covers frontline, sustain, damage, control.",
+     "differs": "No community lineup was found for this mode this week, so there is nothing to compare against.",
+     "confidence": "medium"
+    },
+    {
+     "name": "Team 2",
+     "heroes": [
+      {
+       "id": "athena",
+       "pos": "F1"
+      },
+      {
+       "id": "awakened-athalia",
+       "pos": "F2"
+      },
+      {
+       "id": "medusa",
+       "pos": "B1"
+      },
+      {
+       "id": "awakened-lyca",
+       "pos": "B2"
+      },
+      {
+       "id": "awakened-pippa",
+       "pos": "B3"
+      }
+     ],
+     "artifacts": {
+      "athena": "duras-call",
+      "awakened-athalia": "duras-eye",
+      "medusa": "duras-eye",
+      "awakened-lyca": "duras-eye",
+      "awakened-pippa": "duras-eye"
+     },
+     "score": 63.3,
+     "why": "Built around Awakened Lyca (S+ PVE) and Awakened Athalia (S+ PVE). Covers frontline, sustain, damage, control. Synergy: Athena + Medusa.",
      "differs": "No community lineup was found for this mode this week, so there is nothing to compare against.",
      "confidence": "medium"
     }
@@ -949,6 +949,10 @@
    "whatMatters": "Total damage across six fights. Your score is damage to the boss plus the five Shadow Guard fights, and only your best attempt counts. The boss and guards get stronger as they lose HP, so roster depth (about 30 heroes) matters. afk.guide rates Liberta and Awakened Pippa top tier here, and AllClash rates Sung Jinwoo S+.",
    "bosses": [
     {
+     "name": "Idre",
+     "mechanics": "Shadow Fangs: your heroes can't cast ultimates. Each time a hero's Energy reaches 1000 it is spent and their normal-attack damage rises by 100%, up to 800%. Favours rangers and normal-attack heroes; ultimate-based mages should not be used (Manuel Alcayaga's guide, Oct 2026)."
+    },
+    {
      "name": "Kane",
      "mechanics": "The allied hero who deals the most damage in the first 10 seconds gets a heavy attack nerf, so protect or stagger your main carry. An older setup needs Mortas at SI +20 and Kren at SI +30."
     },
@@ -963,17 +967,240 @@
     "Dune Destroyer",
     "Burning Brute"
    ],
-   "community": [],
+   "community": [
+    {
+     "name": "Idre: Shadow Guard round 1",
+     "consensus": "common",
+     "why": "Round 1 of 6 in Manuel Alcayaga's Cursed Realm guide for the boss Idre (Oct 25, 2026; the author's run scored 276B). The guide gives Kaelon and Skriath variants. Heroes and beast read from the guide's portraits.",
+     "sources": [
+      "https://www.reddit.com/r/afkarena/comments/1xewo6z/cursed_realm_idre_276b_guide_with_investments/"
+     ],
+     "date": "2026-10-25",
+     "dated": false,
+     "partial": false,
+     "positionsInferred": true,
+     "subs": {},
+     "options": [],
+     "heroes": [
+      {
+       "id": "grezhul",
+       "pos": "F1"
+      },
+      {
+       "id": "kaelon",
+       "pos": "F2"
+      },
+      {
+       "id": "elijah-lailah",
+       "pos": "B1"
+      },
+      {
+       "id": "tavriel",
+       "pos": "B2"
+      },
+      {
+       "id": "aurelia",
+       "pos": "B3"
+      }
+     ],
+     "beast": "trickery-chest"
+    },
+    {
+     "name": "Idre: Shadow Guard round 2",
+     "consensus": "common",
+     "why": "Round 2 of 6 in Manuel Alcayaga's Cursed Realm guide for the boss Idre (Oct 25, 2026; the author's run scored 276B). Heroes and beast read from the guide's portraits.",
+     "sources": [
+      "https://www.reddit.com/r/afkarena/comments/1xewo6z/cursed_realm_idre_276b_guide_with_investments/"
+     ],
+     "date": "2026-10-25",
+     "dated": false,
+     "partial": false,
+     "positionsInferred": true,
+     "subs": {},
+     "options": [],
+     "heroes": [
+      {
+       "id": "leviathan",
+       "pos": "F1"
+      },
+      {
+       "id": "misfortis",
+       "pos": "F2"
+      },
+      {
+       "id": "hybris",
+       "pos": "B1"
+      },
+      {
+       "id": "laios",
+       "pos": "B2"
+      },
+      {
+       "id": "dracula",
+       "pos": "B3"
+      }
+     ],
+     "beast": "count-snickerfang"
+    },
+    {
+     "name": "Idre: Shadow Guard round 3",
+     "consensus": "common",
+     "why": "Round 3 of 6 in Manuel Alcayaga's Cursed Realm guide for the boss Idre (Oct 25, 2026; the author's run scored 276B). Flutterplume Owl is shown as the other beast. Heroes and beast read from the guide's portraits.",
+     "sources": [
+      "https://www.reddit.com/r/afkarena/comments/1xewo6z/cursed_realm_idre_276b_guide_with_investments/"
+     ],
+     "date": "2026-10-25",
+     "dated": false,
+     "partial": false,
+     "positionsInferred": true,
+     "subs": {},
+     "options": [],
+     "heroes": [
+      {
+       "id": "odysseus",
+       "pos": "F1"
+      },
+      {
+       "id": "begris",
+       "pos": "F2"
+      },
+      {
+       "id": "knox",
+       "pos": "B1"
+      },
+      {
+       "id": "melion",
+       "pos": "B2"
+      },
+      {
+       "id": "awakened-pippa",
+       "pos": "B3"
+      }
+     ],
+     "beast": "twinlum-spirit"
+    },
+    {
+     "name": "Idre: Shadow Guard round 4",
+     "consensus": "common",
+     "why": "Round 4 of 6 in Manuel Alcayaga's Cursed Realm guide for the boss Idre (Oct 25, 2026; the author's run scored 276B). Heroes and beast read from the guide's portraits.",
+     "sources": [
+      "https://www.reddit.com/r/afkarena/comments/1xewo6z/cursed_realm_idre_276b_guide_with_investments/"
+     ],
+     "date": "2026-10-25",
+     "dated": false,
+     "partial": false,
+     "positionsInferred": true,
+     "subs": {},
+     "options": [],
+     "heroes": [
+      {
+       "id": "gorok",
+       "pos": "F1"
+      },
+      {
+       "id": "sion",
+       "pos": "F2"
+      },
+      {
+       "id": "awakened-lyca",
+       "pos": "B1"
+      },
+      {
+       "id": "talimar",
+       "pos": "B2"
+      },
+      {
+       "id": "shuna",
+       "pos": "B3"
+      }
+     ],
+     "beast": "aureus"
+    },
+    {
+     "name": "Idre: Shadow Guard round 5",
+     "consensus": "common",
+     "why": "Round 5 of 6 in Manuel Alcayaga's Cursed Realm guide for the boss Idre (Oct 25, 2026; the author's run scored 276B). The guide says to use Pegasus only at level 27 or higher. Heroes and beast read from the guide's portraits.",
+     "sources": [
+      "https://www.reddit.com/r/afkarena/comments/1xewo6z/cursed_realm_idre_276b_guide_with_investments/"
+     ],
+     "date": "2026-10-25",
+     "dated": false,
+     "partial": false,
+     "positionsInferred": true,
+     "subs": {},
+     "options": [],
+     "heroes": [
+      {
+       "id": "elthara",
+       "pos": "F1"
+      },
+      {
+       "id": "awakened-skriath",
+       "pos": "F2"
+      },
+      {
+       "id": "lan",
+       "pos": "B1"
+      },
+      {
+       "id": "judy-punch",
+       "pos": "B2"
+      },
+      {
+       "id": "skylan",
+       "pos": "B3"
+      }
+     ],
+     "beast": "nightfall-pegasus"
+    },
+    {
+     "name": "Idre: final boss (round 6)",
+     "consensus": "common",
+     "why": "Round 6 of 6 in Manuel Alcayaga's Cursed Realm guide for the boss Idre (Oct 25, 2026; the author's run scored 276B). The guide says this round is all about Velufira's magic penetration (MP). Heroes and beast read from the guide's portraits.",
+     "sources": [
+      "https://www.reddit.com/r/afkarena/comments/1xewo6z/cursed_realm_idre_276b_guide_with_investments/"
+     ],
+     "date": "2026-10-25",
+     "dated": false,
+     "partial": false,
+     "positionsInferred": true,
+     "subs": {},
+     "options": [],
+     "heroes": [
+      {
+       "id": "athena",
+       "pos": "F1"
+      },
+      {
+       "id": "kafka-hibino",
+       "pos": "F2"
+      },
+      {
+       "id": "thalassa",
+       "pos": "B1"
+      },
+      {
+       "id": "envydiel",
+       "pos": "B2"
+      },
+      {
+       "id": "velufira",
+       "pos": "B3"
+      }
+     ],
+     "beast": "blazefang"
+    }
+   ],
    "ai": [
     {
      "name": "Team 1",
      "heroes": [
       {
-       "id": "jerome",
+       "id": "grezhul",
        "pos": "F1"
       },
       {
-       "id": "awakened-athalia",
+       "id": "hybris",
        "pos": "F2"
       },
       {
@@ -985,27 +1212,27 @@
        "pos": "B2"
       },
       {
-       "id": "ivan",
+       "id": "awakened-lyca",
        "pos": "B3"
       }
      ],
      "artifacts": {
-      "jerome": "duras-eye",
-      "awakened-athalia": "duras-eye",
+      "grezhul": "duras-call",
+      "hybris": "duras-eye",
       "liberta": "duras-call",
       "lucilla": "duras-call",
-      "ivan": "duras-call"
+      "awakened-lyca": "duras-eye"
      },
-     "score": 65.2,
-     "why": "Built around Jerome (S+ BOSS) and Awakened Athalia (S+ BOSS). Covers sustain, damage, buffs/debuffs.",
-     "differs": "No community lineup was found for this mode this week, so there is nothing to compare against.",
+     "score": 67.7,
+     "why": "Built around Grezhul (S+ BOSS) and Hybris (S+ BOSS). Covers sustain, damage, buffs/debuffs.",
+     "differs": "Agrees on Grezhul, Hybris, Awakened Lyca. Adds Liberta, Lucilla, which the community teams don't name.",
      "confidence": "medium"
     },
     {
      "name": "Team 2",
      "heroes": [
       {
-       "id": "grezhul",
+       "id": "athena",
        "pos": "F1"
       },
       {
@@ -1013,11 +1240,83 @@
        "pos": "F2"
       },
       {
+       "id": "sung-jinwoo",
+       "pos": "B1"
+      },
+      {
+       "id": "envydiel",
+       "pos": "B2"
+      },
+      {
+       "id": "sion",
+       "pos": "B3"
+      }
+     ],
+     "artifacts": {
+      "athena": "duras-call",
+      "cha-hae-in": "duras-eye",
+      "sung-jinwoo": "duras-eye",
+      "envydiel": "duras-eye",
+      "sion": "duras-eye"
+     },
+     "score": 65.8,
+     "why": "Built around Envydiel (S+ BOSS) and Sion (S+ BOSS). Covers sustain, damage, buffs/debuffs. Synergy: Cha Hae-in + Sung Jinwoo.",
+     "differs": "Agrees on Athena, Envydiel, Sion. Adds Cha Hae-in, Sung Jinwoo, which the community teams don't name.",
+     "confidence": "medium"
+    },
+    {
+     "name": "Team 3",
+     "heroes": [
+      {
+       "id": "jerome",
+       "pos": "F1"
+      },
+      {
+       "id": "awakened-athalia",
+       "pos": "F2"
+      },
+      {
        "id": "awakened-solise",
        "pos": "B1"
       },
       {
-       "id": "sung-jinwoo",
+       "id": "rosaline",
+       "pos": "B2"
+      },
+      {
+       "id": "velufira",
+       "pos": "B3"
+      }
+     ],
+     "artifacts": {
+      "jerome": "duras-eye",
+      "awakened-athalia": "duras-eye",
+      "awakened-solise": "duras-call",
+      "rosaline": "duras-call",
+      "velufira": "duras-call"
+     },
+     "score": 64,
+     "why": "Built around Velufira (S+ BOSS) and Jerome (S+ BOSS). Covers sustain, damage, buffs/debuffs.",
+     "differs": "Agrees on Velufira. Adds Jerome, Awakened Athalia, Awakened Solise, Rosaline, which the community teams don't name.",
+     "confidence": "medium"
+    },
+    {
+     "name": "Team 4",
+     "heroes": [
+      {
+       "id": "leviathan",
+       "pos": "F1"
+      },
+      {
+       "id": "laios",
+       "pos": "F2"
+      },
+      {
+       "id": "ivan",
+       "pos": "B1"
+      },
+      {
+       "id": "marcille",
        "pos": "B2"
       },
       {
@@ -1026,62 +1325,26 @@
       }
      ],
      "artifacts": {
-      "grezhul": "duras-call",
-      "cha-hae-in": "duras-eye",
-      "awakened-solise": "duras-call",
-      "sung-jinwoo": "duras-eye",
+      "leviathan": "duras-call",
+      "laios": "duras-eye",
+      "ivan": "duras-call",
+      "marcille": "duras-eye",
       "awakened-baden": "duras-eye"
      },
-     "score": 64.3,
-     "why": "Built around Cha Hae-in (S+ BOSS) and Awakened Solise (S+ BOSS). Covers sustain, damage, buffs/debuffs. Synergy: Cha Hae-in + Sung Jinwoo.",
-     "differs": "No community lineup was found for this mode this week, so there is nothing to compare against.",
+     "score": 61.8,
+     "why": "Built around Ivan (S+ BOSS) and Awakened Baden (S+ BOSS). Covers sustain, damage, buffs/debuffs. Synergy: Laios + Marcille.",
+     "differs": "Agrees on Leviathan, Laios. Adds Ivan, Marcille, Awakened Baden, which the community teams don't name.",
      "confidence": "medium"
     },
     {
-     "name": "Team 3",
-     "heroes": [
-      {
-       "id": "athena",
-       "pos": "F1"
-      },
-      {
-       "id": "hybris",
-       "pos": "F2"
-      },
-      {
-       "id": "medusa",
-       "pos": "B1"
-      },
-      {
-       "id": "awakened-lyca",
-       "pos": "B2"
-      },
-      {
-       "id": "envydiel",
-       "pos": "B3"
-      }
-     ],
-     "artifacts": {
-      "athena": "duras-call",
-      "hybris": "duras-eye",
-      "medusa": "duras-eye",
-      "awakened-lyca": "duras-eye",
-      "envydiel": "duras-eye"
-     },
-     "score": 61.3,
-     "why": "Built around Hybris (S+ BOSS) and Awakened Lyca (S+ BOSS). Covers sustain, damage, buffs/debuffs. Synergy: Athena + Medusa.",
-     "differs": "No community lineup was found for this mode this week, so there is nothing to compare against.",
-     "confidence": "medium"
-    },
-    {
-     "name": "Team 4",
+     "name": "Team 5",
      "heroes": [
       {
        "id": "saurus",
        "pos": "F1"
       },
       {
-       "id": "rosaline",
+       "id": "awakened-antandra",
        "pos": "F2"
       },
       {
@@ -1099,57 +1362,21 @@
      ],
      "artifacts": {
       "saurus": "duras-eye",
-      "rosaline": "duras-call",
+      "awakened-antandra": "duras-eye",
       "lavatune": "duras-call",
       "palmer": "duras-call",
       "scarlet": "duras-eye"
      },
      "score": 60.2,
-     "why": "Built around Rosaline (S+ BOSS) and Lavatune (S+ BOSS). Covers sustain, damage, buffs/debuffs.",
-     "differs": "No community lineup was found for this mode this week, so there is nothing to compare against.",
-     "confidence": "medium"
-    },
-    {
-     "name": "Team 5",
-     "heroes": [
-      {
-       "id": "awakened-thoran",
-       "pos": "F1"
-      },
-      {
-       "id": "awakened-antandra",
-       "pos": "F2"
-      },
-      {
-       "id": "thalassa",
-       "pos": "B1"
-      },
-      {
-       "id": "sion",
-       "pos": "B2"
-      },
-      {
-       "id": "velufira",
-       "pos": "B3"
-      }
-     ],
-     "artifacts": {
-      "awakened-thoran": "duras-call",
-      "awakened-antandra": "duras-eye",
-      "thalassa": "duras-call",
-      "sion": "duras-eye",
-      "velufira": "duras-call"
-     },
-     "score": 58,
-     "why": "Built around Sion (S+ BOSS) and Velufira (S+ BOSS). Covers sustain, damage, buffs/debuffs.",
-     "differs": "No community lineup was found for this mode this week, so there is nothing to compare against.",
+     "why": "Built around Lavatune (S+ BOSS) and Palmer (S+ BOSS). Covers sustain, damage, buffs/debuffs.",
+     "differs": "Adds Saurus, Awakened Antandra, Lavatune, Palmer, Scarlet, which the community teams don't name.",
      "confidence": "medium"
     },
     {
      "name": "Team 6",
      "heroes": [
       {
-       "id": "kyno",
+       "id": "awakened-thoran",
        "pos": "F1"
       },
       {
@@ -1157,11 +1384,11 @@
        "pos": "F2"
       },
       {
-       "id": "awakened-pippa",
+       "id": "thalassa",
        "pos": "B1"
       },
       {
-       "id": "daemia",
+       "id": "awakened-pippa",
        "pos": "B2"
       },
       {
@@ -1170,20 +1397,20 @@
       }
      ],
      "artifacts": {
-      "kyno": "duras-call",
+      "awakened-thoran": "duras-call",
       "umbriel": "duras-eye",
+      "thalassa": "duras-call",
       "awakened-pippa": "duras-eye",
-      "daemia": "duras-eye",
       "elijah-lailah": "duras-call"
      },
-     "score": 55,
-     "why": "Built around Kyno (S BOSS) and Umbriel (S BOSS). Covers sustain, damage, buffs/debuffs.",
-     "differs": "No community lineup was found for this mode this week, so there is nothing to compare against.",
+     "score": 58,
+     "why": "Built around Thalassa (S BOSS) and Awakened Pippa (S BOSS). Covers sustain, damage, buffs/debuffs.",
+     "differs": "Agrees on Thalassa, Awakened Pippa, Elijah & Lailah. Adds Awakened Thoran, Umbriel, which the community teams don't name.",
      "confidence": "medium"
     }
    ],
    "group": "boss",
-   "aiNotes": "Six teams that never share a hero. Whether heroes can repeat was not confirmed this week, so the calculation plays it safe. Every guard fight still gets a carry."
+   "aiNotes": "Six teams that never share a hero; Manuel Alcayaga's Oct 2026 guide also uses 30 different heroes across its six rounds. This week's boss, Idre, blocks ultimates and rewards normal attacks, so the calculated lineups (which don't model that) are a weaker guide than the community's Idre teams above."
   },
   {
    "id": "nightmare-corridor",
@@ -1200,6 +1427,227 @@
     "Molten Crystaline Worm"
    ],
    "community": [
+    {
+     "name": "Current rotation, boss 1 (6s kill)",
+     "consensus": "common",
+     "why": "Round 1 of 6 in Manuel Alcayaga's Nightmare Corridor guide for the current boss rotation (Oct 25, 2026; 0:53 in total). Kill time with this team: 6 seconds. Without Severin the guide expects about 1:05 to 1:15 in total. Heroes and beast read from the guide's portraits.",
+     "sources": [
+      "https://www.reddit.com/r/afkarena/comments/1xewq3g/nightmare_corridor_053_guide_with_investments/"
+     ],
+     "date": "2026-10-25",
+     "dated": false,
+     "partial": false,
+     "positionsInferred": true,
+     "subs": {},
+     "options": [],
+     "heroes": [
+      {
+       "id": "alvida",
+       "pos": "F1"
+      },
+      {
+       "id": "elthara",
+       "pos": "F2"
+      },
+      {
+       "id": "rowan",
+       "pos": "B1"
+      },
+      {
+       "id": "misha",
+       "pos": "B2"
+      },
+      {
+       "id": "severin",
+       "pos": "B3"
+      }
+     ],
+     "beast": "twinlum-spirit"
+    },
+    {
+     "name": "Current rotation, boss 2 (9s kill)",
+     "consensus": "common",
+     "why": "Round 2 of 6 in Manuel Alcayaga's Nightmare Corridor guide for the current boss rotation (Oct 25, 2026; 0:53 in total). Kill time with this team: 9 seconds. Heroes and beast read from the guide's portraits.",
+     "sources": [
+      "https://www.reddit.com/r/afkarena/comments/1xewq3g/nightmare_corridor_053_guide_with_investments/"
+     ],
+     "date": "2026-10-25",
+     "dated": false,
+     "partial": false,
+     "positionsInferred": true,
+     "subs": {},
+     "options": [],
+     "heroes": [
+      {
+       "id": "misfortis",
+       "pos": "F1"
+      },
+      {
+       "id": "kyno",
+       "pos": "F2"
+      },
+      {
+       "id": "lan",
+       "pos": "B1"
+      },
+      {
+       "id": "kaelon",
+       "pos": "B2"
+      },
+      {
+       "id": "awakened-safiya",
+       "pos": "B3"
+      }
+     ],
+     "beast": "blazefang"
+    },
+    {
+     "name": "Current rotation, boss 3 (7s kill)",
+     "consensus": "common",
+     "why": "Round 3 of 6 in Manuel Alcayaga's Nightmare Corridor guide for the current boss rotation (Oct 25, 2026; 0:53 in total). Kill time with this team: 7 seconds. Heroes and beast read from the guide's portraits.",
+     "sources": [
+      "https://www.reddit.com/r/afkarena/comments/1xewq3g/nightmare_corridor_053_guide_with_investments/"
+     ],
+     "date": "2026-10-25",
+     "dated": false,
+     "partial": false,
+     "positionsInferred": true,
+     "subs": {},
+     "options": [],
+     "heroes": [
+      {
+       "id": "harvey",
+       "pos": "F1"
+      },
+      {
+       "id": "kafka-hibino",
+       "pos": "F2"
+      },
+      {
+       "id": "sion",
+       "pos": "B1"
+      },
+      {
+       "id": "tavriel",
+       "pos": "B2"
+      },
+      {
+       "id": "awakened-pippa",
+       "pos": "B3"
+      }
+     ],
+     "beast": "count-snickerfang"
+    },
+    {
+     "name": "Current rotation, boss 4 (14s kill)",
+     "consensus": "common",
+     "why": "Round 4 of 6 in Manuel Alcayaga's Nightmare Corridor guide for the current boss rotation (Oct 25, 2026; 0:53 in total). Kill time with this team: 14 seconds. The beast for this round could not be read. Heroes and beast read from the guide's portraits.",
+     "sources": [
+      "https://www.reddit.com/r/afkarena/comments/1xewq3g/nightmare_corridor_053_guide_with_investments/"
+     ],
+     "date": "2026-10-25",
+     "dated": false,
+     "partial": false,
+     "positionsInferred": true,
+     "subs": {},
+     "options": [],
+     "heroes": [
+      {
+       "id": "gorok",
+       "pos": "F1"
+      },
+      {
+       "id": "envydiel",
+       "pos": "F2"
+      },
+      {
+       "id": "aurelia",
+       "pos": "B1"
+      },
+      {
+       "id": "talimar",
+       "pos": "B2"
+      },
+      {
+       "id": "thalassa",
+       "pos": "B3"
+      }
+     ]
+    },
+    {
+     "name": "Current rotation, boss 5 (13s kill)",
+     "consensus": "common",
+     "why": "Round 5 of 6 in Manuel Alcayaga's Nightmare Corridor guide for the current boss rotation (Oct 25, 2026; 0:53 in total). Kill time with this team: 13 seconds. The guide says Pegasus needs level 27. Heroes and beast read from the guide's portraits.",
+     "sources": [
+      "https://www.reddit.com/r/afkarena/comments/1xewq3g/nightmare_corridor_053_guide_with_investments/"
+     ],
+     "date": "2026-10-25",
+     "dated": false,
+     "partial": false,
+     "positionsInferred": true,
+     "subs": {},
+     "options": [],
+     "heroes": [
+      {
+       "id": "awakened-estrilda",
+       "pos": "F1"
+      },
+      {
+       "id": "begris",
+       "pos": "F2"
+      },
+      {
+       "id": "lysander",
+       "pos": "B1"
+      },
+      {
+       "id": "daemia",
+       "pos": "B2"
+      },
+      {
+       "id": "awakened-eluard",
+       "pos": "B3"
+      }
+     ],
+     "beast": "nightfall-pegasus"
+    },
+    {
+     "name": "Current rotation, boss 6 (6s kill)",
+     "consensus": "common",
+     "why": "Round 6 of 6 in Manuel Alcayaga's Nightmare Corridor guide for the current boss rotation (Oct 25, 2026; 0:53 in total). Kill time with this team: 6 seconds. Heroes and beast read from the guide's portraits.",
+     "sources": [
+      "https://www.reddit.com/r/afkarena/comments/1xewq3g/nightmare_corridor_053_guide_with_investments/"
+     ],
+     "date": "2026-10-25",
+     "dated": false,
+     "partial": false,
+     "positionsInferred": true,
+     "subs": {},
+     "options": [],
+     "heroes": [
+      {
+       "id": "athena",
+       "pos": "F1"
+      },
+      {
+       "id": "hybris",
+       "pos": "F2"
+      },
+      {
+       "id": "lavatune",
+       "pos": "B1"
+      },
+      {
+       "id": "awakened-theowyn",
+       "pos": "B2"
+      },
+      {
+       "id": "dracula",
+       "pos": "B3"
+      }
+     ],
+     "beast": "trickery-chest"
+    },
     {
      "name": "Dual-Mantle kill comps (Sion/Cha Hae-in, Envydiel/Kaelon, Elthara, Marcille)",
      "consensus": "common",
@@ -1242,42 +1690,42 @@
      "name": "Best lineup",
      "heroes": [
       {
-       "id": "athena",
+       "id": "cha-hae-in",
        "pos": "F1"
       },
       {
-       "id": "cha-hae-in",
+       "id": "hybris",
        "pos": "F2"
       },
       {
-       "id": "sung-jinwoo",
+       "id": "awakened-solise",
        "pos": "B1"
       },
       {
-       "id": "envydiel",
+       "id": "sung-jinwoo",
        "pos": "B2"
       },
       {
-       "id": "sion",
+       "id": "envydiel",
        "pos": "B3"
       }
      ],
      "artifacts": {
-      "athena": "duras-call",
       "cha-hae-in": "duras-eye",
+      "hybris": "duras-eye",
+      "awakened-solise": "duras-call",
       "sung-jinwoo": "duras-eye",
-      "envydiel": "duras-eye",
-      "sion": "duras-eye"
+      "envydiel": "duras-eye"
      },
-     "score": 65.8,
+     "score": 67.3,
      "why": "Built around Cha Hae-in (S+ BOSS) and Envydiel (S+ BOSS). Covers sustain, damage, buffs/debuffs. Synergy: Cha Hae-in + Sung Jinwoo.",
-     "differs": "Agrees on Cha Hae-in, Envydiel, Sion. Adds Athena, Sung Jinwoo, which the community teams don't name.",
+     "differs": "Agrees on Cha Hae-in, Hybris, Envydiel. Adds Awakened Solise, Sung Jinwoo, which the community teams don't name.",
      "confidence": "medium"
     }
    ],
    "group": "boss",
    "teamsNote": "Six bosses, each beaten with its own comp. Whether heroes can repeat across bosses was not confirmed this week.",
-   "aiNotes": "A single calculated kill team. The community builds a different comp for each boss (Sion or Cha Hae-in, Envydiel or Kaelon, Marcille, Odysseus) with a beast for each, and this lineup does not model the beasts."
+   "aiNotes": "A single calculated kill team. The community builds a different comp for each of the six bosses with its own beast (Manuel Alcayaga's Oct 2026 rotation teams are listed above), and this lineup does not model the bosses or beasts."
   },
   {
    "id": "guild-hunts",
@@ -2084,7 +2532,7 @@
        "pos": "F2"
       },
       {
-       "id": "aurelia",
+       "id": "sung-jinwoo",
        "pos": "B1"
       },
       {
@@ -2092,20 +2540,20 @@
        "pos": "B2"
       },
       {
-       "id": "sung-jinwoo",
+       "id": "awakened-lyca",
        "pos": "B3"
       }
      ],
      "artifacts": {
       "awakened-shemira": "duras-call",
       "cha-hae-in": "duras-eye",
-      "aurelia": "duras-eye",
+      "sung-jinwoo": "duras-eye",
       "liberta": "duras-call",
-      "sung-jinwoo": "duras-eye"
+      "awakened-lyca": "duras-eye"
      },
-     "score": 66.5,
-     "why": "Built around Sung Jinwoo (S+ PVP) and Aurelia (S+ PVP). Covers frontline, sustain, damage, control. Synergy: Sung Jinwoo + Cha Hae-in.",
-     "differs": "Agrees on Awakened Shemira, Aurelia, Liberta, Sung Jinwoo. Adds Cha Hae-in, which the community teams don't name.",
+     "score": 67,
+     "why": "Built around Sung Jinwoo (S+ PVP) and Awakened Lyca (S+ PVP). Covers frontline, sustain, damage, control. Synergy: Cha Hae-in + Sung Jinwoo.",
+     "differs": "Agrees on Awakened Shemira, Sung Jinwoo, Liberta, Awakened Lyca. Adds Cha Hae-in, which the community teams don't name.",
      "confidence": "medium"
     }
    ],
@@ -2668,7 +3116,7 @@
        "pos": "F2"
       },
       {
-       "id": "awakened-solise",
+       "id": "liberta",
        "pos": "B1"
       },
       {
@@ -2683,13 +3131,13 @@
      "artifacts": {
       "jerome": "duras-eye",
       "awakened-athalia": "duras-eye",
-      "awakened-solise": "duras-call",
+      "liberta": "duras-call",
       "awakened-belinda": "duras-eye",
       "lavatune": "duras-call"
      },
-     "score": 64.7,
-     "why": "Built around Jerome (S+ PVP) and Awakened Solise (S+ PVP). Covers frontline, sustain, damage, control.",
-     "differs": "No community lineup was found for this mode this week, so there is nothing to compare against.",
+     "score": 68.7,
+     "why": "Built around Liberta (S+ PVP) and Jerome (S+ PVP). Covers frontline, sustain, damage, control.",
+     "differs": "Agrees on Jerome, Awakened Athalia, Liberta, Lavatune. Adds Awakened Belinda, which the community teams don't name.",
      "confidence": "medium"
     },
     {
@@ -2723,9 +3171,9 @@
       "sung-jinwoo": "duras-eye",
       "aurelia": "duras-eye"
      },
-     "score": 63.1,
+     "score": 68.1,
      "why": "Built around Cha Hae-in (S+ PVP) and Sung Jinwoo (S+ PVP). Covers frontline, sustain, damage, control. Synergy: Athena + Medusa, Cha Hae-in + Sung Jinwoo.",
-     "differs": "No community lineup was found for this mode this week, so there is nothing to compare against.",
+     "differs": "Agrees on Athena, Cha Hae-in, Medusa, Sung Jinwoo, Aurelia.",
      "confidence": "medium"
     },
     {
@@ -2740,28 +3188,28 @@
        "pos": "F2"
       },
       {
-       "id": "awakened-baden",
+       "id": "awakened-lyca",
        "pos": "B1"
       },
       {
-       "id": "awakened-lyca",
+       "id": "daemia",
        "pos": "B2"
       },
       {
-       "id": "daemia",
+       "id": "envydiel",
        "pos": "B3"
       }
      ],
      "artifacts": {
       "kyno": "duras-call",
       "hybris": "duras-eye",
-      "awakened-baden": "duras-eye",
       "awakened-lyca": "duras-eye",
-      "daemia": "duras-eye"
+      "daemia": "duras-eye",
+      "envydiel": "duras-eye"
      },
-     "score": 61,
-     "why": "Built around Hybris (S+ PVP) and Awakened Baden (S+ PVP). Covers frontline, sustain, damage, control.",
-     "differs": "No community lineup was found for this mode this week, so there is nothing to compare against.",
+     "score": 66,
+     "why": "Built around Hybris (S+ PVP) and Awakened Lyca (S+ PVP). Covers frontline, sustain, damage, control.",
+     "differs": "Agrees on Kyno, Hybris, Awakened Lyca, Daemia, Envydiel.",
      "confidence": "medium"
     }
    ],
@@ -2777,46 +3225,270 @@
    "whatMatters": "Several teams explore and fight on their own, so the mode needs many heroes. Each team can meet enemies up to 100 times a day (50 in Elite Clash). Teams start treasure hunting daily at 02:00 and 14:00 UTC.",
    "bosses": [],
    "bossesUnknown": [],
-   "community": [],
-   "ai": [
+   "community": [
     {
-     "name": "Team 1",
+     "name": "Pure Realm team 1",
+     "consensus": "common",
+     "why": "Team 1 of 7 in Manuel Alcayaga's Treasure Scramble guide for the Pure Realm debuff (Oct 30, 2026), from the top teams at ranks 10-20 in regions 10 to 40: seen 65 times. Pure Realm gives 400% max HP and 50 Vitality and scales ATK, DEF, Haste and Energy with current HP, so tanks and HP-scaling heroes shine. Ice Crown is shown as the other beast.",
+     "sources": [
+      "https://www.reddit.com/r/afkarena/comments/1xjc2g9/treasure_scramble_pure_realm_7_teams_guide_with/"
+     ],
+     "date": "2026-10-30",
+     "dated": false,
+     "partial": false,
+     "positionsInferred": true,
+     "subs": {},
+     "options": [],
      "heroes": [
       {
-       "id": "jerome",
+       "id": "leviathan",
        "pos": "F1"
       },
       {
-       "id": "awakened-athalia",
+       "id": "envydiel",
        "pos": "F2"
       },
       {
-       "id": "awakened-solise",
+       "id": "aurelia",
        "pos": "B1"
       },
       {
-       "id": "awakened-belinda",
+       "id": "gorren",
        "pos": "B2"
       },
       {
-       "id": "lavatune",
+       "id": "gavus",
        "pos": "B3"
       }
      ],
-     "artifacts": {
-      "jerome": "duras-eye",
-      "awakened-athalia": "duras-eye",
-      "awakened-solise": "duras-call",
-      "awakened-belinda": "duras-eye",
-      "lavatune": "duras-call"
-     },
-     "score": 64.7,
-     "why": "Built around Jerome (S+ PVP) and Awakened Solise (S+ PVP). Covers frontline, sustain, damage, control.",
-     "differs": "No community lineup was found for this mode this week, so there is nothing to compare against.",
-     "confidence": "medium"
+     "beast": "trickery-chest"
     },
     {
-     "name": "Team 2",
+     "name": "Pure Realm team 2",
+     "consensus": "strong",
+     "why": "Team 2 of 7 in Manuel Alcayaga's Treasure Scramble guide for the Pure Realm debuff (Oct 30, 2026), from the top teams at ranks 10-20 in regions 10 to 40: seen 100 times. Pure Realm gives 400% max HP and 50 Vitality and scales ATK, DEF, Haste and Energy with current HP, so tanks and HP-scaling heroes shine. Count Snickerfang is shown as the other beast.",
+     "sources": [
+      "https://www.reddit.com/r/afkarena/comments/1xjc2g9/treasure_scramble_pure_realm_7_teams_guide_with/"
+     ],
+     "date": "2026-10-30",
+     "dated": false,
+     "partial": false,
+     "positionsInferred": true,
+     "subs": {},
+     "options": [],
+     "heroes": [
+      {
+       "id": "awakened-shemira",
+       "pos": "F1"
+      },
+      {
+       "id": "awakened-estrilda",
+       "pos": "F2"
+      },
+      {
+       "id": "gorok",
+       "pos": "B1"
+      },
+      {
+       "id": "sung-jinwoo",
+       "pos": "B2"
+      },
+      {
+       "id": "awakened-eluard",
+       "pos": "B3"
+      }
+     ],
+     "beast": "flutterplume-owl"
+    },
+    {
+     "name": "Pure Realm team 3",
+     "consensus": "common",
+     "why": "Team 3 of 7 in Manuel Alcayaga's Treasure Scramble guide for the Pure Realm debuff (Oct 30, 2026), from the top teams at ranks 10-20 in regions 10 to 40: seen 42 times. Pure Realm gives 400% max HP and 50 Vitality and scales ATK, DEF, Haste and Energy with current HP, so tanks and HP-scaling heroes shine.",
+     "sources": [
+      "https://www.reddit.com/r/afkarena/comments/1xjc2g9/treasure_scramble_pure_realm_7_teams_guide_with/"
+     ],
+     "date": "2026-10-30",
+     "dated": false,
+     "partial": false,
+     "positionsInferred": true,
+     "subs": {},
+     "options": [],
+     "heroes": [
+      {
+       "id": "saitama",
+       "pos": "F1"
+      },
+      {
+       "id": "valeri",
+       "pos": "F2"
+      },
+      {
+       "id": "elthara",
+       "pos": "B1"
+      },
+      {
+       "id": "skylan",
+       "pos": "B2"
+      },
+      {
+       "id": "awakened-theowyn",
+       "pos": "B3"
+      }
+     ],
+     "beast": "blazefang"
+    },
+    {
+     "name": "Pure Realm team 4",
+     "consensus": "strong",
+     "why": "Team 4 of 7 in Manuel Alcayaga's Treasure Scramble guide for the Pure Realm debuff (Oct 30, 2026), from the top teams at ranks 10-20 in regions 10 to 40: seen 100 times. Pure Realm gives 400% max HP and 50 Vitality and scales ATK, DEF, Haste and Energy with current HP, so tanks and HP-scaling heroes shine. With Pandy Dumpty, the guide says to put Hybris at the bottom for its protection.",
+     "sources": [
+      "https://www.reddit.com/r/afkarena/comments/1xjc2g9/treasure_scramble_pure_realm_7_teams_guide_with/"
+     ],
+     "date": "2026-10-30",
+     "dated": false,
+     "partial": false,
+     "positionsInferred": true,
+     "subs": {},
+     "options": [],
+     "heroes": [
+      {
+       "id": "misfortis",
+       "pos": "F1"
+      },
+      {
+       "id": "hybris",
+       "pos": "F2"
+      },
+      {
+       "id": "zolrath",
+       "pos": "B1"
+      },
+      {
+       "id": "dracula",
+       "pos": "B2"
+      },
+      {
+       "id": "shuna",
+       "pos": "B3"
+      }
+     ],
+     "beast": "treatspector"
+    },
+    {
+     "name": "Pure Realm team 5",
+     "consensus": "strong",
+     "why": "Team 5 of 7 in Manuel Alcayaga's Treasure Scramble guide for the Pure Realm debuff (Oct 30, 2026), from the top teams at ranks 10-20 in regions 10 to 40: seen 100 times. Pure Realm gives 400% max HP and 50 Vitality and scales ATK, DEF, Haste and Energy with current HP, so tanks and HP-scaling heroes shine.",
+     "sources": [
+      "https://www.reddit.com/r/afkarena/comments/1xjc2g9/treasure_scramble_pure_realm_7_teams_guide_with/"
+     ],
+     "date": "2026-10-30",
+     "dated": false,
+     "partial": false,
+     "positionsInferred": true,
+     "subs": {},
+     "options": [],
+     "heroes": [
+      {
+       "id": "kyno",
+       "pos": "F1"
+      },
+      {
+       "id": "odysseus",
+       "pos": "F2"
+      },
+      {
+       "id": "thalassa",
+       "pos": "B1"
+      },
+      {
+       "id": "velufira",
+       "pos": "B2"
+      },
+      {
+       "id": "lan",
+       "pos": "B3"
+      }
+     ],
+     "beast": "twinlum-spirit"
+    },
+    {
+     "name": "Pure Realm team 6",
+     "consensus": "common",
+     "why": "Team 6 of 7 in Manuel Alcayaga's Treasure Scramble guide for the Pure Realm debuff (Oct 30, 2026), from the top teams at ranks 10-20 in regions 10 to 40: seen 46 times. Pure Realm gives 400% max HP and 50 Vitality and scales ATK, DEF, Haste and Energy with current HP, so tanks and HP-scaling heroes shine. The guide says Alvida really wants SI +40.",
+     "sources": [
+      "https://www.reddit.com/r/afkarena/comments/1xjc2g9/treasure_scramble_pure_realm_7_teams_guide_with/"
+     ],
+     "date": "2026-10-30",
+     "dated": false,
+     "partial": false,
+     "positionsInferred": true,
+     "subs": {},
+     "options": [],
+     "heroes": [
+      {
+       "id": "alvida",
+       "pos": "F1"
+      },
+      {
+       "id": "haelia",
+       "pos": "F2"
+      },
+      {
+       "id": "awakened-fawkes",
+       "pos": "B1"
+      },
+      {
+       "id": "awakened-lyca",
+       "pos": "B2"
+      },
+      {
+       "id": "lysander",
+       "pos": "B3"
+      }
+     ],
+     "beast": "nightfall-pegasus"
+    },
+    {
+     "name": "Pure Realm team 7",
+     "consensus": "strong",
+     "why": "Team 7 of 7 in Manuel Alcayaga's Treasure Scramble guide for the Pure Realm debuff (Oct 30, 2026), from the top teams at ranks 10-20 in regions 10 to 40: seen 84 times. Pure Realm gives 400% max HP and 50 Vitality and scales ATK, DEF, Haste and Energy with current HP, so tanks and HP-scaling heroes shine. Some players use Awakened Theowyn in place of Maetria, but the guide calls Maetria the core.",
+     "sources": [
+      "https://www.reddit.com/r/afkarena/comments/1xjc2g9/treasure_scramble_pure_realm_7_teams_guide_with/"
+     ],
+     "date": "2026-10-30",
+     "dated": false,
+     "partial": false,
+     "positionsInferred": true,
+     "subs": {},
+     "options": [],
+     "heroes": [
+      {
+       "id": "athena",
+       "pos": "F1"
+      },
+      {
+       "id": "kafka-hibino",
+       "pos": "F2"
+      },
+      {
+       "id": "maetria",
+       "pos": "B1"
+      },
+      {
+       "id": "medusa",
+       "pos": "B2"
+      },
+      {
+       "id": "flora",
+       "pos": "B3"
+      }
+     ],
+     "beast": "slumber-seal"
+    }
+   ],
+   "ai": [
+    {
+     "name": "Team 1",
      "heroes": [
       {
        "id": "athena",
@@ -2831,11 +3503,11 @@
        "pos": "B1"
       },
       {
-       "id": "sung-jinwoo",
+       "id": "envydiel",
        "pos": "B2"
       },
       {
-       "id": "aurelia",
+       "id": "sung-jinwoo",
        "pos": "B3"
       }
      ],
@@ -2843,19 +3515,55 @@
       "athena": "duras-call",
       "cha-hae-in": "duras-eye",
       "medusa": "duras-eye",
-      "sung-jinwoo": "duras-eye",
-      "aurelia": "duras-eye"
+      "envydiel": "duras-eye",
+      "sung-jinwoo": "duras-eye"
      },
-     "score": 63.1,
-     "why": "Built around Cha Hae-in (S+ PVP) and Sung Jinwoo (S+ PVP). Covers frontline, sustain, damage, control. Synergy: Athena + Medusa, Cha Hae-in + Sung Jinwoo.",
-     "differs": "No community lineup was found for this mode this week, so there is nothing to compare against.",
+     "score": 68.9,
+     "why": "Built around Sung Jinwoo (S+ PVP) and Envydiel (S+ PVP). Covers frontline, sustain, damage, control. Synergy: Athena + Medusa, Sung Jinwoo + Cha Hae-in.",
+     "differs": "Agrees on Athena, Medusa, Envydiel, Sung Jinwoo. Adds Cha Hae-in, which the community teams don't name.",
+     "confidence": "medium"
+    },
+    {
+     "name": "Team 2",
+     "heroes": [
+      {
+       "id": "kyno",
+       "pos": "F1"
+      },
+      {
+       "id": "awakened-athalia",
+       "pos": "F2"
+      },
+      {
+       "id": "velufira",
+       "pos": "B1"
+      },
+      {
+       "id": "awakened-belinda",
+       "pos": "B2"
+      },
+      {
+       "id": "lavatune",
+       "pos": "B3"
+      }
+     ],
+     "artifacts": {
+      "kyno": "duras-call",
+      "awakened-athalia": "duras-eye",
+      "velufira": "duras-call",
+      "awakened-belinda": "duras-eye",
+      "lavatune": "duras-call"
+     },
+     "score": 66.4,
+     "why": "Built around Velufira (S+ PVP) and Kyno (S PVP). Covers frontline, sustain, damage, control.",
+     "differs": "Agrees on Kyno, Velufira. Adds Awakened Athalia, Awakened Belinda, Lavatune, which the community teams don't name.",
      "confidence": "medium"
     },
     {
      "name": "Team 3",
      "heroes": [
       {
-       "id": "kyno",
+       "id": "jerome",
        "pos": "F1"
       },
       {
@@ -2863,34 +3571,34 @@
        "pos": "F2"
       },
       {
-       "id": "awakened-baden",
+       "id": "thalassa",
        "pos": "B1"
       },
       {
-       "id": "awakened-lyca",
+       "id": "aurelia",
        "pos": "B2"
       },
       {
-       "id": "daemia",
+       "id": "awakened-lyca",
        "pos": "B3"
       }
      ],
      "artifacts": {
-      "kyno": "duras-call",
+      "jerome": "duras-eye",
       "hybris": "duras-eye",
-      "awakened-baden": "duras-eye",
-      "awakened-lyca": "duras-eye",
-      "daemia": "duras-eye"
+      "thalassa": "duras-call",
+      "aurelia": "duras-eye",
+      "awakened-lyca": "duras-eye"
      },
-     "score": 61,
-     "why": "Built around Hybris (S+ PVP) and Awakened Baden (S+ PVP). Covers frontline, sustain, damage, control.",
-     "differs": "No community lineup was found for this mode this week, so there is nothing to compare against.",
+     "score": 66.2,
+     "why": "Built around Hybris (S+ PVP) and Aurelia (S+ PVP). Covers frontline, sustain, damage, control.",
+     "differs": "Agrees on Hybris, Thalassa, Aurelia, Awakened Lyca. Adds Jerome, which the community teams don't name.",
      "confidence": "medium"
     }
    ],
    "group": "pvp",
    "teamsNote": "The exact number of teams was not confirmed this week. 3 is a starting point; change it in the builder.",
-   "aiNotes": "Balanced the same way as Legends Championship. The real team count was not confirmed, so set it in the builder."
+   "aiNotes": "Balanced the same way as Legends Championship. The weekly debuff changes what works: under Pure Realm (Oct 2026) tanks and HP-scaling heroes shine, which the calculation doesn't model, so lean on the community's Pure Realm teams above."
   },
   {
    "id": "guild-trials",
@@ -3002,6 +3710,42 @@
      "name": "Team 3",
      "heroes": [
       {
+       "id": "awakened-shemira",
+       "pos": "F1"
+      },
+      {
+       "id": "cha-hae-in",
+       "pos": "F2"
+      },
+      {
+       "id": "ivan",
+       "pos": "B1"
+      },
+      {
+       "id": "merlin",
+       "pos": "B2"
+      },
+      {
+       "id": "sung-jinwoo",
+       "pos": "B3"
+      }
+     ],
+     "artifacts": {
+      "awakened-shemira": "duras-call",
+      "cha-hae-in": "duras-eye",
+      "ivan": "duras-call",
+      "merlin": "duras-call",
+      "sung-jinwoo": "duras-eye"
+     },
+     "score": 60.5,
+     "why": "Built around Ivan (S+ PVE) and Merlin (S+ PVE). Covers frontline, sustain, damage, control. Synergy: Cha Hae-in + Sung Jinwoo.",
+     "differs": "Adds Awakened Shemira, Cha Hae-in, Ivan, Merlin, Sung Jinwoo, which the community teams don't name.",
+     "confidence": "medium"
+    },
+    {
+     "name": "Team 4",
+     "heroes": [
+      {
        "id": "kyno",
        "pos": "F1"
       },
@@ -3014,11 +3758,11 @@
        "pos": "B1"
       },
       {
-       "id": "ivan",
+       "id": "sion",
        "pos": "B2"
       },
       {
-       "id": "merlin",
+       "id": "talimar",
        "pos": "B3"
       }
      ],
@@ -3026,31 +3770,31 @@
       "kyno": "duras-call",
       "leonardo": "duras-eye",
       "rosaline": "duras-call",
-      "ivan": "duras-call",
-      "merlin": "duras-call"
+      "sion": "duras-eye",
+      "talimar": "duras-call"
      },
      "score": 59.5,
      "why": "Built around Leonardo (S+ PVE) and Rosaline (S+ PVE). Covers frontline, sustain, damage, control.",
-     "differs": "Adds Kyno, Leonardo, Rosaline, Ivan, Merlin, which the community teams don't name.",
+     "differs": "Adds Kyno, Leonardo, Rosaline, Sion, Talimar, which the community teams don't name.",
      "confidence": "medium"
     },
     {
-     "name": "Team 4",
+     "name": "Team 5",
      "heroes": [
       {
-       "id": "valeri",
+       "id": "awakened-thoran",
        "pos": "F1"
       },
       {
-       "id": "zohra",
+       "id": "valeri",
        "pos": "F2"
       },
       {
-       "id": "sion",
+       "id": "awakened-antandra",
        "pos": "B1"
       },
       {
-       "id": "talimar",
+       "id": "zohra",
        "pos": "B2"
       },
       {
@@ -3059,51 +3803,15 @@
       }
      ],
      "artifacts": {
+      "awakened-thoran": "duras-call",
       "valeri": "duras-call",
+      "awakened-antandra": "duras-eye",
       "zohra": "duras-eye",
-      "sion": "duras-eye",
-      "talimar": "duras-call",
       "velufira": "duras-call"
      },
-     "score": 59.5,
-     "why": "Built around Zohra (S+ PVE) and Sion (S+ PVE). Covers frontline, sustain, damage, control.",
-     "differs": "Adds Valeri, Zohra, Sion, Talimar, Velufira, which the community teams don't name.",
-     "confidence": "medium"
-    },
-    {
-     "name": "Team 5",
-     "heroes": [
-      {
-       "id": "awakened-shemira",
-       "pos": "F1"
-      },
-      {
-       "id": "awakened-antandra",
-       "pos": "F2"
-      },
-      {
-       "id": "cha-hae-in",
-       "pos": "B1"
-      },
-      {
-       "id": "thalassa",
-       "pos": "B2"
-      },
-      {
-       "id": "sung-jinwoo",
-       "pos": "B3"
-      }
-     ],
-     "artifacts": {
-      "awakened-shemira": "duras-call",
-      "awakened-antandra": "duras-eye",
-      "cha-hae-in": "duras-eye",
-      "thalassa": "duras-call",
-      "sung-jinwoo": "duras-eye"
-     },
-     "score": 57.5,
-     "why": "Built around Thalassa (S PVE) and Awakened Antandra (S PVE). Covers frontline, sustain, damage, control. Synergy: Cha Hae-in + Sung Jinwoo.",
-     "differs": "Adds Awakened Shemira, Awakened Antandra, Cha Hae-in, Thalassa, Sung Jinwoo, which the community teams don't name.",
+     "score": 58,
+     "why": "Built around Zohra (S+ PVE) and Velufira (S+ PVE). Covers frontline, sustain, damage, control.",
+     "differs": "Adds Awakened Thoran, Valeri, Awakened Antandra, Zohra, Velufira, which the community teams don't name.",
      "confidence": "medium"
     }
    ],
@@ -3396,12 +4104,11 @@
      "medusa"
     ],
     "name": "Athena + Medusa",
-    "why": "Paired in 7 calculated lineups (King's Tower, Arcane Labyrinth, Abyssal Expedition, Cursed Realm…). Athena brings tank, Medusa brings debuffer.",
+    "why": "Paired in 6 calculated lineups (King's Tower, Arcane Labyrinth, Abyssal Expedition, Legends Championship…). Athena brings tank, Medusa brings debuffer.",
     "modes": [
      "King's Tower",
      "Arcane Labyrinth",
      "Abyssal Expedition",
-     "Cursed Realm",
      "Legends Championship",
      "Treasure Scramble",
      "Guild Trials"
@@ -3425,22 +4132,6 @@
    },
    {
     "heroes": [
-     "awakened-baden",
-     "awakened-lyca"
-    ],
-    "name": "Awakened Baden + Awakened Lyca",
-    "why": "Paired in 5 calculated lineups (King's Tower, Arcane Labyrinth, Abyssal Expedition, Cursed Realm…). Awakened Baden brings sustained-dps, Awakened Lyca brings sustained-dps.",
-    "modes": [
-     "King's Tower",
-     "Arcane Labyrinth",
-     "Abyssal Expedition",
-     "Cursed Realm",
-     "Guild Trials"
-    ],
-    "reviewed": true
-   },
-   {
-    "heroes": [
      "athena",
      "awakened-athalia"
     ],
@@ -3455,11 +4146,11 @@
    },
    {
     "heroes": [
-     "athena",
-     "awakened-baden"
+     "awakened-athalia",
+     "medusa"
     ],
-    "name": "Athena + Awakened Baden",
-    "why": "Paired in 4 calculated lineups (King's Tower, Arcane Labyrinth, Abyssal Expedition, Guild Trials). Athena brings tank, Awakened Baden brings sustained-dps.",
+    "name": "Awakened Athalia + Medusa",
+    "why": "Paired in 4 calculated lineups (King's Tower, Arcane Labyrinth, Abyssal Expedition, Guild Trials). Awakened Athalia brings burst, Medusa brings debuffer.",
     "modes": [
      "King's Tower",
      "Arcane Labyrinth",
@@ -3470,14 +4161,26 @@
    {
     "heroes": [
      "athena",
+     "awakened-baden"
+    ],
+    "name": "Athena + Awakened Baden",
+    "why": "Paired in 3 calculated lineups (King's Tower, Arcane Labyrinth, Guild Trials). Athena brings tank, Awakened Baden brings sustained-dps.",
+    "modes": [
+     "King's Tower",
+     "Arcane Labyrinth",
+     "Guild Trials"
+    ]
+   },
+   {
+    "heroes": [
+     "athena",
      "awakened-lyca"
     ],
     "name": "Athena + Awakened Lyca",
-    "why": "Paired in 4 calculated lineups (King's Tower, Abyssal Expedition, Cursed Realm, Guild Trials). Athena brings tank, Awakened Lyca brings sustained-dps.",
+    "why": "Paired in 3 calculated lineups (King's Tower, Abyssal Expedition, Guild Trials). Athena brings tank, Awakened Lyca brings sustained-dps.",
     "modes": [
      "King's Tower",
      "Abyssal Expedition",
-     "Cursed Realm",
      "Guild Trials"
     ]
    },
@@ -3501,13 +4204,12 @@
    {
     "heroes": [
      "awakened-athalia",
-     "medusa"
+     "awakened-lyca"
     ],
-    "name": "Awakened Athalia + Medusa",
-    "why": "Paired in 4 calculated lineups (King's Tower, Arcane Labyrinth, Abyssal Expedition, Guild Trials). Awakened Athalia brings burst, Medusa brings debuffer.",
+    "name": "Awakened Athalia + Awakened Lyca",
+    "why": "Paired in 3 calculated lineups (King's Tower, Abyssal Expedition, Guild Trials). Awakened Athalia brings burst, Awakened Lyca brings sustained-dps.",
     "modes": [
      "King's Tower",
-     "Arcane Labyrinth",
      "Abyssal Expedition",
      "Guild Trials"
     ]
@@ -3518,11 +4220,10 @@
      "medusa"
     ],
     "name": "Awakened Baden + Medusa",
-    "why": "Paired in 4 calculated lineups (King's Tower, Arcane Labyrinth, Abyssal Expedition, Guild Trials). Awakened Baden brings sustained-dps, Medusa brings debuffer.",
+    "why": "Paired in 3 calculated lineups (King's Tower, Arcane Labyrinth, Guild Trials). Awakened Baden brings sustained-dps, Medusa brings debuffer.",
     "modes": [
      "King's Tower",
      "Arcane Labyrinth",
-     "Abyssal Expedition",
      "Guild Trials"
     ]
    },
@@ -3532,11 +4233,10 @@
      "medusa"
     ],
     "name": "Awakened Lyca + Medusa",
-    "why": "Paired in 4 calculated lineups (King's Tower, Abyssal Expedition, Cursed Realm, Guild Trials). Awakened Lyca brings sustained-dps, Medusa brings debuffer.",
+    "why": "Paired in 3 calculated lineups (King's Tower, Abyssal Expedition, Guild Trials). Awakened Lyca brings sustained-dps, Medusa brings debuffer.",
     "modes": [
      "King's Tower",
      "Abyssal Expedition",
-     "Cursed Realm",
      "Guild Trials"
     ]
    }

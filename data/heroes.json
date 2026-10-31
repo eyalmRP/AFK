@@ -1,6 +1,6 @@
 {
- "asOf": "2026-10-24",
- "count": 229,
+ "asOf": "2026-10-31",
+ "count": 230,
  "heroes": [
   {
    "id": "adrian-elyse",
@@ -2717,6 +2717,36 @@
    "trend": null,
    "tierNote": "Added 2026-10-24 from the newest lists: Pocket Tactics (Apr) B, AllClash B.",
    "gameId": 118
+  },
+  {
+   "id": "greisman",
+   "name": "Greisman",
+   "title": "Endless Pursuit",
+   "faction": "Graveborn",
+   "class": "Mage",
+   "type": "Intelligence",
+   "release": "2026-10",
+   "awakened": false,
+   "isNew": true,
+   "img": null,
+   "roles": [
+    "debuffer",
+    "buffer"
+   ],
+   "position": "back",
+   "kit": "From the Oct 29, 2026 in-game patch notes: an Intelligence-based Mage who deciphers enemy heroes and reduces their attributes, then transfers the recorded attributes to allies. Skill details not read yet.",
+   "kitConfidence": "medium",
+   "synergies": [],
+   "counters": [],
+   "counteredBy": [],
+   "investment": null,
+   "modes": [],
+   "tiers": {},
+   "raw": {},
+   "consensus": null,
+   "trend": null,
+   "tierNote": "New Graveborn Mage from the Oct 29, 2026 patch (v1.206). Not rated by any list yet; counts as B in team building. Added by hand from the patch notes: the game data the roster sync reads doesn't have him yet, so there is no portrait.",
+   "gameId": null
   },
   {
    "id": "grezhul",
