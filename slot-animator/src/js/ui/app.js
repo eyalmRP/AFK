@@ -228,8 +228,6 @@ const BANK_FILTERS = [
   ['all', 'All'],
   ['symbols', 'Symbols'],
   ['coins', 'Coins'],
-  ['jackpots', 'Jackpots'],
-  ['pots', 'Pots'],
   ['particles', 'Particles'],
   ['wheel', 'Wheel'],
   ['scene', 'Scene'],
@@ -371,7 +369,7 @@ function toggleBank() {
 
 function bankFilters() {
   const game = gameOf();
-  return BANK_FILTERS.filter(([k]) => !((k === 'symbols' || k === 'pots') && game !== 'slot') && !((k === 'coins' || k === 'jackpots') && game === 'wheel'));
+  return BANK_FILTERS.filter(([k]) => !(k === 'symbols' && game !== 'slot') && !(k === 'coins' && game === 'wheel'));
 }
 
 function renderBank() {
@@ -3691,7 +3689,7 @@ function potsSettings() {
     on,
     segmented({ id: 'm-pots-count', label: 'Pots', value: cfg.count, options: [1, 2, 3].map((n) => ({ value: n, label: String(n) })), onChange: (v) => all('count')(Number(v)) }),
     ...T.items.slice(0, cfg.count).map((it, i) => potRow(it, i)),
-    moreLink('Asset Bank › Pot art', { bank: 'pots', id: 'pot-up-0' }, 'Your own pot art'),
+    moreLink('Asset Bank › Scene', { bank: 'scene', id: 'pot-up-0' }, 'Your own pot art'),
     h('h4', { class: 'insp-sub' }, 'What they do'),
     toggleField({
       id: 'm-pots-collect',
@@ -4090,7 +4088,7 @@ function jackpotSettings() {
     moreLink('Machine › Money', { tab: 'machine', id: 'm-bet' }, 'Bet and currency'),
     h('div', { class: 'jp-rows' }, h('div', { class: 'jp-row jp-head', 'aria-hidden': 'true' }, h('span', null, 'Name'), h('span', null, 'Seed (× bet)'), h('span', null, 'Colour')), cfg.tiers.map(boxRow)),
     h('p', { class: 'hint' }, 'Name, seed value (in bets) and colour per box. They are the Hold & Spin jackpots: the Mini, Minor and Major coins and the Grand prize.'),
-    moreLink('Asset Bank › Jackpot box art', { bank: 'jackpots', id: 'jpa-up-grand' }, 'Your own box art'),
+    moreLink('Asset Bank › Scene', { bank: 'scene', id: 'jpa-up-grand' }, 'Your own box art'),
     moreLink('Asset Bank › Coins', { bank: 'coins', section: 'hold-spin-coins' }, 'The jackpot coins'),
     h('h4', { class: 'insp-sub' }, 'What wins them'),
     h('p', { class: 'hint', id: 'jp-wins' }, 'Collecting a Mini, Minor or Major coin wins its box, and a full Hold & Spin board the Grand: each pays what its box shows then. A round can award a box too (Add a feature → Jackpot), and a wheel segment can pay one. A Major also takes the whole screen.'),
@@ -4192,13 +4190,28 @@ function coinSection() {
   );
 }
 
-// Asset Bank: each jackpot box's art, painted in its colour or yours. Its
-// name, seed and colour stay with the boxes in the Features tab.
+// The pots and the jackpot boxes keep their art in Scene too; while one is
+// off, a line says so and links to where it is turned on.
+function offSceneFeatures(game) {
+  const P = state.project;
+  const pots = game === 'slot' && !potsConfig(P).on;
+  const boxes = game !== 'wheel' && !jackpotsConfig(P).on;
+  if (!pots && !boxes) return [];
+  const what = pots && boxes ? 'The pots and the jackpot boxes get' : pots ? 'The pots get' : 'The jackpot boxes get';
+  return [
+    h('p', { class: 'hint' }, `${what} their art here once they are on.`),
+    pots ? moreLink('Features › Pots above the machine', { tab: 'features', section: 'pots-above-the-machine', id: 'm-pots' }, 'Pots') : null,
+    boxes ? moreLink('Features › Jackpot boxes', { tab: 'features', section: 'jackpot-boxes', id: 'jp-on' }, 'Jackpot boxes') : null,
+  ];
+}
+
+// Asset Bank › Scene, with the boxes on: each jackpot box's art, painted
+// in its colour or yours. Its name, seed and colour stay with the boxes in
+// the Features tab.
 function jackpotArtSection() {
   const P = state.project;
   const cfg = jackpotsConfig(P);
-  const link = moreLink('Features › Jackpot boxes', { tab: 'features', section: 'jackpot-boxes', id: cfg.on ? 'jp-label-grand' : 'jp-on' }, cfg.on ? 'Names, seeds and colours' : 'Turn them on');
-  if (!cfg.on) return section('Jackpot box art', h('p', { class: 'hint' }, 'The jackpot boxes are off.'), link);
+  const link = moreLink('Features › Jackpot boxes', { tab: 'features', section: 'jackpot-boxes', id: 'jp-label-grand' }, 'Names, seeds and colours');
   const J = P.jackpots;
   const font = fontStack(P.effects.font);
   const set = (t, v) => {
@@ -4246,13 +4259,13 @@ function jackpotArtSection() {
   );
 }
 
-// Asset Bank: each pot's art, painted or yours. Which pot it is (gold, gems
-// or fruits), its colour and what it does stay with the pots in Features.
+// Asset Bank › Scene, with the pots on: each pot's art, painted or yours.
+// Which pot it is (gold, gems or fruits), its colour and what it does stay
+// with the pots in Features.
 function potArtSection() {
   const P = state.project;
   const cfg = potsConfig(P);
-  const link = moreLink('Features › Pots above the machine', { tab: 'features', section: 'pots-above-the-machine', id: cfg.on ? 'm-pot-art-0' : 'm-pots' }, cfg.on ? 'Which pot is which, colours and roles' : 'Turn them on');
-  if (!cfg.on) return section('Pot art', h('p', { class: 'hint' }, 'The pots are off.'), link);
+  const link = moreLink('Features › Pots above the machine', { tab: 'features', section: 'pots-above-the-machine', id: 'm-pot-art-0' }, 'Which pot is which, colours and roles');
   const d = defaultPots();
   const T = P.pots;
   T.items = d.items.map((it, i) => ({ ...it, ...((T.items || [])[i] || {}) }));
@@ -4310,9 +4323,6 @@ function panelAssets(filter = 'all') {
       h('div', { class: 'row' }, button('Add symbol images', addSymbols, { class: 'btn', icon: 'upload', id: 'a-add' }), useSet(BUILTIN_SYMBOLS, 'Classic set'), useSet(CANDY_SYMBOLS, 'Candy set'))
     ),
     game === 'wheel' || !show('coins') ? null : coinSection(),
-    // Off, they show only under their own filter, saying how to turn them on.
-    game !== 'wheel' && show('jackpots') && (filter === 'jackpots' || jackpotsConfig(P).on) ? jackpotArtSection() : null,
-    game === 'slot' && show('pots') && (filter === 'pots' || potsConfig(P).on) ? potArtSection() : null,
     show('particles') ? particleArtSection() : null,
     show('wheel') ? wheelArtSection() : null,
     !show('scene') ? null : section(
@@ -4321,8 +4331,12 @@ function panelAssets(filter = 'all') {
       assetRow('Frame overlay', 'frame', 'PNG drawn over the reels. Leave the window transparent.'),
       assetRow('Logo', 'logo', 'Replaces the title text above the reels.'),
       toggleField({ id: 'a-builtin', label: 'Draw the built-in frame', checked: P.machine.builtinFrame !== false, onChange: num(P.machine, 'builtinFrame', 'all') }),
-      moreLink('Machine › Look', { tab: 'machine', id: 'm-title-on' }, 'Title on or off')
+      moreLink('Machine › Look', { tab: 'machine', id: 'm-title-on' }, 'Title on or off'),
+      ...offSceneFeatures(game)
     ),
+    // Everything else around the machine: the pots and the jackpot boxes.
+    show('scene') && game === 'slot' && potsConfig(P).on ? potArtSection() : null,
+    show('scene') && game !== 'wheel' && jackpotsConfig(P).on ? jackpotArtSection() : null,
     show('fonts') ? fontsSection() : null,
   ];
 }

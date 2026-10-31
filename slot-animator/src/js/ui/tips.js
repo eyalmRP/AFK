@@ -50,7 +50,7 @@ export const TIPS = {
   'jp-decimals-auto': T('features', 'Decimals as the bet', 'Amounts show cents when the bet is typed with them (1.00), whole numbers when not (1). The same setting as Machine › Money, for every amount.'),
   'jp-decimals-0': T('features', 'Whole numbers', 'Every amount without cents: 1,250.'),
   'jp-decimals-2': T('features', 'Two decimals', 'Every amount with cents, even a whole one: 1,250.00.'),
-  'jp-art-names': T('bank:jackpots', 'Names on your box art', 'Writes each box\'s name on your uploaded art. Turn it off when your art already says GRAND, MAJOR and so on.'),
+  'jp-art-names': T('bank:scene', 'Names on your box art', 'Writes each box\'s name on your uploaded art. Turn it off when your art already says GRAND, MAJOR and so on.'),
   'm-beam-curve-arc': T('features', 'Simple arc beams', 'Each beam bows out in one smooth curve.', 'beam-collect'),
   'm-beam-curve-s': T('features', 'S-curve beams', 'Each beam swings out one way, then the other, like a whip.', 's-curve'),
   'm-beam-bend': T('features', 'Beam bend', 'How far the beams bow out from a straight line.', 'beam-bend'),
@@ -140,7 +140,7 @@ export const TIPS = {
   'ri-tumble': T('round', 'Tumbles', 'Winners pop, the rest fall, new symbols drop in and can win again.', 'tumble', ['small', 'medium', 'big']),
 };
 
-const WHERE = { machine: 'Machine', spin: 'Spin', wins: 'Wins', effects: 'Effects', features: 'Features', wheel: 'Wheel', round: 'Round inspector', 'bank:jackpots': 'Asset Bank › Jackpot box art' };
+const WHERE = { machine: 'Machine', spin: 'Spin', wins: 'Wins', effects: 'Effects', features: 'Features', wheel: 'Wheel', round: 'Round inspector', 'bank:scene': 'Asset Bank › Scene' };
 
 // Search entries made from the tooltips: their words find the control.
 export function tipEntries() {
