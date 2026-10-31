@@ -320,7 +320,8 @@ the result as an editable **After Effects project**.
     keys; double-click resets) and remember their widths. The Asset Bank
     is a floating window you can
     move, resize and minimise (B toggles it); on phones it is a bottom
-    sheet. ? lists the keyboard shortcuts.
+    sheet, and while it (or the guide, or a dialog) is open the page
+    behind holds still, so a drag scrolls only what is on top. ? lists the keyboard shortcuts.
 
 Exports:
 

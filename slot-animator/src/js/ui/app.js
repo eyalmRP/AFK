@@ -325,9 +325,18 @@ function placeBank() {
   st.height = B.min ? '' : `${B.h}px`;
 }
 
+// Phones scroll the whole page: while the Asset Bank sheet, the guide or a
+// dialog covers it, the page stays put and a drag scrolls only what is on
+// top (the CSS applies it on phones only).
+function syncScrollLock() {
+  const over = (ui.bank.open && !ui.bank.min) || !!document.querySelector('body > .modal-back, body > .guide');
+  document.documentElement.classList.toggle('scroll-lock', over);
+}
+
 function setBankMin(v) {
   ui.bank.min = v;
   el.bank.classList.toggle('min', v);
+  syncScrollLock();
   el.bankMin.title = v ? 'Restore' : 'Minimise';
   el.bankMin.setAttribute('aria-label', el.bankMin.title);
   clear(el.bankMin, icon(v ? 'window' : 'minus'));
@@ -345,6 +354,7 @@ function openBank(filter, focus = true) {
   el.railBank.setAttribute('aria-expanded', 'true');
   renderPhoneBar();
   if (ui.bank.min) setBankMin(false);
+  syncScrollLock();
   placeBank();
   renderBank();
   if (focus) el.bank.querySelector('.bank-filter [aria-selected="true"]')?.focus();
@@ -361,6 +371,7 @@ function closeBank() {
   el.railBank.classList.remove('on');
   el.railBank.setAttribute('aria-expanded', 'false');
   renderPhoneBar();
+  syncScrollLock();
   if (had) (el.railBank.offsetParent ? el.railBank : el.bankBtn).focus();
   saveUI();
 }
@@ -1676,6 +1687,8 @@ function buildShell() {
   });
   new ResizeObserver(() => fitCanvas()).observe(el.viewport);
   document.addEventListener('keydown', onKey);
+  // Dialogs and the guide come and go as children of the page.
+  new MutationObserver(syncScrollLock).observe(document.body, { childList: true });
   initTips();
 }
 
