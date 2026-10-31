@@ -224,31 +224,33 @@ function splitter(side) {
 
 // ---------- Asset Bank: a floating window over the editor ----------
 
+// The bank's side bar: each kind of asset with its icon. Effects holds the
+// particle art; Scene everything around the machine.
 const BANK_FILTERS = [
-  ['all', 'All'],
-  ['symbols', 'Symbols'],
-  ['coins', 'Coins'],
-  ['particles', 'Particles'],
-  ['wheel', 'Wheel'],
-  ['scene', 'Scene'],
-  ['fonts', 'Fonts'],
+  ['all', 'All', 'window'],
+  ['symbols', 'Symbols', 'grid'],
+  ['coins', 'Coins', 'coin'],
+  ['effects', 'Effects', 'sparkle'],
+  ['wheel', 'Wheel', 'wheel'],
+  ['scene', 'Scene', 'palette'],
+  ['sounds', 'Sounds', 'sound'],
+  ['fonts', 'Fonts', 'text'],
 ];
 const narrow = () => window.matchMedia('(max-width: 760px)').matches;
 
 function buildBank() {
   el.bankBody = h('div', { class: 'bank-body' });
-  el.bankFilter = h('div', { class: 'bank-filter', role: 'tablist', 'aria-label': 'Asset types' });
+  el.bankFilter = h('nav', { class: 'bank-filter', role: 'tablist', 'aria-label': 'Asset types', 'aria-orientation': 'vertical' });
   el.bankMin = button('', () => setBankMin(!ui.bank.min), { class: 'icon-btn tiny', icon: 'minus', id: 'bank-min', title: 'Minimise' });
   const head = h(
     'header',
     { class: 'bank-head' },
     h('span', { class: 'bank-drag', 'aria-hidden': 'true' }, icon('grid')),
     h('h2', { id: 'bank-title' }, 'Asset Bank'),
-    el.bankFilter,
     h('div', { class: 'bank-tools' }, el.bankMin, button('', () => closeBank(), { class: 'icon-btn tiny', icon: 'x', id: 'bank-close', title: 'Close (Esc)' }))
   );
   const grip = h('div', { class: 'bank-resize', 'aria-hidden': 'true', title: 'Resize' });
-  el.bank = h('section', { class: 'bank', id: 'asset-bank', role: 'dialog', 'aria-modal': 'false', 'aria-labelledby': 'bank-title', hidden: true }, head, el.bankBody, grip);
+  el.bank = h('section', { class: 'bank', id: 'asset-bank', role: 'dialog', 'aria-modal': 'false', 'aria-labelledby': 'bank-title', hidden: true }, head, h('div', { class: 'bank-main' }, el.bankFilter, el.bankBody), grip);
   // Move by the title bar, resize from the corner.
   const drag = (e, onMove) => {
     if (e.button !== 0 || narrow()) return;
@@ -378,7 +380,7 @@ function renderBank() {
   if (!filters.some(([k]) => k === ui.bank.filter)) ui.bank.filter = 'all';
   clear(
     el.bankFilter,
-    filters.map(([k, label]) =>
+    filters.map(([k, label, ic]) =>
       h('button', {
         type: 'button',
         role: 'tab',
@@ -394,7 +396,7 @@ function renderBank() {
         },
         onkeydown: (e) => {
           const i = filters.findIndex(([f]) => f === k);
-          const d = e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : 0;
+          const d = e.key === 'ArrowRight' || e.key === 'ArrowDown' ? 1 : e.key === 'ArrowLeft' || e.key === 'ArrowUp' ? -1 : 0;
           if (!d) return;
           e.preventDefault();
           const next = filters[(i + d + filters.length) % filters.length][0];
@@ -403,7 +405,7 @@ function renderBank() {
           renderBank();
           document.getElementById(`bank-f-${next}`)?.focus();
         },
-      }, label)
+      }, icon(ic), h('span', null, label))
     )
   );
   const scroll = el.bankBody.scrollTop;
@@ -483,7 +485,7 @@ const SECTION_ICONS = {
   'spin-type': 'loop', respins: 'loop', 'reel-order': 'order', 'motion-curve': 'curve', start: 'play', mid: 'loop', end: 'target', 'reel-timing': 'clock', anticipation: 'eye', 'between-rounds': 'clock',
   'win-tiers': 'trophy', 'winning-symbols': 'sparkle', 'win-particles': 'sparkle', 'explosion-templates': 'bolt', 'titles-and-font': 'text', 'win-timing': 'clock',
   intensity: 'bolt', segments: 'wheel', framing: 'target', pointer: 'pointer', spin: 'loop',
-  'sound-track': 'sound', 'your-own-sounds': 'upload', 'after-effects-project': 'download', 'quick-preview-mp4': 'film',
+  'sound-track': 'sound', 'your-own-sounds': 'sound', 'win-effects': 'bolt', 'after-effects-project': 'download', 'quick-preview-mp4': 'film',
   symbols: 'grid', coins: 'coin', 'pot-art': 'coin', 'jackpot-box-art': 'trophy', 'wheel-art': 'wheel', 'scene-art': 'palette', fonts: 'text', 'particle-art': 'sparkle',
 };
 
@@ -4323,7 +4325,8 @@ function panelAssets(filter = 'all') {
       h('div', { class: 'row' }, button('Add symbol images', addSymbols, { class: 'btn', icon: 'upload', id: 'a-add' }), useSet(BUILTIN_SYMBOLS, 'Classic set'), useSet(CANDY_SYMBOLS, 'Candy set'))
     ),
     game === 'wheel' || !show('coins') ? null : coinSection(),
-    show('particles') ? particleArtSection() : null,
+    show('effects') ? particleArtSection() : null,
+    show('effects') ? effectsNote() : null,
     show('wheel') ? wheelArtSection() : null,
     !show('scene') ? null : section(
       'Scene art',
@@ -4337,6 +4340,7 @@ function panelAssets(filter = 'all') {
     // Everything else around the machine: the pots and the jackpot boxes.
     show('scene') && game === 'slot' && potsConfig(P).on ? potArtSection() : null,
     show('scene') && game !== 'wheel' && jackpotsConfig(P).on ? jackpotArtSection() : null,
+    show('sounds') ? soundsSection() : null,
     show('fonts') ? fontsSection() : null,
   ];
 }
@@ -4471,11 +4475,21 @@ function particleArtSection() {
   for (const b of BUILTIN_PARTICLES) tiles.append(particleTile({ id: b.id, name: b.name }));
   for (const a of P.particles.assets) tiles.append(particleTile(a));
   return section(
-    'Win particles',
+    'Particle art',
     h('p', { class: 'hint' }, 'The art the win explosions throw. Upload one PNG for a still particle, several PNGs for an animated one (a spinning coin, a flapping banknote), or one sprite sheet. Pick which particle each win moment uses in the win particle settings. In After Effects each particle is a placeholder comp.'),
     tiles,
     h('div', { class: 'row' }, button('Add particle art', addParticleArt, { class: 'btn', icon: 'upload', id: 'pa-add' })),
     moreLink('Effects › Win particles', { tab: 'effects', section: 'win-particles' }, 'Which moment uses which particle')
+  );
+}
+
+// The win effects themselves (rays, shockwaves, frames) are drawn live;
+// After Effects is where they are replaced, so the bank says how.
+function effectsNote() {
+  return section(
+    'Win effects',
+    h('p', { class: 'hint' }, 'Light rays, shockwaves, cell frames, coin bursts and the other win effects are drawn live, so there is nothing to upload here. In After Effects each is a placeholder comp in Placeholder Comps/Effects with an FX CONTROLS layer (size, opacity, colour, motion); drop a prerendered movie into one and every use plays it.'),
+    moreLink('Effects › Intensity', { tab: 'effects', section: 'intensity' }, 'How strong each effect is')
   );
 }
 
@@ -4622,7 +4636,7 @@ function particleSettings() {
     h('p', { class: 'hint' }, 'Pick an explosion and a particle for every win moment. Short explosions fire once. Continuous ones keep going while the win shows, until the next round, or to the end of the animation (they loop seamlessly). Ambient particles float behind the machine the whole time. A round can use its own in the round inspector.'),
     h('div', { class: 'pfx-rows' }, rows),
     rangeField({ id: 'fx-coins', label: 'Particle amount', value: fx.coins, min: 0, max: 2, step: 0.01, onInput: num(fx, 'coins') }),
-    moreLink('Asset Bank › Particle art', { bank: 'particles', id: 'pa-add' }, 'Your own particle art')
+    moreLink('Asset Bank › Effects', { bank: 'effects', id: 'pa-add' }, 'Your own particle art')
   );
 }
 
@@ -5870,39 +5884,21 @@ function soundChanged() {
   scheduleSound();
 }
 
+// The mix groups: a volume each in the Sound tab, and how the cues are
+// grouped in Asset Bank › Sounds.
+const SOUND_GROUPS = [
+  ['reels', 'Reels and drops'],
+  ['wins', 'Wins, pops, counters'],
+  ['coins', 'Coins'],
+  ['bigwin', 'Big win and features'],
+  ['ui', 'Whooshes'],
+];
+
 function panelSound() {
   const P = state.project;
   const S = P.sound;
-  const groups = [
-    ['reels', 'Reels and drops'],
-    ['wins', 'Wins, pops, counters'],
-    ['coins', 'Coins'],
-    ['bigwin', 'Big win and features'],
-    ['ui', 'Whooshes'],
-  ];
-  const rows = SOUND_EVENTS.map((ev) => {
-    const has = !!S.custom[ev.id];
-    return h(
-      'div',
-      { class: 'sound-row' },
-      h('span', { class: 'sound-name' }, ev.label, h('span', { class: 'hint' }, has ? 'Your sound' : 'Built-in synth')),
-      button(has ? 'Replace' : 'Upload', async () => {
-        const [f] = await pickFiles('audio/*,.wav,.mp3,.ogg,.m4a');
-        if (!f) return;
-        if (f.size > 4e6) return toast('Keep each sound under 4 MB.', 'warn');
-        S.custom[ev.id] = await readFileAsDataURL(f);
-        soundChanged();
-        renderPanel();
-      }, { class: 'btn small', id: `snd-up-${ev.id}` }),
-      has
-        ? button('', () => {
-            delete S.custom[ev.id];
-            soundChanged();
-            renderPanel();
-          }, { class: 'icon-btn tiny', icon: 'x', title: 'Back to the built-in sound', id: `snd-clear-${ev.id}` })
-        : h('span')
-    );
-  });
+  const groups = SOUND_GROUPS;
+  const mine = Object.keys(S.custom || {}).filter((k) => S.custom[k]).length;
   return [
     section(
       'Sound track',
@@ -5914,21 +5910,54 @@ function panelSound() {
             ...groups.map(([k, l]) => rangeField({ id: `snd-mix-${k}`, label: l, value: S.mix[k] ?? 1, min: 0, max: 1.5, step: 0.01, onInput: (v) => { S.mix[k] = v; soundChanged(); } })),
           ]
         : null,
-      button('Download the sound track (WAV)', downloadWav, { class: 'btn small', icon: 'download', id: 'snd-wav', disabled: S.enabled === false })
+      button('Download the sound track (WAV)', downloadWav, { class: 'btn small', icon: 'download', id: 'snd-wav', disabled: S.enabled === false }),
+      S.enabled !== false ? moreLink('Asset Bank › Sounds', { bank: 'sounds', section: 'your-own-sounds' }, mine ? `Your own sounds (${mine} in use)` : 'Your own sounds') : null
     ),
-    S.enabled !== false
-      ? section(
-          'Your own sounds',
-          h('p', { class: 'hint' }, 'Replace any cue with a WAV, MP3 or OGG file. It plays from its start at each cue. The cues are grouped as in the mix above.'),
-          groups.map(([k, l]) => {
-            const list = SOUND_EVENTS.map((ev, i) => [ev, rows[i]]).filter(([ev]) => (ev.group || 'ui') === k);
-            if (!list.length) return null;
-            const mine = list.filter(([ev]) => S.custom[ev.id]).length;
-            return foldRow(`snd-${k}`, l, mine ? `${mine} of ${list.length} yours` : `${list.length} built-in`, h('div', { class: 'sounds' }, list.map(([, row]) => row)));
-          })
-        )
-      : null,
   ];
+}
+
+// Asset Bank › Sounds: any cue can be your own file, grouped as in the mix.
+function soundsSection() {
+  const S = state.project.sound;
+  const link = moreLink('Sound › Sound track', { tab: 'sound', id: S.enabled === false ? 'snd-on' : 'snd-vol' }, S.enabled === false ? 'Turn it on' : 'Volume and mix');
+  if (S.enabled === false) return section('Your own sounds', h('p', { class: 'hint' }, 'The sound track is off.'), link);
+  const after = () => {
+    soundChanged();
+    renderAssets();
+    if (state.tab === 'sound') renderPanel();
+  };
+  const row = (ev) => {
+    const has = !!S.custom[ev.id];
+    return h(
+      'div',
+      { class: 'sound-row' },
+      h('span', { class: 'sound-name' }, ev.label, h('span', { class: 'hint' }, has ? 'Your sound' : 'Built-in synth')),
+      button(has ? 'Replace' : 'Upload', async () => {
+        const [f] = await pickFiles('audio/*,.wav,.mp3,.ogg,.m4a');
+        if (!f) return;
+        if (f.size > 4e6) return toast('Keep each sound under 4 MB.', 'warn');
+        S.custom[ev.id] = await readFileAsDataURL(f);
+        after();
+      }, { class: 'btn small', id: `snd-up-${ev.id}` }),
+      has
+        ? button('', () => {
+            delete S.custom[ev.id];
+            after();
+          }, { class: 'icon-btn tiny', icon: 'x', title: 'Back to the built-in sound', id: `snd-clear-${ev.id}` })
+        : h('span')
+    );
+  };
+  return section(
+    'Your own sounds',
+    h('p', { class: 'hint' }, 'Replace any cue with a WAV, MP3 or OGG file. It plays from its start at each cue. In After Effects each cue is its own audio layer in the SFX comp.'),
+    SOUND_GROUPS.map(([k, l]) => {
+      const list = SOUND_EVENTS.filter((ev) => (ev.group || 'ui') === k);
+      if (!list.length) return null;
+      const mine = list.filter((ev) => S.custom[ev.id]).length;
+      return foldRow(`snd-${k}`, l, mine ? `${mine} of ${list.length} yours` : `${list.length} built-in`, h('div', { class: 'sounds' }, list.map(row)));
+    }),
+    link
+  );
 }
 
 // The whole mix as the preview plays it: 16-bit stereo WAV at 48 kHz. Saves

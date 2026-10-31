@@ -63,7 +63,7 @@ export const GUIDE_STEPS = [
     target: ['#top-bank', '#rail-bank'],
     fallback: ['#pb-assets'],
     title: 'The Asset Bank',
-    text: 'Your art: symbols, coins, jackpot boxes, pots, particles, wheel and scene art, fonts (B). Upload your own; in After Effects every piece is its own comp, easy to replace.',
+    text: 'Everything you can replace: symbols, coins, particle art, the wheel, the scene (with the pots and jackpot boxes), sounds and fonts (B). In After Effects every piece is its own comp or layer, easy to swap.',
   },
   {
     id: 'export',

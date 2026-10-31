@@ -14,7 +14,8 @@ test('tooltips point at controls and sections that exist, and their demos exist'
   const ids = new Set([...app.matchAll(/id: '([a-z0-9-]+)'/g)].map((m) => m[1]));
   for (const t of SPIN_TYPES) ids.add(`spin-type-${t.id}`);
   for (const m of app.matchAll(/id: `([a-z-]+)\$\{/g)) ids.add(`${m[1]}*`);
-  const titles = new Set([...app.matchAll(/section\(\s*'([^']+)'/g)].map((m) => slug(m[1])));
+  // Sections made with section('Title', …) or with their own h3 title.
+  const titles = new Set([...app.matchAll(/section\(\s*'([^']+)'/g), ...app.matchAll(/h\('h3', null, '([^']+)'\)/g)].map((m) => slug(m[1])));
   for (const [key, tip] of Object.entries(TIPS)) {
     assert.ok(tip.title && tip.text, key);
     if (tip.demo) assert.ok(DEMOS[tip.demo], `${key}: demo ${tip.demo}`);

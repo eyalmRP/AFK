@@ -2250,7 +2250,7 @@ body.dragging * {
   height: auto !important;
 }
 
-.bank.min .bank-body,
+.bank.min .bank-main,
 .bank.min .bank-resize {
   display: none;
 }
@@ -2282,35 +2282,72 @@ body.dragging .bank-head {
   white-space: nowrap;
 }
 
+/* The side bar: each kind of asset with its icon, as the main rail. */
+.bank-main {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+.bank-main .bank-body {
+  flex: 1;
+  min-width: 0;
+}
+
 .bank-filter {
   display: flex;
+  flex-direction: column;
   gap: 2px;
-  margin-left: 6px;
-  overflow-x: auto;
+  flex: none;
+  width: 74px;
+  padding: 8px 6px;
+  border-right: 1px solid var(--line);
+  overflow-y: auto;
   scrollbar-width: none;
-  min-width: 0;
-  flex: 1;
 }
 
 .bank-filter button {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 8px 2px 7px;
   border: 0;
-  background: transparent;
+  border-radius: 9px;
+  background: none;
   color: var(--faint);
-  font-size: 12.5px;
+  font-size: 10.5px;
   font-weight: 600;
-  padding: 5px 9px;
-  border-radius: 999px;
+  line-height: 1.1;
   cursor: pointer;
   white-space: nowrap;
 }
 
+.bank-filter .ic {
+  width: 20px;
+  height: 20px;
+}
+
 .bank-filter button:hover {
   color: var(--text);
+  background: var(--surface-2);
 }
 
 .bank-filter button.on {
-  background: rgba(244, 197, 91, 0.14);
   color: var(--gold-2);
+  background: var(--surface-3);
+}
+
+.bank-filter button.on::before {
+  content: '';
+  position: absolute;
+  left: -6px;
+  top: 10px;
+  bottom: 10px;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: var(--gold);
 }
 
 .bank-tools {
@@ -2501,10 +2538,35 @@ body.dragging .bank-head {
     flex-wrap: wrap;
   }
 
+  /* Phones: the side bar turns into a row of tabs under the title. */
+  .bank-main {
+    flex-direction: column;
+  }
+
   .bank-filter {
-    order: 3;
-    flex-basis: 100%;
-    margin-left: 0;
+    flex-direction: row;
+    width: auto;
+    padding: 6px 8px;
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
+
+  .bank-filter button {
+    flex-direction: row;
+    gap: 5px;
+    padding: 6px 10px;
+    font-size: 12.5px;
+  }
+
+  .bank-filter .ic {
+    width: 15px;
+    height: 15px;
+  }
+
+  .bank-filter button.on::before {
+    display: none;
   }
 
   .bank-resize {

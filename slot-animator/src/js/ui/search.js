@@ -214,7 +214,7 @@ export const FEATURES = [
   T('Sound on or off', 'Sound › Sound track', 'audio mute enable', { tab: 'sound', id: 'snd-on' }),
   T('Volume', 'Sound › Sound track', 'loud quiet master', { tab: 'sound', id: 'snd-vol' }),
   T('Download the sound track', 'Sound › Sound track', 'wav audio file', { tab: 'sound', id: 'snd-wav' }),
-  T('Replace a sound with your own', 'Sound › Your own sounds', 'upload custom sfx wav mp3', { tab: 'sound', section: 'your-own-sounds' }),
+  T('Replace a sound with your own', 'Asset Bank › Sounds', 'upload custom sfx wav mp3 ogg audio file cue', { bank: 'sounds', section: 'your-own-sounds' }),
   // Export
   T('Export to After Effects', 'Export › After Effects project', 'ae jsx package download', { tab: 'export', id: 'x-ae' }),
   T('Export formats', 'Export › After Effects project', 'sizes portrait square 4k batch', { tab: 'export', section: 'after-effects-project' }),
@@ -230,7 +230,8 @@ export const FEATURES = [
   T('Symbol roles: wild, scatter, multiplier, bonus', 'Asset Bank › Symbols', 'role wild scatter multiplier bonus special', { bank: 'symbols', section: 'symbols' }),
   T('How often a symbol shows up', 'Asset Bank › Symbols', 'weight frequency filler common rare', { bank: 'symbols', section: 'symbols' }),
   T('Hold & Spin coins', 'Asset Bank › Coins', 'jackpot coins mini minor major grand coin values', { bank: 'coins', section: 'hold-spin-coins' }),
-  T('Particle art', 'Asset Bank › Win particles', 'upload confetti coin star sprite', { bank: 'particles', id: 'pa-add' }),
+  T('Particle art', 'Asset Bank › Effects', 'upload confetti coin star sprite', { bank: 'effects', id: 'pa-add' }),
+  T('Replace a win effect', 'Asset Bank › Effects', 'rays shockwave flash frame effect movie prerendered video clip after effects placeholder', { bank: 'effects', section: 'win-effects' }),
   T('Background image', 'Asset Bank › Scene art', 'backdrop wallpaper', { bank: 'scene', id: 'asset-up-background' }),
   T('Frame overlay', 'Asset Bank › Scene art', 'border machine cabinet', { bank: 'scene', id: 'asset-up-frame' }),
   T('Logo image', 'Asset Bank › Scene art', 'brand title', { bank: 'scene', id: 'asset-up-logo' }),

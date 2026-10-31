@@ -170,7 +170,7 @@ the result as an editable **After Effects project**.
   kicks the reels off a third of a second apart.
 - Sound: every cue (reel stops, anticipation, pops, count-up ticks, stings,
   coins, wheel pegs) is synthesised in sync with the animation; any cue can
-  be replaced with your own file. The preview starts muted (the Sound
+  be replaced with your own file (Asset Bank › Sounds). The preview starts muted (the Sound
   button turns it on); exports always carry it.
 
 - Editor:
@@ -193,13 +193,16 @@ the result as an editable **After Effects project**.
     saying why. Section headers have icons and each its own colour (a
     tinted title, never the same as the few above it). Search also reads
     the tooltip texts.
-  - Art lives in the Asset Bank, one place for everything you can
-    replace (as in After Effects, where each is a placeholder comp):
-    symbols, coins, particles, wheel, scene, fonts. Scene is everything
-    around the machine: background, frame, logo, and the pot and jackpot
-    box art while they are on (a line links to turning them on). A
-    feature's own settings stay with the feature, which links to its art
-    (and the art back to the feature).
+  - Art and sounds live in the Asset Bank, one place for everything you
+    can replace (as in After Effects, where each is a placeholder comp or
+    its own layer). A side bar like the main rail picks the kind (a row
+    of tabs on phones): All, Symbols, Coins, Effects (the particle art,
+    and how the win effects are replaced in After Effects), Wheel, Scene
+    (background, frame, logo, and the pot and jackpot box art while they
+    are on; a line links to turning them on), Sounds (your own file for
+    any cue, grouped as in the mix) and Fonts. A feature's own settings
+    stay with the feature, which links to its art (and the art back to
+    the feature): the Sound tab keeps the track, volume and mix.
   - More settings: a setting whose companions live elsewhere links to
     them (Wins › Beam to pots → Features › Pots above the machine, the
     pots → winning symbols, boosters and zoom, Hold & Spin ↔ Asset Bank ›
@@ -282,7 +285,7 @@ the result as an editable **After Effects project**.
     Desktop and tablet layouts are unchanged.
   - The side panels resize (drag a divider, or focus it and use the arrow
     keys; double-click resets) and remember their widths. The Asset Bank
-    (symbols, coins, particles, scene art) is a floating window you can
+    is a floating window you can
     move, resize and minimise (B toggles it); on phones it is a bottom
     sheet. ? lists the keyboard shortcuts.
 
