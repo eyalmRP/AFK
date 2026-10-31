@@ -88,7 +88,7 @@ Republish with the Artifact tool:
 Before publishing, take one look at the built page (`npm run serve` and a Playwright screenshot). Finally, reply with a short summary: new heroes, tier moves, new community teams, and what is still missing.
 
 ## Code check
-Part of the weekly update (there is no separate daily routine any more). It only touches `data/codes.json`:
+Part of the weekly update (there is no separate daily routine any more). The Codes tab's "Check for new codes" button also runs it on demand: it fires the routine "AFK Codex code check (on demand)" (`trig_019yAgo8pJRoVhbYdZA7JacV`, no schedule) through the viewer's Claude Code Remote connector, and that run commits, pushes and republishes `data/codes.json` itself. It only touches `data/codes.json`:
 1. Search for AFK Arena redemption codes posted or confirmed since `lastChecked`, and for codes that have expired.
 2. Add new codes with the exact code string, `server` (`classic` or `companions`; codes come in pairs, one per server), `rewards` (null if not published), `firstSeen`, `expires`, `status` (active / expired / unverified) and `sources`. Never invent a code. A code seen on only one low-reliability site is `unverified`. Mark codes past their expiry as `expired`.
 3. Set `lastChecked` and `asOf` to today.

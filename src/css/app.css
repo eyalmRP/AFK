@@ -1228,3 +1228,5 @@ table.bank .input, table.bank .select { padding: 3px 6px; min-height: 30px; font
 .bt-traits .bt-up, .bt-list .bt-up { color: var(--good); }
 .bt-traits .bt-down { color: var(--bad); }
 .top-list { grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr)); }
+.code-check p { margin: 0 0 8px; }
+.code-check-err { color: var(--bad); }

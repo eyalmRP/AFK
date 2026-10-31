@@ -13,6 +13,14 @@ let root = null;
 
 const DAY = 86400000;
 
+// "Check for new codes" starts the on-demand code check routine (a Claude
+// session that searches the web, updates data/codes.json and republishes
+// this page) through the viewer's Claude Code Remote connector. The page's
+// own Claude can't browse, so it can't look for codes itself.
+const CHECK = { server: 'Claude Code Remote', tool: 'fire_trigger', trigger: 'trig_019yAgo8pJRoVhbYdZA7JacV' };
+const CHECK_KEY = 'afk-codex-code-check-started';
+const check = { mcp: null, confirm: false, busy: false, error: '' };
+
 function today() {
   return new Date().toISOString().slice(0, 10);
 }
@@ -121,6 +129,42 @@ function card(c) {
   </article>`;
 }
 
+function checkBlock() {
+  if (!check.mcp) return '';
+  const started = local.get(CHECK_KEY, 0) || 0;
+  // A check started in the last 15 minutes (the list only says the day it was checked).
+  if (started && Date.now() - started < 15 * 60 * 1000)
+    return `<p class="callout info small"><strong>Code check started at ${esc(new Date(started).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }))}.</strong> Claude is searching the web; it takes a few minutes. Reload this page then to see any new codes.</p>`;
+  if (check.confirm)
+    return `<div class="callout small code-check"><p><strong>Check for new codes now?</strong> Claude searches the web for new and expired codes, updates the list and republishes the app. It runs on your Claude account, about as much as one short chat, and takes a few minutes.</p>
+      <div class="toolbar"><button class="btn primary" type="button" data-check="go" ${check.busy ? 'disabled' : ''}>${ICON.search} ${check.busy ? 'Starting…' : 'Check now'}</button><button class="btn ghost" type="button" data-check="cancel">Cancel</button></div></div>`;
+  return `<div class="toolbar"><button class="btn" type="button" data-check="ask">${ICON.search} Check for new codes</button>${check.error ? `<span class="small code-check-err">${esc(check.error)}</span>` : ''}</div>`;
+}
+
+async function startCheck() {
+  check.busy = true;
+  check.error = '';
+  render();
+  try {
+    await check.mcp.callTool(CHECK.server, CHECK.tool, { trigger_id: CHECK.trigger });
+    local.set(CHECK_KEY, Date.now());
+    check.confirm = false;
+    toast('Code check started. Reload the page in a few minutes.');
+  } catch (e) {
+    check.confirm = false;
+    check.error =
+      {
+        approval_required: 'It needs your OK: press again and allow Claude Code Remote for this page when claude.ai asks.',
+        server_not_connected: 'This needs the Claude Code Remote connector (claude.ai Settings, Connectors).',
+        not_in_manifest: "Claude Code Remote is turned off for this page. Turn it on in the page's Permissions menu, then press again.",
+        blocked_by_policy: "Your organization's settings block this.",
+      }[e?.code] || "The check couldn't start. Try again in a little while.";
+  } finally {
+    check.busy = false;
+    render();
+  }
+}
+
 function render() {
   const list = allCodes();
   const g = groups(list);
@@ -138,7 +182,8 @@ function render() {
       <p class="eyebrow">Free rewards</p>
       <h2>Redeem codes</h2>
       <p>Lilith posts codes in pairs, one for Classic and one for Companions servers, around events and holidays. Copy a code, redeem it on Lilith's site, then tick it so it drops off your list.</p>
-      ${info.lastChecked ? `<p class="small muted">Last checked for new codes ${esc(fmtDate(info.lastChecked))} · checked weekly</p>` : ''}
+      ${info.lastChecked ? `<p class="small muted">Last checked for new codes ${esc(fmtDate(info.lastChecked))} · checked weekly, or now with the button</p>` : ''}
+      ${checkBlock()}
     </div></div>
     <div class="code-server">
       <span class="eyebrow">My server</span>
@@ -213,8 +258,22 @@ async function copy(text, btn) {
 export function mountCodes(el) {
   root = el;
   bindFolding(root);
+  // The button shows only where the page can reach the viewer's connectors.
+  window.claude?.use?.('mcp')?.then((m) => {
+    if (!m) return;
+    check.mcp = m;
+    render();
+  });
   root.addEventListener('click', (ev) => {
     const t = ev.target;
+    const ck = t.closest('[data-check]')?.dataset.check;
+    if (ck) {
+      if (ck === 'ask') check.confirm = true;
+      else if (ck === 'cancel') check.confirm = false;
+      if (ck === 'go') startCheck();
+      else render();
+      return;
+    }
     const sv = t.closest('[data-server]');
     if (sv) {
       updateSettings({ codeServer: sv.dataset.server });
