@@ -209,8 +209,8 @@ the result as an editable **After Effects project**.
     retrigger, a cash collector, mystery and walking wilds, pots and
     beams (boosters and winners beaming to the pots), teases,
     the big win ladder, slot into Hold & Spin, Hold & Spin, a slot wheel
-    bonus and three wheel-only framings. It opens by itself on the first
-    visit. Between them they show the newer options, each where it fits:
+    bonus and three wheel-only framings. The first run guide offers it.
+    Between them they show the newer options, each where it fits:
     build-up shake (classic, fruit, ways, clusters, cells, portrait, free
     spins, teases, ladder and the coin and wheel slots), row lines (fruit),
     scatters kept lit through the tease (every preset with a scatter
@@ -224,8 +224,16 @@ the result as an editable **After Effects project**.
     (mystery and walking wilds). The editor opens on the classic preset;
     `defaultProject()` stays plain because saved projects are filled in
     from it.
+  - First run guide (`ui/guide.js`): on the first visit a short tour
+    lights each area in turn while the rest darkens (preview, playback,
+    timeline, spin rounds, the round inspector, settings, search, the
+    Asset Bank, the exports) with a card that explains it; arrow keys
+    move, Esc closes. It ends at the presets. It shows by itself once
+    (the browser remembers it); Project › Take the tour, or searching
+    “tour”, runs it again any time. On phones it lights the bottom bar
+    and the phone controls instead.
   - Project menu: new project, open and save the project file (Ctrl O,
-    Ctrl S), presets, clear all rounds, reset to the demo. Undo and redo
+    Ctrl S), presets, clear all rounds, reset to the demo, the tour. Undo and redo
     (Ctrl Z, Ctrl Shift Z) cover every change. Switching the game type keeps
     rounds only when they belong to the new game.
   - Framing (Machine tab): Zoom scales the machine with its pots, title and

@@ -48,6 +48,7 @@ import { searchFeatures, buildIndex } from './search.js';
 import { APPLIES, notApplying } from './applies.js';
 import { TIPS, tipEntries } from './tips.js';
 import { DEMOS, demoPlan, demoAt } from './demos.js';
+import { runGuide } from './guide.js';
 import { WHEEL_FRAMINGS, WHEEL_LANDINGS, POINTER_SIDES, LABEL_PALETTES, WHEEL_ICONS, SEGMENT_KINDS, wheelConfig, iconName, autoIcons, autoHeights, segmentKind, wheelLandings } from '../core/wheel.js';
 import { parseFontNames, BUILTIN_FONTS, FONT_CATALOG, FONT_CATS, googleFontURL } from '../core/fonts.js';
 import { renderFrame } from '../render/renderer.js';
@@ -684,6 +685,8 @@ function projectMenuItems() {
     { sep: true },
     { id: 'pm-undo', label: 'Undo', kbd: 'Ctrl Z', run: undo },
     { id: 'pm-redo', label: 'Redo', kbd: 'Ctrl Shift Z', run: redo },
+    { sep: true },
+    { id: 'pm-guide', label: 'Take the tour', hint: 'The first run guide, about a minute', run: () => startGuide() },
     { id: 'pm-keys', label: 'Keyboard shortcuts', kbd: '?', run: showShortcuts },
   ];
 }
@@ -756,6 +759,7 @@ const SEARCH_ACTIONS = {
   undo: () => undo(),
   redo: () => redo(),
   keys: () => showShortcuts(),
+  guide: () => startGuide(),
   bank: () => openBank(),
   splitters: () => {
     const sp = el.splitters[0];
@@ -1139,6 +1143,31 @@ function openPresets() {
       }
     }
   })();
+}
+
+// ---------- first run guide ----------
+// Shows itself once, where the browser remembers that; Project › Take the
+// tour (or search) runs it again any time.
+
+function startGuide(first = false) {
+  if (el.guide) return;
+  closeSearch();
+  closePresets(false);
+  el.keys?.remove();
+  el.keys = null;
+  if (state.pick) endPick();
+  // The floating Asset Bank would cover what the tour lights.
+  if (ui.bank.open && !narrow()) setBankMin(true);
+  ui.seenGuide = true;
+  ui.seenPresets = true;
+  saveUI();
+  el.guide = runGuide({
+    onPresets: () => openPresets(),
+    onClose: (how) => {
+      el.guide = null;
+      if (first && how === 'skipped') toast('The tour is in the Project menu whenever you want it.', 'info', 5000);
+    },
+  });
 }
 
 // ---------- keyboard shortcuts ----------
@@ -6088,7 +6117,8 @@ export async function start() {
   // Reel Studio opens paused, on the first frame: Space or Play starts it.
   state.playing = false;
   renderTransport();
-  // The presets gallery shows itself once, where the browser remembers that.
-  if (!ui.seenPresets && storageWorks()) setTimeout(() => openPresets(), 700);
+  // The first run guide shows itself once, where the browser remembers
+  // that; it offers the presets gallery.
+  if (!ui.seenGuide && storageWorks()) setTimeout(() => startGuide(true), 700);
   window.reelStudio = { state, rebuild, renderFrame, audio };
 }

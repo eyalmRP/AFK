@@ -82,6 +82,7 @@ export const FEATURES = [
   T('Undo', 'Top bar', 'revert back', { action: 'undo' }),
   T('Redo', 'Top bar', 'again forward', { action: 'redo' }),
   T('Keyboard shortcuts', 'Help', 'keys hotkeys help', { action: 'keys' }),
+  T('Take the tour', 'Project menu', 'first run guide tour walkthrough tutorial onboarding help intro introduction getting started how to begin welcome', { action: 'guide' }),
   T('Asset Bank', 'Left rail (top bar on tablets)', 'assets library upload images symbols art window', { action: 'bank' }),
   T('Fold the settings panel away', 'Left rail', 'hide collapse close settings panel bigger larger preview more room wider stage focus', { action: 'fold' }),
   T('Resize the side panels', 'Layout', 'width wider narrower drag divider splitter panel', { action: 'splitters' }),
